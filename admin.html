@@ -23,11 +23,76 @@
    hide it. We hide it here and re-enable only on /admin.html via the
    body class below. */
 .adm-wrap{display:none!important}
-body.pv-page-admin .adm-wrap{display:block!important}
+body.pv-page-admin.pv-admin-authed .adm-wrap{display:block!important}
 body.pv-page-staff .adm-wrap{display:none!important}
+/* Hide main site nav on admin page - admin has its own topbar */
+body.pv-page-admin #nav{display:none!important}
+body.pv-page-admin .site-footer{display:none!important}
+body.pv-page-admin .adm-topbar{top:0!important}
+body.pv-page-admin .adm-tabs-bar{top:46px!important}
+body.pv-page-admin .adm-wrap{padding-top:90px!important}
+/* Hide home screen content that leaks through on admin page */
+body.pv-page-admin .screen{display:none!important}
+/* Password gate overlay */
+#pv-admin-gate{position:fixed;inset:0;background:#0a0a0a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+body.pv-admin-authed #pv-admin-gate{display:none}
+.pv-admin-gate-box{background:#fff;padding:40px 48px;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.4);width:340px;text-align:center}
+.pv-admin-gate-box h2{margin:0 0 8px;font-size:18px;font-weight:800;color:#0a0a0a;letter-spacing:-.01em}
+.pv-admin-gate-box p{margin:0 0 20px;font-size:13px;color:#666}
+.pv-admin-gate-box input{width:100%;padding:11px 14px;font-size:14px;border:1.5px solid #e0e0e0;border-radius:5px;font-family:inherit;text-align:center;letter-spacing:3px;box-sizing:border-box}
+.pv-admin-gate-box input:focus{outline:none;border-color:#E91E8C}
+.pv-admin-gate-box button{width:100%;margin-top:10px;padding:11px;background:#0a0a0a;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.3px}
+.pv-admin-gate-box button:hover{background:#E91E8C}
+.pv-admin-gate-err{color:#ef4444;font-size:12px;margin-top:10px;min-height:16px}
 </style>
 </head>
 <body class="pv-page-admin">
+<!-- Password gate (removed when correct password entered) -->
+<div id="pv-admin-gate">
+ <div class="pv-admin-gate-box">
+  <h2>Admin Access</h2>
+  <p>Enter password to continue</p>
+  <input type="password" id="pv-admin-gate-pw" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')pvAdminGateCheck()">
+  <button onclick="pvAdminGateCheck()">Sign In</button>
+  <div class="pv-admin-gate-err" id="pv-admin-gate-err"></div>
+ </div>
+</div>
+<script>
+/* Standalone password gate using SHA-256 hash of '8888' */
+(function(){
+  var PV_ADMIN_HASH = '2926a2731f4b312c08982cacf8061eb14bf65c1a87cc5d70e864e079c6220731';
+  /* If already authed this session, skip the gate */
+  if(sessionStorage.getItem('pv_admin_authed') === '1'){
+    document.body.classList.add('pv-admin-authed');
+  }
+  async function hash(str){
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+  }
+  window.pvAdminGateCheck = async function(){
+    var input = document.getElementById('pv-admin-gate-pw');
+    var err = document.getElementById('pv-admin-gate-err');
+    err.textContent = '';
+    try {
+      var h = await hash(input.value);
+      if(h === PV_ADMIN_HASH){
+        sessionStorage.setItem('pv_admin_authed','1');
+        document.body.classList.add('pv-admin-authed');
+      } else {
+        err.textContent = 'Incorrect password';
+        input.value = '';
+        input.focus();
+      }
+    } catch(e){
+      err.textContent = 'Browser not supported (needs HTTPS)';
+    }
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    var input = document.getElementById('pv-admin-gate-pw');
+    if(input && !document.body.classList.contains('pv-admin-authed')) input.focus();
+  });
+})();
+</script>
 <div id="errdiv" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:12px;font-size:12px;font-family:monospace;z-index:9999;white-space:pre-wrap;max-height:200px;overflow-y:auto"></div>
 
 <div class="toast" id="toast"></div>
