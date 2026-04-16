@@ -7,7 +7,6 @@ export function ContactForm({ whatsappNumber }: { whatsappNumber: string }) {
 
   function submitForm(e: React.FormEvent) {
     e.preventDefault();
-    // Build a WhatsApp message from the form contents
     const form = new FormData(e.target as HTMLFormElement);
     const name = (form.get('name') || '').toString();
     const phone = (form.get('phone') || '').toString();
@@ -27,42 +26,76 @@ export function ContactForm({ whatsappNumber }: { whatsappNumber: string }) {
   }
 
   return (
-    <form onSubmit={submitForm}>
+    <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {sent && (
-        <div id="ct-ok" style={{ display: 'block' }}>
+        <div style={{
+          padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0',
+          color: '#15803d', fontSize: 13, fontWeight: 700, borderRadius: 6, textAlign: 'center',
+        }}>
           ✓ Opening WhatsApp with your message pre-filled.
         </div>
       )}
-      <div className="ct-field-group">
-        <div className="ct-field-row">
-          <div className="ct-field">
-            <label className="ct-label">Name *</label>
-            <input name="name" required className="ct-input" placeholder="Your name" />
-          </div>
-          <div className="ct-field">
-            <label className="ct-label">Phone</label>
-            <input name="phone" className="ct-input" placeholder="+65 XXXX XXXX" />
-          </div>
-        </div>
-        <div className="ct-field">
-          <label className="ct-label">Email *</label>
-          <input name="email" type="email" required className="ct-input" placeholder="you@email.com" />
-        </div>
-        <div className="ct-field">
-          <label className="ct-label">Enquiry Type</label>
-          <select name="enquiry" className="ct-input" defaultValue="General Enquiry">
-            <option>General Enquiry</option>
-            <option>Request a Quote</option>
-            <option>Corporate Account</option>
-            <option>Order Follow-up</option>
-          </select>
-        </div>
-        <div className="ct-field">
-          <label className="ct-label">Message *</label>
-          <textarea name="message" required className="ct-textarea" placeholder="Tell us what you need — product, quantity, timeline..." />
-        </div>
-        <button type="submit" className="ct-submit">Send Message →</button>
+
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <Field label="Name *">
+          <input name="name" required className="pv-checkout-input" placeholder="Your name" />
+        </Field>
+        <Field label="Phone">
+          <input name="phone" className="pv-checkout-input" placeholder="+65 XXXX XXXX" />
+        </Field>
       </div>
+
+      <Field label="Email *">
+        <input name="email" type="email" required className="pv-checkout-input" placeholder="you@email.com" />
+      </Field>
+
+      <Field label="Enquiry Type">
+        <select name="enquiry" className="pv-checkout-input" defaultValue="General Enquiry">
+          <option>General Enquiry</option>
+          <option>Request a Quote</option>
+          <option>Corporate Account</option>
+          <option>Order Follow-up</option>
+        </select>
+      </Field>
+
+      <Field label="Message *">
+        <textarea
+          name="message"
+          required
+          rows={5}
+          className="pv-checkout-input"
+          placeholder="Tell us what you need — product, quantity, timeline..."
+        />
+      </Field>
+
+      <button
+        type="submit"
+        style={{
+          marginTop: 8, padding: '16px 24px', borderRadius: 999,
+          background: '#E91E8C', color: '#fff', fontSize: 13, fontWeight: 800,
+          letterSpacing: 0.5, textTransform: 'uppercase', border: 'none',
+          cursor: 'pointer', fontFamily: 'var(--sans)',
+          boxShadow: '4px 4px 0 #0a0a0a',
+          transition: 'transform .1s',
+        }}
+      >
+        Send Message →
+      </button>
     </form>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'block' }}>
+      <span style={{
+        display: 'block', fontSize: 10, fontWeight: 800,
+        letterSpacing: 1.5, textTransform: 'uppercase',
+        color: '#0a0a0a', marginBottom: 8,
+      }}>
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
