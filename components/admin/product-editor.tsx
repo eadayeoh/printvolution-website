@@ -9,7 +9,7 @@ import type { ProductDetail } from '@/lib/data/products';
 import { formatSGD } from '@/lib/utils';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
-type Tab = 'basics' | 'pricing' | 'configurator' | 'faqs' | 'content';
+type Tab = 'basics' | 'pricing' | 'faqs' | 'content';
 
 export function ProductEditor({ product, categories }: { product: ProductDetail; categories: Cat[] }) {
   const router = useRouter();
@@ -118,7 +118,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
     <div>
       {/* Tabs */}
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200">
-        {(['basics', 'content', 'pricing', 'configurator', 'faqs'] as Tab[]).map((t) => (
+        {(['basics', 'content', 'pricing', 'faqs'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -128,8 +128,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           >
             {t === 'basics' && 'Basics'}
             {t === 'content' && 'SEO & Content'}
-            {t === 'pricing' && 'Pricing'}
-            {t === 'configurator' && `Configurator (${configurator.length})`}
+            {t === 'pricing' && `Pricing & Options${configurator.length > 0 ? ` (${configurator.length})` : ''}`}
             {t === 'faqs' && `FAQs (${faqs.length})`}
           </button>
         ))}
@@ -246,9 +245,19 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
         </div>
       )}
 
-      {/* Pricing */}
+      {/* Pricing & Options (merged) */}
       {tab === 'pricing' && (
-        <div className="max-w-5xl rounded-lg border border-neutral-200 bg-white p-6">
+        <div className="max-w-5xl space-y-6">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+            <strong>How pricing works:</strong> Simple products use only the <em>quantity tiers matrix</em> below.
+            Complex products (with size/material/color variants that change price) add <em>configurator steps</em> — each option's{' '}
+            <code className="rounded bg-white px-1 py-0.5 font-mono">price_formula</code> overrides the matrix.
+          </div>
+
+          {/* Section 1: matrix */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <h3 className="mb-1 text-sm font-bold text-ink">1. Quantity tiers & base pricing</h3>
+            <p className="mb-4 text-xs text-neutral-500">The price ladder shown on the product page. Columns are variants (e.g. Matte / Glossy). Prices in S$.</p>
           <div className="mb-4 grid gap-4 md:grid-cols-[1fr_auto]">
             <Field label="Dimension label (e.g. Size, Material, Color)">
               <input value={pricingLabel} onChange={(e) => setPricingLabel(e.target.value)} className={inputCls} />
@@ -324,12 +333,19 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
             className="mt-3 flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
             <Plus size={12} /> Add row
           </button>
-        </div>
-      )}
+          </div>
 
-      {/* Configurator */}
-      {tab === 'configurator' && (
-        <ConfiguratorEditor steps={configurator} setSteps={setConfigurator} />
+          {/* Section 2: configurator */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <h3 className="mb-1 text-sm font-bold text-ink">2. Product options (configurator steps)</h3>
+            <p className="mb-4 text-xs text-neutral-500">
+              Optional. Add interactive options (size, material, color, quantity input). Each option can override the base price via a formula using{' '}
+              <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono">qty</code>, <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono">+ - * /</code>, parentheses, and{' '}
+              <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono">Math.min/max</code>. Leave blank to use the matrix price.
+            </p>
+            <ConfiguratorEditor steps={configurator} setSteps={setConfigurator} />
+          </div>
+        </div>
       )}
 
       {/* FAQs */}
