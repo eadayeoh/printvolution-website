@@ -6245,6 +6245,9 @@ function shopSearch(q) {
 }
 
 
+// -- Export depth-3 scoped functions to window --
+window.renderProductPage = renderProductPage;
+
 // -- ADMIN --
 var _aH = '2926a2731f4b312c08982cacf8061eb14bf65c1a87cc5d70e864e079c6220731';
 function _ck(v){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')})}
@@ -6799,6 +6802,15 @@ function admTab(tab, el) {
  if (tab === 'pages') { admBuildFaqList(); renderNav();
   pgInitHomepage(); pgInitAbout(); }
 }
+
+// -- Export scoped functions to window for inline onclick handlers --
+window.go = go; window.goProduct = goProduct; window.goSub = goSub;
+window.admTab = admTab; window.buildShopGrid = buildShopGrid;
+window.navToggle = navToggle; window.navClose = navClose;
+window.closeMega = closeMega; window.addToCart = addToCart;
+window.ppFaq = ppFaq; window.pp3SelectCol = pp3SelectCol; window.pp3SelectRow = pp3SelectRow;
+window.ftToggle = ftToggle; window.updateCartCount = updateCartCount;
+window.adminLogin = adminLogin; window.adminLogout = adminLogout;
 
 // -- Also support old admShowSection calls --
 function admShowSection(s, el) {
