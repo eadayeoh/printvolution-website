@@ -87,3 +87,66 @@ export async function saveNavigation(items: z.infer<typeof NavItemSchema>[]) {
   revalidatePath('/', 'layout');
   return { ok: true };
 }
+
+// Mega menu editor — save sections and their items for a given menu_key
+const MegaItemSchema = z.object({
+  product_slug: z.string().min(1),
+  label: z.string().min(1),
+});
+const MegaSectionSchema = z.object({
+  section_heading: z.string().min(1),
+  items: z.array(MegaItemSchema),
+});
+
+export async function saveMegaMenu(
+  menuKey: string,
+  sections: z.infer<typeof MegaSectionSchema>[]
+) {
+  const sb = adminClient();
+
+  // Fetch existing section IDs for this menu (we'll wipe them via cascade)
+  const { data: existing } = await sb
+    .from('mega_menus')
+    .select('id')
+    .eq('menu_key', menuKey);
+
+  if (existing && existing.length > 0) {
+    const ids = existing.map((r: any) => r.id);
+    // Delete items first (FK), then sections
+    await sb.from('mega_menu_items').delete().in('mega_menu_id', ids);
+    await sb.from('mega_menus').delete().in('id', ids);
+  }
+
+  // Insert sections in order
+  for (let i = 0; i < sections.length; i++) {
+    const sec = sections[i];
+    const { data: inserted, error: sErr } = await sb
+      .from('mega_menus')
+      .insert({
+        menu_key: menuKey,
+        section_heading: sec.section_heading,
+        column_index: 0,
+        display_order: i,
+      })
+      .select('id')
+      .single();
+
+    if (sErr || !inserted) {
+      return { ok: false, error: `Section "${sec.section_heading}" failed: ${sErr?.message}` };
+    }
+
+    if (sec.items.length > 0) {
+      const itemRows = sec.items.map((it, j) => ({
+        mega_menu_id: inserted.id,
+        product_slug: it.product_slug,
+        label: it.label,
+        display_order: j,
+      }));
+      const { error: iErr } = await sb.from('mega_menu_items').insert(itemRows);
+      if (iErr) return { ok: false, error: `Items for "${sec.section_heading}" failed: ${iErr.message}` };
+    }
+  }
+
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
