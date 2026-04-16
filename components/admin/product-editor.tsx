@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { FormulaBuilder } from '@/components/admin/formula-builder';
 import type { ProductDetail } from '@/lib/data/products';
 import { formatSGD } from '@/lib/utils';
 
@@ -169,21 +170,29 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           </Field>
           <div>
             <div className="mb-1 text-xs font-bold text-ink">Specs</div>
+            <p className="mb-2 text-[11px] text-neutral-500">
+              Two columns: the <strong>Label</strong> (e.g. Sizes, Paper, Turnaround) and the <strong>Value</strong> (e.g. &quot;A4, A5, DL&quot;, &quot;Gloss Art Paper&quot;, &quot;3-5 working days&quot;).
+            </p>
+            <div className="mb-1 grid grid-cols-[200px_1fr_36px] gap-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+              <div>Label</div>
+              <div>Value</div>
+              <div />
+            </div>
             {specs.map((s, i) => (
-              <div key={i} className="mb-2 flex gap-2">
+              <div key={i} className="mb-2 grid grid-cols-[200px_1fr_36px] gap-2 items-center">
                 <input
                   value={s.label}
                   onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                  placeholder="Label"
-                  className={`${inputCls} w-40`}
+                  placeholder="Sizes"
+                  className={inputCls}
                 />
                 <input
                   value={s.value}
                   onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
-                  placeholder="Value"
-                  className={`${inputCls} flex-1`}
+                  placeholder="A4, A5, DL (99×210mm)"
+                  className={inputCls}
                 />
-                <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} className="text-red-600 hover:text-red-700">
+                <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -436,41 +445,41 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
           {(s.type === 'swatch' || s.type === 'select') && (
             <div>
               <div className="mb-2 text-[11px] font-bold text-neutral-500">Options:</div>
-              <div className="space-y-1">
+              <div className="space-y-3">
                 {(s.options ?? []).map((opt, oi) => (
-                  <div key={oi} className="flex gap-1">
-                    <input
-                      value={opt.slug}
-                      onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, slug: e.target.value } : x) })}
-                      placeholder="slug"
-                      className={`${inputCls} w-24 font-mono text-[11px]`}
-                    />
-                    <input
-                      value={opt.label}
-                      onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, label: e.target.value } : x) })}
-                      placeholder="Label"
-                      className={`${inputCls} flex-1`}
-                    />
-                    <input
-                      value={opt.note ?? ''}
-                      onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, note: e.target.value } : x) })}
-                      placeholder="Note"
-                      className={`${inputCls} w-32`}
-                    />
-                    <input
+                  <div key={oi} className="rounded border border-neutral-200 bg-neutral-50/50 p-3">
+                    <div className="mb-2 grid grid-cols-[120px_1fr_180px_32px] gap-2">
+                      <input
+                        value={opt.slug}
+                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, slug: e.target.value } : x) })}
+                        placeholder="slug"
+                        className={`${inputCls} font-mono text-[11px]`}
+                      />
+                      <input
+                        value={opt.label}
+                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, label: e.target.value } : x) })}
+                        placeholder="Label (e.g. 85cm × 200cm)"
+                        className={inputCls}
+                      />
+                      <input
+                        value={opt.note ?? ''}
+                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, note: e.target.value } : x) })}
+                        placeholder='Note (e.g. "Most popular")'
+                        className={inputCls}
+                      />
+                      <button type="button" onClick={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
+                        className="justify-self-center text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
+                    </div>
+                    <FormulaBuilder
                       value={opt.price_formula ?? ''}
-                      onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, price_formula: e.target.value } : x) })}
-                      placeholder="price_formula"
-                      className={`${inputCls} w-48 font-mono text-[11px]`}
+                      onChange={(formula) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, price_formula: formula } : x) })}
                     />
-                    <button type="button" onClick={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
-                      className="text-red-600 hover:text-red-700"><Trash2 size={12} /></button>
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={() => update(i, { options: [...(s.options ?? []), { slug: 'new', label: 'New', price_formula: '0' }] })}
-                className="mt-2 flex items-center gap-1 rounded border border-neutral-200 px-2 py-0.5 text-[11px] font-bold text-ink hover:border-ink">
-                <Plus size={10} /> Add option
+              <button type="button" onClick={() => update(i, { options: [...(s.options ?? []), { slug: 'new', label: 'New option', price_formula: '' }] })}
+                className="mt-3 flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
+                <Plus size={12} /> Add option
               </button>
             </div>
           )}
