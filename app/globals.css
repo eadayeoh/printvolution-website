@@ -42,6 +42,14 @@
   }
 }
 
+/* Override hero background images — use local assets instead of picsum */
+.hero-print .hero-side-img {
+  background-image: url('/images/name-card.webp') !important;
+}
+.hero-gifts .hero-side-img {
+  background-image: url('/images/custom-keychain.webp') !important;
+}
+
 /* Checkout form inputs */
 .pv-checkout-input {
   width: 100%;

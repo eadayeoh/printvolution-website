@@ -1,13 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Menu, ShoppingCart, Settings, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import type { NavItem, MegaMenuSection, ProductLookup } from '@/lib/data/navigation-types';
 import { productHref } from '@/lib/data/navigation-types';
-import { useEffect, useState as useStateReact } from 'react';
 
 type Props = {
   nav: NavItem[];
@@ -19,8 +18,24 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMega, setOpenMega] = useState<string | null>(null);
   const count = useCart((s) => s.count());
-  const [mounted, setMounted] = useStateReact(false);
+  const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Delay-based hover: close after 200ms of no pointer on nav OR dropdown.
+  // Cancelled if pointer re-enters either → prevents flicker when moving
+  // from the menu button to the dropdown across the gap.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function openKey(key: string) {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpenMega(key);
+  }
+  function scheduleClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpenMega(null), 200);
+  }
+  function cancelClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }
 
   return (
     <>
@@ -32,22 +47,24 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
         {/* Desktop nav */}
         <div
           className="relative hidden items-center gap-1 lg:flex"
-          onMouseLeave={() => setOpenMega(null)}
+          onMouseLeave={scheduleClose}
+          onMouseEnter={cancelClose}
         >
           {nav.map((item, i) => {
             if (item.type === 'sep') {
               return <span key={i} className="mx-2 h-4 w-px bg-neutral-300" />;
             }
             if (item.type === 'dropdown' && item.mega_key) {
+              const key = item.mega_key;
               return (
                 <button
                   key={i}
                   className={cn(
                     'rounded-full px-4 py-2 text-[13px] font-semibold text-neutral-700 transition-colors hover:text-pink',
-                    openMega === item.mega_key && 'text-pink'
+                    openMega === key && 'text-pink'
                   )}
-                  onMouseEnter={() => setOpenMega(item.mega_key)}
-                  onClick={() => setOpenMega(openMega === item.mega_key ? null : item.mega_key)}
+                  onMouseEnter={() => openKey(key)}
+                  onClick={() => setOpenMega(openMega === key ? null : key)}
                 >
                   {item.label} ▾
                 </button>
@@ -95,15 +112,20 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
         </div>
       </nav>
 
-      {/* Mega menu (desktop) */}
+      {/* Mega menu (desktop) — sits right under the 62px nav with a
+          2px transparent bridge to catch the mouse when moving from the button. */}
       {openMega && mega[openMega] && (
         <div
-          className="fixed left-0 right-0 top-[62px] z-40 hidden border-b border-pink/20 bg-white shadow-2xl lg:block"
-          onMouseEnter={() => setOpenMega(openMega)}
-          onMouseLeave={() => setOpenMega(null)}
+          className="fixed left-0 right-0 top-[60px] z-40 hidden border-b border-pink/20 bg-white shadow-2xl lg:block"
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          style={{ paddingTop: 2 }}
         >
           <div className="mx-auto max-w-7xl px-8 py-8">
-            <div className="grid gap-8" style={{ gridTemplateColumns: `repeat(${Math.min(mega[openMega].length, 4)}, minmax(0, 1fr))` }}>
+            <div
+              className="grid gap-8"
+              style={{ gridTemplateColumns: `repeat(${Math.min(mega[openMega].length, 4)}, minmax(0, 1fr))` }}
+            >
               {mega[openMega].map((section) => (
                 <div key={section.id}>
                   <h4 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-pink">
