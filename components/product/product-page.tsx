@@ -20,7 +20,10 @@ export function ProductPage({ product, productRoutes }: Props) {
   const router = useRouter();
   const addToCart = useCart((s) => s.add);
 
-  const [colIdx, setColIdx] = useState(0);
+  // colIdx is only used for the price-ladder + matrix fallback. If the
+  // configurator has a 'size' step, it's derived from that selection; otherwise
+  // it's a manual state (rare — only for products without a size step).
+  const [manualColIdx, setManualColIdx] = useState(0);
   const [rowIdx, setRowIdx] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [designFilesUrl, setDesignFilesUrl] = useState('');
@@ -46,6 +49,21 @@ export function ProductPage({ product, productRoutes }: Props) {
     if (!qtyStep) return 1;
     return parseInt(cfgState[qtyStep.step_id] || '1', 10) || 1;
   }, [visibleSteps, cfgState]);
+
+  // Derive colIdx from the configurator's "size" step if present.
+  // This keeps the price ladder (which uses pricing.rows columns) in sync with
+  // the user's configurator selection.
+  const colIdx = useMemo(() => {
+    const sizeStep = visibleSteps.find(
+      (s) => (s.type === 'swatch' || s.type === 'select') && /size|dimension/i.test(s.label)
+    ) || visibleSteps.find((s) => s.type === 'swatch' && s.options.length > 1);
+    if (sizeStep && product.pricing) {
+      const selected = cfgState[sizeStep.step_id];
+      const idx = sizeStep.options.findIndex((o) => o.slug === selected);
+      if (idx >= 0 && idx < product.pricing.configs.length) return idx;
+    }
+    return manualColIdx;
+  }, [visibleSteps, cfgState, product.pricing, manualColIdx]);
 
   // Core pricing engine — sums formula-based options, falls back to matrix
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number): {
@@ -323,54 +341,8 @@ export function ProductPage({ product, productRoutes }: Props) {
               Configure your order
             </div>
 
-            {/* Size/primary dimension (uses pricing.configs) */}
-            {product.pricing && product.pricing.configs.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#0a0a0a', marginBottom: 10 }}>
-                  {product.pricing.label} <span style={{ color: '#E91E8C' }}>*</span>
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {product.pricing.configs.map((cfg, i) => {
-                    const firstRow = product.pricing?.rows[0];
-                    const price = firstRow?.prices[i];
-                    const isActive = i === colIdx;
-                    // Show "Most popular" / "Standard" badge based on position heuristic
-                    const badge = product.pricing && i === Math.floor(product.pricing.configs.length / 2) && product.pricing.configs.length > 1 ? 'Most popular' : null;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setColIdx(i)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 10,
-                          padding: '12px 20px', borderRadius: 8,
-                          border: `2px solid ${isActive ? '#E91E8C' : '#e5e5e5'}`,
-                          background: '#fff', cursor: 'pointer',
-                          fontFamily: 'var(--sans)',
-                        }}
-                      >
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0a0a0a' }}>{cfg}</span>
-                        {typeof price === 'number' && (
-                          <span style={{ fontSize: 12, color: isActive ? '#E91E8C' : '#888', fontWeight: 700 }}>
-                            {formatSGD(price)}
-                          </span>
-                        )}
-                        {badge && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase',
-                            color: '#E91E8C', marginLeft: 4,
-                          }}>
-                            {badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Other configurator steps */}
+            {/* Configurator steps (single source of truth). For each swatch/select
+                option that has a price_formula, show its price at current qty inline. */}
             {visibleSteps.map((step) => {
               if (step.type === 'qty') return null; // qty rendered separately below
               return (
@@ -383,6 +355,12 @@ export function ProductPage({ product, productRoutes }: Props) {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {step.options.map((opt, oi) => {
                         const isActive = cfgState[step.step_id] === opt.slug;
+                        // Compute this option's price at current qty for inline label
+                        const optPrice = opt.price_formula
+                          ? evaluateFormula(opt.price_formula, { qty, base: 0 })
+                          : null;
+                        // Show price only if > 0 (skip 'add-on' options with price 0)
+                        const showPrice = optPrice !== null && optPrice > 0;
                         return (
                           <button
                             key={opt.slug}
@@ -397,6 +375,11 @@ export function ProductPage({ product, productRoutes }: Props) {
                             }}
                           >
                             <span style={{ fontSize: 13, fontWeight: 700, color: '#0a0a0a' }}>{opt.label}</span>
+                            {showPrice && (
+                              <span style={{ fontSize: 12, color: isActive ? '#E91E8C' : '#888', fontWeight: 700 }}>
+                                {formatSGD(optPrice)}
+                              </span>
+                            )}
                             {opt.note && (
                               <span style={{
                                 fontSize: 9, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase',
@@ -509,9 +492,6 @@ export function ProductPage({ product, productRoutes }: Props) {
                 </div>
 
                 <dl style={{ padding: '14px 22px 4px', margin: 0 }}>
-                  {product.pricing && (
-                    <Row label={product.pricing.label} value={product.pricing.configs[colIdx] ?? '-'} />
-                  )}
                   {visibleSteps.filter((s) => s.type !== 'qty').map((step) => {
                     const val = cfgState[step.step_id];
                     if (!val) return null;

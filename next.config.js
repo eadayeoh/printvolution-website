@@ -6,7 +6,12 @@ const nextConfig = {
       { protocol: 'https', hostname: 'picsum.photos' },
     ],
   },
-  // Bust any cached .html URLs from the old static site
+  experimental: {
+    serverActions: {
+      // Allow up to 10MB uploads (default is 1MB) for product images
+      bodySizeLimit: '10mb',
+    },
+  },
   async redirects() {
     return [
       { source: '/index.html', destination: '/', permanent: true },
@@ -21,8 +26,6 @@ const nextConfig = {
       { source: '/admin.html', destination: '/admin', permanent: true },
       { source: '/staff.html', destination: '/staff', permanent: true },
       { source: '/login.html', destination: '/login', permanent: true },
-      // Old /product/...category.../slug/ URLs: Next.js already handles this
-      // same URL shape via [category]/[...slug]/page.tsx, so no redirect needed.
     ];
   },
 };
