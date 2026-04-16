@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { formatSGD } from '@/lib/utils';
+import { ProductIcon } from '@/components/product/product-icon';
 
 type Item = {
   slug: string;
@@ -140,7 +141,11 @@ export function ShopClient({ items, categories, initialCategory, initialGift, in
                 {group.items.map((p) => (
                   <Link key={p.slug} href={p.href} className="pvshop-card">
                     <div className="pvshop-card-img">
-                      <div className="ph" style={{ fontSize: 52 }}>{p.icon ?? '📦'}</div>
+                      {p.icon && (p.icon.startsWith('http') || p.icon.startsWith('/')) ? (
+                        <img src={p.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div className="ph" style={{ fontSize: 52 }}>{p.icon ?? '📦'}</div>
+                      )}
                     </div>
                     <div className="pvshop-card-body">
                       <span className="pv-cat">{p.category_name}</span>

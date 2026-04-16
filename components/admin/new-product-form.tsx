@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createProduct } from '@/app/admin/products/actions';
+import { ImageUpload } from '@/components/admin/image-upload';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -10,7 +11,7 @@ export function NewProductForm({ categories }: { categories: Cat[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('📦');
+  const [icon, setIcon] = useState('');
   const [categoryId, setCategoryId] = useState(categories.find((c) => !c.parent_id)?.id ?? '');
   const [subcategoryId, setSubcategoryId] = useState<string>('');
   const [isGift, setIsGift] = useState(false);
@@ -25,7 +26,7 @@ export function NewProductForm({ categories }: { categories: Cat[] }) {
     startTransition(async () => {
       const result = await createProduct({
         name,
-        icon,
+        icon: icon || undefined,
         category_id: categoryId,
         subcategory_id: subcategoryId || null,
         is_gift: isGift,
@@ -44,8 +45,8 @@ export function NewProductForm({ categories }: { categories: Cat[] }) {
       <Field label="Product name">
         <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} placeholder="e.g. Premium Name Card" />
       </Field>
-      <Field label="Icon (emoji)">
-        <input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={4} className={`${inputCls} w-24 text-center text-xl`} />
+      <Field label="Thumbnail image">
+        <ImageUpload value={icon} onChange={setIcon} prefix="product" label="Thumbnail" />
       </Field>
       <Field label="Category">
         <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); }} required className={inputCls}>

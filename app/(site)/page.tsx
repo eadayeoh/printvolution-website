@@ -156,7 +156,13 @@ export default async function HomePage() {
                   href={productHref(slug, routes)}
                   className="cat-card"
                 >
-                  <span className="cc-ic">{p.icon ?? '📦'}</span>
+                  {p.icon && (p.icon.startsWith('http') || p.icon.startsWith('/')) ? (
+                    <span className="cc-ic" style={{ padding: 0 }}>
+                      <img src={p.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </span>
+                  ) : (
+                    <span className="cc-ic">{p.icon ?? '📦'}</span>
+                  )}
                   <div className="cc-cat">{meta?.cat ?? p.category?.name ?? 'Print'}</div>
                   <div className="cc-name">{p.name}</div>
                   <div className="cc-tags">

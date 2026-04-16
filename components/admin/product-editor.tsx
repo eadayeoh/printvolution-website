@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { updateProduct } from '@/app/admin/products/actions';
+import { ImageUpload } from '@/components/admin/image-upload';
 import type { ProductDetail } from '@/lib/data/products';
 import { formatSGD } from '@/lib/utils';
 
@@ -137,14 +138,12 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
       {/* Basics */}
       {tab === 'basics' && (
         <div className="grid max-w-4xl gap-5 rounded-lg border border-neutral-200 bg-white p-6">
-          <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-            <Field label="Product name">
-              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Icon">
-              <input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={4} className={`${inputCls} w-24 text-center text-xl`} />
-            </Field>
-          </div>
+          <Field label="Product name">
+            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Thumbnail image">
+            <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} label="Thumbnail" />
+          </Field>
           <Field label="Tagline (1-line hook)">
             <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
           </Field>
@@ -241,8 +240,8 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           <Field label="Trust chips (one per line, shown in hero)">
             <textarea value={chips} onChange={(e) => setChips(e.target.value)} rows={3} className={inputCls} />
           </Field>
-          <Field label="Hero image URL">
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputCls} placeholder="https://..." />
+          <Field label="Hero image (shown on product page hero)">
+            <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} label="Hero image" size="lg" />
           </Field>
         </div>
       )}
