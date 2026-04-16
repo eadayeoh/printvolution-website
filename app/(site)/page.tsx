@@ -3,6 +3,13 @@ import { listProducts } from '@/lib/data/products';
 import { listBundles } from '@/lib/data/bundles';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { formatSGD } from '@/lib/utils';
+import { LocalBusinessSchema } from '@/components/seo/json-ld';
+
+export const metadata = {
+  title: 'Printvolution | Printing Services Singapore · Name Cards, Flyers, Banners & Gifts',
+  description: 'Printing services Singapore at Paya Lebar Square. Name cards from $28, flyers, banners, custom embroidery, personalised gifts, NFC business cards. WhatsApp for instant quote. Same-day express available.',
+  alternates: { canonical: 'https://printvolution.sg/' },
+};
 
 const FEATURED_SLUGS = [
   'name-card', 'flyers', 'roll-up-banner', 'acrylic-signage',
@@ -70,6 +77,7 @@ export default async function HomePage() {
 
   return (
     <div className="screen active" id="screen-home">
+      <LocalBusinessSchema />
       {/* HERO */}
       <div className="hero pv-hero-split">
         <div className="hero-bg-grid" />
