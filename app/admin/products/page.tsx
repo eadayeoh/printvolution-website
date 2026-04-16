@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { StatusBadge } from '@/components/admin/status-badge';
+import { ProductRowActions } from '@/components/admin/product-row-actions';
 
 export const metadata = { title: 'Products' };
 
@@ -12,7 +12,7 @@ export default async function AdminProducts() {
       id, slug, name, icon, is_active, is_gift, sort_order,
       category:categories!products_category_id_fkey(name)
     `)
-    .order('sort_order');
+    .order('name');
 
   const rows = ((data ?? []) as any[]);
 
@@ -23,6 +23,12 @@ export default async function AdminProducts() {
           <h1 className="text-2xl font-black text-ink">Products</h1>
           <p className="text-sm text-neutral-500">{rows.length} products</p>
         </div>
+        <Link
+          href="/admin/products/new"
+          className="rounded-full bg-pink px-4 py-2 text-xs font-bold text-white hover:bg-pink-dark"
+        >
+          + New Product
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
@@ -33,6 +39,7 @@ export default async function AdminProducts() {
               <th className="px-4 py-3 text-left">Category</th>
               <th className="px-4 py-3 text-center">Gift</th>
               <th className="px-4 py-3 text-center">Active</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -41,13 +48,13 @@ export default async function AdminProducts() {
               return (
                 <tr key={p.id} className="hover:bg-neutral-50">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/admin/products/${p.slug}`} className="flex items-center gap-3 group">
                       <span className="text-xl">{p.icon ?? '📦'}</span>
                       <div>
-                        <div className="font-bold text-ink">{p.name}</div>
+                        <div className="font-bold text-ink group-hover:text-pink">{p.name}</div>
                         <div className="text-[11px] text-neutral-500">{p.slug}</div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-xs text-neutral-600">{cat?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-center">
@@ -64,16 +71,15 @@ export default async function AdminProducts() {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <ProductRowActions slug={p.slug} name={p.name} isActive={p.is_active} />
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-
-      <p className="mt-4 text-xs text-neutral-500">
-        Product editing (name, description, pricing, configurator, FAQs) is built in Phase 6.
-      </p>
     </div>
   );
 }
