@@ -1,14 +1,23 @@
 /**
- * Supabase database types. Will be auto-generated via:
- *   npx supabase gen types typescript --project-id YOUR_PROJECT > types/database.ts
+ * Supabase database types — placeholder until we run:
+ *   npx supabase login
+ *   npx supabase gen types typescript --project-id zblzeztisjzjcnvarwcw > types/database.ts
  *
- * This is a placeholder stub until the Supabase project is created (Phase 1).
+ * Loose typing for now — works fine for queries, just no autocomplete on column names.
+ * Will be replaced with strict generated types in a follow-up.
  */
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+
 export type Database = {
   public: {
-    Tables: Record<string, { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> }>;
-    Views: Record<string, { Row: Record<string, unknown> }>;
-    Functions: Record<string, never>;
+    Tables: Record<string, {
+      Row: Record<string, Json>;
+      Insert: Record<string, Json>;
+      Update: Record<string, Json>;
+    }>;
+    Views: Record<string, { Row: Record<string, Json> }>;
+    Functions: Record<string, { Args: Record<string, Json>; Returns: Json }>;
     Enums: Record<string, string>;
+    CompositeTypes: Record<string, never>;
   };
 };

@@ -36,3 +36,6 @@ next-env.d.ts
 
 # Supabase
 supabase/.temp
+
+# Extracted legacy data — regenerate with `node scripts/extract-legacy-data.mjs`
+/data/
