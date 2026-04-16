@@ -1,8 +1,0 @@
-User-agent: *
-Disallow: /
-Disallow: /admin.html
-Disallow: /staff.html
-Disallow: /login.html
-Disallow: /cart.html
-Disallow: /checkout.html
-Sitemap: https://printvolution.sg/sitemap.xml

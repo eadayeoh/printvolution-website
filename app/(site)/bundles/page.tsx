@@ -28,9 +28,9 @@ export default async function BundlesPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           {bundles.map((b) => {
-            const savings = b.original_price_cents - b.price_cents;
-            const savingsPct = b.original_price_cents > 0
-              ? Math.round((savings / b.original_price_cents) * 100)
+            const savings = b.discount_cents;
+            const savingsPct = b.subtotal_cents > 0
+              ? Math.round((savings / b.subtotal_cents) * 100)
               : 0;
             return (
               <Link
@@ -48,7 +48,7 @@ export default async function BundlesPage() {
                   <span className="text-4xl font-black text-pink">{formatSGD(b.price_cents)}</span>
                   {savings > 0 && (
                     <>
-                      <span className="text-sm text-neutral-400 line-through">{formatSGD(b.original_price_cents)}</span>
+                      <span className="text-sm text-neutral-400 line-through">{formatSGD(b.subtotal_cents)}</span>
                       <span className="rounded bg-yellow-brand px-2 py-0.5 text-[10px] font-bold text-ink">
                         Save {savingsPct}%
                       </span>

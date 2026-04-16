@@ -184,11 +184,11 @@ export default async function HomePage() {
                   {b.description && <p className="mb-4 text-sm text-neutral-600">{b.description}</p>}
                   <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-black text-pink">{formatSGD(b.price_cents)}</span>
-                    {b.original_price_cents > b.price_cents && (
+                    {b.discount_cents > 0 && (
                       <>
-                        <span className="text-sm text-neutral-400 line-through">{formatSGD(b.original_price_cents)}</span>
+                        <span className="text-sm text-neutral-400 line-through">{formatSGD(b.subtotal_cents)}</span>
                         <span className="rounded bg-yellow-brand px-2 py-0.5 text-[10px] font-bold text-ink">
-                          Save {formatSGD(b.original_price_cents - b.price_cents)}
+                          Save {formatSGD(b.discount_cents)}
                         </span>
                       </>
                     )}
