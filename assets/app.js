@@ -6803,14 +6803,55 @@ function admTab(tab, el) {
   pgInitHomepage(); pgInitAbout(); }
 }
 
-// -- Export scoped functions to window for inline onclick handlers --
+// -- Export ALL scoped functions to window for inline onclick handlers --
+// Navigation & UI
 window.go = go; window.goProduct = goProduct; window.goSub = goSub;
-window.admTab = admTab; window.buildShopGrid = buildShopGrid;
 window.navToggle = navToggle; window.navClose = navClose;
-window.closeMega = closeMega; window.addToCart = addToCart;
-window.ppFaq = ppFaq; window.pp3SelectCol = pp3SelectCol; window.pp3SelectRow = pp3SelectRow;
-window.ftToggle = ftToggle; window.updateCartCount = updateCartCount;
+window.closeMega = closeMega; window.megaToggle = megaToggle;
+window.renderNav = renderNav; window.faqToggle = faqToggle;
+window.ftToggle = ftToggle; window.shopFilter = shopFilter;
+window.buildShopGrid = buildShopGrid; window.updateCartCount = updateCartCount;
+// Product & Cart
+window.addToCart = addToCart; window.ppFaq = ppFaq;
+window.pp3SelectCol = pp3SelectCol; window.pp3SelectRow = pp3SelectRow;
+window.placeOrder = placeOrder; window.submitForm = submitForm;
+window.setDelivery = setDelivery;
+// Auth
 window.adminLogin = adminLogin; window.adminLogout = adminLogout;
+// Staff
+window.sfKey = sfKey; window.sfLoad = sfLoad; window.sfLogout = sfLogout; window.sfSetTab = sfSetTab;
+// Members & Points
+window.ptsLookup = ptsLookup; window.memLookup = memLookup;
+window.ptsApplyRedeem = ptsApplyRedeem; window.ptsLookupReset = ptsLookupReset;
+// Admin tabs & core
+window.admTab = admTab; window.admShowSection = admShowSection;
+window.admBuildProdList = admBuildProdList; window.admLoadOrders = admLoadOrders;
+window.admLoadDashboard = admLoadDashboard; window.admProdTypeFilter = admProdTypeFilter;
+window.admExportOrders = admExportOrders; window.admExportCustomers = admExportCustomers;
+window.admExportSupabase = admExportSupabase;
+// Admin pages
+window.pgSubTab = pgSubTab; window.pgAddPainCard = pgAddPainCard;
+window.pgAddContactMethod = pgAddContactMethod;
+window.admSavePages = admSavePages; window.admSaveNav = admSaveNav;
+window.admNavAdd = admNavAdd; window.admAddFaqItem = admAddFaqItem;
+window.admMenuTab = admMenuTab; window.admMenuAddSection = admMenuAddSection;
+window.admSaveMenus = admSaveMenus; window.admSaveChipDefaults = admSaveChipDefaults;
+// Admin promos & coupons
+window.admAddCoupon = admAddCoupon; window.admAddDiscRule = admAddDiscRule;
+window.admApplyPtsAdj = admApplyPtsAdj; window.admClosePtsModal = admClosePtsModal;
+window.admSavePtsConfig = admSavePtsConfig;
+// Admin bundles
+window.admOpenBundleBuilder = admOpenBundleBuilder; window.admCloseBundleBuilder = admCloseBundleBuilder;
+window.admSaveBundle = admSaveBundle; window.admDeleteBundle = admDeleteBundle;
+window.admAddBundleSlot = admAddBundleSlot;
+// Admin template editor
+window.admSaveTplEditor = admSaveTplEditor; window.admCloseTplEditor = admCloseTplEditor;
+window.admTplAddField = admTplAddField; window.admTplDeleteSelected = admTplDeleteSelected;
+window.admTplSetBleed = admTplSetBleed; window.admTplSetUnit = admTplSetUnit;
+window.admTplTogglePrintSetup = admTplTogglePrintSetup;
+// Admin images
+window.imglibCloseTagModal = imglibCloseTagModal; window.imglibDeleteImg = imglibDeleteImg;
+window.imglibSaveTags = imglibSaveTags;
 
 // -- Also support old admShowSection calls --
 function admShowSection(s, el) {
