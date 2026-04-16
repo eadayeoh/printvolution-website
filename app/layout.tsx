@@ -15,6 +15,14 @@ export const metadata: Metadata = {
     locale: 'en_SG',
   },
   twitter: { card: 'summary_large_image' },
+  // SITE IS UNDER CONSTRUCTION — block all search engines until launch.
+  // To re-enable indexing later, remove the `robots` field below AND update
+  // /app/robots.ts to allow crawling.
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

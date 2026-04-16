@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Ticket,
-  FileText, LogOut, Layers, ExternalLink,
+  FileText, LogOut, Layers, ExternalLink, Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -22,6 +22,7 @@ const NAV = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/bundles', label: 'Bundles', icon: Layers },
+  { href: '/admin/blog', label: 'Blog', icon: Newspaper },
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/promos', label: 'Promos', icon: Ticket },
   { href: '/admin/members', label: 'Members', icon: Users },
