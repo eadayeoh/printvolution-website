@@ -803,6 +803,12 @@ export function ProductPage({ product, productRoutes }: Props) {
       </section>
 
       <style jsx>{`
+        /* Defensive: guarantee dark hero regardless of cached CSS */
+        .pp3 .pp3-hero { background: #0d0d1a !important; color: #fff !important; }
+        .pp3 .pp3-hero h1 { color: #fff !important; }
+        .pp3 .pp3-hero em { color: rgba(255,255,255,0.85) !important; }
+        .pp3 .pp3-hero p { color: rgba(255,255,255,0.72) !important; }
+        .pp3 .pp3-hero nav a { color: rgba(255,255,255,0.55) !important; }
         @media (max-width: 960px) {
           .pp3-hero-inner { grid-template-columns: 1fr !important; gap: 40px !important; padding: 48px 24px 56px !important; }
           .pp3-pricing-layout { grid-template-columns: 1fr !important; gap: 32px !important; }
