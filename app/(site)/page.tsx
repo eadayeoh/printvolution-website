@@ -1,230 +1,331 @@
 import Link from 'next/link';
-import { getPageContent, getContactMethods } from '@/lib/data/page_content';
-import { listBundles } from '@/lib/data/bundles';
-import { listTopCategories } from '@/lib/data/categories';
 import { listProducts } from '@/lib/data/products';
+import { listBundles } from '@/lib/data/bundles';
+import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { formatSGD } from '@/lib/utils';
 
+const FEATURED_SLUGS = [
+  'name-card', 'flyers', 'roll-up-banner', 'acrylic-signage',
+  'polo-shirts', 'stickers', 'led-photo-frame', 'nfc-card',
+];
+const FEATURED_META: Record<string, { cat: string; tags: string[] }> = {
+  'name-card': { cat: 'Most Popular', tags: ['Matt', 'Gloss', 'Spot UV', 'Soft Touch'] },
+  'flyers': { cat: 'Advertising', tags: ['A4', 'A5', 'DL', 'Double-sided'] },
+  'roll-up-banner': { cat: 'Events & Display', tags: ['Stand Included', 'Carry Bag', '24h'] },
+  'acrylic-signage': { cat: 'Signage', tags: ['Shop Sign', 'Reception', 'Chrome Bolts'] },
+  'polo-shirts': { cat: 'Uniforms', tags: ['Embroidery', 'DTF Print', 'XS–3XL'] },
+  'stickers': { cat: 'Branding', tags: ['Die-Cut', 'Vinyl', 'Waterproof'] },
+  'led-photo-frame': { cat: 'Personalised Gifts', tags: ['Custom Photo', 'Gift Box', 'Glows'] },
+  'nfc-card': { cat: 'Smart Tech', tags: ['Tap to Share', 'Always Updated'] },
+};
+
+const MARQUEE = [
+  'Name Cards', 'Flyers', 'Roll-Up Banners', 'Stickers', 'Embroidery',
+  'Polo Shirts', 'UV DTF', 'NFC Cards', 'Booklets', 'Tote Bags',
+  'Acrylic Signs', 'Corporate Gifts', 'Wedding Gifts', 'LED Photo Frames',
+];
+
+const PAIN_POINTS = [
+  ['"My name cards look embarrassing."', '→ Premium cards from S$28. Matt, gloss, spot UV — cards people actually keep.'],
+  ['"Event is next week and I need banners now."', '→ 24-hour express available. Roll-up banner with stand from S$88. Done.'],
+  ['"Corporate gifts look generic every year."', '→ Personalised LED frames, engraved tumblers, custom necklaces — from S$22.'],
+  ['"My team uniform looks like it cost $5."', '→ Embroidered or DTF polo shirts from S$19/pc. Sizes XS to 3XL.'],
+  ['"I need 8 different things from 6 vendors."', '→ 90+ products. One shop. One invoice. Walk in or order online.'],
+  ['"Printer sent wrong colour. Again."', '→ Pre-press file check on every order. What you approve is what you get.'],
+];
+
+const STEPS = [
+  { n: '01', t: 'Pick your product', d: 'Browse 90+ products with live pricing. No hidden costs, no minimum order on most items.' },
+  { n: '02', t: 'Send your artwork', d: 'PDF, AI, or JPG. We run a pre-press check and flag any issues before printing starts.' },
+  { n: '03', t: 'We print and finish', d: 'Proofed, printed, quality-checked. Most jobs ready in 3–5 days. Express 24h available.' },
+  { n: '04', t: 'Collect or delivery', d: 'Walk in at Paya Lebar Square B1-35, or get it sent island-wide for +S$8 flat.' },
+];
+
+const WHY_US = [
+  { n: '01', t: 'File check before every print', d: 'We catch resolution issues, bleed problems, and colour mismatches before the job goes to press — not after.' },
+  { n: '02', t: 'One shop for everything', d: 'Name cards to LED photo frames to polo shirts. 90+ products, one invoice, one collection point.' },
+  { n: '03', t: 'Walk in or order online', d: 'Paya Lebar Square B1-35, Mon–Sat 10am–7.30pm. Or order online and we deliver island-wide.' },
+  { n: '04', t: 'Express 24h when you need it', d: 'Order before 12pm for same-day processing on most products. Events sneak up — we know.' },
+];
+
+const SEO_KW = [
+  { slug: 'name-card', label: 'Name Card Printing Singapore', loc: 'From S$28' },
+  { slug: 'flyers', label: 'Flyer Printing Singapore', loc: 'From S$65' },
+  { slug: 'roll-up-banner', label: 'Banner Printing Singapore', loc: 'From S$88' },
+  { slug: 'polo-shirts', label: 'Uniform & T-Shirt Printing', loc: 'From S$19/pc' },
+  { slug: 'acrylic-signage', label: 'Acrylic Signage Singapore', loc: 'From S$32' },
+  { slug: 'stickers', label: 'Sticker Printing Singapore', loc: 'From S$45' },
+  { slug: 'embroidery', label: 'Embroidery Singapore', loc: 'Custom pricing' },
+  { slug: null, label: 'Urgent Printing Singapore', loc: '24h Express' },
+];
+
 export default async function HomePage() {
-  const [homeContent, contacts, bundles, topCats, products] = await Promise.all([
-    getPageContent('home'),
-    getContactMethods(),
-    listBundles(),
-    listTopCategories(),
+  const [products, bundles, routes] = await Promise.all([
     listProducts(),
+    listBundles(),
+    getProductRoutes(),
   ]);
 
-  const pain = (homeContent.pain?.items ?? []) as Array<{ q: string; a: string }>;
-  const steps = (homeContent.steps?.items ?? []) as Array<{ title: string; desc: string }>;
-  const why = (homeContent.why?.items ?? []) as Array<{ title: string; desc: string; emoji?: string }>;
-
-  const whatsapp = contacts.find((c) => c.type === 'whatsapp');
-  const email = contacts.find((c) => c.type === 'email');
-
-  // Top categories with a sample product count
-  const productsByCat = new Map<string, number>();
-  for (const p of products) {
-    if (p.category) {
-      productsByCat.set(p.category.slug, (productsByCat.get(p.category.slug) ?? 0) + 1);
-    }
-  }
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
 
   return (
-    <>
-      {/* Split hero */}
-      <section className="grid min-h-[600px] lg:grid-cols-2">
-        <div className="relative flex items-center px-8 py-16 lg:px-16 lg:py-24">
-          <div className="max-w-lg">
-            <span className="mb-4 inline-block rounded-full border border-pink px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-pink">
-              01 / 02 · Print
-            </span>
-            <span className="mb-8 block w-fit rounded-full border border-pink px-3 py-1 text-[11px] font-bold text-pink">
-              Printing Services
-            </span>
-            <h1 className="mb-6 text-5xl font-black leading-[0.95] tracking-tight text-ink lg:text-7xl">
-              Print that
-              <br />
-              makes
-              <br />
-              <span className="text-pink">your brand</span>
-              <br />
-              <span className="text-pink">look</span>
-              <br />
-              <span className="text-pink">the part.</span>
-            </h1>
-            <p className="mb-8 border-l-2 border-pink pl-4 text-sm leading-relaxed text-neutral-600 lg:text-base">
-              Name cards, flyers, banners, uniforms, signage — all under one roof at Paya Lebar Square. File check on every job. Express 24h available.
+    <div className="screen active" id="screen-home">
+      {/* HERO */}
+      <div className="hero pv-hero-split">
+        <div className="hero-bg-grid" />
+        <div className="hero-side hero-print">
+          <div className="hero-side-img" />
+          <div className="hero-side-content">
+            <div className="hero-side-num">01 / 02 · PRINT</div>
+            <div className="hero-eyebrow">Printing Services</div>
+            <h1 className="hero-h">Print that makes<br /><em>your brand look<br />the part.</em></h1>
+            <p className="hero-sub">
+              Name cards, flyers, banners, uniforms, signage — all under one roof at Paya Lebar Square.
+              File check on every job. Express 24h available.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/shop" className="inline-flex items-center rounded-full bg-pink px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark">
-                Browse Printing
-              </Link>
-              {whatsapp && (
-                <a
-                  href={`https://wa.me/${whatsapp.value.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border-2 border-ink bg-white px-6 py-3 text-sm font-bold text-ink transition-colors hover:bg-ink hover:text-white"
-                >
-                  WhatsApp Us
-                </a>
-              )}
+            <div className="hero-btns">
+              <Link href="/shop" className="btn-primary">Browse Printing</Link>
+              <a href="https://wa.me/6585533497" target="_blank" rel="noopener noreferrer" className="btn-sec">WhatsApp Us</a>
+            </div>
+            <div className="hero-trust">
+              <span>24h Express</span>
+              <span>File Check</span>
+              <span>From S$28</span>
             </div>
           </div>
         </div>
-
-        <div className="relative flex items-center bg-ink px-8 py-16 text-white lg:px-16 lg:py-24">
-          <div className="max-w-lg">
-            <span className="mb-4 inline-block rounded-full border border-yellow-brand px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-yellow-brand">
-              02 / 02 · Gifts
-            </span>
-            <span className="mb-8 block w-fit rounded-full border border-yellow-brand px-3 py-1 text-[11px] font-bold text-yellow-brand">
-              Personalised Gifts
-            </span>
-            <h1 className="mb-6 text-5xl font-black leading-[0.95] tracking-tight text-white lg:text-7xl">
-              Gifts that
-              <br />
-              feel
-              <br />
-              <span className="text-yellow-brand">made for</span>
-              <br />
-              <span className="text-yellow-brand">them.</span>
-            </h1>
-            <p className="mb-8 text-sm leading-relaxed text-white/70 lg:text-base">
-              LED photo frames, engraved tumblers, custom tote bags, corporate hampers. Walk in with an idea — leave with a gift they&apos;ll keep.
+        <div className="hero-side hero-gifts">
+          <div className="hero-side-img" />
+          <div className="hero-side-content">
+            <div className="hero-side-num">02 / 02 · GIFTS</div>
+            <div className="hero-eyebrow">Personalised Gifts</div>
+            <h1 className="hero-h">Gifts that feel<br /><em>made for them.</em></h1>
+            <p className="hero-sub">
+              LED photo frames, engraved tumblers, custom tote bags, corporate hampers.
+              Walk in with an idea — leave with a gift they&rsquo;ll keep.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/shop?gift=1" className="inline-flex items-center rounded-full bg-yellow-brand px-6 py-3 text-sm font-bold text-ink transition-colors hover:brightness-95">
-                Shop Gifts
-              </Link>
-              {whatsapp && (
-                <a
-                  href={`https://wa.me/${whatsapp.value.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center rounded-full border-2 border-cyan-brand bg-ink px-6 py-3 text-sm font-bold text-cyan-brand transition-colors hover:bg-cyan-brand hover:text-ink"
-                >
-                  WhatsApp Us
-                </a>
-              )}
+            <div className="hero-btns">
+              <Link href="/shop?gift=1" className="btn-primary">Shop Gifts</Link>
+              <a href="https://wa.me/6585533497" target="_blank" rel="noopener noreferrer" className="btn-sec">WhatsApp Us</a>
+            </div>
+            <div className="hero-trust">
+              <span>Ready in 3 Days</span>
+              <span>Custom Engraving</span>
+              <span>Gift-Wrap Available</span>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Category marquee */}
-      <section className="overflow-hidden border-y-2 border-ink bg-pink py-4">
-        <div className="flex animate-marquee gap-12 whitespace-nowrap text-xl font-black text-white">
-          {[...topCats, ...topCats].map((c, i) => (
-            <Link key={`${c.slug}-${i}`} href={`/shop?category=${c.slug}`} className="hover:text-ink">
-              — {c.name.toUpperCase()}
-            </Link>
+      {/* MARQUEE */}
+      <div className="marquee-bar">
+        <div className="marquee-track">
+          {[...MARQUEE, ...MARQUEE].map((w, i) => (
+            <span key={i}>{w} &bull;</span>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* Why us / Pain points */}
-      {pain.length > 0 && (
-        <section className="px-6 py-20 lg:px-16">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">● What Our Customers Say</div>
-              <h2 className="text-4xl font-black text-ink lg:text-5xl">The conversations we have every week.</h2>
+      {/* POPULAR PRODUCTS */}
+      <div className="home-sec">
+        <div className="home-sec-inner">
+          <div className="hs-head">
+            <div>
+              <div className="hs-tag">90+ Print &amp; Gift Products</div>
+              <h2 className="hs-h">Everything you need.<br /><em>In one place.</em></h2>
+              <p className="hs-sub">From your first name card to your next event — we print it, check it, and get it to you fast.</p>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {pain.map((p, i) => (
-                <div key={i} className="border-l-4 border-pink bg-white p-6 shadow-sm">
-                  <div className="mb-3 text-sm italic text-neutral-500">&ldquo;{p.q}&rdquo;</div>
-                  <div className="text-sm font-semibold text-ink">{p.a}</div>
-                </div>
-              ))}
-            </div>
+            <Link href="/shop" className="btn-outline">Shop All Products &rarr;</Link>
           </div>
-        </section>
-      )}
-
-      {/* Process steps */}
-      {steps.length > 0 && (
-        <section className="bg-neutral-50 px-6 py-20 lg:px-16">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">● How It Works</div>
-              <h2 className="text-4xl font-black text-ink lg:text-5xl">From WhatsApp to your hands.</h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <div key={i} className="rounded-lg border-2 border-ink bg-white p-6 shadow-brand">
-                  <div className="mb-3 text-5xl font-black text-pink">0{i + 1}</div>
-                  <div className="mb-2 text-sm font-bold text-ink">{s.title}</div>
-                  <div className="text-xs leading-relaxed text-neutral-600">{s.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Bundles */}
-      {bundles.length > 0 && (
-        <section className="px-6 py-20 lg:px-16">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <div className="mb-2 text-xs font-bold uppercase tracking-wider text-yellow-brand">● Bundle & Save</div>
-              <h2 className="text-4xl font-black text-ink lg:text-5xl">Curated packs, better value.</h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {bundles.map((b) => (
+          <div className="cat-grid">
+            {FEATURED_SLUGS.map((slug) => {
+              const p = bySlug.get(slug);
+              const meta = FEATURED_META[slug];
+              if (!p) return null;
+              return (
                 <Link
-                  key={b.id}
-                  href={`/bundle/${b.slug}`}
-                  className="group rounded-lg border-2 border-ink bg-white p-8 shadow-brand transition-all hover:shadow-brand-lg"
+                  key={slug}
+                  href={productHref(slug, routes)}
+                  className="cat-card"
                 >
-                  <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">{b.tagline ?? 'Bundle'}</div>
-                  <h3 className="mb-3 text-2xl font-black text-ink">{b.name}</h3>
-                  {b.description && <p className="mb-4 text-sm text-neutral-600">{b.description}</p>}
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-3xl font-black text-pink">{formatSGD(b.price_cents)}</span>
-                    {b.discount_cents > 0 && (
-                      <>
-                        <span className="text-sm text-neutral-400 line-through">{formatSGD(b.subtotal_cents)}</span>
-                        <span className="rounded bg-yellow-brand px-2 py-0.5 text-[10px] font-bold text-ink">
-                          Save {formatSGD(b.discount_cents)}
-                        </span>
-                      </>
-                    )}
+                  <span className="cc-ic">{p.icon ?? '📦'}</span>
+                  <div className="cc-cat">{meta?.cat ?? p.category?.name ?? 'Print'}</div>
+                  <div className="cc-name">{p.name}</div>
+                  <div className="cc-tags">
+                    {(meta?.tags ?? []).map((t) => <span key={t}>{t}</span>)}
                   </div>
+                  <div className="cc-from">
+                    {p.min_price !== null ? `From ${formatSGD(p.min_price)}` : 'Quote'}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="view-all-row">
+            <Link href="/shop" className="btn-outline" style={{ padding: '12px 36px', fontSize: 14 }}>
+              See All {products.length}+ Products &rarr;
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* PROBLEMS WE SOLVE */}
+      <div className="home-sec" style={{ background: '#0D0D0D' }}>
+        <div className="home-sec-inner">
+          <div className="hs-tag" style={{ color: '#E91E8C' }}>Sound familiar?</div>
+          <h2 className="hs-h" style={{ color: '#fff' }}>
+            Every business has a printing problem.<br /><em style={{ color: '#E91E8C' }}>We fix all of them.</em>
+          </h2>
+          <div className="pain-grid">
+            {PAIN_POINTS.map(([q, a], i) => (
+              <div key={i} className="pain-card">
+                <div className="pain-q">{q}</div>
+                <div className="pain-a">{a}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* HOW IT WORKS */}
+      <div className="home-sec" style={{ background: '#f8f8f8' }}>
+        <div className="home-sec-inner">
+          <div className="hs-tag">How It Works</div>
+          <h2 className="hs-h">Order to delivery.<br /><em>Simpler than you think.</em></h2>
+          <div className="steps-grid">
+            {STEPS.map((s) => (
+              <div key={s.n} className="step">
+                <div className="step-n">{s.n}</div>
+                <div className="step-title">{s.t}</div>
+                <div className="step-desc">{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* SOCIAL PROOF */}
+      <div className="proof-strip">
+        <div className="home-sec-inner">
+          <div className="proof-grid">
+            <div className="proof-item">
+              <div className="proof-num">5,000+</div>
+              <div className="proof-lbl">businesses served</div>
+            </div>
+            <div className="proof-div" />
+            <div className="proof-item">
+              <div className="proof-num">{products.length}+</div>
+              <div className="proof-lbl">products available</div>
+            </div>
+            <div className="proof-div" />
+            <div className="proof-item">
+              <div className="proof-num">24h</div>
+              <div className="proof-lbl">express turnaround</div>
+            </div>
+            <div className="proof-div" />
+            <div className="proof-item">
+              <div className="proof-num">10+</div>
+              <div className="proof-lbl">years in Singapore</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* HOME BUNDLES */}
+      {bundles.length > 0 && (
+        <div className="bun-section" id="home-bundles-section">
+          <div className="bun-inner">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8, flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2, color: '#E91E8C', marginBottom: 8 }}>Bundle &amp; Save</div>
+                <h2 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(24px,3vw,36px)', fontWeight: 700, color: '#0a0a0a', lineHeight: 1.2, margin: 0 }}>
+                  More products,<br /><em style={{ color: '#E91E8C' }}>bigger savings.</em>
+                </h2>
+              </div>
+              <Link href="/bundles" className="btn-outline">See All Bundles &rarr;</Link>
+            </div>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 24, maxWidth: 480 }}>
+              Products that work best together — already discounted, so you can see exactly what you save.
+            </p>
+            <div className="bun-grid">
+              {bundles.slice(0, 3).map((b) => (
+                <Link key={b.id} href={`/bundle/${b.slug}`} className="bun-card">
+                  <div className="bun-name">{b.name}</div>
+                  {b.description && <div className="bun-desc">{b.description}</div>}
+                  <div className="bun-price">{formatSGD(b.price_cents)}</div>
+                  {b.discount_cents > 0 && (
+                    <div className="bun-cs-body" style={{ fontSize: 12, color: '#666' }}>
+                      <span style={{ textDecoration: 'line-through' }}>{formatSGD(b.subtotal_cents)}</span>
+                      {' · Save '}{formatSGD(b.discount_cents)}
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Final CTA */}
-      <section className="bg-ink py-24 text-center text-white">
-        <div className="mx-auto max-w-3xl px-6">
-          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-yellow-brand">● Need Printing?</div>
-          <h2 className="mb-8 text-4xl font-black leading-tight lg:text-6xl">WhatsApp us for an instant quote.</h2>
-          {whatsapp && (
-            <div className="mb-10 flex justify-center">
-              <a
-                href={`https://wa.me/${whatsapp.value.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 rounded-full bg-green-500 px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-600"
-              >
-                💬 WhatsApp · {whatsapp.value}
-              </a>
-            </div>
-          )}
-          <div className="flex flex-wrap justify-center gap-3 text-xs">
-            <span className="rounded-full border border-white/20 px-4 py-2">📍 60 Paya Lebar Rd #B1-35</span>
-            <span className="rounded-full border border-white/20 px-4 py-2">🕐 Mon–Sat · 10am–7.30pm</span>
-            {email && <span className="rounded-full border border-white/20 px-4 py-2">✉️ {email.value}</span>}
-            <span className="rounded-full border border-white/20 px-4 py-2">⚡ Same-day Express</span>
+      {/* WHY US */}
+      <div className="home-sec" style={{ background: '#0D0D0D' }}>
+        <div className="home-sec-inner">
+          <div className="hs-tag" style={{ color: '#E91E8C' }}>Why Printvolution</div>
+          <h2 className="hs-h" style={{ color: '#fff' }}>
+            Not just printed.<br /><em style={{ color: '#E91E8C' }}>Printed properly.</em>
+          </h2>
+          <div className="why-grid-home">
+            {WHY_US.map((w) => (
+              <div key={w.n} className="why-home-item">
+                <div className="why-home-num">{w.n}</div>
+                <div className="why-home-title">{w.t}</div>
+                <div className="why-home-desc">{w.d}</div>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
-    </>
+      </div>
+
+      {/* SEO KEYWORDS */}
+      <div className="home-sec">
+        <div className="home-sec-inner">
+          <div className="hs-tag">Printing Services in Singapore</div>
+          <h2 className="hs-h" style={{ maxWidth: 600 }}>
+            Looking for a specific print service?<br /><em>We probably do it.</em>
+          </h2>
+          <div className="seo-kw-grid">
+            {SEO_KW.map((k, i) => {
+              const href = k.slug ? productHref(k.slug, routes) : '/shop';
+              return (
+                <Link key={i} href={href} className="seo-kw-item">
+                  <div className="ski-label">{k.label}</div>
+                  <div className="ski-loc">{k.loc}</div>
+                </Link>
+              );
+            })}
+          </div>
+          <p className="seo-fine">
+            <strong>Printvolution</strong> is a <strong>printing company in Singapore</strong> at Paya Lebar Square offering
+            {' '}<strong>name card printing</strong>, <strong>flyer printing</strong>, <strong>banner printing Singapore</strong>,
+            corporate gifts, uniform printing, personalised gifts, and 90+ other <strong>printing services in Singapore</strong>.
+            Walk in or order online with island-wide delivery.
+          </p>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="cta-strip">
+        <div className="home-sec-inner">
+          <h2>Ready to order?</h2>
+          <p>
+            Browse our products, configure your order, and place it online — or walk into Paya Lebar Square
+            and we&rsquo;ll sort it on the spot.
+          </p>
+          <div className="cta-btns">
+            <Link href="/shop" className="btn-wh">Browse All Products</Link>
+            <a href="https://wa.me/6585533497" target="_blank" rel="noopener noreferrer" className="btn-wh-o">WhatsApp Us</a>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
