@@ -1,22 +1,31 @@
 /**
- * Supabase database types — placeholder until we run:
+ * Supabase database types — placeholder. Queries return `any` until we run:
  *   npx supabase login
  *   npx supabase gen types typescript --project-id zblzeztisjzjcnvarwcw > types/database.ts
  *
- * Loose typing for now — works fine for queries, just no autocomplete on column names.
- * Will be replaced with strict generated types in a follow-up.
+ * Loose typing intentionally so Supabase query builder doesn't narrow to `never`.
  */
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
+/** Generic table shape — allows any query to type-check. */
+type AnyTable = {
+  Row: Record<string, any>;
+  Insert: Record<string, any>;
+  Update: Record<string, any>;
+  Relationships: [];
+};
+
 export type Database = {
   public: {
-    Tables: Record<string, {
-      Row: Record<string, Json>;
-      Insert: Record<string, Json>;
-      Update: Record<string, Json>;
-    }>;
-    Views: Record<string, { Row: Record<string, Json> }>;
-    Functions: Record<string, { Args: Record<string, Json>; Returns: Json }>;
+    Tables: {
+      [key: string]: AnyTable;
+    };
+    Views: {
+      [key: string]: { Row: Record<string, any>; Relationships: [] };
+    };
+    Functions: {
+      [key: string]: { Args: Record<string, any>; Returns: any };
+    };
     Enums: Record<string, string>;
     CompositeTypes: Record<string, never>;
   };
