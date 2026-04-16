@@ -1,8 +1,7 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "headers": [
     {
-      "source": "/(.*)\\.html",
+      "source": "/:path*.html",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
