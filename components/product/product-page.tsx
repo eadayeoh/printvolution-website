@@ -118,20 +118,36 @@ export function ProductPage({ product, productRoutes }: Props) {
   const unitPrice = qty > 0 ? Math.round(lineTotal / qty) : 0;
 
   const fromPrice = useMemo(() => {
-    // Minimum reachable price: try qty=1 with each size column
-    if (!product.pricing) return null;
     let min: number | null = null;
-    for (let i = 0; i < product.pricing.configs.length; i++) {
-      const { total } = computeTotal(1, i, 0);
-      if (total > 0 && (min === null || total < min)) min = total;
+    // 1. Try each pricing column (if matrix exists) at qty=1
+    if (product.pricing) {
+      for (let i = 0; i < product.pricing.configs.length; i++) {
+        const { total } = computeTotal(1, i, 0);
+        if (total > 0 && (min === null || total < min)) min = total;
+      }
     }
-    // Fallback to matrix if no formulas produced a price
+    // 2. Scan configurator swatch/select options for any price_formula @qty=1
     if (min === null) {
-      for (const r of product.pricing.rows) for (const p of r.prices) if (typeof p === 'number' && p > 0 && (min === null || p < min)) min = p;
+      for (const step of product.configurator) {
+        if (step.type !== 'swatch' && step.type !== 'select') continue;
+        for (const opt of step.options ?? []) {
+          if (!opt.price_formula) continue;
+          const cents = Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100);
+          if (cents > 0 && (min === null || cents < min)) min = cents;
+        }
+      }
+    }
+    // 3. Last resort: min of all matrix prices
+    if (min === null && product.pricing) {
+      for (const r of product.pricing.rows) {
+        for (const p of r.prices) {
+          if (typeof p === 'number' && p > 0 && (min === null || p < min)) min = p;
+        }
+      }
     }
     return min;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.pricing, cfgState]);
+  }, [product.pricing, product.configurator, cfgState]);
 
   // Price at every quantity — RECOMPUTES via formulas at each tier
   const priceLadder = useMemo(() => {
@@ -544,7 +560,7 @@ export function ProductPage({ product, productRoutes }: Props) {
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#888' }}>Total</span>
                     <span style={{ fontFamily: 'var(--sans)', fontSize: 32, fontWeight: 900, color: '#E91E8C', letterSpacing: '-0.02em' }}>
-                      {product.pricing ? formatSGD(lineTotal) : 'Quote'}
+                      {lineTotal > 0 ? formatSGD(lineTotal) : 'Quote'}
                     </span>
                   </div>
                 </div>
