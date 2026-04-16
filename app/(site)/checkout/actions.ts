@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const OrderSchema = z.object({
   customer_name: z.string().min(2).max(100),
@@ -34,6 +35,17 @@ export type OrderResult =
   | { ok: false; error: string };
 
 export async function submitOrder(input: OrderInput): Promise<OrderResult> {
+  // Rate limit: 3 orders per IP per 10 minutes (real humans don't place
+  // 4+ orders in 10 min; scripts do).
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`checkout:${ip}`, { max: 3, windowSeconds: 600 });
+  if (!rl.allowed) {
+    return {
+      ok: false,
+      error: `Too many orders from your IP. Please try again in ${rl.retryAfterSeconds}s or WhatsApp us.`,
+    };
+  }
+
   // Validate
   const parsed = OrderSchema.safeParse(input);
   if (!parsed.success) {

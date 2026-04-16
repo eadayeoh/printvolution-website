@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { checkLoginRateLimit, recordFailedLogin } from '@/app/login/actions';
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,9 +19,19 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Rate limit check BEFORE hitting Supabase Auth
+    const rl = await checkLoginRateLimit();
+    if (!rl.allowed) {
+      setError(`Too many login attempts. Try again in ${rl.retryAfterSeconds}s.`);
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
+      await recordFailedLogin(email);
       setError(authError.message);
       setLoading(false);
       return;
