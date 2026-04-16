@@ -35,7 +35,7 @@ export async function uploadProductImage(formData: FormData): Promise<{ ok: bool
   const file = formData.get('file');
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
-  if (file.size > 5 * 1024 * 1024) return { ok: false, error: 'File too large (max 5MB)' };
+  if (file.size > 10 * 1024 * 1024) return { ok: false, error: 'File too large (max 10MB)' };
 
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
   if (!allowed.includes(file.type)) {

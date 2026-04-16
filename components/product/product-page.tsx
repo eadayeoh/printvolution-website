@@ -284,25 +284,30 @@ export function ProductPage({ product, productRoutes }: Props) {
                   marginBottom: 20,
                 }}
               >
-                <meta itemProp="priceCurrency" content="SGD" />
-                <meta itemProp="price" content={(fromPrice / 100).toFixed(2)} />
-                <meta itemProp="availability" content="https://schema.org/InStock" />
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#888', marginRight: 8 }}>
-                      From
-                    </span>
-                    <span style={{ fontFamily: 'var(--sans)', fontSize: 32, fontWeight: 900, color: '#E91E8C', letterSpacing: '-0.02em' }}>
-                      {formatSGD(fromPrice)}
-                    </span>
-                  </div>
-                  {lineTotal > 0 && lineTotal !== fromPrice && (
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5 }}>Current total</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#0a0a0a' }}>{formatSGD(lineTotal)}</div>
-                    </div>
-                  )}
-                </div>
+                {(() => {
+                  const displayPrice = lineTotal > 0 ? lineTotal : fromPrice;
+                  const isBase = lineTotal <= 0 || lineTotal === fromPrice;
+                  return (
+                    <>
+                      <meta itemProp="priceCurrency" content="SGD" />
+                      <meta itemProp="price" content={(displayPrice / 100).toFixed(2)} />
+                      <meta itemProp="availability" content="https://schema.org/InStock" />
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#888' }}>
+                          {isBase ? 'From' : 'Your price'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--sans)', fontSize: 36, fontWeight: 900, color: '#E91E8C', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                          {formatSGD(displayPrice)}
+                        </span>
+                        {qty > 1 && (
+                          <span style={{ fontSize: 12, color: '#888' }}>
+                            ({formatSGD(Math.round(displayPrice / qty))} × {qty})
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 
