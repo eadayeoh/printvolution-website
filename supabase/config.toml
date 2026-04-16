@@ -1,0 +1,8 @@
+# Supabase project config
+# See: https://supabase.com/docs/guides/cli/config
+
+project_id = "zblzeztisjzjcnvarwcw"
+
+[db]
+# Postgres major version
+major_version = 15
