@@ -5,8 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Ticket,
-  FileText, Image as ImageIcon, Type, Settings, LogOut,
-  Layers,
+  FileText, LogOut, Layers, ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -26,8 +25,6 @@ const NAV = [
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/promos', label: 'Promos', icon: Ticket },
   { href: '/admin/members', label: 'Members', icon: Users },
-  { href: '/admin/fonts', label: 'Fonts', icon: Type },
-  { href: '/admin/images', label: 'Images', icon: ImageIcon },
 ];
 
 export function AdminShell({ userEmail, userName, role, children }: Props) {
@@ -81,6 +78,19 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
               </Link>
             );
           })}
+
+          {/* Back to site */}
+          <div className="mt-6 border-t border-white/10 pt-4">
+            <Link
+              href="/"
+              target="_blank"
+              className="flex items-center gap-3 rounded px-3 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/5 hover:text-pink"
+              title="Opens site in a new tab"
+            >
+              <ExternalLink size={16} />
+              View live site
+            </Link>
+          </div>
         </nav>
 
         <div className="border-t border-white/10 p-4">

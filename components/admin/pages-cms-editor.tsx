@@ -225,49 +225,84 @@ function MegaEditor({
               {section.items.length === 0 && (
                 <div className="text-xs text-neutral-400 italic mb-2">No items in this section.</div>
               )}
-              {section.items.map((item, ii) => (
-                <div key={ii} className="flex gap-2">
-                  <select
-                    value={item.product_slug}
-                    onChange={(e) => {
-                      const slug = e.target.value;
-                      const prod = productBySlug.get(slug);
-                      // Auto-fill label with product name if label is empty or matches previous product
-                      const prevProd = productBySlug.get(item.product_slug);
-                      const prevName = prevProd?.name ?? '';
-                      const shouldAutoLabel = !item.label.trim() || item.label === prevName;
-                      setSections(sections.map((s, j) => j === si
-                        ? {
-                            ...s,
-                            items: s.items.map((x, k) => k === ii
-                              ? { product_slug: slug, label: shouldAutoLabel ? (prod?.name ?? '') : x.label }
-                              : x),
-                          }
-                        : s));
-                    }}
-                    className={`${inputCls} w-64`}
-                  >
-                    <option value="">— pick a product —</option>
-                    {products.map((p) => (
-                      <option key={p.slug} value={p.slug}>{p.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    value={item.label}
-                    onChange={(e) => setSections(sections.map((s, j) => j === si
-                      ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: e.target.value } : x) }
-                      : s))}
-                    placeholder="Display label"
-                    className={`${inputCls} flex-1`}
-                  />
-                  <button type="button" onClick={() => setSections(sections.map((s, j) => j === si
-                    ? { ...s, items: s.items.filter((_, k) => k !== ii) }
-                    : s))}
-                    className="text-red-600 hover:text-red-700">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
+              {section.items.map((item, ii) => {
+                const moveItem = (from: number, to: number) => {
+                  if (to < 0 || to >= section.items.length) return;
+                  setSections(sections.map((s, j) => {
+                    if (j !== si) return s;
+                    const next = [...s.items];
+                    const [moved] = next.splice(from, 1);
+                    next.splice(to, 0, moved);
+                    return { ...s, items: next };
+                  }));
+                };
+                return (
+                  <div key={ii} className="flex items-center gap-2">
+                    <div className="flex flex-col flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveItem(ii, ii - 1)}
+                        disabled={ii === 0}
+                        className="text-neutral-400 hover:text-ink disabled:opacity-20 leading-none"
+                        title="Move up"
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveItem(ii, ii + 1)}
+                        disabled={ii === section.items.length - 1}
+                        className="text-neutral-400 hover:text-ink disabled:opacity-20 leading-none"
+                        title="Move down"
+                      >
+                        <ChevronDown size={12} />
+                      </button>
+                    </div>
+                    <select
+                      value={item.product_slug}
+                      onChange={(e) => {
+                        const slug = e.target.value;
+                        const prod = productBySlug.get(slug);
+                        const prevProd = productBySlug.get(item.product_slug);
+                        const prevName = prevProd?.name ?? '';
+                        const shouldAutoLabel = !item.label.trim() || item.label === prevName;
+                        setSections(sections.map((s, j) => j === si
+                          ? {
+                              ...s,
+                              items: s.items.map((x, k) => k === ii
+                                ? { product_slug: slug, label: shouldAutoLabel ? (prod?.name ?? '') : x.label }
+                                : x),
+                            }
+                          : s));
+                      }}
+                      className={`${inputCls} w-64`}
+                    >
+                      <option value="">— pick a product —</option>
+                      {products.map((p) => (
+                        <option key={p.slug} value={p.slug}>{p.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      value={item.label}
+                      onChange={(e) => setSections(sections.map((s, j) => j === si
+                        ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: e.target.value } : x) }
+                        : s))}
+                      placeholder="Display label"
+                      className={`${inputCls} flex-1`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSections(sections.map((s, j) => j === si
+                        ? { ...s, items: s.items.filter((_, k) => k !== ii) }
+                        : s))}
+                      className="text-red-600 hover:text-red-700 flex-shrink-0"
+                      title="Remove"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })}
 
               <button type="button" onClick={() => setSections(sections.map((s, j) => j === si
                 ? { ...s, items: [...s.items, { product_slug: '', label: '' }] }

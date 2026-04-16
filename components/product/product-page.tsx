@@ -65,12 +65,16 @@ export function ProductPage({ product, productRoutes }: Props) {
     return manualColIdx;
   }, [visibleSteps, cfgState, product.pricing, manualColIdx]);
 
-  // Core pricing engine — sums formula-based options, falls back to matrix
+  // Core pricing engine — sums formula-based options, falls back to matrix.
+  // IMPORTANT: legacy price_formula outputs DOLLAR values (e.g. 75) but our
+  // system stores everything in CENTS. We multiply formula results by 100 to
+  // convert. The matrix is already in cents (from the extraction script).
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number): {
     total: number; breakdown: Array<{ label: string; amount: number }>;
   } {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let formulaSum = 0;
+    let anyFormula = false;
 
     // Options with price_formula — these ARE the line items (not add-ons)
     for (const step of visibleSteps) {
@@ -78,14 +82,20 @@ export function ProductPage({ product, productRoutes }: Props) {
       const selected = cfgState[step.step_id];
       const opt = step.options.find((o) => o.slug === selected);
       if (opt?.price_formula) {
-        const value = evaluateFormula(opt.price_formula, { qty: useQty, base: 0 });
-        formulaSum += value;
-        breakdown.push({ label: `${step.label}: ${opt.label}`, amount: value });
+        anyFormula = true;
+        // Formula is in dollars → convert to cents
+        const valueDollars = evaluateFormula(opt.price_formula, { qty: useQty, base: 0 });
+        const valueCents = Math.round(valueDollars * 100);
+        formulaSum += valueCents;
+        // Hide $0 entries from breakdown (cleaner UI for material/lamination etc.)
+        if (valueCents > 0) {
+          breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
+        }
       }
     }
 
-    // If no formulas at all, use the pricing matrix row × col
-    if (formulaSum === 0 && product.pricing) {
+    // If no formulas at all, use the pricing matrix row × col (already in cents)
+    if (!anyFormula && product.pricing) {
       const row = product.pricing.rows[useRowIdx] ?? product.pricing.rows[0];
       const matrixPrice = row?.prices[useColIdx] ?? 0;
       if (matrixPrice > 0) {
@@ -289,7 +299,9 @@ export function ProductPage({ product, productRoutes }: Props) {
               </div>
             </div>
 
-            {/* Hero art — large watermark + device-frame mockup */}
+            {/* Hero art — large watermark + device-frame mockup.
+                Uses extras.image_url (big hero), falls back to icon if it's a URL,
+                falls back to emoji + product name. */}
             <div style={{ position: 'relative', minHeight: 520 }}>
               <div style={{
                 position: 'absolute', inset: 0,
@@ -304,22 +316,31 @@ export function ProductPage({ product, productRoutes }: Props) {
                   {heroBig}
                 </div>
               </div>
-              <div style={{
-                position: 'relative', width: 320, height: 460, margin: '0 auto',
-                borderRadius: 32, border: '4px solid #0a0a0a',
-                boxShadow: '12px 12px 0 #E91E8C',
-                background: product.extras?.image_url ? `url(${product.extras.image_url}) center/cover` : '#fff',
-                display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
-                padding: 18, overflow: 'hidden',
-              }}>
-                {!product.extras?.image_url && (
+              {(() => {
+                const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
+                const heroImg = product.extras?.image_url || (iconIsUrl ? product.icon : null);
+                return (
                   <div style={{
-                    fontSize: 14, fontWeight: 700, color: '#0a0a0a',
+                    position: 'relative', width: 320, height: 460, margin: '0 auto',
+                    borderRadius: 32, border: '4px solid #0a0a0a',
+                    boxShadow: '12px 12px 0 #E91E8C',
+                    background: heroImg ? `url(${heroImg}) center/cover` : '#fff',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+                    padding: 18, overflow: 'hidden',
                   }}>
-                    {product.name}
+                    {!heroImg && (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+                        {product.icon && !iconIsUrl && (
+                          <div style={{ fontSize: 96, lineHeight: 1 }}>{product.icon}</div>
+                        )}
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0a0a0a' }}>
+                          {product.name}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -355,12 +376,12 @@ export function ProductPage({ product, productRoutes }: Props) {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {step.options.map((opt, oi) => {
                         const isActive = cfgState[step.step_id] === opt.slug;
-                        // Compute this option's price at current qty for inline label
-                        const optPrice = opt.price_formula
-                          ? evaluateFormula(opt.price_formula, { qty, base: 0 })
+                        // Compute this option's price at current qty for inline label.
+                        // Formula outputs dollars → convert to cents for formatSGD.
+                        const optPriceCents = opt.price_formula
+                          ? Math.round(evaluateFormula(opt.price_formula, { qty, base: 0 }) * 100)
                           : null;
-                        // Show price only if > 0 (skip 'add-on' options with price 0)
-                        const showPrice = optPrice !== null && optPrice > 0;
+                        const showPrice = optPriceCents !== null && optPriceCents > 0;
                         return (
                           <button
                             key={opt.slug}
@@ -375,9 +396,9 @@ export function ProductPage({ product, productRoutes }: Props) {
                             }}
                           >
                             <span style={{ fontSize: 13, fontWeight: 700, color: '#0a0a0a' }}>{opt.label}</span>
-                            {showPrice && (
+                            {showPrice && optPriceCents !== null && (
                               <span style={{ fontSize: 12, color: isActive ? '#E91E8C' : '#888', fontWeight: 700 }}>
-                                {formatSGD(optPrice)}
+                                {formatSGD(optPriceCents)}
                               </span>
                             )}
                             {opt.note && (
