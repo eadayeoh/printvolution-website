@@ -152,19 +152,10 @@ export function ProductPage({ product, productRoutes }: Props) {
 
   const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
   const heroImg = product.extras?.image_url || (iconIsUrl ? product.icon : null);
-  // Force a dark hero bg. Many products have stored the brand pink in
-  // `hero_color`, which kills contrast for pink CTA + pink category pill.
-  // We always use a dark navy/black so text and accent elements read clearly.
-  const storedHero = product.extras?.hero_color || '';
-  const isTooLight = (() => {
-    const m = /^#?([0-9a-f]{6})$/i.exec(storedHero);
-    if (!m) return true;
-    const n = parseInt(m[1], 16);
-    const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; // perceived brightness
-    return lum > 60; // anything lighter than ~very-dark becomes dark default
-  })();
-  const heroColor = isTooLight ? '#0d0d1a' : storedHero;
+  // Hero bg: ALWAYS dark. Legacy data has brand pink stored in
+  // hero_color on many products, which breaks the pink accents + white
+  // text inside the hero. Ignore stored value entirely.
+  const heroColor = '#0d0d1a';
   const heroBig = product.extras?.hero_big || product.name.split(' ').pop()?.toUpperCase() || '';
   const h1 = product.extras?.h1 ?? product.name;
   const h1em = product.extras?.h1em ?? '';
