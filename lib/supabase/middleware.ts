@@ -4,15 +4,20 @@ import type { Database } from '@/types/database';
 
 /**
  * Refreshes the Supabase auth session cookie on every request.
- * Called from root middleware.ts.
+ * Called from root middleware.ts. Must never throw — if anything goes wrong
+ * (missing env, Supabase down, network blip), just pass the request through.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If env isn't configured yet, don't crash — just pass through
+  if (!url || !key) return response;
+
+  try {
+    const supabase = createServerClient<Database>(url, key, {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
@@ -28,22 +33,23 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set({ name, value: '', ...options });
         },
       },
-    }
-  );
+    });
 
-  // Refresh session
-  await supabase.auth.getUser();
-
-  // Guard /admin and /staff routes
-  const { pathname } = request.nextUrl;
-  if (pathname.startsWith('/admin') || pathname.startsWith('/staff')) {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user && pathname !== '/admin/login' && pathname !== '/staff/login') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('redirectTo', pathname);
-      return NextResponse.redirect(url);
+
+    // Guard /admin and /staff routes
+    const { pathname } = request.nextUrl;
+    if (pathname.startsWith('/admin') || pathname.startsWith('/staff')) {
+      if (!user && pathname !== '/admin/login' && pathname !== '/staff/login') {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = '/login';
+        redirectUrl.searchParams.set('redirectTo', pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
     }
+  } catch (err) {
+    // Log but don't break the site. Middleware errors should never 500.
+    console.error('Middleware error:', err);
   }
 
   return response;
