@@ -72,16 +72,16 @@ export function CheckoutForm() {
     });
   }
 
-  if (!mounted) return <div className="text-sm text-neutral-500">Loading…</div>;
+  if (!mounted) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading…</div>;
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border-2 border-dashed border-neutral-200 p-12 text-center">
-        <p className="mb-6 text-lg text-neutral-500">Your cart is empty.</p>
-        <Link
-          href="/shop"
-          className="inline-flex items-center rounded-full bg-pink px-6 py-3 text-sm font-bold text-white hover:bg-pink-dark"
-        >
+      <div style={{
+        padding: 80, textAlign: 'center', border: '2px dashed #ddd',
+        background: '#fff', maxWidth: 600, margin: '0 auto',
+      }}>
+        <p style={{ fontSize: 18, color: '#666', marginBottom: 24 }}>Your cart is empty.</p>
+        <Link href="/shop" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
           Browse products →
         </Link>
       </div>
@@ -89,111 +89,141 @@ export function CheckoutForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-8 lg:grid-cols-5">
-      {/* Form fields */}
-      <div className="space-y-8 lg:col-span-3">
-        <section>
-          <h2 className="mb-4 text-lg font-black text-ink">Your details</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" error={errors.customer_name?.message}>
-              <input {...register('customer_name')} className={inputCls} placeholder="Jane Tan" />
-            </Field>
-            <Field label="Email" error={errors.email?.message}>
-              <input type="email" {...register('email')} className={inputCls} placeholder="jane@company.sg" />
-            </Field>
-            <Field label="Mobile" error={errors.phone?.message}>
-              <input {...register('phone')} className={inputCls} placeholder="8123 4567" />
-            </Field>
-            <Field label="Company (optional)">
-              <input {...register('company')} className={inputCls} />
-            </Field>
-            <div className="sm:col-span-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="co-layout">
+      <div className="co-left">
+        <div className="co-card">
+          <div className="co-card-head">
+            <span className="co-card-num">01</span>
+            <h2 className="co-card-title">Your details</h2>
+          </div>
+          <div className="co-card-body">
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <Field label="Full name" error={errors.customer_name?.message}>
+                <input {...register('customer_name')} className={inputCls} placeholder="Jane Tan" />
+              </Field>
+              <Field label="Email" error={errors.email?.message}>
+                <input type="email" {...register('email')} className={inputCls} placeholder="jane@company.sg" />
+              </Field>
+              <Field label="Mobile" error={errors.phone?.message}>
+                <input {...register('phone')} className={inputCls} placeholder="8123 4567" />
+              </Field>
+              <Field label="Company (optional)">
+                <input {...register('company')} className={inputCls} />
+              </Field>
               <Field label="Position (optional)">
                 <input {...register('position')} className={inputCls} />
               </Field>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section>
-          <h2 className="mb-4 text-lg font-black text-ink">Delivery</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={`cursor-pointer rounded-lg border-2 p-4 transition-colors ${deliveryMethod === 'pickup' ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-300'}`}>
-              <input type="radio" value="pickup" {...register('delivery_method')} className="sr-only" />
-              <div className="mb-1 text-sm font-bold text-ink">Self-pickup</div>
-              <div className="text-xs text-neutral-500">60 Paya Lebar Road #B1-35 · Free</div>
-            </label>
-            <label className={`cursor-pointer rounded-lg border-2 p-4 transition-colors ${deliveryMethod === 'delivery' ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-300'}`}>
-              <input type="radio" value="delivery" {...register('delivery_method')} className="sr-only" />
-              <div className="mb-1 text-sm font-bold text-ink">Delivery</div>
-              <div className="text-xs text-neutral-500">Singapore-wide · S$8.00</div>
-            </label>
+        <div className="co-card">
+          <div className="co-card-head">
+            <span className="co-card-num">02</span>
+            <h2 className="co-card-title">Delivery</h2>
           </div>
-          {deliveryMethod === 'delivery' && (
-            <div className="mt-4">
-              <Field label="Delivery address">
-                <textarea {...register('delivery_address')} rows={2} className={inputCls} placeholder="Postal code, unit number, street..." />
-              </Field>
+          <div className="co-card-body">
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <label style={{
+                cursor: 'pointer', padding: 18, borderRadius: 8,
+                border: `2px solid ${deliveryMethod === 'pickup' ? '#E91E8C' : '#e5e5e5'}`,
+                background: deliveryMethod === 'pickup' ? 'rgba(233,30,140,.05)' : '#fff',
+              }}>
+                <input type="radio" value="pickup" {...register('delivery_method')} style={{ display: 'none' }} />
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>Self-pickup</div>
+                <div style={{ fontSize: 11, color: '#888' }}>60 Paya Lebar Road #B1-35 · Free</div>
+              </label>
+              <label style={{
+                cursor: 'pointer', padding: 18, borderRadius: 8,
+                border: `2px solid ${deliveryMethod === 'delivery' ? '#E91E8C' : '#e5e5e5'}`,
+                background: deliveryMethod === 'delivery' ? 'rgba(233,30,140,.05)' : '#fff',
+              }}>
+                <input type="radio" value="delivery" {...register('delivery_method')} style={{ display: 'none' }} />
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>Delivery</div>
+                <div style={{ fontSize: 11, color: '#888' }}>Singapore-wide · S$8.00</div>
+              </label>
             </div>
-          )}
-        </section>
+            {deliveryMethod === 'delivery' && (
+              <div style={{ marginTop: 16 }}>
+                <Field label="Delivery address">
+                  <textarea {...register('delivery_address')} rows={2} className={inputCls} placeholder="Postal code, unit number, street..." />
+                </Field>
+              </div>
+            )}
+          </div>
+        </div>
 
-        <section>
-          <h2 className="mb-4 text-lg font-black text-ink">Notes <span className="text-xs font-normal text-neutral-400">(optional)</span></h2>
-          <textarea {...register('notes')} rows={3} className={inputCls} placeholder="Special instructions, delivery timing, etc." />
-        </section>
+        <div className="co-card">
+          <div className="co-card-head">
+            <span className="co-card-num">03</span>
+            <h2 className="co-card-title">Notes <span style={{ fontSize: 11, fontWeight: 400, color: '#aaa', marginLeft: 8 }}>optional</span></h2>
+          </div>
+          <div className="co-card-body">
+            <textarea {...register('notes')} rows={3} className={inputCls} placeholder="Special instructions, delivery timing, artwork notes..." />
+          </div>
+        </div>
 
         {submitError && (
-          <div className="rounded-lg border-2 border-red-500 bg-red-50 p-4 text-sm text-red-700">
+          <div style={{
+            padding: 14, background: '#fef2f2', border: '2px solid #dc2626',
+            color: '#991b1b', fontSize: 13, borderRadius: 6,
+          }}>
             {submitError}
           </div>
         )}
       </div>
 
-      {/* Summary */}
-      <aside className="lg:col-span-2">
-        <div className="sticky top-20 rounded-lg border-2 border-ink bg-white p-6 shadow-brand">
-          <h3 className="mb-4 text-lg font-black text-ink">Order summary</h3>
-          <div className="mb-4 space-y-3 text-xs">
+      <aside className="co-rail">
+        <div className="co-sum-card" style={{ boxShadow: '6px 6px 0 #E91E8C' }}>
+          <div className="co-sum-head">
+            <div className="co-sum-head-title">Order summary</div>
+          </div>
+
+          <div className="co-sum-items">
             {items.map((i) => (
-              <div key={i.id} className="flex gap-2">
-                <span className="text-lg">{i.icon ?? '📦'}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-bold text-ink">{i.product_name}</div>
-                  <div className="truncate text-[11px] text-neutral-500">
-                    Qty {i.qty} · {formatSGD(i.line_total_cents)}
-                  </div>
+              <div key={i.id} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
+                <span style={{ fontSize: 18 }}>{i.icon ?? '📦'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#0a0a0a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.product_name}</div>
+                  <div style={{ fontSize: 11, color: '#888' }}>Qty {i.qty} · {formatSGD(i.line_total_cents)}</div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mb-4 space-y-2 border-t border-neutral-200 pt-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-neutral-600">Subtotal</span>
-              <span className="font-semibold text-ink">{formatSGD(subtotal)}</span>
+
+          <div className="co-sum-totals">
+            <div className="co-sum-row">
+              <span>Subtotal</span>
+              <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{formatSGD(subtotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-600">Delivery</span>
-              <span className="font-semibold text-ink">{deliveryCost === 0 ? 'Free' : formatSGD(deliveryCost)}</span>
-            </div>
-          </div>
-          <div className="mb-5 border-t-2 border-ink pt-4">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-semibold text-neutral-600">Total</span>
-              <span className="text-2xl font-black text-pink">{formatSGD(total)}</span>
-            </div>
-            <div className="mt-1 text-right text-[10px] text-neutral-500">
-              +{Math.floor(subtotal / 100)} points on this order
+            <div className="co-sum-row">
+              <span>Delivery</span>
+              <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{deliveryCost === 0 ? 'Free' : formatSGD(deliveryCost)}</span>
             </div>
           </div>
+
+          <div className="co-sum-divider" />
+
+          <div className="co-sum-total-row">
+            <span className="co-sum-total-lbl">Total</span>
+            <span className="co-sum-total-val">{formatSGD(total)}</span>
+          </div>
+          <div className="co-earn-row">+{Math.floor(subtotal / 100)} points on this order</div>
+
           <button
             type="submit"
             disabled={isPending}
-            className="w-full rounded-full bg-pink py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
+            className="co-sum-cta"
+            style={{
+              width: '100%', padding: 14, marginTop: 16, borderRadius: 999,
+              background: '#E91E8C', color: '#fff', fontSize: 13, fontWeight: 800,
+              letterSpacing: 0.3, border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)',
+              opacity: isPending ? 0.5 : 1,
+            }}
           >
             {isPending ? 'Placing order…' : 'Place Order'}
           </button>
-          <p className="mt-3 text-center text-[10px] text-neutral-500">
+          <p style={{ textAlign: 'center', fontSize: 10, color: '#aaa', marginTop: 10 }}>
             Payment handled via WhatsApp after order confirmation.
           </p>
         </div>
@@ -204,13 +234,14 @@ export function CheckoutForm() {
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-bold text-ink">{label}</span>
+    <label style={{ display: 'block' }}>
+      <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#0a0a0a', marginBottom: 6, letterSpacing: 0.3 }}>
+        {label}
+      </span>
       {children}
-      {error && <span className="mt-1 block text-[11px] text-red-600">{error}</span>}
+      {error && <span style={{ display: 'block', fontSize: 11, color: '#dc2626', marginTop: 4 }}>{error}</span>}
     </label>
   );
 }
 
-const inputCls =
-  'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
+const inputCls = 'pv-checkout-input';

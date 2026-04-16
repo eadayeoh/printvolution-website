@@ -6,23 +6,33 @@ export const metadata = { title: 'Sign In' };
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-6 py-12">
-      <div className="cmyk-bar absolute inset-x-0 top-0" />
-      <Link href="/" className="mb-8 text-2xl font-black text-ink">
-        Print<span className="text-pink">volution</span>
+    <div style={{
+      minHeight: '100vh', background: '#fafaf7',
+      backgroundImage: 'radial-gradient(circle, #e8e4dc 1.2px, transparent 1.2px)',
+      backgroundSize: '22px 22px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24,
+    }}>
+      <Link href="/" style={{
+        marginTop: 48, marginBottom: 32,
+        fontSize: 24, fontWeight: 800, color: '#0a0a0a', textDecoration: 'none',
+      }}>
+        Print<span style={{ color: '#E91E8C' }}>volution</span>
       </Link>
 
-      <div className="w-full max-w-sm rounded-lg border-2 border-ink bg-white p-8 shadow-brand">
-        <h1 className="mb-1 text-2xl font-black text-ink">Sign in</h1>
-        <p className="mb-6 text-sm text-neutral-500">Admin &amp; staff access</p>
+      <div className="pv-login-box">
+        <h1>Sign in</h1>
+        <p className="sub">Admin &amp; staff access</p>
 
         <Suspense>
           <LoginForm />
         </Suspense>
 
-        <div className="mt-6 border-t border-neutral-200 pt-4 text-center text-xs text-neutral-400">
+        <div style={{
+          marginTop: 24, paddingTop: 16, borderTop: '1px solid #eee',
+          fontSize: 11, color: '#aaa', textAlign: 'center',
+        }}>
           Not an admin?{' '}
-          <Link href="/" className="font-semibold text-pink hover:underline">
+          <Link href="/" style={{ fontWeight: 700, color: '#E91E8C', textDecoration: 'none' }}>
             Back to site
           </Link>
         </div>

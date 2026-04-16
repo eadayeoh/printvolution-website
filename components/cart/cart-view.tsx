@@ -13,16 +13,16 @@ export function CartView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  if (!mounted) return <div className="text-sm text-neutral-500">Loading…</div>;
+  if (!mounted) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading…</div>;
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border-2 border-dashed border-neutral-200 p-12 text-center">
-        <p className="mb-6 text-lg text-neutral-500">Your cart is empty.</p>
-        <Link
-          href="/shop"
-          className="inline-flex items-center rounded-full bg-pink px-6 py-3 text-sm font-bold text-white hover:bg-pink-dark"
-        >
+      <div style={{
+        padding: 80, textAlign: 'center', border: '2px dashed #ddd',
+        background: '#fff', maxWidth: 600, margin: '0 auto',
+      }}>
+        <p style={{ fontSize: 18, color: '#666', marginBottom: 24 }}>Your cart is empty.</p>
+        <Link href="/shop" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
           Browse products →
         </Link>
       </div>
@@ -30,37 +30,54 @@ export function CartView() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
-          {items.map((item) => (
-            <div key={item.id} className="flex gap-4 p-4">
-              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded bg-neutral-50 text-3xl">
+    <div className="cart-layout">
+      <div className="cart-main">
+        <div style={{ background: '#fff', border: '1.5px solid #0a0a0a' }}>
+          {items.map((item, idx) => (
+            <div
+              key={item.id}
+              style={{
+                display: 'flex', gap: 16, padding: '18px 22px',
+                borderBottom: idx < items.length - 1 ? '1px solid #eee' : 'none',
+              }}
+            >
+              <div style={{
+                width: 72, height: 72, background: '#f5f2ea', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 36,
+              }}>
                 {item.icon ?? '📦'}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-bold text-ink">{item.product_name}</h3>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+                  <h3 style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 700, color: '#0a0a0a', margin: 0 }}>
+                    {item.product_name}
+                  </h3>
                   <button
                     onClick={() => remove(item.id)}
-                    className="text-neutral-400 transition-colors hover:text-red-500"
+                    style={{ background: 'none', border: 'none', color: '#bbb', cursor: 'pointer' }}
                     aria-label="Remove"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
                 {Object.keys(item.config).length > 0 && (
-                  <div className="mb-2 text-xs text-neutral-500">
+                  <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>
                     {Object.entries(item.config).map(([k, v]) => (
-                      <span key={k} className="mr-3">
-                        <span className="text-neutral-400">{k}:</span> <span className="font-semibold text-neutral-700">{v}</span>
+                      <span key={k} style={{ marginRight: 14 }}>
+                        <span style={{ color: '#bbb' }}>{k}:</span>{' '}
+                        <strong style={{ color: '#555' }}>{v}</strong>
                       </span>
                     ))}
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-500">Qty {item.qty}</span>
-                  <span className="text-sm font-black text-pink">{formatSGD(item.line_total_cents)}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#888' }}>Qty {item.qty}</span>
+                  <span style={{
+                    fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700, color: '#E91E8C',
+                  }}>
+                    {formatSGD(item.line_total_cents)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -68,34 +85,56 @@ export function CartView() {
         </div>
       </div>
 
-      <aside>
-        <div className="sticky top-20 rounded-lg border-2 border-ink bg-white p-6 shadow-brand">
-          <h3 className="mb-4 text-lg font-black text-ink">Summary</h3>
-          <div className="mb-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-neutral-600">Subtotal</span>
-              <span className="font-semibold text-ink">{formatSGD(subtotal)}</span>
+      <aside className="cart-rail">
+        <div style={{
+          position: 'sticky', top: 80, padding: 28, background: '#fff',
+          border: '2px solid #0a0a0a', boxShadow: '6px 6px 0 #E91E8C',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 6 }}>Summary</div>
+          <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 700, marginBottom: 18, color: '#0a0a0a' }}>
+            {items.length} item{items.length !== 1 ? 's' : ''}
+          </h3>
+
+          <div style={{ marginBottom: 14, fontSize: 13, lineHeight: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#666' }}>Subtotal</span>
+              <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{formatSGD(subtotal)}</span>
             </div>
-            <div className="flex justify-between text-neutral-400">
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#aaa' }}>
               <span>Delivery</span>
-              <span>Calculated at checkout</span>
+              <span>At checkout</span>
             </div>
           </div>
-          <div className="mb-5 border-t-2 border-ink pt-4">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-semibold text-neutral-600">Total</span>
-              <span className="text-2xl font-black text-pink">{formatSGD(subtotal)}</span>
+
+          <div style={{ borderTop: '2px solid #0a0a0a', paddingTop: 14, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#666' }}>Total</span>
+              <span style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 700, color: '#E91E8C' }}>
+                {formatSGD(subtotal)}
+              </span>
             </div>
           </div>
+
           <Link
             href="/checkout"
-            className="block w-full rounded-full bg-pink py-3 text-center text-sm font-bold text-white transition-colors hover:bg-pink-dark"
+            style={{
+              display: 'block', textAlign: 'center', padding: '14px',
+              borderRadius: 999, background: '#E91E8C', color: '#fff',
+              fontSize: 13, fontWeight: 800, letterSpacing: 0.3,
+              textDecoration: 'none', fontFamily: 'var(--sans)', marginBottom: 8,
+            }}
           >
             Proceed to Checkout →
           </Link>
           <Link
             href="/shop"
-            className="mt-2 block w-full rounded-full border-2 border-neutral-200 py-3 text-center text-sm font-bold text-ink transition-colors hover:border-ink"
+            style={{
+              display: 'block', textAlign: 'center', padding: '14px',
+              borderRadius: 999, background: '#fff', color: '#0a0a0a',
+              fontSize: 13, fontWeight: 800, letterSpacing: 0.3,
+              textDecoration: 'none', fontFamily: 'var(--sans)',
+              border: '2px solid #e5e5e5',
+            }}
           >
             Continue shopping
           </Link>

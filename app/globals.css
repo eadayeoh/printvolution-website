@@ -42,6 +42,56 @@
   }
 }
 
+/* Checkout form inputs */
+.pv-checkout-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--sans);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  color: #0a0a0a;
+  box-sizing: border-box;
+}
+.pv-checkout-input:focus { border-color: #E91E8C; }
+textarea.pv-checkout-input { min-height: 70px; resize: vertical; line-height: 1.55; }
+
+/* Cart layout */
+.cart-layout {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .cart-layout { grid-template-columns: 1fr; }
+}
+
+/* Login page */
+.pv-login-box {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 40px 32px;
+  background: #fff;
+  border: 2px solid #0a0a0a;
+  box-shadow: 8px 8px 0 #E91E8C;
+}
+.pv-login-box h1 {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 700;
+  color: #0a0a0a;
+  margin: 0 0 6px;
+}
+.pv-login-box .sub {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 24px;
+}
+
 /* CMYK brand bar at top of every page */
 @layer components {
   .cmyk-bar {

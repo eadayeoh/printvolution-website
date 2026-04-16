@@ -25,44 +25,51 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    // Refresh to let middleware pick up new cookie and redirect
     router.push(redirectTo);
     router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <label className="block">
-        <span className="mb-1 block text-xs font-bold text-ink">Email</span>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <label>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#0a0a0a', marginBottom: 6 }}>Email</span>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none"
+          className="pv-checkout-input"
         />
       </label>
-      <label className="block">
-        <span className="mb-1 block text-xs font-bold text-ink">Password</span>
+      <label>
+        <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#0a0a0a', marginBottom: 6 }}>Password</span>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
-          className="w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none"
+          className="pv-checkout-input"
         />
       </label>
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <div style={{
+          padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca',
+          color: '#991b1b', fontSize: 12, borderRadius: 4,
+        }}>
           {error}
         </div>
       )}
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-full bg-pink py-2.5 text-sm font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
+        style={{
+          padding: '12px 20px', borderRadius: 999,
+          background: '#E91E8C', color: '#fff', fontSize: 13, fontWeight: 800,
+          letterSpacing: 0.3, border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)',
+          marginTop: 8, opacity: loading ? 0.5 : 1,
+        }}
       >
         {loading ? 'Signing in…' : 'Sign In'}
       </button>

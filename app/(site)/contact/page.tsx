@@ -2,7 +2,8 @@ import { getContactMethods } from '@/lib/data/page_content';
 
 export const metadata = {
   title: 'Contact Us',
-  description: 'Get in touch with Printvolution. WhatsApp, phone, or visit our store at Paya Lebar Square.',
+  description: 'WhatsApp, phone, or visit our store at Paya Lebar Square.',
+  alternates: { canonical: 'https://printvolution.sg/contact' },
 };
 
 const TYPE_META: Record<string, { icon: string; href: (v: string) => string }> = {
@@ -21,42 +22,77 @@ export default async function ContactPage() {
   const methods = await getContactMethods();
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-16 lg:px-10 lg:py-24">
-      <div className="mb-12 text-center">
-        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">● Contact</div>
-        <h1 className="mb-4 text-5xl font-black text-ink lg:text-6xl">Get in touch.</h1>
-        <p className="text-lg text-neutral-600">
-          Walk in, call, or WhatsApp us. We reply fastest on WhatsApp.
-        </p>
+    <div className="screen active" id="screen-contact">
+      {/* Hero */}
+      <div className="ab-hero">
+        <div className="ab-hero-inner" style={{ gridTemplateColumns: '1fr', maxWidth: 900 }}>
+          <div className="ab-hero-text">
+            <div className="hs-tag" style={{ color: '#E91E8C' }}>Contact</div>
+            <h1 className="ab-h1">Get in touch.<br /><em>We pick up.</em></h1>
+            <p className="ab-sub" style={{ color: 'rgba(255,255,255,.7)' }}>
+              WhatsApp is fastest — usually a reply within 30 minutes during opening hours.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-10 grid gap-4 md:grid-cols-2">
-        {methods.map((m: any, i: number) => {
-          const meta = TYPE_META[m.type] ?? TYPE_META.other;
-          return (
+      {/* Methods grid */}
+      <div className="ab-section">
+        <div className="ab-section-in">
+          <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+            {methods.map((m, i) => {
+              const meta = TYPE_META[m.type] ?? TYPE_META.other;
+              return (
+                <a
+                  key={i}
+                  href={meta.href(m.value)}
+                  target={m.type !== 'phone' && m.type !== 'email' ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', gap: 16, padding: 24,
+                    background: '#fff', border: '2px solid #0a0a0a',
+                    textDecoration: 'none', color: 'inherit',
+                    transition: 'all .2s', boxShadow: '4px 4px 0 #E91E8C',
+                  }}
+                >
+                  <div style={{ fontSize: 36 }}>{meta.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 4 }}>
+                      {m.type}
+                    </div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 700, color: '#0a0a0a' }}>
+                      {m.label ?? m.value}
+                    </div>
+                    {m.note && <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{m.note}</div>}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Visit */}
+      <div className="ab-section" style={{ background: '#f8f8f8' }}>
+        <div className="ab-section-in">
+          <div style={{ background: '#fff', padding: 40, border: '1px solid #eee', textAlign: 'center' }}>
+            <div className="hs-tag" style={{ marginBottom: 12 }}>📍 Visit Us</div>
+            <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 700, color: '#0a0a0a', marginBottom: 8 }}>
+              60 Paya Lebar Road #B1-35
+            </div>
+            <div style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>Paya Lebar Square, Singapore 409051</div>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 24 }}>Mon–Sat · 10am–7.30pm · Closed Sunday</div>
             <a
-              key={i}
-              href={meta.href(m.value)}
-              target={m.type !== 'phone' && m.type !== 'email' ? '_blank' : undefined}
+              href="https://maps.google.com/?q=60+Paya+Lebar+Road+B1-35"
+              target="_blank"
               rel="noopener noreferrer"
-              className="group flex gap-4 rounded-lg border-2 border-ink bg-white p-6 shadow-brand transition-all hover:shadow-brand-lg"
+              className="btn-primary"
+              style={{ display: 'inline-block', textDecoration: 'none' }}
             >
-              <div className="text-3xl">{meta.icon}</div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-pink">{m.type}</div>
-                <div className="text-lg font-black text-ink group-hover:text-pink">{m.label ?? m.value}</div>
-                {m.note && <div className="mt-1 text-xs text-neutral-500">{m.note}</div>}
-              </div>
+              Get Directions
             </a>
-          );
-        })}
-      </div>
-
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-8 text-center">
-        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">📍 Visit Us</div>
-        <div className="mb-1 text-xl font-black text-ink">60 Paya Lebar Road #B1-35</div>
-        <div className="mb-4 text-sm text-neutral-600">Paya Lebar Square, Singapore 409051</div>
-        <div className="text-xs text-neutral-500">Mon–Sat · 10am–7.30pm · Closed Sunday</div>
+          </div>
+        </div>
       </div>
     </div>
   );
