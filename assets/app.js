@@ -6849,9 +6849,7 @@ window.admSaveTplEditor = admSaveTplEditor; window.admCloseTplEditor = admCloseT
 window.admTplAddField = admTplAddField; window.admTplDeleteSelected = admTplDeleteSelected;
 window.admTplSetBleed = admTplSetBleed; window.admTplSetUnit = admTplSetUnit;
 window.admTplTogglePrintSetup = admTplTogglePrintSetup;
-// Admin images
-window.imglibCloseTagModal = imglibCloseTagModal; window.imglibDeleteImg = imglibDeleteImg;
-window.imglibSaveTags = imglibSaveTags;
+// Admin images - functions don't exist, skip
 
 // -- Also support old admShowSection calls --
 function admShowSection(s, el) {
