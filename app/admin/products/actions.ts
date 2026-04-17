@@ -60,7 +60,6 @@ const ProductUpdateSchema = z.object({
   intro: z.string().nullable(),
   why_headline: z.string().nullable(),
   why_us: z.array(z.string()),
-  chips: z.array(z.string()),
   image_url: z.string().nullable(),
   // nested
   pricing: PricingSchema.nullable(),
@@ -105,7 +104,7 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
     hero_color: d.hero_color, hero_big: d.hero_big,
     h1: d.h1, h1em: d.h1em,
     intro: d.intro, why_headline: d.why_headline,
-    why_us: d.why_us, chips: d.chips, image_url: d.image_url,
+    why_us: d.why_us, image_url: d.image_url,
   }, { onConflict: 'product_id' });
 
   // 3. Pricing

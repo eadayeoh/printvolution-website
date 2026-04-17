@@ -51,7 +51,6 @@ export type ProductExtras = {
   why_headline: string | null;
   why_us: string[];
   use_cases: unknown[];
-  chips: string[];
   image_url: string | null;
 };
 
@@ -205,7 +204,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
           h1: extras.h1, h1em: extras.h1em,
           intro: extras.intro, why_headline: extras.why_headline,
           why_us: extras.why_us ?? [], use_cases: extras.use_cases ?? [],
-          chips: extras.chips ?? [], image_url: extras.image_url,
+          image_url: extras.image_url,
         }
       : null,
     configurator,

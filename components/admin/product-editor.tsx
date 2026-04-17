@@ -46,7 +46,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
   const [intro, setIntro] = useState(product.extras?.intro ?? '');
   const [whyHeadline, setWhyHeadline] = useState(product.extras?.why_headline ?? '');
   const [whyUs, setWhyUs] = useState((product.extras?.why_us ?? []).join('\n'));
-  const [chips, setChips] = useState((product.extras?.chips ?? []).join('\n'));
   const [imageUrl, setImageUrl] = useState(product.extras?.image_url ?? '');
 
   // Pricing (cents in backend, dollars in UI)
@@ -81,7 +80,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
         h1: h1 || null, h1em: h1em || null,
         intro: intro || null, why_headline: whyHeadline || null,
         why_us: whyUs.split('\n').map((s) => s.trim()).filter(Boolean),
-        chips: chips.split('\n').map((s) => s.trim()).filter(Boolean),
         image_url: imageUrl || null,
         pricing: {
           label: pricingLabel,
@@ -248,9 +246,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           </Field>
           <Field label="Why us bullets (one per line)">
             <textarea value={whyUs} onChange={(e) => setWhyUs(e.target.value)} rows={4} className={inputCls} />
-          </Field>
-          <Field label="Trust chips (one per line, shown in hero)">
-            <textarea value={chips} onChange={(e) => setChips(e.target.value)} rows={3} className={inputCls} />
           </Field>
           <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
             💡 The hero banner image moved to the <strong>Basics</strong> tab — it now acts as the full-bleed background of the product page.

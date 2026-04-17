@@ -214,7 +214,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const h1em = product.extras?.h1em ?? '';
   const intro = product.extras?.intro ?? product.description ?? '';
   const whyHeadlineHtml = product.extras?.why_headline ?? '';
-  const chips = (product.extras?.chips ?? []).filter(Boolean);
   const whyUs = (product.extras?.why_us ?? []).filter(Boolean);
   const useCases = (product.extras?.use_cases ?? []) as Array<{ title: string; desc: string }>;
   const related = (product.related ?? []).slice(0, 4);
@@ -448,29 +447,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               }}>
                 {product.tagline}
               </p>
-            )}
-
-            {/* Trust chips — glass morphism */}
-            {chips.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 36 }}>
-                {chips.slice(0, 3).map((c, i) => (
-                  <div key={i} style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    padding: '8px 14px',
-                    background: 'rgba(255,255,255,0.5)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.7)',
-                    color: '#1A0410',
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    letterSpacing: 0.2,
-                  }}>
-                    {c}
-                  </div>
-                ))}
-              </div>
             )}
 
             {/* CTAs — pink-dominant, modern */}

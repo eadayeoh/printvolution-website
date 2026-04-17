@@ -242,7 +242,6 @@ async function seedProductExtras() {
       why_headline: e.whyHeadline || null,
       why_us: e.whyUs || [],
       use_cases: e.useCases || [],
-      chips: e.chips || [],
       image_url: e.image || null,
     }, { onConflict: 'product_id' });
     if (error) throw new Error(`extras ${slug}: ${error.message}`);
