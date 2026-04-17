@@ -53,6 +53,7 @@ const ProductUpdateSchema = z.object({
   // extras
   seo_title: z.string().nullable(),
   seo_desc: z.string().nullable(),
+  seo_body: z.string().nullable(),
   hero_color: z.string().nullable(),
   hero_big: z.string().nullable(),
   h1: z.string().nullable(),
@@ -100,7 +101,7 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
   // 2. Extras
   await sb.from('product_extras').upsert({
     product_id: id,
-    seo_title: d.seo_title, seo_desc: d.seo_desc,
+    seo_title: d.seo_title, seo_desc: d.seo_desc, seo_body: d.seo_body,
     hero_color: d.hero_color, hero_big: d.hero_big,
     h1: d.h1, h1em: d.h1em,
     intro: d.intro, why_headline: d.why_headline,

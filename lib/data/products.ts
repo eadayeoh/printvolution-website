@@ -43,6 +43,7 @@ export type ConfiguratorStep = {
 export type ProductExtras = {
   seo_title: string | null;
   seo_desc: string | null;
+  seo_body: string | null;
   hero_color: string | null;
   hero_big: string | null;
   h1: string | null;
@@ -205,7 +206,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
       : null,
     extras: extras
       ? {
-          seo_title: extras.seo_title, seo_desc: extras.seo_desc,
+          seo_title: extras.seo_title, seo_desc: extras.seo_desc, seo_body: extras.seo_body,
           hero_color: extras.hero_color, hero_big: extras.hero_big,
           h1: extras.h1, h1em: extras.h1em,
           intro: extras.intro, why_headline: extras.why_headline,

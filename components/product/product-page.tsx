@@ -218,7 +218,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const intro = product.extras?.intro ?? product.description ?? '';
   const whyHeadlineHtml = product.extras?.why_headline ?? '';
   const whyUs = (product.extras?.why_us ?? []).filter(Boolean);
-  const useCases = (product.extras?.use_cases ?? []) as Array<{ title: string; desc: string }>;
   const related = (product.related ?? []).slice(0, 4);
 
   function handleAddToCart() {
@@ -498,7 +497,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.52 3.48A11.8 11.8 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.12.56 4.1 1.54 5.82L0 24l6.34-1.66A11.87 11.87 0 0 0 12 24c6.63 0 12-5.37 12-12 0-3.2-1.25-6.22-3.48-8.52zM12 21.82c-1.86 0-3.67-.5-5.26-1.45l-.38-.22-3.77.99 1.01-3.67-.25-.38a9.8 9.8 0 0 1-1.52-5.25c0-5.43 4.42-9.85 9.85-9.85S21.85 6.3 21.85 11.73c0 5.42-4.42 9.84-9.85 9.84zm5.4-7.35c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.34.22-.64.07-.3-.15-1.26-.47-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.34.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47 0 1.46 1.06 2.87 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.75-.72 2-1.41.25-.69.25-1.28.17-1.4-.07-.13-.27-.2-.57-.35z"/>
                 </svg>
-                Quick enquiry on WhatsApp
+                WhatsApp
               </a>
             </div>
           </div>
@@ -851,33 +850,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         </section>
       )}
 
-      {/* =============== SECTION 6 — USE CASES =============== */}
-      {useCases.length > 0 && (
-        <section className="pp3-use" style={{ background: '#fff', padding: '72px 24px' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 8 }}>
-                Who Orders This
-              </div>
-              <h2 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, color: '#0a0a0a' }}>
-                Built for<br />
-                <em style={{ fontFamily: 'var(--serif, Cormorant Garamond, Georgia, serif)', fontStyle: 'italic', fontWeight: 500, color: '#E91E8C' }}>
-                  every scenario.
-                </em>
-              </h2>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-              {useCases.map((u, i) => (
-                <div key={i} style={{ background: '#fafaf7', border: '1px solid #eee', borderRadius: 14, padding: 26 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0a0a0a', marginBottom: 8 }}>{u.title}</div>
-                  <div style={{ fontSize: 14, color: '#555', lineHeight: 1.6 }}>{u.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* =============== SECTION 8 — WHY US (dark) =============== */}
       {whyUs.length > 0 && (
         <section className="pp3-why" style={{ background: '#0a0a0a', color: '#fff', padding: '80px 24px' }}>
@@ -1006,15 +978,19 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         </section>
       )}
 
-      {/* =============== SECTION 11 — SEO BODY TEXT =============== */}
+      {/* =============== SECTION 11 — SEO BODY TEXT (editable via admin SEO tab) =============== */}
       <section style={{ background: '#fff', padding: '40px 24px 80px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 13, color: '#777', lineHeight: 1.75 }}>
-          <p style={{ margin: 0 }}>
-            Looking for {product.name.toLowerCase()} in Singapore? Printvolution offers fast, high-quality{' '}
-            {product.name.toLowerCase()} printing with island-wide delivery or free pickup at Paya Lebar Square.
-            {fromPrice !== null && <> Prices start from <strong>{formatSGD(fromPrice)}</strong> with volume discounts available.</>}
-            {' '}All orders go through pre-press file checks and digital mockup review before we print, so what you approve is what you get. Need it fast? Express turnaround is available — message us on WhatsApp for rush jobs and custom specs.
-          </p>
+          {product.extras?.seo_body ? (
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{product.extras.seo_body}</p>
+          ) : (
+            <p style={{ margin: 0 }}>
+              Looking for {product.name.toLowerCase()} in Singapore? Printvolution offers fast, high-quality{' '}
+              {product.name.toLowerCase()} printing with island-wide delivery or free pickup at Paya Lebar Square.
+              {fromPrice !== null && <> Prices start from <strong>{formatSGD(fromPrice)}</strong> with volume discounts available.</>}
+              {' '}All orders go through pre-press file checks and digital mockup review before we print, so what you approve is what you get. Need it fast? Express turnaround is available — message us on WhatsApp for rush jobs and custom specs.
+            </p>
+          )}
         </div>
       </section>
 

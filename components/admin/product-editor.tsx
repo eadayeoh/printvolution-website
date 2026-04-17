@@ -43,6 +43,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
   // Extras
   const [seoTitle, setSeoTitle] = useState(product.extras?.seo_title ?? '');
   const [seoDesc, setSeoDesc] = useState(product.extras?.seo_desc ?? '');
+  const [seoBody, setSeoBody] = useState(product.extras?.seo_body ?? '');
   const [heroColor, setHeroColor] = useState(product.extras?.hero_color ?? '#0D0D0D');
   const [heroBig, setHeroBig] = useState(product.extras?.hero_big ?? '');
   const [h1, setH1] = useState(product.extras?.h1 ?? '');
@@ -80,7 +81,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
         is_gift: isGift,
         highlights: highlights.split('\n').map((s) => s.trim()).filter(Boolean),
         specs: specs.filter((s) => s.label.trim() || s.value.trim()),
-        seo_title: seoTitle || null, seo_desc: seoDesc || null,
+        seo_title: seoTitle || null, seo_desc: seoDesc || null, seo_body: seoBody || null,
         hero_color: heroColor || null, hero_big: heroBig || null,
         h1: h1 || null, h1em: h1em || null,
         intro: intro || null, why_headline: whyHeadline || null,
@@ -273,6 +274,18 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           <Field label="SEO description">
             <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
             <p className="mt-1 text-[10px] text-neutral-500">Under ~155 characters. Shown below the title in search results.</p>
+          </Field>
+          <Field label="SEO body paragraph (bottom of product page)">
+            <textarea
+              value={seoBody}
+              onChange={(e) => setSeoBody(e.target.value)}
+              rows={6}
+              className={inputCls}
+              placeholder={`Looking for ${product.name.toLowerCase()} in Singapore? Printvolution offers fast, high-quality ${product.name.toLowerCase()} printing with island-wide delivery…`}
+            />
+            <p className="mt-1 text-[10px] text-neutral-500">
+              Rendered as a small grey paragraph at the bottom of the product page — indexed by Google for long-tail keywords. Leave blank to use the auto-generated fallback.
+            </p>
           </Field>
         </div>
       )}
