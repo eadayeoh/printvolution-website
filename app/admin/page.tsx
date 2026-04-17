@@ -1,29 +1,30 @@
 import Link from 'next/link';
 import { getAdminStats, getRecentOrders } from '@/lib/data/admin';
+import { getAnalytics } from '@/lib/data/analytics';
 import { formatSGD } from '@/lib/utils';
 import { StatusBadge } from '@/components/admin/status-badge';
+import { AnalyticsPanel } from '@/components/admin/analytics-panel';
 
 export const metadata = { title: 'Dashboard' };
+export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-  const [stats, recent] = await Promise.all([
+  const [stats, recent, analytics] = await Promise.all([
     getAdminStats(),
     getRecentOrders(8),
+    getAnalytics(),
   ]);
 
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-black text-ink">Dashboard</h1>
-        <p className="text-sm text-neutral-500">Orders, revenue, and production queue.</p>
+        <p className="text-sm text-neutral-500">Revenue, orders, top products, and production queue.</p>
       </div>
 
-      {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Total Orders" value={String(stats.total_orders)} color="blue" />
-        <StatCard label="Revenue" value={formatSGD(stats.revenue_cents)} color="pink" />
-        <StatCard label="Pending" value={String(stats.pending_count)} color="amber" />
-        <StatCard label="Processing" value={String(stats.processing_count)} color="cyan" />
+      {/* Analytics */}
+      <div className="mb-8">
+        <AnalyticsPanel a={analytics} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
