@@ -31,6 +31,12 @@ export default async function AdminGiftsPage() {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/admin/gifts/prompts"
+            className="rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
+          >
+            Prompts →
+          </Link>
+          <Link
             href="/admin/gifts/templates"
             className="rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
           >

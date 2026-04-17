@@ -120,39 +120,69 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
         </div>
       </nav>
 
-      {/* Mega menu (desktop) */}
+      {/* Mega menu (desktop) — compact, balanced columns */}
       {openMega && mega[openMega] && (
         <div
-          className="fixed left-0 right-0 top-[60px] z-40 hidden border-b border-pink/20 bg-white shadow-2xl lg:block"
+          className="fixed left-0 right-0 top-[60px] z-40 hidden border-b border-neutral-200 bg-white shadow-xl lg:block"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
           style={{ paddingTop: 2 }}
         >
           <div className="mx-auto max-w-7xl px-8 py-8">
-            <div
-              className="grid gap-8"
-              style={{ gridTemplateColumns: `repeat(${Math.min(mega[openMega].length, 4)}, minmax(0, 1fr))` }}
-            >
-              {mega[openMega].map((section) => (
-                <div key={section.id}>
-                  <h4 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-pink">
-                    {section.section_heading}
-                  </h4>
-                  <ul className="space-y-2">
-                    {section.items.map((it) => (
-                      <li key={it.product_slug}>
-                        <Link
-                          href={productHref(it.product_slug, productRoutes)}
-                          onClick={() => setOpenMega(null)}
-                          className="text-sm text-neutral-700 transition-colors hover:text-pink"
-                        >
-                          {it.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <div className="grid grid-cols-4 gap-x-10 gap-y-8">
+              {mega[openMega].map((section) => {
+                const SHOWN = 6;
+                const items = section.items.slice(0, SHOWN);
+                const more = section.items.length - SHOWN;
+                return (
+                  <div key={section.id} className="min-w-0">
+                    <h4 className="mb-3 border-b border-pink/15 pb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-pink">
+                      {section.section_heading}
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {items.map((it) => (
+                        <li key={it.product_slug}>
+                          <Link
+                            href={productHref(it.product_slug, productRoutes)}
+                            onClick={() => setOpenMega(null)}
+                            className="group flex items-center gap-1.5 truncate text-[13px] text-neutral-700 transition-colors hover:text-pink"
+                          >
+                            <span className="h-1 w-1 rounded-full bg-neutral-300 transition-colors group-hover:bg-pink" />
+                            <span className="truncate">{it.label}</span>
+                          </Link>
+                        </li>
+                      ))}
+                      {more > 0 && (
+                        <li>
+                          <Link
+                            href="/shop"
+                            onClick={() => setOpenMega(null)}
+                            className="text-[11px] font-semibold text-neutral-400 hover:text-pink"
+                          >
+                            +{more} more →
+                          </Link>
+                        </li>
+                      )}
+                      {section.items.length === 0 && (
+                        <li className="text-[11px] italic text-neutral-300">Coming soon</li>
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Footer callout */}
+            <div className="mt-8 flex items-center justify-between border-t border-neutral-100 pt-5">
+              <div className="text-[11px] text-neutral-500">
+                Need something custom? <Link href="/contact" onClick={() => setOpenMega(null)} className="font-bold text-pink hover:underline">Ask us →</Link>
+              </div>
+              <Link
+                href={openMega === 'gifts' ? '/shop?category=gifts' : '/shop'}
+                onClick={() => setOpenMega(null)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 text-[11px] font-bold text-white hover:bg-pink"
+              >
+                Browse all {openMega === 'gifts' ? 'gifts' : 'products'} →
+              </Link>
             </div>
           </div>
         </div>
