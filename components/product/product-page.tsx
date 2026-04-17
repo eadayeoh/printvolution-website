@@ -160,16 +160,43 @@ export function ProductPage({ product, productRoutes }: Props) {
       (s) => (s.type === 'swatch' || s.type === 'select') && (s.options ?? []).some((o) => !!o.price_formula)
     );
     if (!hasFormula || singleTotal <= 0) return [];
-    const tiers = [1, 5, 10, 25, 50, 100];
-    return tiers.map((qtyNum) => {
-      const { total } = computeTotal(qtyNum, colIdx, 0);
-      const undiscountedTotal = singleTotal * qtyNum;
+
+    // Walk qty 1→12 and find the point at which savings plateau (i.e.
+    // the formula's discount cap has been reached). Typical volume
+    // discounts cap around $10 off per piece, so extra qty beyond the
+    // cap doesn't save any MORE per unit. Show tiers up to that cap
+    // plus one beyond for context. This keeps the ladder realistic
+    // ("nobody buys 100 roll-up banners").
+    const sample: Array<{ qty: number; total: number; perPiece: number; saves: number }> = [];
+    let prevPerPiece = singleTotal;
+    let plateauAt: number | null = null;
+    for (let q = 1; q <= 20; q++) {
+      const { total } = computeTotal(q, colIdx, 0);
+      const perPiece = total / q;
+      const saves = Math.max(0, singleTotal * q - total);
+      sample.push({ qty: q, total, perPiece, saves });
+      if (q > 1 && Math.abs(perPiece - prevPerPiece) < 1 && plateauAt === null) {
+        plateauAt = q; // discount has fully kicked in by this qty
+      }
+      prevPerPiece = perPiece;
+    }
+
+    // Show tiers: 1, 2, 3, plateau-point, plateau+2 (or similar).
+    const stopAt = plateauAt ? Math.min(plateauAt + 1, 10) : 10;
+    const tierQtys = new Set<number>([1, 2, 3]);
+    // Fill evenly up to stopAt
+    if (stopAt >= 5) tierQtys.add(5);
+    if (stopAt >= 10) tierQtys.add(10);
+    tierQtys.add(stopAt);
+    const sorted = Array.from(tierQtys).filter((q) => q >= 1 && q <= 12).sort((a, b) => a - b);
+    return sorted.map((q) => {
+      const s = sample[q - 1];
       return {
-        qty: qtyNum === 1 ? '1 pc' : `${qtyNum} pcs`,
-        qtyNum,
-        total,
-        perPiece: qtyNum > 0 ? total / qtyNum : total,
-        saves: Math.max(0, undiscountedTotal - total),
+        qty: q === 1 ? '1 pc' : `${q} pcs`,
+        qtyNum: q,
+        total: s.total,
+        perPiece: s.perPiece,
+        saves: s.saves,
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
