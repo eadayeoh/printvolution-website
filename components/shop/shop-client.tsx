@@ -9,6 +9,7 @@ type Item = {
   slug: string;
   name: string;
   icon: string | null;
+  image_url: string | null;
   tagline: string | null;
   is_gift: boolean;
   category_name: string;
@@ -141,8 +142,8 @@ export function ShopClient({ items, categories, initialCategory, initialGift, in
                 {group.items.map((p) => (
                   <Link key={p.slug} href={p.href} className="pvshop-card">
                     <div className="pvshop-card-img">
-                      {p.icon && (p.icon.startsWith('http') || p.icon.startsWith('/')) ? (
-                        <img src={p.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {p.image_url ? (
+                        <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div className="ph" style={{ fontSize: 52 }}>{p.icon ?? '📦'}</div>
                       )}

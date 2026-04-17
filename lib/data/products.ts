@@ -70,7 +70,7 @@ export type ProductDetail = {
   extras: ProductExtras | null;
   configurator: ConfiguratorStep[];
   faqs: Array<{ question: string; answer: string }>;
-  related: Array<{ slug: string; name: string; icon: string | null; category_slug: string; subcategory_slug: string | null; min_price: number | null }>;
+  related: Array<{ slug: string; name: string; icon: string | null; image_url: string | null; category_slug: string; subcategory_slug: string | null; min_price: number | null }>;
 };
 
 export type ProductListItem = {

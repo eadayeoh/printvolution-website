@@ -233,7 +233,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     }
     if (designFilesUrl.trim()) configLabels['Design files'] = designFilesUrl.trim();
     addToCart({
-      product_slug: product.slug, product_name: product.name, icon: product.icon,
+      product_slug: product.slug, product_name: product.name,
+      // Snapshot the banner as the cart thumbnail when available; fall
+      // back to the emoji / legacy icon otherwise.
+      icon: product.extras?.image_url || product.icon,
       config: configLabels, qty, unit_price_cents: unitPrice, line_total_cents: lineTotal,
     });
     setAddedFlash(true);
@@ -968,7 +971,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
               {related.map((r) => {
                 const href = productHref(r.slug, productRoutes) ?? '#';
-                const rIconIsUrl = !!r.icon && (r.icon.startsWith('http') || r.icon.startsWith('/'));
                 return (
                   <Link
                     key={r.slug}
@@ -981,8 +983,8 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     }}
                   >
                     <div style={{ width: 52, height: 52, borderRadius: 10, background: '#fafaf7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-                      {rIconIsUrl ? (
-                        <img src={r.icon!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {r.image_url ? (
+                        <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <span style={{ fontSize: 28 }}>{r.icon || '📦'}</span>
                       )}

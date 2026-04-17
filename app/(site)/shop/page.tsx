@@ -27,6 +27,7 @@ export default async function ShopPage({
     slug: p.slug,
     name: p.name,
     icon: p.icon,
+    image_url: p.image_url,
     tagline: p.tagline,
     is_gift: p.is_gift,
     category_name: p.category?.name ?? 'Other',

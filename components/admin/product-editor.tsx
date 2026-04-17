@@ -21,7 +21,10 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
 
   // All editable fields (local state)
   const [name, setName] = useState(product.name);
-  const [icon, setIcon] = useState(product.icon ?? '');
+  // Legacy per-product icon (emoji fallback) — not edited from admin
+  // anymore; the hero banner is the canonical product image. Kept on
+  // the save payload so existing emoji values aren't wiped.
+  const icon = product.icon ?? '';
   const [tagline, setTagline] = useState(product.tagline ?? '');
   const [description, setDescription] = useState(product.description ?? '');
   const topCats = categories.filter((c) => !c.parent_id);
@@ -138,20 +141,14 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </Field>
           <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
-            💡 <strong>Two images per product:</strong>
-            <ul className="mt-1 list-disc pl-5 space-y-0.5">
-              <li><strong>Thumbnail</strong> (square) → shop grid cards · cart · related products · admin orders</li>
-              <li><strong>Hero banner</strong> (landscape) → full-width background on this product&apos;s own page</li>
-            </ul>
+            💡 The <strong>hero banner</strong> is the single product image. It&apos;s used as the
+            full-bleed background on this product&apos;s page and also as the thumbnail on shop
+            grid cards, cart, related products, and admin orders. Upload a landscape image — it
+            will be cropped to 16:9 and auto-resized.
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Thumbnail image — square">
-              <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} aspect={1} label="Thumbnail" />
-            </Field>
-            <Field label="Hero banner — landscape">
-              <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
-            </Field>
-          </div>
+          <Field label="Hero banner image">
+            <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
+          </Field>
           <Field label="Tagline (1-line hook)">
             <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
           </Field>

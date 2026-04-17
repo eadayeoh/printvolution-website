@@ -170,9 +170,9 @@ export default async function HomePage() {
                   href={productHref(slug, routes)}
                   className="cat-card"
                 >
-                  {p.icon && (p.icon.startsWith('http') || p.icon.startsWith('/')) ? (
+                  {p.image_url ? (
                     <span className="cc-ic" style={{ padding: 0 }}>
-                      <img src={p.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </span>
                   ) : (
                     <span className="cc-ic">{p.icon ?? '📦'}</span>
