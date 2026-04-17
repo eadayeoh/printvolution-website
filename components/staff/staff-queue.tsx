@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, ArrowRight, Check } from 'lucide-react';
+import { Search, ArrowRight, Check, LayoutList, Columns } from 'lucide-react';
 import { formatSGD } from '@/lib/utils';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { setOrderStatus, setItemProductionStatus } from '@/app/staff/actions';
 import { createClient } from '@/lib/supabase/client';
+import { StaffBoard } from '@/components/staff/staff-board';
 
 type Props = {
   orders: any[];
@@ -29,6 +30,14 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
   const [isPending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [orders, setOrders] = useState(initialOrders);
+  const [view, setView] = useState<'list' | 'board'>(() => {
+    if (typeof window === 'undefined') return 'list';
+    return (localStorage.getItem('pv-staff-view') as any) || 'list';
+  });
+  function setViewPersistent(v: 'list' | 'board') {
+    setView(v);
+    try { localStorage.setItem('pv-staff-view', v); } catch {}
+  }
 
   // Keep local state in sync with server re-renders
   useEffect(() => { setOrders(initialOrders); }, [initialOrders]);
@@ -110,12 +119,35 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
             );
           })}
         </div>
-        <div className="ml-auto text-[11px] text-neutral-400">
-          Updates live
+        <div className="ml-auto flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex rounded-full border border-neutral-200 bg-white p-0.5 text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={() => setViewPersistent('list')}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 transition-colors ${view === 'list' ? 'bg-ink text-white' : 'text-neutral-500 hover:text-ink'}`}
+            >
+              <LayoutList size={12} /> List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewPersistent('board')}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 transition-colors ${view === 'board' ? 'bg-ink text-white' : 'text-neutral-500 hover:text-ink'}`}
+            >
+              <Columns size={12} /> Board
+            </button>
+          </div>
+          <span className="text-[11px] text-neutral-400">Updates live</span>
         </div>
       </div>
 
-      {/* Order cards */}
+      {/* Board (swim lanes) */}
+      {view === 'board' && (
+        <StaffBoard orders={orders} />
+      )}
+
+      {/* List view — existing card-per-order layout below */}
+      {view === 'list' && (
       <div className="space-y-3">
         {orders.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-neutral-200 p-12 text-center text-sm text-neutral-500">
@@ -238,6 +270,7 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
           );
         })}
       </div>
+      )}
     </>
   );
 }
