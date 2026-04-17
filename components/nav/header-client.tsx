@@ -110,6 +110,13 @@ export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
 
         <div className="flex items-center gap-2">
           <Link
+            href="/account"
+            className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-ink transition-colors hover:border-ink lg:inline-flex"
+            title="My account"
+          >
+            Account
+          </Link>
+          <Link
             href="/cart"
             className="relative flex items-center gap-2 rounded-full bg-pink px-4 py-2 text-[12px] font-bold text-white transition-colors hover:bg-pink-dark"
           >
