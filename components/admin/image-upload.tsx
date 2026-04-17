@@ -50,10 +50,16 @@ export function ImageUpload({
     let srcType = file.type;
     try {
       if (file.size > 3 * 1024 * 1024) {
-        const compressed = await compressImage(file, 2400, 0.85);
-        displaySrc = await blobToDataUrl(compressed.blob);
-        srcType = compressed.type;
-        srcName = file.name.replace(/\.[^.]+$/, '') + '-compressed.jpg';
+        try {
+          const compressed = await compressImage(file, 2400, 0.85);
+          displaySrc = await blobToDataUrl(compressed.blob);
+          srcType = compressed.type;
+          srcName = file.name.replace(/\.[^.]+$/, '') + '-compressed.jpg';
+        } catch {
+          // HEIC, RAW or weird format the browser can't decode → just
+          // hand the original to the cropper and let the cropper try.
+          displaySrc = await blobToDataUrl(file);
+        }
       } else {
         displaySrc = await blobToDataUrl(file);
       }
@@ -113,7 +119,7 @@ export function ImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/heic,image/heif"
         style={{ display: 'none' }}
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -160,8 +166,8 @@ export function ImageUpload({
             {uploading
               ? 'Uploading…'
               : value
-                ? 'Click to replace · Max 10 MB · Crop tool shown after pick'
-                : 'Click to browse · Max 10 MB · JPG / PNG / WebP · Cropped to ' + (aspect === 1 ? 'square' : `${aspect.toFixed(2)}:1`)}
+                ? 'Click to replace · Max 20 MB · Auto-resized to fit'
+                : 'Click to browse · Max 20 MB · JPG / PNG / WebP / HEIC · Cropped to ' + (aspect === 1 ? 'square' : `${aspect.toFixed(2)}:1`)}
           </div>
           {error && (
             <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
