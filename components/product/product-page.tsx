@@ -7,6 +7,7 @@ import { formatSGD } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
 import type { ProductDetail } from '@/lib/data/products';
+import { defaultProductSeoBody } from '@/lib/data/product-seo';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
 import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
 
@@ -981,16 +982,9 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       {/* =============== SECTION 11 — SEO BODY TEXT (editable via admin SEO tab) =============== */}
       <section style={{ background: '#fff', padding: '40px 24px 80px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 13, color: '#777', lineHeight: 1.75 }}>
-          {product.extras?.seo_body ? (
-            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{product.extras.seo_body}</p>
-          ) : (
-            <p style={{ margin: 0 }}>
-              Looking for {product.name.toLowerCase()} in Singapore? Printvolution offers fast, high-quality{' '}
-              {product.name.toLowerCase()} printing with island-wide delivery or free pickup at Paya Lebar Square.
-              {fromPrice !== null && <> Prices start from <strong>{formatSGD(fromPrice)}</strong> with volume discounts available.</>}
-              {' '}All orders go through pre-press file checks and digital mockup review before we print, so what you approve is what you get. Need it fast? Express turnaround is available — message us on WhatsApp for rush jobs and custom specs.
-            </p>
-          )}
+          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+            {product.extras?.seo_body?.trim() || defaultProductSeoBody(product.name, fromPrice)}
+          </p>
         </div>
       </section>
 

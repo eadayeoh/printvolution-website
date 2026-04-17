@@ -12,7 +12,7 @@ import { formatSGD } from '@/lib/utils';
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 type Tab = 'basics' | 'pricing' | 'faqs' | 'content';
 
-export function ProductEditor({ product, categories }: { product: ProductDetail; categories: Cat[] }) {
+export function ProductEditor({ product, categories, defaultSeoBody }: { product: ProductDetail; categories: Cat[]; defaultSeoBody?: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [savedFlash, setSavedFlash] = useState(false);
@@ -43,7 +43,9 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
   // Extras
   const [seoTitle, setSeoTitle] = useState(product.extras?.seo_title ?? '');
   const [seoDesc, setSeoDesc] = useState(product.extras?.seo_desc ?? '');
-  const [seoBody, setSeoBody] = useState(product.extras?.seo_body ?? '');
+  // Prefill with the live fallback text so the admin edits the paragraph
+  // they actually see on the page, instead of staring at an empty field.
+  const [seoBody, setSeoBody] = useState(product.extras?.seo_body ?? defaultSeoBody ?? '');
   const [heroColor, setHeroColor] = useState(product.extras?.hero_color ?? '#0D0D0D');
   const [heroBig, setHeroBig] = useState(product.extras?.hero_big ?? '');
   const [h1, setH1] = useState(product.extras?.h1 ?? '');
@@ -275,18 +277,29 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
             <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
             <p className="mt-1 text-[10px] text-neutral-500">Under ~155 characters. Shown below the title in search results.</p>
           </Field>
-          <Field label="SEO body paragraph (bottom of product page)">
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-ink">SEO body paragraph (bottom of product page)</span>
+              {defaultSeoBody && seoBody !== defaultSeoBody && (
+                <button
+                  type="button"
+                  onClick={() => setSeoBody(defaultSeoBody)}
+                  className="text-[10px] font-bold text-pink hover:underline"
+                >
+                  Reset to default
+                </button>
+              )}
+            </div>
             <textarea
               value={seoBody}
               onChange={(e) => setSeoBody(e.target.value)}
-              rows={6}
+              rows={7}
               className={inputCls}
-              placeholder={`Looking for ${product.name.toLowerCase()} in Singapore? Printvolution offers fast, high-quality ${product.name.toLowerCase()} printing with island-wide delivery…`}
             />
             <p className="mt-1 text-[10px] text-neutral-500">
-              Rendered as a small grey paragraph at the bottom of the product page — indexed by Google for long-tail keywords. Leave blank to use the auto-generated fallback.
+              Prefilled with the live default generated from the product name and lowest price. Edit freely — it&apos;s rendered as-is at the bottom of the product page and indexed by Google for long-tail keywords. Clear the field to revert to the auto-generated version.
             </p>
-          </Field>
+          </div>
         </div>
       )}
 

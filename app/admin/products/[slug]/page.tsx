@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getProductBySlug } from '@/lib/data/products';
+import { defaultProductSeoBody, minPriceFromRows } from '@/lib/data/product-seo';
 import { ProductEditor } from '@/components/admin/product-editor';
 
 export const metadata = { title: 'Edit Product' };
@@ -32,7 +33,11 @@ export default async function EditProductPage({ params }: { params: { slug: stri
           </div>
         </div>
       </div>
-      <ProductEditor product={product} categories={((cats ?? []) as any[])} />
+      <ProductEditor
+        product={product}
+        categories={((cats ?? []) as any[])}
+        defaultSeoBody={defaultProductSeoBody(product.name, minPriceFromRows(product.pricing?.rows))}
+      />
     </div>
   );
 }
