@@ -75,11 +75,18 @@ export type OrderListItem = RecentOrder & {
   subtotal_cents: number;
 };
 
-export async function listOrders(filters?: { status?: string; search?: string }): Promise<OrderListItem[]> {
+export async function listOrders(filters?: {
+  status?: string; search?: string; page?: number; pageSize?: number;
+}): Promise<{ rows: OrderListItem[]; total: number; page: number; pageSize: number }> {
   const supabase = createClient();
+  const page = Math.max(1, filters?.page ?? 1);
+  const pageSize = Math.max(10, Math.min(100, filters?.pageSize ?? 25));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = supabase
     .from('orders')
-    .select('id, order_number, customer_name, email, phone, delivery_method, subtotal_cents, total_cents, status, created_at, order_items(id)')
+    .select('id, order_number, customer_name, email, phone, delivery_method, subtotal_cents, total_cents, status, created_at, order_items(id)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (filters?.status && filters.status !== 'all') {
@@ -90,8 +97,8 @@ export async function listOrders(filters?: { status?: string; search?: string })
     query = query.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%`);
   }
 
-  const { data } = await query.limit(200);
-  return ((data ?? []) as any[]).map((o: any) => ({
+  const { data, count } = await query.range(from, to);
+  const rows = ((data ?? []) as any[]).map((o: any) => ({
     id: o.id,
     order_number: o.order_number,
     customer_name: o.customer_name,
@@ -104,6 +111,7 @@ export async function listOrders(filters?: { status?: string; search?: string })
     created_at: o.created_at,
     item_count: (o.order_items ?? []).length,
   }));
+  return { rows, total: count ?? rows.length, page, pageSize };
 }
 
 export async function getOrderById(id: string) {
