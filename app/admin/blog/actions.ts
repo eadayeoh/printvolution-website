@@ -274,3 +274,14 @@ export async function deletePost(id: string) {
   revalidatePath('/blog');
   return { ok: true as const };
 }
+
+/** Delete many posts in one call. Returns the number actually deleted. */
+export async function deletePosts(ids: string[]): Promise<{ ok: boolean; deleted?: number; error?: string }> {
+  const sb = await requireAdmin();
+  if (ids.length === 0) return { ok: true, deleted: 0 };
+  const { error, count } = await sb.from('blog_posts').delete({ count: 'exact' }).in('id', ids);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath('/admin/blog');
+  revalidatePath('/blog');
+  return { ok: true, deleted: count ?? ids.length };
+}
