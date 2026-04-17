@@ -44,9 +44,18 @@ export function CartView() {
               <div style={{
                 width: 72, height: 72, background: '#f5f2ea', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 36,
+                fontSize: 36, overflow: 'hidden', borderRadius: 8,
               }}>
-                {item.icon ?? '📦'}
+                {item.gift_image_url ? (
+                  // Gift: show the customer's configured/transformed preview
+                  <img src={item.gift_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/')) ? (
+                  // Print product with uploaded thumbnail
+                  <img src={item.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  // Fallback: emoji
+                  <span>{item.icon ?? '📦'}</span>
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>

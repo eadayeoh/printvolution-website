@@ -47,8 +47,12 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             <div className="divide-y divide-neutral-100">
               {(order.order_items ?? []).map((item: any) => (
                 <div key={item.id} className="flex gap-4 p-4">
-                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded bg-neutral-50 text-3xl">
-                    {item.icon ?? '📦'}
+                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-neutral-50 text-3xl">
+                    {item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/')) ? (
+                      <img src={item.icon} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{item.icon ?? '📦'}</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-ink">{item.product_name}</div>

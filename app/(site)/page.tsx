@@ -56,14 +56,28 @@ const WHY_US = [
 ];
 
 const SEO_KW = [
-  { slug: 'name-card', label: 'Name Card Printing Singapore', loc: 'From S$28' },
-  { slug: 'flyers', label: 'Flyer Printing Singapore', loc: 'From S$65' },
-  { slug: 'roll-up-banner', label: 'Banner Printing Singapore', loc: 'From S$88' },
-  { slug: 'polo-shirts', label: 'Uniform & T-Shirt Printing', loc: 'From S$19/pc' },
-  { slug: 'acrylic-signage', label: 'Acrylic Signage Singapore', loc: 'From S$32' },
-  { slug: 'stickers', label: 'Sticker Printing Singapore', loc: 'From S$45' },
-  { slug: 'embroidery', label: 'Embroidery Singapore', loc: 'Custom pricing' },
-  { slug: null, label: 'Urgent Printing Singapore', loc: '24h Express' },
+  { slug: 'name-card',         label: 'Name Card Printing',       loc: 'From S$28' },
+  { slug: 'luxury-business-card', label: 'Luxury Name Cards',     loc: 'From S$88' },
+  { slug: 'flyers',            label: 'Flyer Printing',           loc: 'From S$65' },
+  { slug: 'roll-up-banner',    label: 'Banner Printing',          loc: 'From S$88' },
+  { slug: 'pvc-canvas',        label: 'PVC Canvas Printing',      loc: 'From S$55' },
+  { slug: 'poster',            label: 'Poster Printing',          loc: 'From S$12' },
+  { slug: 'polo-shirts',       label: 'Uniform & T-Shirts',       loc: 'From S$19/pc' },
+  { slug: 'aprons',            label: 'Apron Printing',           loc: 'From S$24/pc' },
+  { slug: 'acrylic-signage',   label: 'Acrylic Signage',          loc: 'From S$32' },
+  { slug: 'stickers',          label: 'Sticker Printing',         loc: 'From S$45' },
+  { slug: 'uv-dtf-sticker',    label: 'UV DTF Stickers',          loc: 'Custom' },
+  { slug: 'long-brochures',    label: 'Brochure Printing',        loc: 'From S$38' },
+  { slug: 'books',             label: 'Booklet Printing',         loc: 'From S$85' },
+  { slug: 'hang-tag',          label: 'Hang Tag Printing',        loc: 'From S$18' },
+  { slug: 'paper-bag',         label: 'Paper Bag Printing',       loc: 'From S$45' },
+  { slug: 'tote-bag',          label: 'Tote Bag Printing',        loc: 'From S$38' },
+  { slug: 'rubber-stamp',      label: 'Rubber Stamps',            loc: 'From S$18' },
+  { slug: 'envelopes',         label: 'Envelope Printing',        loc: 'From S$45' },
+  { slug: 'letterhead',        label: 'Letterhead Printing',      loc: 'From S$35' },
+  { slug: 'loose-sheets',      label: 'Loose Sheet Printing',     loc: 'From S$15' },
+  { slug: 'life-size-standee', label: 'Life-Size Standee',        loc: 'From S$95' },
+  { slug: null,                label: 'Urgent Printing',          loc: '24h Express' },
 ];
 
 export default async function HomePage() {

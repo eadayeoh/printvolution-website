@@ -108,31 +108,98 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
 
   return (
     <article>
-      {/* Dark hero */}
-      <section style={{ background: '#0d0d1a', color: '#fff', padding: '56px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 40, gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
+      {/* Light hero — matches homepage / print-product feel */}
+      <section style={{ background: '#FAF7F0', color: '#0a0a0a', position: 'relative', overflow: 'hidden' }}>
+        {/* Dotted pattern */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', inset: 0, opacity: 0.5, pointerEvents: 'none',
+            backgroundImage: 'radial-gradient(rgba(10,10,10,0.12) 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+          }}
+        />
+        {/* Pink blob top-right */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: '-180px', right: '-180px',
+            width: 420, height: 420, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(233,30,140,0.32) 0%, rgba(233,30,140,0) 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Yellow rotated square bottom-left */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', bottom: '-60px', left: '-60px',
+            width: 200, height: 200, background: '#FFD100', opacity: 0.35,
+            transform: 'rotate(18deg)', pointerEvents: 'none',
+          }}
+        />
+        {/* CMYK dot trio */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: 30, left: '42%',
+            display: 'flex', gap: 8, pointerEvents: 'none',
+          }}
+        >
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#E91E8C' }} />
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#00B8D9' }} />
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FFD100' }} />
+        </div>
+
+        <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px', display: 'grid', gap: 48, gridTemplateColumns: '1.15fr 1fr', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 12 }}>
-              Personalised gift · {GIFT_MODE_LABEL[product.mode]}
+            {/* Mode pill — outlined black on cream, pink dot */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C' }} />
+              Personalised Gift · {GIFT_MODE_LABEL[product.mode]}
             </div>
-            <h1 style={{ fontSize: 'clamp(34px, 4vw, 52px)', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.08, margin: '0 0 16px' }}>
+
+            <h1 style={{ fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, letterSpacing: '-0.025em', lineHeight: 1.02, margin: '0 0 18px', color: '#0a0a0a' }}>
               {product.name}
             </h1>
+
             {product.tagline && (
-              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', margin: '0 0 20px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 18, color: '#555', margin: '0 0 26px', lineHeight: 1.55, maxWidth: 520 }}>
                 {product.tagline}
               </p>
             )}
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, padding: '10px 18px', background: 'rgba(233,30,140,0.15)', borderRadius: 999, color: '#E91E8C', fontSize: 13, fontWeight: 700 }}>
-              From <strong style={{ fontSize: 18 }}>{formatSGD(product.base_price_cents)}</strong>
+
+            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, padding: '12px 22px', borderRadius: 999, background: '#E91E8C', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 0.3, boxShadow: '0 6px 20px rgba(233,30,140,0.4)' }}>
+              From <strong style={{ fontSize: 17 }}>{formatSGD(product.base_price_cents)}</strong>
             </div>
           </div>
-          <div style={{ position: 'relative', aspectRatio: '1 / 1', maxWidth: 420, marginLeft: 'auto', borderRadius: 16, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {thumb ? (
-              <img src={thumb} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ fontSize: 120 }}>🎁</div>
-            )}
+
+          {/* Right: product image in white card with 2px ink border + offset pink block + ink shadow */}
+          <div style={{ position: 'relative', height: 'min(520px, 60vh)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Offset pink block behind */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', width: '78%', maxWidth: 400, aspectRatio: '1/1',
+                background: '#E91E8C', borderRadius: 18,
+                transform: 'translate(22px, 22px)', pointerEvents: 'none',
+              }}
+            />
+            <div
+              style={{
+                position: 'relative', width: '78%', maxWidth: 400, aspectRatio: '1 / 1',
+                background: '#fff', border: '2px solid #0a0a0a',
+                borderRadius: 18, overflow: 'hidden', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '8px 8px 0 #0a0a0a',
+              }}
+            >
+              {thumb ? (
+                <img src={thumb} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ fontSize: 140, lineHeight: 1 }}>🎁</div>
+              )}
+            </div>
           </div>
         </div>
       </section>
