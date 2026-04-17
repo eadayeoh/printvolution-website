@@ -9,6 +9,7 @@ import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
+import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 
 type Props = {
   product: GiftProduct;
@@ -310,9 +311,34 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Preview</span>
                 </div>
-                <div style={{ border: '2px solid #0a0a0a', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>
-                  <img src={preview.previewUrl} alt="Preview" style={{ width: '100%', display: 'block' }} />
-                </div>
+                {product.mockup_url && product.mockup_area ? (
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {/* Main: design composited on the product mockup */}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#666', marginBottom: 6 }}>
+                        On the product
+                      </div>
+                      <GiftMockupPreview
+                        mockupUrl={product.mockup_url}
+                        previewUrl={preview.previewUrl}
+                        area={product.mockup_area as any}
+                      />
+                    </div>
+                    {/* Secondary: the transformed design on its own */}
+                    <details>
+                      <summary style={{ cursor: 'pointer', fontSize: 11, color: '#666', fontWeight: 700 }}>
+                        See the design by itself
+                      </summary>
+                      <div style={{ marginTop: 8, border: '1px solid #e5e5e5', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>
+                        <img src={preview.previewUrl} alt="Design" style={{ width: '100%', display: 'block' }} />
+                      </div>
+                    </details>
+                  </div>
+                ) : (
+                  <div style={{ border: '2px solid #0a0a0a', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>
+                    <img src={preview.previewUrl} alt="Preview" style={{ width: '100%', display: 'block' }} />
+                  </div>
+                )}
                 <p style={{ marginTop: 10, fontSize: 12, color: '#666', lineHeight: 1.55 }}>
                   This is a <strong>low-resolution preview</strong>. The final printed piece is produced at 300 DPI with professional colour correction — quality is much higher than what you see here.
                 </p>
