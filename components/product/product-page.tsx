@@ -311,190 +311,200 @@ export function ProductPage({ product, productRoutes }: Props) {
         </div>
       </div>
 
-      {/* =============== SECTION 1 — HERO (light, brand design) =============== */}
+      {/* =============== SECTION 1 — HERO (full-bleed banner background) =============== */}
       <section
         className="pp3-hero"
         style={{
-          background: '#FAF7F0',
-          color: '#0a0a0a',
           position: 'relative',
+          minHeight: 'min(520px, 60vh)',
           overflow: 'hidden',
+          background: heroImg
+            ? `#0a0a0a`
+            : '#FAF7F0',
         }}
       >
-        {/* Dotted pattern backdrop */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', inset: 0, opacity: 0.5,
-            backgroundImage: 'radial-gradient(rgba(10,10,10,0.12) 1px, transparent 1px)',
-            backgroundSize: '18px 18px',
-          }}
-        />
-        {/* Pink blob top-right */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: '-180px', right: '-180px',
-            width: 420, height: 420, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(233,30,140,0.35) 0%, rgba(233,30,140,0) 70%)',
-            filter: 'blur(2px)', pointerEvents: 'none',
-          }}
-        />
-        {/* Yellow square bottom-left, rotated */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', bottom: '-60px', left: '-60px',
-            width: 200, height: 200, background: '#FFD100', opacity: 0.35,
-            transform: 'rotate(18deg)', pointerEvents: 'none',
-          }}
-        />
-        {/* Cyan dot row */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: 30, left: '40%',
-            display: 'flex', gap: 8, pointerEvents: 'none',
-          }}
-        >
-          {[0, 1, 2].map((i) => (
-            <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i === 1 ? '#00B8D9' : (i === 0 ? '#E91E8C' : '#FFD100') }} />
-          ))}
-        </div>
+        {/* Full-width banner image */}
+        {heroImg && (
+          <img
+            src={heroImg}
+            alt={product.name}
+            aria-hidden
+            style={{
+              position: 'absolute', inset: 0,
+              width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+            }}
+          />
+        )}
+        {/* Dark gradient overlay to keep text legible on any photo */}
+        {heroImg && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.25) 100%)',
+            }}
+          />
+        )}
+        {/* Fallback dotted pattern when there's no banner image */}
+        {!heroImg && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute', inset: 0, opacity: 0.5,
+              backgroundImage: 'radial-gradient(rgba(10,10,10,0.12) 1px, transparent 1px)',
+              backgroundSize: '18px 18px',
+            }}
+          />
+        )}
 
         <div
           className="pp3-hero-inner"
           style={{
             position: 'relative',
-            maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px',
-            display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 56, alignItems: 'center',
+            maxWidth: 1200, margin: '0 auto',
+            padding: '72px 24px 88px',
+            minHeight: 'min(520px, 60vh)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            color: heroImg ? '#fff' : '#0a0a0a',
           }}
         >
-          <div>
-            {/* Breadcrumbs */}
-            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: '#666', marginBottom: 18, letterSpacing: 0.3 }}>
-              <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
-              <span style={{ margin: '0 8px' }}>›</span>
-              {product.category ? (
-                <Link href={`/shop?category=${product.category.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                  {product.category.name}
-                </Link>
-              ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
-            </nav>
-
-            {/* Category pill */}
-            {product.category && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C' }} />
+          {/* Breadcrumbs */}
+          <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: heroImg ? 'rgba(255,255,255,0.75)' : '#666', marginBottom: 18, letterSpacing: 0.3 }}>
+            <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
+            <span style={{ margin: '0 8px' }}>›</span>
+            {product.category ? (
+              <Link href={`/shop?category=${product.category.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                 {product.category.name}
-              </div>
-            )}
+              </Link>
+            ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
+          </nav>
 
-            {/* H1 */}
-            <h1 style={{ fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.025em', margin: '0 0 18px', color: '#0a0a0a' }}>
-              {h1}
-              {h1em && (
+          {/* Category pill */}
+          {product.category && (
+            <div style={{
+              display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 999,
+              background: heroImg ? 'rgba(255,255,255,0.12)' : '#fff',
+              border: heroImg ? '1px solid rgba(255,255,255,0.25)' : '2px solid #0a0a0a',
+              backdropFilter: heroImg ? 'blur(6px)' : undefined,
+              color: heroImg ? '#fff' : '#0a0a0a',
+              fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 20,
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C' }} />
+              {product.category.name}
+            </div>
+          )}
+
+          {/* H1 */}
+          <h1 style={{
+            fontSize: 'clamp(36px, 5.2vw, 68px)',
+            fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.025em',
+            margin: '0 0 18px', maxWidth: 820,
+            color: heroImg ? '#fff' : '#0a0a0a',
+            textShadow: heroImg ? '0 2px 18px rgba(0,0,0,0.35)' : 'none',
+          }}>
+            {h1}
+            {h1em && (
+              <>
+                <br />
+                <em style={{ fontFamily: 'var(--serif, Fraunces, Georgia, serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '0.78em', color: heroImg ? '#FFD166' : '#E91E8C' }}>
+                  {h1em}
+                </em>
+              </>
+            )}
+          </h1>
+
+          {product.tagline && (
+            <p style={{
+              fontSize: 18, color: heroImg ? 'rgba(255,255,255,0.85)' : '#555',
+              lineHeight: 1.55, margin: '0 0 28px', maxWidth: 620,
+              textShadow: heroImg ? '0 1px 10px rgba(0,0,0,0.35)' : 'none',
+            }}>
+              {product.tagline}
+            </p>
+          )}
+
+          {/* Trust chip row */}
+          {chips.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
+              {chips.slice(0, 4).map((c, i) => (
+                <div key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '7px 14px',
+                  background: heroImg ? 'rgba(255,255,255,0.14)' : '#fff',
+                  border: heroImg ? '1px solid rgba(255,255,255,0.22)' : '1px solid #e5e5e5',
+                  backdropFilter: heroImg ? 'blur(6px)' : undefined,
+                  color: heroImg ? '#fff' : '#333',
+                  borderRadius: 999, fontSize: 12, fontWeight: 600,
+                }}>
+                  {c}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Hero CTAs */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <a
+              href="#pricing"
+              onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                padding: '14px 26px', borderRadius: 999, background: '#E91E8C', color: '#fff',
+                fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: 0.3,
+                boxShadow: '0 8px 24px rgba(233,30,140,0.5)',
+              }}
+            >
+              {fromPrice !== null && (
                 <>
-                  <br />
-                  <em style={{ fontFamily: 'var(--serif, Fraunces, Cormorant Garamond, Georgia, serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '0.8em', color: '#E91E8C' }}>
-                    {h1em}
-                  </em>
+                  From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong>
+                  <span style={{ opacity: 0.7 }}>·</span>
                 </>
               )}
-            </h1>
+              See Pricing →
+            </a>
+            <a
+              href="https://wa.me/6591234567"
+              target="_blank"
+              rel="noopener"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '14px 24px', borderRadius: 999,
+                background: heroImg ? 'rgba(255,255,255,0.12)' : '#fff',
+                border: heroImg ? '1px solid rgba(255,255,255,0.35)' : '2px solid #0a0a0a',
+                backdropFilter: heroImg ? 'blur(6px)' : undefined,
+                color: heroImg ? '#fff' : '#0a0a0a',
+                fontSize: 13, fontWeight: 800, textDecoration: 'none',
+              }}
+            >
+              💬 Quick enquiry
+            </a>
+          </div>
+        </div>
+      </section>
 
-            {product.tagline && (
-              <p style={{ fontSize: 18, color: '#555', lineHeight: 1.55, margin: '0 0 26px', maxWidth: 520 }}>
-                {product.tagline}
-              </p>
-            )}
-
-            {/* Trust chip row */}
-            {chips.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 30 }}>
-                {chips.slice(0, 4).map((c, i) => (
-                  <div key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 14px', background: '#fff', border: '1px solid #e5e5e5', borderRadius: 999, fontSize: 12, color: '#333', fontWeight: 600 }}>
-                    {c}
-                  </div>
-                ))}
+      {/* =============== SECTION 1B — Template Feature Row (standard across all products) =============== */}
+      <section style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
+          {[
+            { icon: '✓', title: 'Pre-press file check', desc: 'We inspect every file before it hits the printer.' },
+            { icon: '🖼', title: 'Digital mockup', desc: 'Preview your design before we produce it.' },
+            { icon: '🚚', title: 'Island-wide delivery', desc: 'Or free pickup at Paya Lebar Square.' },
+            { icon: '⚡', title: 'Express available', desc: '24-hour turnaround for rush jobs — ask us.' },
+          ].map((f, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                background: '#FFE4F1', color: '#E91E8C',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, fontWeight: 900,
+              }}>{f.icon}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', marginBottom: 2 }}>{f.title}</div>
+                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>{f.desc}</div>
               </div>
-            )}
-
-            {/* Hero CTAs */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <a
-                href="#pricing"
-                onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 10,
-                  padding: '14px 24px', borderRadius: 999, background: '#E91E8C', color: '#fff',
-                  fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: 0.3,
-                  boxShadow: '0 6px 20px rgba(233,30,140,0.4)',
-                }}
-              >
-                {fromPrice !== null && (
-                  <>
-                    From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong>
-                    <span style={{ opacity: 0.7 }}>·</span>
-                  </>
-                )}
-                See Pricing →
-              </a>
-              <a
-                href="https://wa.me/6591234567"
-                target="_blank"
-                rel="noopener"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '14px 24px', borderRadius: 999,
-                  background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a',
-                  fontSize: 13, fontWeight: 800, textDecoration: 'none',
-                }}
-              >
-                💬 Quick enquiry
-              </a>
             </div>
-          </div>
-
-          {/* Right: poster frame with offset brand-colored accent */}
-          <div style={{ position: 'relative', height: 'min(520px, 60vh)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Offset pink block behind */}
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute', width: '78%', maxWidth: 400, aspectRatio: '1/1',
-                background: '#E91E8C', borderRadius: 18,
-                transform: 'translate(22px, 22px)',
-                pointerEvents: 'none',
-              }}
-            />
-            {/* Watermark word at low opacity */}
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'clamp(96px, 16vw, 220px)', fontWeight: 900, letterSpacing: '-0.04em',
-                color: 'rgba(10,10,10,0.05)', lineHeight: 1, userSelect: 'none', whiteSpace: 'nowrap',
-              }}
-            >
-              {heroBig}
-            </div>
-            <div
-              style={{
-                position: 'relative', width: '78%', maxWidth: 400, aspectRatio: '1 / 1',
-                background: '#fff', border: '2px solid #0a0a0a',
-                borderRadius: 18, overflow: 'hidden', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                boxShadow: '8px 8px 0 #0a0a0a',
-              }}
-            >
-              {heroImg ? (
-                <img src={heroImg} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ fontSize: 160, lineHeight: 1 }}>{product.icon && !iconIsUrl ? product.icon : '📦'}</div>
-              )}
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
