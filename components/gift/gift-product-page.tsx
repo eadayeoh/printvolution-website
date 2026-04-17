@@ -8,6 +8,7 @@ import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
+import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 
 type Props = {
   product: GiftProduct;
@@ -29,6 +30,9 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
+  // Photo-resize: after file pick, show crop tool. Store pending file +
+  // its blob URL until user confirms the crop rect.
+  const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
@@ -38,12 +42,25 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
   async function onFile(file: File) {
     setErr(null);
     if (file.size > 20 * 1024 * 1024) { setErr('File too large (max 20 MB)'); return; }
+    // Photo-resize mode: open the crop tool first. For AI modes we send
+    // the whole image directly (the pipeline handles positioning).
+    if (product.mode === 'photo-resize') {
+      const src = URL.createObjectURL(file);
+      setCropPending({ file, src });
+      return;
+    }
+    await doUpload(file, null);
+  }
+
+  async function doUpload(file: File, cropRect: GiftCropRect | null) {
+    setErr(null);
     setUploading(true);
     const fd = new FormData();
     fd.append('file', file);
     fd.append('product_slug', product.slug);
     if (selectedTemplateId) fd.append('template_id', selectedTemplateId);
     if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
+    if (cropRect) fd.append('crop_rect', JSON.stringify(cropRect));
     try {
       const r = await uploadAndPreviewGift(fd);
       // Defensive: server action could reject/return undefined in flaky
@@ -367,6 +384,21 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
           </aside>
         </div>
       </section>
+
+      {cropPending && (
+        <GiftCropTool
+          product={product}
+          fileSrc={cropPending.src}
+          file={cropPending.file}
+          onCancel={() => { URL.revokeObjectURL(cropPending.src); setCropPending(null); }}
+          onConfirm={(file, crop) => {
+            const pending = cropPending;
+            setCropPending(null);
+            if (pending) URL.revokeObjectURL(pending.src);
+            doUpload(file, crop);
+          }}
+        />
+      )}
     </article>
   );
 }
