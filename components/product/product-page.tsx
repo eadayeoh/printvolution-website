@@ -133,14 +133,39 @@ export function ProductPage({ product, productRoutes }: Props) {
   }, [product.pricing, product.configurator, cfgState]);
 
   const priceLadder = useMemo(() => {
-    if (!product.pricing) return [];
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
-    return product.pricing.rows.map((r, rIdx) => {
-      const qtyNum = parseInt((r.qty.match(/\d+/) ?? ['1'])[0], 10) || 1;
-      const { total } = computeTotal(qtyNum, colIdx, rIdx);
+
+    // 1. If product has an explicit pricing matrix (with quantity rows),
+    //    use those rows — that's the canonical ladder.
+    if (product.pricing && product.pricing.rows.length > 0) {
+      return product.pricing.rows.map((r, rIdx) => {
+        const qtyNum = parseInt((r.qty.match(/\d+/) ?? ['1'])[0], 10) || 1;
+        const { total } = computeTotal(qtyNum, colIdx, rIdx);
+        const undiscountedTotal = singleTotal * qtyNum;
+        return {
+          qty: r.qty,
+          qtyNum,
+          total,
+          perPiece: qtyNum > 0 ? total / qtyNum : total,
+          saves: Math.max(0, undiscountedTotal - total),
+        };
+      });
+    }
+
+    // 2. Otherwise, if any configurator option has a price formula that
+    //    varies by quantity (volume discount baked into the formula),
+    //    synthesise a ladder at common tiers so the customer can see the
+    //    savings curve.
+    const hasFormula = product.configurator.some(
+      (s) => (s.type === 'swatch' || s.type === 'select') && (s.options ?? []).some((o) => !!o.price_formula)
+    );
+    if (!hasFormula || singleTotal <= 0) return [];
+    const tiers = [1, 5, 10, 25, 50, 100];
+    return tiers.map((qtyNum) => {
+      const { total } = computeTotal(qtyNum, colIdx, 0);
       const undiscountedTotal = singleTotal * qtyNum;
       return {
-        qty: r.qty,
+        qty: qtyNum === 1 ? '1 pc' : `${qtyNum} pcs`,
         qtyNum,
         total,
         perPiece: qtyNum > 0 ? total / qtyNum : total,
@@ -148,7 +173,7 @@ export function ProductPage({ product, productRoutes }: Props) {
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.pricing, colIdx, cfgState, visibleSteps]);
+  }, [product.pricing, product.configurator, colIdx, cfgState, visibleSteps]);
 
   const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
   const heroImg = product.extras?.image_url || (iconIsUrl ? product.icon : null);
@@ -618,15 +643,30 @@ export function ProductPage({ product, productRoutes }: Props) {
           {/* =============== SECTION 4 — PRICE LADDER =============== */}
           {priceLadder.length > 1 && (
             <div style={{ marginTop: 56 }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 6 }}>
-                  Volume Pricing
-                </div>
-                <h3 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, color: '#0a0a0a' }}>Price at every quantity.</h3>
-                <p style={{ fontSize: 13, color: '#666', margin: '4px 0 0' }}>
-                  Based on your current selections — updates as you configure.
-                </p>
-              </div>
+              {(() => {
+                const anySaves = priceLadder.some((r) => r.saves > 0);
+                const maxSave = Math.max(...priceLadder.map((r) => r.saves || 0));
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C' }}>
+                        Volume Pricing
+                      </div>
+                      {anySaves && (
+                        <span style={{ background: '#16a34a', color: '#fff', fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 999, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          💚 Buy more, save up to {formatSGD(maxSave)}
+                        </span>
+                      )}
+                    </div>
+                    <h3 style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, color: '#0a0a0a' }}>
+                      {anySaves ? 'Price drops as you order more.' : 'Price at every quantity.'}
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#666', margin: '4px 0 0' }}>
+                      Click any tier to set that quantity — the total updates automatically.
+                    </p>
+                  </div>
+                );
+              })()}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                 {priceLadder.map((r, i) => {
                   const isCurrent = i === rowIdx;
