@@ -283,5 +283,39 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     }
   }
 
+  // Send order confirmation emails (non-blocking — never fail the order
+  // because email didn't go out)
+  void sendOrderEmails({
+    order_number: order.order_number as string,
+    customer_name: data.customer_name,
+    customer_email: data.email,
+    delivery_method: data.delivery_method,
+    delivery_address: data.delivery_address,
+    items: data.items.map((i) => ({
+      product_name: i.product_name,
+      qty: i.qty,
+      line_total_cents: i.line_total_cents,
+      config: i.config,
+    })),
+    subtotal_cents: subtotal,
+    delivery_cents: delivery,
+    total_cents: total,
+  });
+
   return { ok: true, order_number: order.order_number as string, id: order.id as string };
+}
+
+async function sendOrderEmails(payload: import('@/lib/email').OrderEmailPayload) {
+  try {
+    const { sendEmail, customerOrderConfirmationEmail, adminNewOrderEmail, adminEmail } = await import('@/lib/email');
+    const customer = customerOrderConfirmationEmail(payload);
+    await sendEmail({ to: payload.customer_email, subject: customer.subject, html: customer.html });
+    const admin = adminEmail();
+    if (admin) {
+      const a = adminNewOrderEmail(payload);
+      await sendEmail({ to: admin, subject: a.subject, html: a.html, replyTo: payload.customer_email });
+    }
+  } catch (e) {
+    console.error('[order email] failed', e);
+  }
 }
