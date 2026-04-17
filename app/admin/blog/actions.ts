@@ -266,6 +266,132 @@ export async function updatePost(id: string, input: {
   return { ok: true as const };
 }
 
+/**
+ * Import posts from a WordPress WXR (eXtended RSS) export XML file.
+ * The admin downloads this file from WP → Tools → Export → Posts, then
+ * uploads it here. No public API access required.
+ */
+export async function importFromWxr(
+  formData: FormData,
+  opts: { status: 'draft' | 'published' }
+): Promise<{ ok: boolean; imported: number; skipped: number; errors: string[]; totalFound: number }> {
+  try { await requireAdmin(); }
+  catch (e: any) { return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: [e.message ?? 'auth'] }; }
+
+  const file = formData.get('file');
+  if (!(file instanceof File)) return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: ['No file'] };
+  if (file.size === 0) return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: ['Empty file'] };
+  if (file.size > 50 * 1024 * 1024) return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: ['File too large (max 50MB)'] };
+
+  let xmlText: string;
+  try { xmlText = await file.text(); }
+  catch { return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: ['Could not read file'] }; }
+
+  const { XMLParser } = await import('fast-xml-parser');
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    cdataPropName: '__cdata',
+    removeNSPrefix: false,
+  });
+
+  let parsed: any;
+  try { parsed = parser.parse(xmlText); }
+  catch (e: any) { return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: [`XML parse failed: ${e?.message ?? 'invalid XML'}`] }; }
+
+  const channel = parsed?.rss?.channel;
+  if (!channel) return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: ['Not a WordPress WXR file (no <rss><channel>)'] };
+
+  const siteUrl = String(channel['wp:base_site_url'] ?? channel.link ?? '').trim();
+  const items = Array.isArray(channel.item) ? channel.item : channel.item ? [channel.item] : [];
+
+  const sb = serviceClient();
+  let imported = 0, skipped = 0;
+  const errors: string[] = [];
+  let totalFound = 0;
+
+  function pickText(field: any): string {
+    if (field === undefined || field === null) return '';
+    if (typeof field === 'string') return field;
+    if (typeof field === 'object') {
+      if (field.__cdata) return String(field.__cdata);
+      if ('#text' in field) return String(field['#text']);
+    }
+    return String(field);
+  }
+
+  for (const item of items as any[]) {
+    const postType = pickText(item['wp:post_type']);
+    if (postType && postType !== 'post') continue;
+    const postStatus = pickText(item['wp:status']);
+    if (postStatus === 'trash' || postStatus === 'auto-draft') continue;
+    totalFound++;
+
+    try {
+      const title = stripHtml(pickText(item.title) || 'Untitled');
+      const slug = (pickText(item['wp:post_name']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).slice(0, 120);
+      const wpId = parseInt(pickText(item['wp:post_id']) || '0', 10) || null;
+      const contentHtml = pickText(item['content:encoded']) || '';
+      const excerptHtml = pickText(item['excerpt:encoded']) || '';
+      const excerpt = stripHtml(excerptHtml).slice(0, 400);
+      const author = stripHtml(pickText(item['dc:creator']) || '') || null;
+      const date = pickText(item['wp:post_date_gmt']) || pickText(item.pubDate) || null;
+
+      // Tags + categories
+      const categories = Array.isArray(item.category) ? item.category : item.category ? [item.category] : [];
+      const tags = (categories as any[])
+        .map((c) => typeof c === 'object' ? pickText(c) : String(c))
+        .filter(Boolean)
+        .slice(0, 10);
+
+      // Featured image is a separate <item> with post_type='attachment' referencing _thumbnail_id
+      // For simplicity v1: pull the first <img> src from content_encoded
+      let featuredUrl: string | null = null;
+      const imgMatch = contentHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch) featuredUrl = imgMatch[1];
+
+      // Dedup: source + wp_post_id
+      if (wpId) {
+        const { data: existing } = await sb
+          .from('blog_posts').select('id').eq('wp_source_url', siteUrl).eq('wp_post_id', wpId).maybeSingle();
+        if (existing) { skipped++; continue; }
+      } else {
+        const { data: existing } = await sb
+          .from('blog_posts').select('id').eq('slug', slug).maybeSingle();
+        if (existing) { skipped++; continue; }
+      }
+
+      // Ensure slug unique
+      let finalSlug = slug;
+      const { data: slugExists } = await sb.from('blog_posts').select('id').eq('slug', finalSlug).maybeSingle();
+      if (slugExists) finalSlug = `${slug}-${wpId ?? Date.now()}`;
+
+      const { error: insErr } = await sb.from('blog_posts').insert({
+        slug: finalSlug,
+        title,
+        excerpt: excerpt || null,
+        content_html: contentHtml,
+        featured_image_url: featuredUrl,
+        author,
+        tags,
+        status: postStatus === 'publish' ? opts.status : 'draft',
+        published_at: date ? new Date(date).toISOString() : null,
+        wp_source_url: siteUrl || null,
+        wp_post_id: wpId,
+      });
+      if (insErr) errors.push(`${title}: ${insErr.message}`);
+      else imported++;
+    } catch (e: any) {
+      errors.push(`Item failed: ${e?.message ?? 'unknown'}`);
+    }
+  }
+
+  revalidatePath('/admin/blog');
+  revalidatePath('/blog');
+
+  return { ok: true, imported, skipped, totalFound, errors };
+}
+
 export async function deletePost(id: string) {
   const sb = await requireAdmin();
   const { error } = await sb.from('blog_posts').delete().eq('id', id);

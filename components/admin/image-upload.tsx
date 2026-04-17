@@ -13,6 +13,12 @@ type Props = {
   size?: 'sm' | 'md' | 'lg';
   /** Aspect ratio for the crop tool. Default 1 (square). Pass 16/9 for wide, etc. */
   aspect?: number;
+  /**
+   * Skip the crop modal entirely — upload the image as-is (compressed
+   * if oversized). Use for logos / icons / anything where fixed-aspect
+   * cropping would chop meaningful content.
+   */
+  skipCrop?: boolean;
 };
 
 export function ImageUpload({
@@ -22,6 +28,7 @@ export function ImageUpload({
   label = 'Image',
   size = 'md',
   aspect = 1,
+  skipCrop = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -40,6 +47,21 @@ export function ImageUpload({
     // SVG isn't croppable on canvas reliably — upload as-is.
     if (file.type === 'image/svg+xml') {
       uploadBlob(file, file.name, file.type);
+      return;
+    }
+    // Logos / icons skip crop: compress if oversized, upload as-is.
+    if (skipCrop) {
+      try {
+        if (file.size > 3 * 1024 * 1024) {
+          const compressed = await compressImage(file, 2400, 0.9);
+          const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+          uploadBlob(compressed.blob, name, compressed.type);
+        } else {
+          uploadBlob(file, file.name, file.type);
+        }
+      } catch (e: any) {
+        setError(e?.message ?? 'Could not read image');
+      }
       return;
     }
     // Auto-compress oversized images BEFORE the crop tool so we stay

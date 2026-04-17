@@ -21,7 +21,7 @@ type Props = {
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/products', label: 'Services', icon: Package },
   { href: '/admin/gifts', label: 'Gifts', icon: Gift },
   { href: '/admin/gifts/prompts', label: 'AI Prompts', icon: Sparkles },
   { href: '/admin/gifts/templates', label: 'Gift Templates', icon: ImageIcon },

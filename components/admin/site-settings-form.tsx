@@ -55,9 +55,9 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
               value={logoUrl}
               onChange={setLogoUrl}
               prefix="logo"
-              aspect={3}
               size="lg"
               label="Header logo"
+              skipCrop
             />
           </div>
 
