@@ -47,7 +47,7 @@ const ProductUpdateSchema = z.object({
   category_id: z.string().uuid().nullable(),
   subcategory_id: z.string().uuid().nullable(),
   is_active: z.boolean(),
-  is_gift: z.boolean(),
+  is_gift: z.boolean().default(false),
   highlights: z.array(z.string()),
   specs: SpecSchema,
   // extras
@@ -68,7 +68,7 @@ const ProductUpdateSchema = z.object({
   faqs: FaqSchema,
 });
 
-export type ProductUpdateInput = z.infer<typeof ProductUpdateSchema>;
+export type ProductUpdateInput = z.input<typeof ProductUpdateSchema>;
 
 export async function updateProduct(slug: string, input: ProductUpdateInput) {
   const parsed = ProductUpdateSchema.safeParse(input);

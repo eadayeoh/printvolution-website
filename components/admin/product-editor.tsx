@@ -33,7 +33,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
     subCats.find((c) => c.name === product.subcategory?.name)?.id ?? ''
   );
   const [isActive, setIsActive] = useState(true);
-  const [isGift, setIsGift] = useState(product.is_gift);
   const [highlights, setHighlights] = useState(product.highlights.join('\n'));
   const [specs, setSpecs] = useState<Array<{ label: string; value: string }>>(product.specs);
 
@@ -75,7 +74,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
         category_id: categoryId || null,
         subcategory_id: subcategoryId || null,
         is_active: isActive,
-        is_gift: isGift,
         highlights: highlights.split('\n').map((s) => s.trim()).filter(Boolean),
         specs: specs.filter((s) => s.label.trim() || s.value.trim()),
         seo_title: seoTitle || null, seo_desc: seoDesc || null,
@@ -201,12 +199,6 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
               className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
               <Plus size={12} /> Add spec
             </button>
-          </div>
-          <div className="flex gap-6 pt-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={isGift} onChange={(e) => setIsGift(e.target.checked)} />
-              <span className="font-semibold text-ink">Gift product</span>
-            </label>
           </div>
         </div>
       )}
