@@ -303,8 +303,19 @@ export default async function HomePage() {
       <div className="home-sec">
         <div className="home-sec-inner">
           <div className="hs-tag">Printing Services in Singapore</div>
-          <h2 className="hs-h" style={{ fontSize: 'clamp(28px, 3.6vw, 44px)', lineHeight: 1.08, maxWidth: 920 }}>
-            Looking for a specific print service? <em>We probably do it.</em>
+          <h2
+            style={{
+              fontFamily: 'var(--serif, Fraunces, Georgia, serif)',
+              fontSize: 'clamp(28px, 3.2vw, 40px)',
+              fontWeight: 800,
+              lineHeight: 1.12,
+              letterSpacing: '-0.02em',
+              margin: '0 0 24px',
+              maxWidth: 780,
+            }}
+          >
+            Looking for a specific print service?{' '}
+            <em style={{ fontStyle: 'normal', color: '#E91E8C' }}>We probably do it.</em>
           </h2>
           <div className="seo-kw-grid">
             {SEO_KW.map((k, i) => {
