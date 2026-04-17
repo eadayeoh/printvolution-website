@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Trash2, Plus } from 'lucide-react';
 import { createGiftProduct, updateGiftProduct, deleteGiftProduct, setProductTemplates } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { GiftMockupEditor } from '@/components/admin/gift-mockup-editor';
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
 import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate } from '@/lib/gifts/types';
 
@@ -18,7 +19,7 @@ type Props = {
   assignedTemplateIds: string[];
 };
 
-type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'seo';
+type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'seo';
 
 const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: string }> = [
   { v: 'laser', label: 'Laser', desc: GIFT_MODE_DESCRIPTION['laser'], emoji: '🔥' },
@@ -61,6 +62,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? '');
   const [seoDesc, setSeoDesc] = useState(product?.seo_desc ?? '');
 
+  const [mockupUrl, setMockupUrl] = useState(product?.mockup_url ?? '');
+  const [mockupArea, setMockupArea] = useState<{ x: number; y: number; width: number; height: number }>(
+    (product?.mockup_area as any) ?? { x: 20, y: 20, width: 60, height: 60 }
+  );
+
   const [assignedTemplates, setAssignedTemplates] = useState<string[]>(assignedTemplateIds);
 
   function autoSlugFromName() {
@@ -93,6 +99,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       seo_title: seoTitle.trim() || null,
       seo_desc: seoDesc.trim() || null,
       is_active: isActive,
+      mockup_url: mockupUrl || null,
+      mockup_area: mockupUrl ? mockupArea : null,
     };
     if (!modeLocked) payload.mode = mode;
 
@@ -134,6 +142,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     { v: 'pricing', label: 'Pricing' },
     { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
+    { v: 'mockup', label: 'Mockup' },
     { v: 'seo', label: 'SEO' },
   ];
   const visibleTabs = TABS.filter((t) => !t.hide);
@@ -428,6 +437,16 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       )}
 
       {/* SEO */}
+      {tab === 'mockup' && (
+        <GiftMockupEditor
+          mockupUrl={mockupUrl}
+          setMockupUrl={setMockupUrl}
+          area={mockupArea}
+          setArea={setMockupArea}
+          slug={slug}
+        />
+      )}
+
       {tab === 'seo' && (
         <div className="max-w-3xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
           <label className="block">

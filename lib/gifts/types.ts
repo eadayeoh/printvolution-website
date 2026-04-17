@@ -50,6 +50,9 @@ export type GiftProduct = {
   first_ordered_at: string | null;
   created_at: string;
   updated_at: string;
+  // Mockup — product shot that the transformed design is composited onto
+  mockup_url?: string | null;
+  mockup_area?: { x: number; y: number; width: number; height: number } | null;
 };
 
 export type GiftTemplateZone = {

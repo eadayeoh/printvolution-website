@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { saveSection, saveContactMethods, saveNavigation, saveMegaMenu } from '@/app/admin/pages/actions';
 import { MegaEditorDnd } from '@/components/admin/mega-editor-dnd';
+import { ImageUpload } from '@/components/admin/image-upload';
 
 type Tab = 'home' | 'about' | 'contact' | 'nav' | 'mega';
 
@@ -87,12 +88,46 @@ export function PagesCmsEditor({
         <div className="space-y-6">
           <SectionEditor
             pageKey="about"
+            sectionKey="hero"
+            title="Hero"
+            hint="The big banner at the top of /about — tag, headline, subtitle, and 4 stats."
+            initial={sections['about:hero'] ?? []}
+            fields={[
+              { key: 'tag', label: 'Tag (small uppercase above h1)', type: 'text' },
+              { key: 'h1', label: 'Headline', type: 'textarea' },
+              { key: 'sub', label: 'Subtitle', type: 'textarea' },
+              { key: 'stat1_n', label: 'Stat 1 — Number', type: 'text' },
+              { key: 'stat1_l', label: 'Stat 1 — Label', type: 'text' },
+              { key: 'stat2_n', label: 'Stat 2 — Number', type: 'text' },
+              { key: 'stat2_l', label: 'Stat 2 — Label', type: 'text' },
+              { key: 'stat3_n', label: 'Stat 3 — Number', type: 'text' },
+              { key: 'stat3_l', label: 'Stat 3 — Label', type: 'text' },
+              { key: 'stat4_n', label: 'Stat 4 — Number', type: 'text' },
+              { key: 'stat4_l', label: 'Stat 4 — Label', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="story"
+            title="Our Story"
+            hint="Tag, headline, and story paragraphs."
+            initial={sections['about:story'] ?? []}
+            fields={[
+              { key: 'tag', label: 'Tag', type: 'text' },
+              { key: 'h2', label: 'Headline', type: 'textarea' },
+              { key: 'para1', label: 'Paragraph 1', type: 'textarea' },
+              { key: 'para2', label: 'Paragraph 2', type: 'textarea' },
+              { key: 'para3', label: 'Paragraph 3', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
             sectionKey="values"
             title="Company values"
             hint="About page 'What we value' cards."
             initial={sections['about:values'] ?? []}
             fields={[
-              { key: 'emoji', label: 'Emoji', type: 'text' },
+              { key: 'image_url', label: 'Icon image', type: 'image' },
               { key: 'title', label: 'Title', type: 'text' },
               { key: 'desc', label: 'Description', type: 'textarea' },
             ]}
@@ -104,9 +139,24 @@ export function PagesCmsEditor({
             hint="About page 'Who we serve' cards."
             initial={sections['about:clients'] ?? []}
             fields={[
-              { key: 'emoji', label: 'Emoji', type: 'text' },
+              { key: 'image_url', label: 'Icon image', type: 'image' },
               { key: 'title', label: 'Title', type: 'text' },
               { key: 'desc', label: 'Description', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="cta"
+            title="Bottom CTA strip"
+            hint="Walk-in / contact block at the bottom of /about."
+            initial={sections['about:cta'] ?? []}
+            fields={[
+              { key: 'h2', label: 'Headline', type: 'text' },
+              { key: 'p', label: 'Paragraph', type: 'textarea' },
+              { key: 'btn1_label', label: 'Button 1 label', type: 'text' },
+              { key: 'btn1_href', label: 'Button 1 URL', type: 'text' },
+              { key: 'btn2_label', label: 'Button 2 label', type: 'text' },
+              { key: 'btn2_href', label: 'Button 2 URL', type: 'text' },
             ]}
           />
         </div>
@@ -137,7 +187,7 @@ function MegaEditor(props: {
   return <MegaEditorDnd {...props} />;
 }
 
-type FieldDef = { key: string; label: string; type: 'text' | 'textarea' };
+type FieldDef = { key: string; label: string; type: 'text' | 'textarea' | 'image' };
 
 function SectionEditor({ pageKey, sectionKey, title, hint, initial, fields }: {
   pageKey: string; sectionKey: string; title: string; hint: string;
@@ -195,6 +245,15 @@ function SectionEditor({ pageKey, sectionKey, title, hint, initial, fields }: {
                     onChange={(e) => setItems(items.map((x, j) => j === i ? { ...x, [f.key]: e.target.value } : x))}
                     rows={2}
                     className={inputCls}
+                  />
+                ) : f.type === 'image' ? (
+                  <ImageUpload
+                    value={item[f.key] ?? ''}
+                    onChange={(url) => setItems(items.map((x, j) => j === i ? { ...x, [f.key]: url } : x))}
+                    prefix={`${pageKey}-${sectionKey}-${f.key}`}
+                    aspect={1}
+                    size="sm"
+                    label={f.label}
                   />
                 ) : (
                   <input

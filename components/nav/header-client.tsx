@@ -38,7 +38,8 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
 
   return (
     <>
-      <nav className="fixed left-0 right-0 top-0 z-50 flex h-[62px] items-center justify-between border-b border-neutral-200 bg-white/95 px-7 backdrop-blur-md">
+      <nav className="fixed left-0 right-0 top-0 z-50 h-[62px] border-b border-neutral-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-8">
         <Link href="/" className="text-[20px] font-black tracking-tight text-ink">
           Print<span className="text-pink">volution</span>
         </Link>
@@ -117,6 +118,7 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+        </div>
         </div>
       </nav>
 

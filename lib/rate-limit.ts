@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * Server-side rate limiter using Supabase `rate_limit_attempts` table.
  *

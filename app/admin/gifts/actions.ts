@@ -45,6 +45,10 @@ const GiftProductSchema = z.object({
   seo_title: z.string().nullable().optional(),
   seo_desc: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
+  mockup_url: z.string().nullable().optional(),
+  mockup_area: z.object({
+    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+  }).nullable().optional(),
 });
 
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {

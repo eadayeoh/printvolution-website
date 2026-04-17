@@ -281,7 +281,7 @@ export default async function HomePage() {
       )}
 
       {/* WHY US */}
-      <div className="home-sec" style={{ background: '#0D0D0D' }}>
+      <div className="home-sec" data-pv-dark style={{ background: '#0D0D0D' }}>
         <div className="home-sec-inner">
           <div className="hs-tag" style={{ color: '#E91E8C' }}>Why Printvolution</div>
           <h2 className="hs-h" style={{ color: '#fff' }}>
@@ -289,10 +289,10 @@ export default async function HomePage() {
           </h2>
           <div className="why-grid-home">
             {WHY_US.map((w) => (
-              <div key={w.n} className="why-home-item">
+              <div key={w.n} className="why-home-item" style={{ background: '#111', color: '#fff' }}>
                 <div className="why-home-num">{w.n}</div>
-                <div className="why-home-title">{w.t}</div>
-                <div className="why-home-desc">{w.d}</div>
+                <div className="why-home-title" style={{ color: '#fff' }}>{w.t}</div>
+                <div className="why-home-desc" style={{ color: 'rgba(255,255,255,0.7)' }}>{w.d}</div>
               </div>
             ))}
           </div>
@@ -303,8 +303,8 @@ export default async function HomePage() {
       <div className="home-sec">
         <div className="home-sec-inner">
           <div className="hs-tag">Printing Services in Singapore</div>
-          <h2 className="hs-h" style={{ maxWidth: 600 }}>
-            Looking for a specific print service?<br /><em>We probably do it.</em>
+          <h2 className="hs-h" style={{ maxWidth: 1100 }}>
+            Looking for a specific print service? <em>We probably do it.</em>
           </h2>
           <div className="seo-kw-grid">
             {SEO_KW.map((k, i) => {
