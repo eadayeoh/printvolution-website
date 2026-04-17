@@ -151,7 +151,7 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FFD100' }} />
         </div>
 
-        <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px', display: 'grid', gap: 48, gridTemplateColumns: '1.15fr 1fr', alignItems: 'center' }}>
+        <div className="gift-hero-inner" style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px', display: 'grid', gap: 48, gridTemplateColumns: '1.15fr 1fr', alignItems: 'center' }}>
           <div>
             {/* Mode pill — outlined black on cream, pink dot */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
@@ -206,7 +206,7 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
 
       {/* Main configurator */}
       <section style={{ background: '#fff', padding: '48px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 36, gridTemplateColumns: '1.4fr 1fr', alignItems: 'start' }}>
+        <div className="gift-config-layout" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 36, gridTemplateColumns: '1.4fr 1fr', alignItems: 'start' }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 8 }}>
               Personalise
@@ -492,6 +492,13 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
           }}
         />
       )}
+      <style jsx>{`
+        @media (max-width: 900px) {
+          .gift-hero-inner { grid-template-columns: 1fr !important; gap: 32px !important; padding: 40px 20px 48px !important; }
+          .gift-config-layout { grid-template-columns: 1fr !important; gap: 28px !important; }
+          .gift-config-layout aside { position: static !important; }
+        }
+      `}</style>
     </article>
   );
 }
