@@ -139,11 +139,18 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           <Field label="Product name">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </Field>
+          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
+            💡 <strong>Two images per product:</strong>
+            <ul className="mt-1 list-disc pl-5 space-y-0.5">
+              <li><strong>Thumbnail</strong> (square) → shop grid cards · cart · related products · admin orders</li>
+              <li><strong>Hero banner</strong> (landscape) → full-width background on this product&apos;s own page</li>
+            </ul>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Thumbnail image (shown in shop / cart / nav)">
-              <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} label="Thumbnail" />
+            <Field label="Thumbnail image — square">
+              <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} aspect={1} label="Thumbnail" />
             </Field>
-            <Field label="Hero banner (full-bleed background on the product page)">
+            <Field label="Hero banner — landscape">
               <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
             </Field>
           </div>
