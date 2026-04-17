@@ -312,7 +312,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ fontSize: 18, fontWeight: 900, color: '#E91E8C' }}>{formatSGD(displayPrice)}</div>
-            <button onClick={handleAddToCart} style={{ padding: '9px 18px', background: '#E91E8C', color: '#fff', border: 'none', borderRadius: 999, fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.3 }}>
+            <button onClick={handleAddToCart} style={{ padding: '9px 18px', background: '#FF6B1A', color: '#fff', border: 'none', borderRadius: 999, fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.3 }}>
               Add to Cart
             </button>
           </div>
@@ -479,24 +479,26 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 See Pricing →
               </a>
               <a
-                href="https://wa.me/6591234567"
+                href="https://wa.me/6585533497"
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  display: 'inline-flex', alignItems: 'center', gap: 10,
                   padding: '17px 26px',
                   borderRadius: 999,
-                  background: 'rgba(255,255,255,0.6)',
-                  backdropFilter: 'blur(14px)',
-                  WebkitBackdropFilter: 'blur(14px)',
-                  border: '1px solid rgba(255,255,255,0.8)',
-                  color: '#9C1462',
+                  background: '#25D366',
+                  color: '#fff',
                   fontSize: 14,
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  letterSpacing: 0.3,
                   textDecoration: 'none',
+                  boxShadow: '0 12px 32px -8px rgba(37,211,102,0.55)',
                 }}
               >
-                💬 Quick enquiry
+                <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.52 3.48A11.8 11.8 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.12.56 4.1 1.54 5.82L0 24l6.34-1.66A11.87 11.87 0 0 0 12 24c6.63 0 12-5.37 12-12 0-3.2-1.25-6.22-3.48-8.52zM12 21.82c-1.86 0-3.67-.5-5.26-1.45l-.38-.22-3.77.99 1.01-3.67-.25-.38a9.8 9.8 0 0 1-1.52-5.25c0-5.43 4.42-9.85 9.85-9.85S21.85 6.3 21.85 11.73c0 5.42-4.42 9.84-9.85 9.84zm5.4-7.35c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.34.22-.64.07-.3-.15-1.26-.47-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.34.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47 0 1.46 1.06 2.87 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.75-.72 2-1.41.25-.69.25-1.28.17-1.4-.07-.13-.27-.2-.57-.35z"/>
+                </svg>
+                Quick enquiry on WhatsApp
               </a>
             </div>
           </div>
@@ -731,10 +733,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   onClick={handleAddToCart}
                   style={{
                     width: '100%', padding: '14px 18px',
-                    background: addedFlash ? '#16a34a' : '#E91E8C', color: '#fff',
+                    background: addedFlash ? '#16a34a' : '#FF6B1A', color: '#fff',
                     border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 800,
                     cursor: 'pointer', letterSpacing: 0.3,
-                    boxShadow: '0 10px 24px -6px rgba(233,30,140,0.5)',
+                    boxShadow: '0 10px 24px -6px rgba(255,107,26,0.5)',
                   }}
                 >
                   {addedFlash ? '✓ Added to Cart' : 'Add to Cart'}
@@ -925,7 +927,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 </em>
               </h2>
               <p style={{ fontSize: 14, color: '#666', margin: '16px 0 0', lineHeight: 1.6 }}>
-                Can&apos;t find the answer? <a href="https://wa.me/6591234567" target="_blank" rel="noopener" style={{ color: '#E91E8C', fontWeight: 700 }}>Ask on WhatsApp →</a>
+                Can&apos;t find the answer? <a href="https://wa.me/6585533497" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', fontWeight: 700 }}>Ask on WhatsApp →</a>
               </p>
             </div>
             <div>

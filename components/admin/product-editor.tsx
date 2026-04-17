@@ -36,6 +36,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
     subCats.find((c) => c.name === product.subcategory?.name)?.id ?? ''
   );
   const [isActive, setIsActive] = useState(true);
+  const [isGift, setIsGift] = useState(product.is_gift ?? false);
   const [highlights, setHighlights] = useState(product.highlights.join('\n'));
   const [specs, setSpecs] = useState<Array<{ label: string; value: string }>>(product.specs);
 
@@ -76,6 +77,7 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
         category_id: categoryId || null,
         subcategory_id: subcategoryId || null,
         is_active: isActive,
+        is_gift: isGift,
         highlights: highlights.split('\n').map((s) => s.trim()).filter(Boolean),
         specs: specs.filter((s) => s.label.trim() || s.value.trim()),
         seo_title: seoTitle || null, seo_desc: seoDesc || null,
@@ -127,126 +129,151 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
             }`}
           >
             {t === 'basics' && 'Basics'}
-            {t === 'content' && 'SEO & Content'}
+            {t === 'content' && 'SEO'}
             {t === 'pricing' && `Pricing & Options${configurator.length > 0 ? ` (${configurator.length})` : ''}`}
             {t === 'faqs' && `FAQs (${faqs.length})`}
           </button>
         ))}
       </div>
 
-      {/* Basics */}
+      {/* Basics — ordered to match the front-end render sequence */}
       {tab === 'basics' && (
-        <div className="grid max-w-4xl gap-5 rounded-lg border border-neutral-200 bg-white p-6">
-          <Field label="Product name">
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-          </Field>
-          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
-            💡 The <strong>hero banner</strong> is the single product image. It&apos;s used as the
-            full-bleed background on this product&apos;s page and also as the thumbnail on shop
-            grid cards, cart, related products, and admin orders. Upload a landscape image — it
-            will be cropped to 16:9 and auto-resized.
-          </div>
-          <Field label="Hero banner image">
-            <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
-          </Field>
-          <Field label="Tagline (1-line hook)">
-            <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Description">
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
-          </Field>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Category">
-              <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); }} className={inputCls}>
-                {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+        <div className="max-w-4xl space-y-6">
+          {/* Identity */}
+          <Section title="Identity" desc="Name, category, visibility. Shown in the hero breadcrumb and category pill.">
+            <Field label="Product name">
+              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
             </Field>
-            {subCats.length > 0 && (
-              <Field label="Subcategory">
-                <select value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} className={inputCls}>
-                  <option value="">— none —</option>
-                  {subCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Category">
+                <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); }} className={inputCls}>
+                  {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </Field>
-            )}
-          </div>
-          <Field label="Highlights (one per line)">
-            <textarea value={highlights} onChange={(e) => setHighlights(e.target.value)} rows={5} className={inputCls} />
-          </Field>
-          <div>
-            <div className="mb-1 text-xs font-bold text-ink">Specs</div>
-            <p className="mb-2 text-[11px] text-neutral-500">
-              Two columns: the <strong>Label</strong> (e.g. Sizes, Paper, Turnaround) and the <strong>Value</strong> (e.g. &quot;A4, A5, DL&quot;, &quot;Gloss Art Paper&quot;, &quot;3-5 working days&quot;).
-            </p>
-            <div className="mb-1 grid grid-cols-[200px_1fr_36px] gap-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-              <div>Label</div>
-              <div>Value</div>
-              <div />
+              {subCats.length > 0 && (
+                <Field label="Subcategory">
+                  <select value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} className={inputCls}>
+                    <option value="">— none —</option>
+                    {subCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </Field>
+              )}
             </div>
-            {specs.map((s, i) => (
-              <div key={i} className="mb-2 grid grid-cols-[200px_1fr_36px] gap-2 items-center">
-                <input
-                  value={s.label}
-                  onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                  placeholder="Sizes"
-                  className={inputCls}
-                />
-                <input
-                  value={s.value}
-                  onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
-                  placeholder="A4, A5, DL (99×210mm)"
-                  className={inputCls}
-                />
-                <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700">
-                  <Trash2 size={14} />
-                </button>
+            <div className="flex flex-wrap gap-5 pt-1">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+                <span className="font-semibold text-ink">Active (visible on the site)</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={isGift} onChange={(e) => setIsGift(e.target.checked)} />
+                <span className="font-semibold text-ink">Personalised gift</span>
+              </label>
+            </div>
+          </Section>
+
+          {/* Hero — first section customers see */}
+          <Section title="Hero section" desc="The top of the product page — H1, tagline, banner, CTAs.">
+            <Field label="Hero banner image (landscape)">
+              <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
+              <p className="mt-1 text-[10px] text-neutral-500">
+                Cropped to 16:9. Also used as the thumbnail on shop grid cards, cart, related products, and admin orders.
+              </p>
+            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="H1 text">
+                <input value={h1} onChange={(e) => setH1(e.target.value)} className={inputCls} placeholder={name} />
+                <p className="mt-1 text-[10px] text-neutral-500">Leave blank to use the product name.</p>
+              </Field>
+              <Field label="H1 italic sub (em)">
+                <input value={h1em} onChange={(e) => setH1em(e.target.value)} className={inputCls} placeholder="Built for Singapore's Outdoors." />
+              </Field>
+            </div>
+            <Field label="Tagline (1-line hook)">
+              <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Hero big text (watermark fallback)">
+              <input value={heroBig} onChange={(e) => setHeroBig(e.target.value)} className={inputCls} placeholder="PVC CANVAS" />
+              <p className="mt-1 text-[10px] text-neutral-500">Shown large and italic when no banner image is uploaded.</p>
+            </Field>
+          </Section>
+
+          {/* About / description */}
+          <Section title="About section" desc='Dark "Why this one works so well" block further down the page.'>
+            <Field label="Short description">
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls} />
+              <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Used in JSON-LD schema and as a fallback meta description.</p>
+            </Field>
+            <Field label="Intro paragraph">
+              <textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={4} className={inputCls} />
+              <p className="mt-1 text-[10px] text-neutral-500">Main body text in the About section.</p>
+            </Field>
+            <Field label="Highlights (one per line)">
+              <textarea value={highlights} onChange={(e) => setHighlights(e.target.value)} rows={5} className={inputCls} />
+              <p className="mt-1 text-[10px] text-neutral-500">Pink-dotted bullet list shown next to the intro.</p>
+            </Field>
+            <div>
+              <div className="mb-1 text-xs font-bold text-ink">Specs (right-side card)</div>
+              <p className="mb-2 text-[11px] text-neutral-500">
+                Two columns: the <strong>Label</strong> (e.g. Sizes, Paper, Turnaround) and the <strong>Value</strong>.
+              </p>
+              <div className="mb-1 grid grid-cols-[200px_1fr_36px] gap-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                <div>Label</div>
+                <div>Value</div>
+                <div />
               </div>
-            ))}
-            <button type="button" onClick={() => setSpecs([...specs, { label: '', value: '' }])}
-              className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
-              <Plus size={12} /> Add spec
-            </button>
-          </div>
+              {specs.map((s, i) => (
+                <div key={i} className="mb-2 grid grid-cols-[200px_1fr_36px] gap-2 items-center">
+                  <input
+                    value={s.label}
+                    onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                    placeholder="Sizes"
+                    className={inputCls}
+                  />
+                  <input
+                    value={s.value}
+                    onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
+                    placeholder="A4, A5, DL (99×210mm)"
+                    className={inputCls}
+                  />
+                  <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setSpecs([...specs, { label: '', value: '' }])}
+                className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
+                <Plus size={12} /> Add spec
+              </button>
+            </div>
+          </Section>
+
+          {/* Why us — dark block */}
+          <Section title="Why us (dark block)" desc='Bottom-of-page "why buyers come back" section.'>
+            <Field label="Why us headline (HTML ok, e.g. 'Line 1<br><em>Line 2</em>')">
+              <input value={whyHeadline} onChange={(e) => setWhyHeadline(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Why us bullets (one per line)">
+              <textarea value={whyUs} onChange={(e) => setWhyUs(e.target.value)} rows={4} className={inputCls} />
+            </Field>
+          </Section>
         </div>
       )}
 
-      {/* SEO & Content */}
+      {/* SEO — metadata only */}
       {tab === 'content' && (
         <div className="grid max-w-4xl gap-5 rounded-lg border border-neutral-200 bg-white p-6">
+          <div className="text-xs text-neutral-500">
+            Metadata for search engines and social sharing. Content fields (H1, tagline, intro, etc.)
+            now live on the <strong>Basics</strong> tab in the order they appear on the page.
+          </div>
           <Field label="SEO title">
             <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={inputCls} />
+            <p className="mt-1 text-[10px] text-neutral-500">Keep under ~60 characters. Shown in the browser tab and Google results.</p>
           </Field>
           <Field label="SEO description">
-            <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={2} className={inputCls} />
+            <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
+            <p className="mt-1 text-[10px] text-neutral-500">Under ~155 characters. Shown below the title in search results.</p>
           </Field>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Hero background color">
-              <input type="color" value={heroColor} onChange={(e) => setHeroColor(e.target.value)} className="h-10 w-20 cursor-pointer rounded" />
-            </Field>
-            <Field label='Hero big text (watermark behind icon)'>
-              <input value={heroBig} onChange={(e) => setHeroBig(e.target.value)} className={inputCls} placeholder="BANNERS" />
-            </Field>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="H1 text">
-              <input value={h1} onChange={(e) => setH1(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="H1 italic sub (em)">
-              <input value={h1em} onChange={(e) => setH1em(e.target.value)} className={inputCls} />
-            </Field>
-          </div>
-          <Field label="Intro paragraph">
-            <textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={4} className={inputCls} />
-          </Field>
-          <Field label="Why us headline (HTML ok, e.g. 'Line 1<br><em>Line 2</em>')">
-            <input value={whyHeadline} onChange={(e) => setWhyHeadline(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Why us bullets (one per line)">
-            <textarea value={whyUs} onChange={(e) => setWhyUs(e.target.value)} rows={4} className={inputCls} />
-          </Field>
-          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
-            💡 The hero banner image moved to the <strong>Basics</strong> tab — it now acts as the full-bleed background of the product page.
-          </div>
         </div>
       )}
 
@@ -705,6 +732,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-xs font-bold text-ink">{label}</span>
       {children}
     </label>
+  );
+}
+
+function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-6">
+      <div className="mb-4 border-b border-neutral-100 pb-3">
+        <div className="text-sm font-black text-ink">{title}</div>
+        {desc && <div className="mt-0.5 text-[11px] text-neutral-500">{desc}</div>}
+      </div>
+      <div className="space-y-5">{children}</div>
+    </div>
   );
 }
 const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';

@@ -460,7 +460,7 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
                 onClick={handleAddToCart}
                 disabled={!preview}
                 style={{
-                  width: '100%', padding: '14px', background: addedFlash ? '#16a34a' : (!preview ? 'rgba(255,255,255,0.1)' : '#E91E8C'),
+                  width: '100%', padding: '14px', background: addedFlash ? '#16a34a' : (!preview ? 'rgba(255,255,255,0.1)' : '#FF6B1A'),
                   color: '#fff', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 800,
                   cursor: preview ? 'pointer' : 'not-allowed', letterSpacing: 0.3,
                 }}
