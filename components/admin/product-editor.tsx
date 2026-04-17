@@ -139,9 +139,14 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           <Field label="Product name">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Thumbnail image">
-            <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} label="Thumbnail" />
-          </Field>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Thumbnail image (shown in shop / cart / nav)">
+              <ImageUpload value={icon} onChange={setIcon} prefix={`product-${product.slug}`} label="Thumbnail" />
+            </Field>
+            <Field label="Hero banner (full-bleed background on the product page)">
+              <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
+            </Field>
+          </div>
           <Field label="Tagline (1-line hook)">
             <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
           </Field>
@@ -240,9 +245,9 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
           <Field label="Trust chips (one per line, shown in hero)">
             <textarea value={chips} onChange={(e) => setChips(e.target.value)} rows={3} className={inputCls} />
           </Field>
-          <Field label="Hero image (shown on product page hero)">
-            <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} label="Hero image" size="lg" />
-          </Field>
+          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
+            💡 The hero banner image moved to the <strong>Basics</strong> tab — it now acts as the full-bleed background of the product page.
+          </div>
         </div>
       )}
 
