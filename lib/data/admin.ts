@@ -112,7 +112,16 @@ export async function getOrderById(id: string) {
     .from('orders')
     .select(`
       *,
-      order_items(id, product_name, product_slug, icon, config, qty, unit_price_cents, line_total_cents, personalisation_notes, gift_image_url)
+      order_items(id, product_name, product_slug, icon, config, qty, unit_price_cents, line_total_cents, personalisation_notes, gift_image_url),
+      gift_order_items(
+        id, qty, unit_price_cents, line_total_cents, mode, product_name_snapshot,
+        production_status, production_error, admin_notes,
+        gift_product:gift_products(id, slug, name, thumbnail_url, mode),
+        source:gift_assets!gift_order_items_source_asset_id_fkey(id, bucket, path, mime_type),
+        preview:gift_assets!gift_order_items_preview_asset_id_fkey(id, bucket, path, mime_type),
+        production:gift_assets!gift_order_items_production_asset_id_fkey(id, bucket, path, mime_type, width_px, height_px, dpi),
+        production_pdf:gift_assets!gift_order_items_production_pdf_id_fkey(id, bucket, path, mime_type)
+      )
     `)
     .eq('id', id)
     .maybeSingle();

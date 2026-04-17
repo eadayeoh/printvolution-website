@@ -177,6 +177,64 @@ export async function deleteGiftPrompt(id: string) {
   return { ok: true as const };
 }
 
+/**
+ * Short-lived signed URL for a private gift asset (source / production /
+ * pdf). Used by the admin order page to let admins download production
+ * files. Customers cannot call this — requireAdmin enforces.
+ */
+export async function signGiftAssetUrl(assetId: string, expiresInSec = 300): Promise<{ ok: boolean; url?: string; error?: string }> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
+  const sb = (await import('@/lib/supabase/server')).createClient();
+  const { data: asset } = await sb.from('gift_assets').select('bucket, path').eq('id', assetId).maybeSingle();
+  if (!asset) return { ok: false, error: 'Asset not found' };
+  try {
+    const { signUrl } = await import('@/lib/gifts/storage');
+    const url = await signUrl(asset.bucket as string, asset.path as string, expiresInSec);
+    return { ok: true, url };
+  } catch (e: any) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/** Re-run the production pipeline for a failed or stale gift line */
+export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean; error?: string }> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
+  const sb = (await import('@/lib/gifts/storage')).serviceClient();
+  const { data: line } = await sb.from('gift_order_items').select('id, gift_product_id, source_asset_id, mode').eq('id', lineId).maybeSingle();
+  if (!line) return { ok: false, error: 'Line not found' };
+  if (!line.source_asset_id) return { ok: false, error: 'No source asset on this line' };
+
+  await sb.from('gift_order_items').update({ production_status: 'processing', production_error: null }).eq('id', lineId);
+  try {
+    const [{ data: product }, { data: source }] = await Promise.all([
+      sb.from('gift_products').select('*').eq('id', line.gift_product_id).maybeSingle(),
+      sb.from('gift_assets').select('path, mime_type').eq('id', line.source_asset_id).maybeSingle(),
+    ]);
+    if (!product || !source) throw new Error('Product or source missing');
+    const { runProductionPipeline } = await import('@/lib/gifts/pipeline');
+    const { GIFT_BUCKETS } = await import('@/lib/gifts/storage');
+    const out = await runProductionPipeline({
+      product: product as any, sourcePath: source.path as string, sourceMime: (source.mime_type as string) ?? 'image/jpeg',
+    });
+    const { data: prodAsset } = await sb.from('gift_assets').insert({
+      role: 'production', bucket: GIFT_BUCKETS.production, path: out.productionPath, mime_type: out.productionMime,
+      width_px: out.widthPx, height_px: out.heightPx, dpi: out.dpi,
+    }).select('id').single();
+    const { data: pdfAsset } = await sb.from('gift_assets').insert({
+      role: 'production-pdf', bucket: GIFT_BUCKETS.production, path: out.productionPdfPath, mime_type: out.productionPdfMime,
+    }).select('id').single();
+    await sb.from('gift_order_items').update({
+      production_asset_id: prodAsset?.id ?? null,
+      production_pdf_id: pdfAsset?.id ?? null,
+      production_status: 'ready',
+    }).eq('id', lineId);
+    return { ok: true };
+  } catch (e: any) {
+    await sb.from('gift_order_items').update({ production_status: 'failed', production_error: e?.message ?? 'unknown' }).eq('id', lineId);
+    return { ok: false, error: e.message };
+  }
+}
+
 export async function uploadTemplateAsset(formData: FormData): Promise<{ ok: boolean; url?: string; error?: string }> {
   try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
 

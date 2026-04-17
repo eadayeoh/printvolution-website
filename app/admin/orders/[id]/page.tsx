@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getOrderById } from '@/lib/data/admin';
 import { formatSGD } from '@/lib/utils';
 import { OrderStatusUpdater } from '@/components/admin/order-status-updater';
+import { GiftOrderLine } from '@/components/admin/gift-order-line';
 
 export const metadata = { title: 'Order Detail' };
 
@@ -26,6 +27,20 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {/* Gift items (personalised, each has source + preview + production files) */}
+          {(order.gift_order_items ?? []).length > 0 && (
+            <section className="rounded-lg border-2 border-pink/30 bg-white">
+              <div className="border-b border-pink/20 px-4 py-3 font-bold text-pink">
+                🎁 Gift items ({(order.gift_order_items ?? []).length})
+              </div>
+              <div className="space-y-3 p-4">
+                {(order.gift_order_items ?? []).map((g: any) => (
+                  <GiftOrderLine key={g.id} line={g} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Items */}
           <section className="rounded-lg border border-neutral-200 bg-white">
             <div className="border-b border-neutral-200 px-4 py-3 font-bold text-ink">Items</div>
