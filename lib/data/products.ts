@@ -1,6 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { cache } from 'react';
 
+/**
+ * Normalise a PostgREST embed. 1:1 foreign-key embeds (where the FK column
+ * is a primary key on the embedded table) come back as a single object;
+ * 1:many embeds come back as an array. Returns the first row either way,
+ * or null when there's nothing. Supabase has flipped between these shapes
+ * across versions, so don't assume.
+ */
+export function embedOne<T>(v: T | T[] | null | undefined): T | null {
+  if (v == null) return null;
+  return Array.isArray(v) ? ((v[0] as T) ?? null) : v;
+}
+
 export type PricingRow = { qty: string; prices: number[] }; // prices in cents
 export type PricingData = {
   label: string;
@@ -91,7 +103,7 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
   if (error) throw error;
 
   return ((data ?? []) as any[]).map((p: any) => {
-    const rows = p.product_pricing?.[0]?.rows ?? [];
+    const rows = embedOne(p.product_pricing)?.rows ?? [];
     let min: number | null = null;
     for (const r of rows) {
       for (const price of r.prices ?? []) {
@@ -143,8 +155,8 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   if (error || !data) return null;
   const d: any = data;
 
-  const pricing = d.product_pricing?.[0] ?? null;
-  const extras = d.product_extras?.[0] ?? null;
+  const pricing = embedOne<any>(d.product_pricing);
+  const extras = embedOne<any>(d.product_extras);
   const faqs = ((d.product_faqs ?? []) as any[])
     .sort((a: any, b: any) => a.display_order - b.display_order)
     .map((f: any) => ({ question: f.question, answer: f.answer }));
@@ -154,7 +166,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     .map((r: any) => {
       const rp = r.related;
       if (!rp) return null;
-      const rows = rp.product_pricing?.[0]?.rows ?? [];
+      const rows = embedOne(rp.product_pricing)?.rows ?? [];
       let min: number | null = null;
       for (const row of rows) for (const p of row.prices ?? []) if (typeof p === 'number' && (min === null || p < min)) min = p;
       return {

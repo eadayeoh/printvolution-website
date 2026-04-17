@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { embedOne } from '@/lib/data/products';
 import { BundleEditor } from '@/components/admin/bundle-editor';
 
 export const metadata = { title: 'Edit Bundle' };
@@ -42,7 +43,7 @@ export default async function EditBundlePage({ params }: { params: { slug: strin
     slug: p.slug,
     name: p.name,
     icon: p.icon,
-    min_price: minPriceCents(p.product_pricing?.[0]?.rows),
+    min_price: minPriceCents(embedOne<any>(p.product_pricing)?.rows),
   }));
 
   const initial = {

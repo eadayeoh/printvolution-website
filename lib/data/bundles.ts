@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { cache } from 'react';
+import { embedOne } from '@/lib/data/products';
 
 export type BundleListItem = {
   id: string;
@@ -81,7 +82,7 @@ export const listBundles = cache(async (): Promise<BundleListItem[]> => {
     let subtotal = 0;
     for (const bp of (b.bundle_products ?? [])) {
       const prod = Array.isArray(bp.product) ? bp.product[0] : bp.product;
-      const rows = prod?.product_pricing?.[0]?.rows;
+      const rows = embedOne<any>(prod?.product_pricing)?.rows;
       const unit = minPriceCents(rows) ?? 0;
       subtotal += unit * (bp.override_qty ?? 1);
     }
@@ -134,7 +135,7 @@ export const getBundleBySlug = cache(async (slug: string): Promise<BundleDetail 
       if (!p) return null;
       const cat = Array.isArray(p.category) ? p.category[0] : p.category;
       const sub = Array.isArray(p.subcategory) ? p.subcategory[0] : p.subcategory;
-      const rows = p.product_pricing?.[0]?.rows;
+      const rows = embedOne<any>(p.product_pricing)?.rows;
       const unit = minPriceCents(rows);
       const qty = bp.override_qty ?? 1;
       return {
