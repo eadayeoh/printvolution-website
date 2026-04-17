@@ -8,7 +8,7 @@ import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
 import type { ProductDetail } from '@/lib/data/products';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
-import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings';
+import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
 
 type Props = {
   product: ProductDetail;
