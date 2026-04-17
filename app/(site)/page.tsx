@@ -303,7 +303,7 @@ export default async function HomePage() {
       <div className="home-sec">
         <div className="home-sec-inner">
           <div className="hs-tag">Printing Services in Singapore</div>
-          <h2 className="hs-h" style={{ maxWidth: 1100 }}>
+          <h2 className="hs-h" style={{ fontSize: 'clamp(28px, 3.6vw, 44px)', lineHeight: 1.08, maxWidth: 920 }}>
             Looking for a specific print service? <em>We probably do it.</em>
           </h2>
           <div className="seo-kw-grid">
