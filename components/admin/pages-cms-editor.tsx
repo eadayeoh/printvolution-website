@@ -6,6 +6,10 @@ import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { saveSection, saveContactMethods, saveNavigation, saveMegaMenu } from '@/app/admin/pages/actions';
 import { MegaEditorDnd } from '@/components/admin/mega-editor-dnd';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { DndContext, DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 
 type Tab = 'home' | 'about' | 'contact' | 'nav' | 'mega';
 
@@ -370,25 +374,39 @@ function NavEditor({ initial }: { initial: any[] }) {
           {isPending ? 'Saving…' : 'Save all'}
         </button>
       </div>
-      <div className="space-y-2">
-        {nav.map((n, i) => (
-          <div key={i} className="grid gap-2 rounded border border-neutral-200 p-3 md:grid-cols-[auto_1fr_1fr_1fr_auto_auto]">
-            <select value={n.type} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className={`${inputCls} w-32`}>
-              <option value="link">Link</option>
-              <option value="dropdown">Dropdown</option>
-              <option value="sep">Separator</option>
-            </select>
-            <input value={n.label ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, label: e.target.value || null } : x))} placeholder="Label" className={inputCls} disabled={n.type === 'sep'} />
-            <input value={n.action ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, action: e.target.value || null } : x))} placeholder="Action (e.g. /shop)" className={inputCls} disabled={n.type !== 'link'} />
-            <input value={n.mega_key ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, mega_key: e.target.value || null } : x))} placeholder="Mega key (print/gifts)" className={inputCls} disabled={n.type !== 'dropdown'} />
-            <label className="flex items-center gap-1 text-xs">
-              <input type="checkbox" checked={n.is_hidden} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, is_hidden: e.target.checked } : x))} />
-              Hidden
-            </label>
-            <button onClick={() => setNav(nav.filter((_, j) => j !== i))} className="text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
+      <DndContext
+        sensors={useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))}
+        collisionDetection={closestCenter}
+        onDragEnd={(e: DragEndEvent) => {
+          const from = Number(e.active.id);
+          const to = e.over ? Number(e.over.id) : -1;
+          if (to >= 0 && from !== to) {
+            setNav(arrayMove(nav, from, to).map((x, i) => ({ ...x, display_order: i })));
+          }
+        }}
+      >
+        <SortableContext items={nav.map((_, i) => i.toString())} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {nav.map((n, i) => (
+              <SortableNavRow key={i} id={i.toString()}>
+                <select value={n.type} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, type: e.target.value } : x))} className={`${inputCls} w-32`}>
+                  <option value="link">Link</option>
+                  <option value="dropdown">Dropdown</option>
+                  <option value="sep">Separator</option>
+                </select>
+                <input value={n.label ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, label: e.target.value || null } : x))} placeholder="Label" className={inputCls} disabled={n.type === 'sep'} />
+                <input value={n.action ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, action: e.target.value || null } : x))} placeholder="Action (e.g. /shop)" className={inputCls} disabled={n.type !== 'link'} />
+                <input value={n.mega_key ?? ''} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, mega_key: e.target.value || null } : x))} placeholder="Mega key (print/gifts)" className={inputCls} disabled={n.type !== 'dropdown'} />
+                <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                  <input type="checkbox" checked={n.is_hidden} onChange={(e) => setNav(nav.map((x, j) => j === i ? { ...x, is_hidden: e.target.checked } : x))} />
+                  Hidden
+                </label>
+                <button onClick={() => setNav(nav.filter((_, j) => j !== i))} className="text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
+              </SortableNavRow>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
       <div className="mt-3 flex items-center justify-between">
         <button onClick={() => setNav([...nav, { type: 'link', label: '', action: '/', mega_key: null, is_hidden: false }])}
           className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
@@ -401,3 +419,22 @@ function NavEditor({ initial }: { initial: any[] }) {
 }
 
 const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-400';
+
+function SortableNavRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-stretch gap-0 rounded border border-neutral-200 bg-white">
+      <div
+        {...attributes}
+        {...listeners}
+        className="flex cursor-grab items-center rounded-l bg-neutral-50 px-2 text-neutral-400 hover:text-ink active:cursor-grabbing"
+      >
+        <GripVertical size={14} />
+      </div>
+      <div className="grid flex-1 gap-2 p-3 md:grid-cols-[128px_1fr_1fr_1fr_auto_auto]">
+        {children}
+      </div>
+    </div>
+  );
+}
