@@ -314,27 +314,46 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         </div>
       </div>
 
-      {/* =============== SECTION 1 — HERO (editorial, light, pink-forward) =============== */}
+      {/* =============== SECTION 1 — HERO (modern 2026, pink-first) =============== */}
       <section
         className="pvHero"
         style={{
           position: 'relative',
-          background: 'linear-gradient(135deg, #FFF5FA 0%, #FBF7F1 60%, #FFF0F7 100%)',
+          background: '#FFE9F3',
           overflow: 'hidden',
         }}
       >
-        {/* Soft pink blob top-left */}
+        {/* Aurora blobs — fluid, no patterns */}
         <div aria-hidden style={{
-          position: 'absolute', top: '-30%', left: '-10%',
-          width: '55%', height: '140%',
-          background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.12), transparent 60%)',
+          position: 'absolute',
+          top: '-35%',
+          left: '-10%',
+          width: '70%',
+          height: '160%',
+          background: 'radial-gradient(ellipse at center, #FF6FB5 0%, rgba(233,30,140,0.35) 35%, transparent 70%)',
+          filter: 'blur(60px)',
+          opacity: 0.8,
           pointerEvents: 'none',
         }} />
-        {/* Soft pink blob bottom-right */}
         <div aria-hidden style={{
-          position: 'absolute', bottom: '-30%', right: '-10%',
-          width: '45%', height: '100%',
-          background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.08), transparent 65%)',
+          position: 'absolute',
+          bottom: '-40%',
+          right: '-15%',
+          width: '65%',
+          height: '160%',
+          background: 'radial-gradient(ellipse at center, #FFB3D8 0%, rgba(255,179,216,0.6) 40%, transparent 70%)',
+          filter: 'blur(80px)',
+          opacity: 0.9,
+          pointerEvents: 'none',
+        }} />
+        <div aria-hidden style={{
+          position: 'absolute',
+          top: '20%',
+          left: '35%',
+          width: '40%',
+          height: '60%',
+          background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.75) 0%, transparent 70%)',
+          filter: 'blur(60px)',
           pointerEvents: 'none',
         }} />
 
@@ -344,19 +363,19 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             position: 'relative',
             maxWidth: 1320,
             margin: '0 auto',
-            padding: 'clamp(40px, 5vw, 72px) clamp(24px, 4vw, 56px)',
+            padding: 'clamp(48px, 6vw, 96px) clamp(24px, 4vw, 56px)',
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 6fr) minmax(0, 7fr)',
+            gridTemplateColumns: 'minmax(0, 5.5fr) minmax(0, 6.5fr)',
             alignItems: 'center',
-            gap: 'clamp(32px, 4vw, 64px)',
+            gap: 'clamp(32px, 4vw, 72px)',
           }}
         >
           {/* LEFT — text */}
           <div className="pvHeroText">
             {/* Breadcrumbs */}
-            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: '#888', marginBottom: 22, letterSpacing: 0.3, fontWeight: 600 }}>
+            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: 'rgba(156,20,98,0.75)', marginBottom: 24, letterSpacing: 0.3, fontWeight: 600 }}>
               <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
-              <span style={{ margin: '0 8px' }}>/</span>
+              <span style={{ margin: '0 8px', opacity: 0.5 }}>/</span>
               {product.category ? (
                 <Link href={`/shop?category=${product.category.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                   {product.category.name}
@@ -364,33 +383,37 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
             </nav>
 
-            {/* Pink pill eyebrow */}
+            {/* Glass eyebrow pill */}
             {product.category && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '6px 14px', borderRadius: 999,
-                background: 'rgba(233,30,140,0.1)',
-                color: '#E91E8C',
-                fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
-                marginBottom: 22,
+                padding: '8px 16px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.55)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                border: '1px solid rgba(255,255,255,0.8)',
+                color: '#9C1462',
+                fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase',
+                marginBottom: 26,
+                boxShadow: '0 8px 30px -10px rgba(156,20,98,0.18)',
               }}>
                 <span aria-hidden style={{
-                  width: 7, height: 7, borderRadius: '50%',
+                  width: 6, height: 6, borderRadius: '50%',
                   background: '#E91E8C',
-                  boxShadow: '0 0 0 4px rgba(233,30,140,0.22)',
+                  boxShadow: '0 0 10px rgba(233,30,140,0.6)',
                 }} />
                 {product.category.name}
               </div>
             )}
 
-            {/* H1 — big editorial */}
+            {/* H1 — modern display, pink gradient */}
             <h1 style={{
-              fontSize: 'clamp(40px, 5.6vw, 72px)',
+              fontSize: 'clamp(44px, 6vw, 84px)',
               fontWeight: 900,
-              lineHeight: 0.98,
-              letterSpacing: '-0.035em',
-              margin: '0 0 20px',
-              color: '#0a0a0a',
+              lineHeight: 0.94,
+              letterSpacing: '-0.04em',
+              margin: '0 0 22px',
+              color: '#1A0410',
             }}>
               {h1}
               {h1em && (
@@ -400,9 +423,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     fontFamily: 'var(--serif, "Cormorant Garamond", Georgia, serif)',
                     fontStyle: 'italic',
                     fontWeight: 500,
-                    fontSize: '0.82em',
+                    fontSize: '0.8em',
+                    backgroundImage: 'linear-gradient(135deg, #E91E8C 0%, #FF7FBF 100%)',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
                     color: '#E91E8C',
-                    letterSpacing: '-0.01em',
+                    letterSpacing: '-0.02em',
                   }}>
                     {h1em}
                   </em>
@@ -413,29 +440,31 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             {product.tagline && (
               <p style={{
                 fontSize: 18,
-                color: '#555',
+                color: 'rgba(26,4,16,0.7)',
                 lineHeight: 1.55,
-                margin: '0 0 32px',
-                maxWidth: 520,
+                margin: '0 0 36px',
+                maxWidth: 540,
                 fontWeight: 400,
               }}>
                 {product.tagline}
               </p>
             )}
 
-            {/* Trust chips */}
+            {/* Trust chips — glass morphism */}
             {chips.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 36 }}>
                 {chips.slice(0, 3).map((c, i) => (
                   <div key={i} style={{
                     display: 'inline-flex', alignItems: 'center',
-                    padding: '7px 14px',
-                    background: '#fff',
-                    border: '1px solid #E8E0D3',
-                    color: '#333',
+                    padding: '8px 14px',
+                    background: 'rgba(255,255,255,0.5)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255,255,255,0.7)',
+                    color: '#1A0410',
                     borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 700,
+                    fontSize: 12,
+                    fontWeight: 600,
                     letterSpacing: 0.2,
                   }}>
                     {c}
@@ -444,26 +473,26 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               </div>
             )}
 
-            {/* CTAs */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            {/* CTAs — pink-dominant, modern */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
               <a
                 href="#pricing"
                 onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
-                  padding: '15px 26px',
+                  padding: '17px 30px',
                   borderRadius: 999,
-                  background: '#E91E8C',
+                  background: 'linear-gradient(135deg, #E91E8C 0%, #FF4FA3 100%)',
                   color: '#fff',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 800,
                   textDecoration: 'none',
-                  letterSpacing: 0.4,
-                  boxShadow: '0 12px 32px -8px rgba(233,30,140,0.55)',
+                  letterSpacing: 0.3,
+                  boxShadow: '0 20px 40px -12px rgba(233,30,140,0.55), 0 0 0 1px rgba(233,30,140,0.15) inset',
                 }}
               >
                 {fromPrice !== null && (
-                  <>From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.7 }}>·</span></>
+                  <>From <strong style={{ fontSize: 16 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.7 }}>·</span></>
                 )}
                 See Pricing →
               </a>
@@ -473,41 +502,44 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 rel="noopener"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '15px 22px',
+                  padding: '17px 26px',
                   borderRadius: 999,
-                  border: '1.5px solid rgba(233,30,140,0.3)',
-                  color: '#E91E8C',
-                  fontSize: 13,
+                  background: 'rgba(255,255,255,0.6)',
+                  backdropFilter: 'blur(14px)',
+                  WebkitBackdropFilter: 'blur(14px)',
+                  border: '1px solid rgba(255,255,255,0.8)',
+                  color: '#9C1462',
+                  fontSize: 14,
                   fontWeight: 700,
                   textDecoration: 'none',
                 }}
               >
-                💬 Quick enquiry →
+                💬 Quick enquiry
               </a>
             </div>
           </div>
 
-          {/* RIGHT — image with pink offset block + printer's signature dots */}
+          {/* RIGHT — image in soft glassy frame, modern floating card */}
           <div className="pvHeroImage" style={{ position: 'relative' }}>
-            {/* Offset pink block behind image */}
+            {/* Big soft pink glow behind image */}
             <div aria-hidden style={{
               position: 'absolute',
-              inset: 0,
-              background: '#E91E8C',
-              borderRadius: 20,
-              transform: 'translate(14px, 14px)',
+              inset: '-8%',
+              background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.35) 0%, transparent 65%)',
+              filter: 'blur(40px)',
               zIndex: 0,
+              pointerEvents: 'none',
             }} />
-            {/* Image wrapper */}
+            {/* Image card */}
             <div style={{
               position: 'relative',
-              aspectRatio: '4 / 3',
+              aspectRatio: '4 / 3.1',
               width: '100%',
-              borderRadius: 20,
+              borderRadius: 28,
               overflow: 'hidden',
               zIndex: 1,
-              background: '#FFE4F1',
-              boxShadow: '0 30px 80px -30px rgba(233,30,140,0.35)',
+              background: '#fff',
+              boxShadow: '0 40px 80px -20px rgba(156,20,98,0.28), 0 10px 30px -10px rgba(156,20,98,0.18), 0 0 0 1px rgba(255,255,255,0.6) inset',
             }}>
               {heroImg ? (
                 <img
@@ -524,7 +556,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'linear-gradient(135deg, #FFD4E8 0%, #E91E8C 100%)',
-                  color: 'rgba(255,255,255,0.4)',
+                  color: 'rgba(255,255,255,0.55)',
                   fontSize: 'clamp(70px, 11vw, 180px)',
                   fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                   fontFamily: 'var(--serif, "Cormorant Garamond", Georgia, serif)',
@@ -535,21 +567,28 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               )}
             </div>
 
-            {/* CMY registration dots — printer's signature (no K / black) */}
-            <div aria-hidden style={{
-              position: 'absolute',
-              top: -14, right: -14,
-              display: 'flex', gap: 4,
-              padding: '6px 10px',
-              background: '#fff',
-              borderRadius: 999,
-              boxShadow: '0 6px 20px -6px rgba(233,30,140,0.25)',
-              zIndex: 2,
-            }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00B8D9' }} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E91E8C' }} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FFD100' }} />
-            </div>
+            {/* Floating From-price glass chip — bottom-left of image */}
+            {fromPrice !== null && (
+              <div aria-hidden style={{
+                position: 'absolute',
+                left: -14,
+                bottom: -14,
+                display: 'inline-flex',
+                alignItems: 'baseline',
+                gap: 8,
+                padding: '14px 20px',
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.8)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 20px 40px -12px rgba(156,20,98,0.28)',
+                zIndex: 2,
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: 'rgba(156,20,98,0.75)' }}>From</span>
+                <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.01em', color: '#E91E8C' }}>{formatSGD(fromPrice)}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
