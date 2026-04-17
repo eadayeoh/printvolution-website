@@ -1,16 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
 
 const PageSectionSchema = z.object({
   page_key: z.string(),
@@ -19,6 +11,7 @@ const PageSectionSchema = z.object({
 });
 
 export async function saveSection(input: z.infer<typeof PageSectionSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = PageSectionSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -47,6 +40,7 @@ const ContactMethodSchema = z.object({
 });
 
 export async function saveContactMethods(methods: z.infer<typeof ContactMethodSchema>[]) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   // Wipe + reinsert (simpler than diffing)
   await sb.from('contact_methods').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -77,6 +71,7 @@ const NavItemSchema = z.object({
 });
 
 export async function saveNavigation(items: z.infer<typeof NavItemSchema>[]) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   await sb.from('navigation').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (items.length) {
@@ -102,6 +97,7 @@ export async function saveMegaMenu(
   menuKey: string,
   sections: z.infer<typeof MegaSectionSchema>[]
 ) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
 
   // Fetch existing section IDs for this menu (we'll wipe them via cascade)

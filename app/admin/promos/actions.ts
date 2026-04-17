@@ -1,16 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
 
 const CouponSchema = z.object({
   id: z.string().uuid().optional(),
@@ -25,6 +17,7 @@ const CouponSchema = z.object({
 });
 
 export async function saveCoupon(input: z.infer<typeof CouponSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = CouponSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -51,6 +44,7 @@ export async function saveCoupon(input: z.infer<typeof CouponSchema>) {
 }
 
 export async function deleteCoupon(id: string) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('coupons').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };
@@ -69,6 +63,7 @@ const RuleSchema = z.object({
 });
 
 export async function saveRule(input: z.infer<typeof RuleSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = RuleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -93,6 +88,7 @@ export async function saveRule(input: z.infer<typeof RuleSchema>) {
 }
 
 export async function deleteRule(id: string) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('discount_rules').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };

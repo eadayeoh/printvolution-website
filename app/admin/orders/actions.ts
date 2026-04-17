@@ -1,10 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+
+const ALLOWED_STATUSES = ['pending', 'processing', 'ready', 'completed', 'cancelled'] as const;
 
 export async function updateOrderStatus(orderId: string, status: string) {
-  const supabase = createClient();
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  if (!ALLOWED_STATUSES.includes(status as any)) return { ok: false, error: 'Invalid status' };
+
+  const supabase = createServiceClient();
   const { data: before } = await supabase
     .from('orders')
     .select('order_number, customer_name, email, status')
@@ -17,7 +22,6 @@ export async function updateOrderStatus(orderId: string, status: string) {
     .eq('id', orderId);
   if (error) return { ok: false, error: error.message };
 
-  // Fire status email if status actually changed
   if (before && before.status !== status && ['processing', 'ready', 'completed', 'cancelled'].includes(status)) {
     void (async () => {
       try {
@@ -25,7 +29,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
         const m = orderStatusEmail(before.order_number as string, before.customer_name as string, status);
         await sendEmail({ to: before.email as string, subject: m.subject, html: m.html });
       } catch (e) {
-        console.error('[status email] failed', e);
+        console.error('[status email] failed');
       }
     })();
   }
@@ -37,7 +41,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 export async function deleteOrder(orderId: string) {
-  const supabase = createClient();
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  const supabase = createServiceClient();
   const { error } = await supabase.from('orders').delete().eq('id', orderId);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/admin/orders');

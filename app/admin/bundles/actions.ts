@@ -1,17 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
 
 const BundleSchema = z.object({
   name: z.string().min(2),
@@ -78,6 +70,7 @@ async function saveBundle(id: string, d: BundleUpdateInput) {
 }
 
 export async function updateBundleBySlug(slug: string, input: BundleUpdateInput) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = BundleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
@@ -89,6 +82,7 @@ export async function updateBundleBySlug(slug: string, input: BundleUpdateInput)
 }
 
 export async function createBundle(input: BundleUpdateInput) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = BundleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -125,6 +119,7 @@ export async function createBundle(input: BundleUpdateInput) {
 }
 
 export async function deleteBundle(slug: string) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('bundles').delete().eq('slug', slug);
   if (error) return { ok: false, error: error.message };

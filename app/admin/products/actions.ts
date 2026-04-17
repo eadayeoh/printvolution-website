@@ -1,17 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
+import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+// Backwards-compat alias so existing call sites inside this file keep
+// working without a mass rename. Every exported action below calls
+// requireAdmin() first; only after that passes do we hand out the
+// service-role client.
+const adminClient = createServiceClient;
 
 const SpecSchema = z.array(z.object({ label: z.string(), value: z.string() }));
 const PricingRowSchema = z.object({
@@ -71,6 +69,7 @@ const ProductUpdateSchema = z.object({
 export type ProductUpdateInput = z.input<typeof ProductUpdateSchema>;
 
 export async function updateProduct(slug: string, input: ProductUpdateInput) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = ProductUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -165,6 +164,7 @@ const ProductCreateSchema = z.object({
 });
 
 export async function createProduct(input: z.infer<typeof ProductCreateSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const parsed = ProductCreateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -210,6 +210,7 @@ export async function createProduct(input: z.infer<typeof ProductCreateSchema>) 
 }
 
 export async function deleteProduct(slug: string) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('products').delete().eq('slug', slug);
   if (error) return { ok: false, error: error.message };
@@ -219,6 +220,7 @@ export async function deleteProduct(slug: string) {
 }
 
 export async function toggleProductActive(slug: string, is_active: boolean) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('products').update({ is_active }).eq('slug', slug);
   if (error) return { ok: false, error: error.message };

@@ -131,13 +131,83 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // PRINT and which are GIFT. Each item is in exactly one of the two
   // tables (gift_products wins if for some reason both exist).
   const slugs = Array.from(new Set(data.items.map((i) => i.product_slug)));
-  const [printRes, giftRes] = await Promise.all([
-    sb.from('products').select('id, slug').in('slug', slugs),
-    sb.from('gift_products').select('id, slug, mode').in('slug', slugs),
+  const [printRes, giftRes, pricingRes] = await Promise.all([
+    sb.from('products').select('id, slug, is_active').in('slug', slugs),
+    sb.from('gift_products').select('id, slug, mode, base_price_cents, is_active').in('slug', slugs),
+    sb.from('product_pricing').select('product_id, rows'),
   ]);
   if (printRes.error) return { ok: false, error: 'Product lookup failed: ' + printRes.error.message };
   const printSlugToId = new Map((printRes.data ?? []).map((p: any) => [p.slug, p.id]));
-  const giftSlugToInfo = new Map((giftRes.data ?? []).map((p: any) => [p.slug, { id: p.id, mode: p.mode }]));
+  const printActive = new Map((printRes.data ?? []).map((p: any) => [p.slug, p.is_active]));
+  const giftSlugToInfo = new Map(
+    (giftRes.data ?? []).map((p: any) => [p.slug, { id: p.id, mode: p.mode, base_price_cents: p.base_price_cents, is_active: p.is_active }])
+  );
+
+  // Compute PRICE FLOOR per print product — the lowest unit price in
+  // the pricing matrix. Used to reject manipulated low-priced orders.
+  const printFloor = new Map<string, number>();
+  const productIdToSlug = new Map((printRes.data ?? []).map((p: any) => [p.id, p.slug]));
+  for (const row of ((pricingRes.data ?? []) as any[])) {
+    const slug = productIdToSlug.get(row.product_id);
+    if (!slug) continue;
+    let min: number | null = null;
+    for (const r of (row.rows ?? []) as any[]) {
+      for (const price of (r.prices ?? []) as any[]) {
+        if (typeof price === 'number' && price > 0 && (min === null || price < min)) min = price;
+      }
+    }
+    if (min !== null) printFloor.set(slug, min);
+  }
+
+  // ───────── PRICE VALIDATION ─────────
+  // Reject if any item claims to cost less than what the product allows.
+  // Also reject inactive/unknown products.
+  for (const item of data.items) {
+    const isGift = giftSlugToInfo.has(item.product_slug);
+    const isPrint = printSlugToId.has(item.product_slug);
+    if (!isGift && !isPrint) {
+      return { ok: false, error: `Unknown product: ${item.product_slug}` };
+    }
+    if (isPrint && printActive.get(item.product_slug) === false) {
+      return { ok: false, error: `Product not available: ${item.product_slug}` };
+    }
+    if (isGift && giftSlugToInfo.get(item.product_slug)?.is_active === false) {
+      return { ok: false, error: `Product not available: ${item.product_slug}` };
+    }
+
+    if (isGift) {
+      // Gifts: unit price must equal base_price_cents (configurators on gifts
+      // don't exist yet — flat pricing).
+      const expected = giftSlugToInfo.get(item.product_slug)!.base_price_cents ?? 0;
+      if (expected > 0 && item.unit_price_cents < expected) {
+        return { ok: false, error: `Price mismatch on ${item.product_name}. Please refresh your cart.` };
+      }
+    } else {
+      // Print: unit price must be >= minimum price from pricing matrix.
+      // (Upper bound not enforced — higher prices mean a pricier config.)
+      const floor = printFloor.get(item.product_slug);
+      // Reject if the product has no known price floor at all — that
+      // means the product has no pricing matrix rows configured, which
+      // should never reach checkout. Treat it as a manipulated cart.
+      if (floor === undefined) {
+        return { ok: false, error: `Product is not priced: ${item.product_name}. Please contact us.` };
+      }
+      if (item.unit_price_cents < floor) {
+        return { ok: false, error: `Price mismatch on ${item.product_name}. Please refresh your cart.` };
+      }
+    }
+
+    // No free prints or gifts from the checkout path.
+    if (item.unit_price_cents <= 0 || item.line_total_cents <= 0) {
+      return { ok: false, error: `Invalid price on ${item.product_name}. Please refresh your cart.` };
+    }
+
+    // line_total sanity: must equal unit * qty (or within 1 cent rounding)
+    const expectedLine = item.unit_price_cents * item.qty;
+    if (Math.abs(item.line_total_cents - expectedLine) > Math.max(1, item.qty)) {
+      return { ok: false, error: `Line total mismatch on ${item.product_name}. Please refresh your cart.` };
+    }
+  }
 
   // For gift items, parse the source/preview asset IDs out of
   // personalisation_notes — the upload action wrote them there as

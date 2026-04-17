@@ -57,9 +57,51 @@ function normaliseSiteUrl(raw: string): string {
   return u;
 }
 
+/**
+ * SSRF guard: reject URLs that resolve to private / link-local / loopback
+ * addresses, plus anything exotic (file://, etc.). Only http/https + public
+ * hostnames. Used before every fetch() in the WordPress import flow so an
+ * admin can't (accidentally or maliciously) probe internal infrastructure
+ * via the import form.
+ */
+function assertPublicUrl(raw: string): void {
+  let u: URL;
+  try { u = new URL(raw); } catch { throw new Error('Invalid URL'); }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+    throw new Error('Only http(s) URLs allowed');
+  }
+  const host = u.hostname.toLowerCase();
+  if (
+    host === 'localhost' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host === 'metadata.google.internal' ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal')
+  ) throw new Error('Internal hosts not allowed');
+  // Literal IPv4 ranges we always block
+  const m = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (m) {
+    const [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)];
+    if (
+      a === 10 ||                                   // 10.0.0.0/8
+      a === 127 ||                                  // loopback
+      (a === 169 && b === 254) ||                   // link-local / EC2 metadata
+      (a === 172 && b >= 16 && b <= 31) ||          // 172.16.0.0/12
+      (a === 192 && b === 168) ||                   // 192.168.0.0/16
+      a === 0 ||                                    // this-network
+      a >= 224                                      // multicast / reserved
+    ) throw new Error('Private IP not allowed');
+  }
+  // Bare IPv6 literals (bracketed) — block everything for simplicity;
+  // legitimate imports use hostnames, not raw v6 addresses.
+  if (host.startsWith('[')) throw new Error('IPv6 literals not allowed');
+}
+
 /** Re-host a remote image in our Supabase Storage so old WP URLs don't break. */
 async function mirrorImage(remoteUrl: string): Promise<string | null> {
   try {
+    assertPublicUrl(remoteUrl);
     const res = await fetch(remoteUrl, { redirect: 'follow' });
     if (!res.ok) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
@@ -101,6 +143,9 @@ export async function importFromWordPress(
   }
 
   const siteUrl = normaliseSiteUrl(siteUrlRaw);
+  try { assertPublicUrl(siteUrl); } catch (e: any) {
+    return { ok: false, imported: 0, skipped: 0, totalFound: 0, errors: [e.message ?? 'Invalid source URL'] };
+  }
   const perPage = 50;
   let page = 1;
   let imported = 0;
