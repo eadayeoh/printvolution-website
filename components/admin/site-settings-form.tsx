@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { updateSiteSettings } from '@/app/admin/settings/actions';
-import type { SiteSettings } from '@/lib/data/site-settings';
+import type { ProductFeature, SiteSettings } from '@/lib/data/site-settings';
 
 export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
   const router = useRouter();
@@ -13,8 +13,13 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
   const [logoWidth, setLogoWidth] = useState((initial.logo_width_px ?? '').toString());
   const [favicon, setFavicon] = useState(initial.favicon_url ?? '');
   const [brand, setBrand] = useState(initial.brand_text);
+  const [features, setFeatures] = useState<ProductFeature[]>(initial.product_features);
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+
+  function updateFeature(idx: number, patch: Partial<ProductFeature>) {
+    setFeatures((xs) => xs.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
+  }
 
   function save() {
     setErr(null);
@@ -24,6 +29,12 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
         logo_width_px: logoWidth ? parseInt(logoWidth, 10) : null,
         favicon_url: favicon || null,
         brand_text: brand.trim() || 'Printvolution',
+        product_features: features.map((f) => ({
+          icon_url: f.icon_url || null,
+          emoji: f.emoji || null,
+          title: f.title.trim(),
+          desc: f.desc.trim(),
+        })),
       });
       if (!r.ok) setErr(r.error);
       else {
@@ -86,6 +97,69 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
               />
               <span className="mt-1 block text-[10px] text-neutral-500">Shown if the logo image fails to load + as alt text.</span>
             </label>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-neutral-200 bg-white p-6">
+          <div className="mb-1 text-xs font-bold text-ink">Product-page feature row</div>
+          <p className="mb-4 text-[11px] text-neutral-500">
+            Four trust signals shown just below the hero on <em>every</em> product page.
+            Upload a square icon (auto-cropped to 1:1) or leave blank to use an emoji.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {features.map((f, i) => (
+              <div key={i} className="rounded border border-neutral-200 p-4 bg-neutral-50/50">
+                <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-pink text-[10px] text-white">{i + 1}</span>
+                  Feature {i + 1}
+                </div>
+                <div className="flex gap-3">
+                  <div className="shrink-0">
+                    <ImageUpload
+                      value={f.icon_url ?? ''}
+                      onChange={(v) => updateFeature(i, { icon_url: v || null })}
+                      prefix={`feat-${i + 1}`}
+                      aspect={1}
+                      size="sm"
+                      label="Icon"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <label className="block">
+                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">
+                        Emoji fallback {f.icon_url && <em className="font-normal normal-case text-neutral-400">(ignored while icon is set)</em>}
+                      </span>
+                      <input
+                        value={f.emoji ?? ''}
+                        onChange={(e) => updateFeature(i, { emoji: e.target.value })}
+                        className={`${inputCls} w-20`}
+                        placeholder="✓"
+                        maxLength={4}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Title</span>
+                      <input
+                        value={f.title}
+                        onChange={(e) => updateFeature(i, { title: e.target.value })}
+                        className={inputCls}
+                        maxLength={60}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Description</span>
+                      <textarea
+                        value={f.desc}
+                        onChange={(e) => updateFeature(i, { desc: e.target.value })}
+                        className={inputCls}
+                        rows={2}
+                        maxLength={200}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

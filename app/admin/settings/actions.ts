@@ -13,11 +13,19 @@ async function requireAdmin() {
   return sb;
 }
 
+const FeatureSchema = z.object({
+  icon_url: z.string().nullable().optional(),
+  emoji: z.string().nullable().optional(),
+  title: z.string().min(1).max(60),
+  desc: z.string().max(200).default(''),
+});
+
 const Schema = z.object({
   logo_url: z.string().nullable().optional(),
   logo_width_px: z.number().int().nullable().optional(),
   favicon_url: z.string().nullable().optional(),
   brand_text: z.string().min(1).default('Printvolution'),
+  product_features: z.array(FeatureSchema).min(1).max(6).optional(),
 });
 
 export async function updateSiteSettings(input: z.input<typeof Schema>) {

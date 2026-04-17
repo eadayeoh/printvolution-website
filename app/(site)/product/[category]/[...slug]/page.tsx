@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getProductBySlug } from '@/lib/data/products';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
+import { getSiteSettings } from '@/lib/data/site-settings';
 import { ProductPage } from '@/components/product/product-page';
 import { BreadcrumbSchema, ProductSchema } from '@/components/seo/json-ld';
 
@@ -40,9 +41,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function Page({ params }: PageProps) {
   const productSlug = params.slug[params.slug.length - 1];
-  const [product, routes] = await Promise.all([
+  const [product, routes, settings] = await Promise.all([
     getProductBySlug(productSlug),
     getProductRoutes(),
+    getSiteSettings(),
   ]);
   if (!product) notFound();
 
@@ -76,7 +78,7 @@ export default async function Page({ params }: PageProps) {
         imageUrl={product.extras?.image_url}
         priceFromCents={minPrice}
       />
-      <ProductPage product={product} productRoutes={routes} />
+      <ProductPage product={product} productRoutes={routes} features={settings.product_features} />
     </>
   );
 }

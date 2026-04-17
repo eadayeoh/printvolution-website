@@ -8,13 +8,16 @@ import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
 import type { ProductDetail } from '@/lib/data/products';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
+import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings';
 
 type Props = {
   product: ProductDetail;
   productRoutes: ProductLookup;
+  features?: ProductFeature[];
 };
 
-export function ProductPage({ product, productRoutes }: Props) {
+export function ProductPage({ product, productRoutes, features }: Props) {
+  const productFeatures = features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES;
   const router = useRouter();
   const addToCart = useCart((s) => s.add);
 
@@ -311,22 +314,28 @@ export function ProductPage({ product, productRoutes }: Props) {
         </div>
       </div>
 
-      {/* =============== SECTION 1 — HERO (editorial, light, image-led) =============== */}
+      {/* =============== SECTION 1 — HERO (editorial, light, pink-forward) =============== */}
       <section
         className="pvHero"
         style={{
           position: 'relative',
-          background: '#FBF7F1',
+          background: 'linear-gradient(135deg, #FFF5FA 0%, #FBF7F1 60%, #FFF0F7 100%)',
           overflow: 'hidden',
         }}
       >
-        {/* Grid-paper texture (subtle) */}
+        {/* Soft pink blob top-left */}
         <div aria-hidden style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          backgroundImage:
-            'linear-gradient(rgba(10,10,10,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(10,10,10,0.035) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-          backgroundPosition: '-1px -1px',
+          position: 'absolute', top: '-30%', left: '-10%',
+          width: '55%', height: '140%',
+          background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.12), transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Soft pink blob bottom-right */}
+        <div aria-hidden style={{
+          position: 'absolute', bottom: '-30%', right: '-10%',
+          width: '45%', height: '100%',
+          background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.08), transparent 65%)',
+          pointerEvents: 'none',
         }} />
 
         <div
@@ -355,19 +364,21 @@ export function ProductPage({ product, productRoutes }: Props) {
               ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
             </nav>
 
-            {/* CMYK dots + eyebrow */}
+            {/* Pink pill eyebrow */}
             {product.category && (
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 12,
-                fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase',
-                color: '#0a0a0a', marginBottom: 20,
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                padding: '6px 14px', borderRadius: 999,
+                background: 'rgba(233,30,140,0.1)',
+                color: '#E91E8C',
+                fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+                marginBottom: 22,
               }}>
-                <span aria-hidden style={{ display: 'inline-flex', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00B8D9' }} />
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E91E8C' }} />
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFD100' }} />
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0a0a0a' }} />
-                </span>
+                <span aria-hidden style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#E91E8C',
+                  boxShadow: '0 0 0 4px rgba(233,30,140,0.22)',
+                }} />
                 {product.category.name}
               </div>
             )}
@@ -442,17 +453,17 @@ export function ProductPage({ product, productRoutes }: Props) {
                   display: 'inline-flex', alignItems: 'center', gap: 10,
                   padding: '15px 26px',
                   borderRadius: 999,
-                  background: '#0a0a0a',
+                  background: '#E91E8C',
                   color: '#fff',
                   fontSize: 13,
                   fontWeight: 800,
                   textDecoration: 'none',
                   letterSpacing: 0.4,
-                  boxShadow: '0 10px 30px -8px rgba(0,0,0,0.35)',
+                  boxShadow: '0 12px 32px -8px rgba(233,30,140,0.55)',
                 }}
               >
                 {fromPrice !== null && (
-                  <>From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.6 }}>·</span></>
+                  <>From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.7 }}>·</span></>
                 )}
                 See Pricing →
               </a>
@@ -462,9 +473,10 @@ export function ProductPage({ product, productRoutes }: Props) {
                 rel="noopener"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '15px 24px',
+                  padding: '15px 22px',
                   borderRadius: 999,
-                  color: '#0a0a0a',
+                  border: '1.5px solid rgba(233,30,140,0.3)',
+                  color: '#E91E8C',
                   fontSize: 13,
                   fontWeight: 700,
                   textDecoration: 'none',
@@ -475,13 +487,13 @@ export function ProductPage({ product, productRoutes }: Props) {
             </div>
           </div>
 
-          {/* RIGHT — image with dark ink frame + CMYK corner marks */}
+          {/* RIGHT — image with pink offset block + printer's signature dots */}
           <div className="pvHeroImage" style={{ position: 'relative' }}>
-            {/* Offset dark block behind image (ink swatch) */}
+            {/* Offset pink block behind image */}
             <div aria-hidden style={{
               position: 'absolute',
               inset: 0,
-              background: '#0a0a0a',
+              background: '#E91E8C',
               borderRadius: 20,
               transform: 'translate(14px, 14px)',
               zIndex: 0,
@@ -494,8 +506,8 @@ export function ProductPage({ product, productRoutes }: Props) {
               borderRadius: 20,
               overflow: 'hidden',
               zIndex: 1,
-              background: '#0a0a0a',
-              boxShadow: '0 30px 80px -30px rgba(0,0,0,0.3)',
+              background: '#FFE4F1',
+              boxShadow: '0 30px 80px -30px rgba(233,30,140,0.35)',
             }}>
               {heroImg ? (
                 <img
@@ -511,8 +523,8 @@ export function ProductPage({ product, productRoutes }: Props) {
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%)',
-                  color: 'rgba(255,255,255,0.08)',
+                  background: 'linear-gradient(135deg, #FFD4E8 0%, #E91E8C 100%)',
+                  color: 'rgba(255,255,255,0.4)',
                   fontSize: 'clamp(70px, 11vw, 180px)',
                   fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                   fontFamily: 'var(--serif, "Cormorant Garamond", Georgia, serif)',
@@ -523,7 +535,7 @@ export function ProductPage({ product, productRoutes }: Props) {
               )}
             </div>
 
-            {/* CMYK registration marks — printer's signature */}
+            {/* CMY registration dots — printer's signature (no K / black) */}
             <div aria-hidden style={{
               position: 'absolute',
               top: -14, right: -14,
@@ -531,34 +543,35 @@ export function ProductPage({ product, productRoutes }: Props) {
               padding: '6px 10px',
               background: '#fff',
               borderRadius: 999,
-              boxShadow: '0 6px 20px -6px rgba(0,0,0,0.2)',
+              boxShadow: '0 6px 20px -6px rgba(233,30,140,0.25)',
               zIndex: 2,
             }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00B8D9' }} />
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E91E8C' }} />
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FFD100' }} />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#0a0a0a' }} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* =============== SECTION 1B — Template Feature Row (standard across all products) =============== */}
+      {/* =============== SECTION 1B — Template Feature Row (editable from site settings) =============== */}
       <section style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
-          {[
-            { icon: '✓', title: 'Pre-press file check', desc: 'We inspect every file before it hits the printer.' },
-            { icon: '🖼', title: 'Digital mockup', desc: 'Preview your design before we produce it.' },
-            { icon: '🚚', title: 'Island-wide delivery', desc: 'Or free pickup at Paya Lebar Square.' },
-            { icon: '⚡', title: 'Express available', desc: '24-hour turnaround for rush jobs — ask us.' },
-          ].map((f, i) => (
+          {productFeatures.map((f, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
               <div style={{
-                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                 background: '#FFE4F1', color: '#E91E8C',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, fontWeight: 900,
-              }}>{f.icon}</div>
+                overflow: 'hidden',
+              }}>
+                {f.icon_url ? (
+                  <img src={f.icon_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span>{f.emoji ?? '✓'}</span>
+                )}
+              </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', marginBottom: 2 }}>{f.title}</div>
                 <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>{f.desc}</div>
