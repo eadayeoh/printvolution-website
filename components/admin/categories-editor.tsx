@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, GripVertical } from 'lucide-react';
+import { DndContext, DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { createCategory, updateCategory, deleteCategory } from '@/app/admin/categories/actions';
 
 type Category = { id: string; slug: string; name: string; parent_id: string | null; display_order: number };
@@ -25,6 +28,24 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
     const next = new Set(dirty);
     next.add(id);
     setDirty(next);
+  }
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function onDragEnd(e: DragEndEvent) {
+    const activeId = String(e.active.id);
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId || activeId === overId) return;
+    const fromIdx = rows.findIndex((r) => r.id === activeId);
+    const toIdx = rows.findIndex((r) => r.id === overId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const next = arrayMove(rows, fromIdx, toIdx);
+    // Reassign display_order based on new positions and mark all reordered as dirty
+    const updated = next.map((r, i) => ({ ...r, display_order: i }));
+    setRows(updated);
+    const newDirty = new Set(dirty);
+    updated.forEach((r) => newDirty.add(r.id));
+    setDirty(newDirty);
   }
 
   function saveAll() {
@@ -111,7 +132,8 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
 
       {/* List */}
       <div className="rounded-lg border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[1fr_1fr_1fr_80px_40px] gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+        <div className="grid grid-cols-[36px_1fr_1fr_1fr_60px_40px] gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+          <div />
           <div>Name</div>
           <div>Slug</div>
           <div>Parent</div>
@@ -121,39 +143,77 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
         {rows.length === 0 ? (
           <div className="p-8 text-center text-xs text-neutral-500">No categories yet. Add one above.</div>
         ) : (
-          rows.map((r) => (
-            <div key={r.id} className={`grid grid-cols-[1fr_1fr_1fr_80px_40px] items-center gap-3 border-b border-neutral-100 px-4 py-2 text-sm ${dirty.has(r.id) ? 'bg-yellow-50' : ''}`}>
-              <input
-                value={r.name}
-                onChange={(e) => { setRows(rows.map((x) => x.id === r.id ? { ...x, name: e.target.value } : x)); mark(r.id); }}
-                className={inputCls}
-              />
-              <input
-                value={r.slug}
-                onChange={(e) => { setRows(rows.map((x) => x.id === r.id ? { ...x, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') } : x)); mark(r.id); }}
-                className={`${inputCls} font-mono text-xs`}
-              />
-              <select
-                value={r.parent_id ?? ''}
-                onChange={(e) => { setRows(rows.map((x) => x.id === r.id ? { ...x, parent_id: e.target.value || null } : x)); mark(r.id); }}
-                className={`${inputCls} text-xs`}
-              >
-                <option value="">— Top-level —</option>
-                {parents.filter((p) => p.id !== r.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <input
-                type="number"
-                value={r.display_order}
-                onChange={(e) => { setRows(rows.map((x) => x.id === r.id ? { ...x, display_order: parseInt(e.target.value, 10) || 0 } : x)); mark(r.id); }}
-                className={inputCls}
-              />
-              <button onClick={() => removeRow(r.id)} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Delete">
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+              {rows.map((r) => (
+                <SortableCategoryRow
+                  key={r.id}
+                  row={r}
+                  parents={parents}
+                  isDirty={dirty.has(r.id)}
+                  inputCls={inputCls}
+                  onChange={(patch) => { setRows(rows.map((x) => x.id === r.id ? { ...x, ...patch } : x)); mark(r.id); }}
+                  onRemove={() => removeRow(r.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
+    </div>
+  );
+}
+
+function SortableCategoryRow({
+  row, parents, isDirty, inputCls, onChange, onRemove,
+}: {
+  row: Category;
+  parents: Category[];
+  isDirty: boolean;
+  inputCls: string;
+  onChange: (patch: Partial<Category>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className={`grid grid-cols-[36px_1fr_1fr_1fr_60px_40px] items-center gap-3 border-b border-neutral-100 px-4 py-2 text-sm ${isDirty ? 'bg-yellow-50' : ''}`}>
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-neutral-400 hover:text-ink active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+      <input
+        value={row.name}
+        onChange={(e) => onChange({ name: e.target.value })}
+        className={inputCls}
+      />
+      <input
+        value={row.slug}
+        onChange={(e) => onChange({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+        className={`${inputCls} font-mono text-xs`}
+      />
+      <select
+        value={row.parent_id ?? ''}
+        onChange={(e) => onChange({ parent_id: e.target.value || null })}
+        className={`${inputCls} text-xs`}
+      >
+        <option value="">— Top-level —</option>
+        {parents.filter((p) => p.id !== row.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+      </select>
+      <input
+        type="number"
+        value={row.display_order}
+        onChange={(e) => onChange({ display_order: parseInt(e.target.value, 10) || 0 })}
+        className={`${inputCls} text-center`}
+      />
+      <button onClick={onRemove} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 }

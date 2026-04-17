@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Ticket,
   FileText, LogOut, Layers, ExternalLink, Newspaper, Gift, FolderTree,
-  Sparkles, Image as ImageIcon,
+  Sparkles, Image as ImageIcon, Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -31,6 +31,7 @@ const NAV = [
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/promos', label: 'Promos', icon: Ticket },
   { href: '/admin/members', label: 'Members', icon: Users },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AdminShell({ userEmail, userName, role, children }: Props) {

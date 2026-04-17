@@ -7,14 +7,16 @@ import { cn } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import type { NavItem, MegaMenuSection, ProductLookup } from '@/lib/data/navigation-types';
 import { productHref } from '@/lib/data/navigation-types';
+import type { SiteSettings } from '@/lib/data/site-settings';
 
 type Props = {
   nav: NavItem[];
   mega: Record<string, MegaMenuSection[]>;
   productRoutes: ProductLookup;
+  settings?: SiteSettings;
 };
 
-export function HeaderClient({ nav, mega, productRoutes }: Props) {
+export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMega, setOpenMega] = useState<string | null>(null);
   const count = useCart((s) => s.count());
@@ -40,8 +42,23 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
     <>
       <nav className="fixed left-0 right-0 top-0 z-50 h-[62px] border-b border-neutral-200 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link href="/" className="text-[20px] font-black tracking-tight text-ink">
-          Print<span className="text-pink">volution</span>
+        <Link href="/" className="flex items-center text-[20px] font-black tracking-tight text-ink">
+          {settings?.logo_url ? (
+            // Logo auto-scales to a max height of 38px so headers stay
+            // consistent regardless of the source image dimensions.
+            <img
+              src={settings.logo_url}
+              alt={settings.brand_text || 'Printvolution'}
+              style={{
+                height: 38,
+                width: 'auto',
+                maxWidth: settings.logo_width_px ? `${settings.logo_width_px}px` : 220,
+                objectFit: 'contain',
+              }}
+            />
+          ) : (
+            <>Print<span className="text-pink">volution</span></>
+          )}
         </Link>
 
         {/* Desktop nav */}
