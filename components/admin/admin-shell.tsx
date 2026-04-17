@@ -5,7 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Ticket,
-  FileText, LogOut, Layers, ExternalLink, Newspaper, Gift,
+  FileText, LogOut, Layers, ExternalLink, Newspaper, Gift, FolderTree,
+  Sparkles, Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -22,6 +23,9 @@ const NAV = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/gifts', label: 'Gifts', icon: Gift },
+  { href: '/admin/gifts/prompts', label: 'AI Prompts', icon: Sparkles },
+  { href: '/admin/gifts/templates', label: 'Gift Templates', icon: ImageIcon },
+  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
   { href: '/admin/bundles', label: 'Bundles', icon: Layers },
   { href: '/admin/blog', label: 'Blog', icon: Newspaper },
   { href: '/admin/pages', label: 'Pages', icon: FileText },
