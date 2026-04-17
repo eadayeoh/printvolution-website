@@ -46,23 +46,32 @@ export const getMegaMenus = cache(async (): Promise<Record<string, MegaMenuSecti
 
 export const getProductRoutes = cache(async (): Promise<ProductLookup> => {
   const supabase = createClient();
-  const { data } = await supabase
-    .from('products')
-    .select(`
-      slug,
-      category:categories!products_category_id_fkey(slug),
-      subcategory:categories!products_subcategory_id_fkey(slug)
-    `)
-    .eq('is_active', true);
+  const [printRes, giftRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select(`
+        slug,
+        category:categories!products_category_id_fkey(slug),
+        subcategory:categories!products_subcategory_id_fkey(slug)
+      `)
+      .eq('is_active', true),
+    supabase.from('gift_products').select('slug').eq('is_active', true),
+  ]);
+
   const map: ProductLookup = {};
-  for (const p of (data ?? []) as any[]) {
+  for (const p of (printRes.data ?? []) as any[]) {
     const cat = Array.isArray(p.category) ? p.category[0] : p.category;
     const sub = Array.isArray(p.subcategory) ? p.subcategory[0] : p.subcategory;
     map[p.slug] = {
+      kind: 'print',
       slug: p.slug,
       category_slug: cat?.slug ?? 'misc',
       subcategory_slug: sub?.slug ?? null,
     };
+  }
+  // Gift products override (in case a slug exists in both — gift wins now)
+  for (const g of (giftRes.data ?? []) as any[]) {
+    map[g.slug] = { kind: 'gift', slug: g.slug };
   }
   return map;
 });
