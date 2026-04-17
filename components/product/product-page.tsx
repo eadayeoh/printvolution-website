@@ -111,6 +111,21 @@ export function ProductPage({ product, productRoutes, features }: Props) {
 
   const unitPrice = qty > 0 ? Math.round(lineTotal / qty) : 0;
 
+  // Volume-discount savings shown in the order summary. A "1pc" total
+  // for the current config represents the undiscounted unit; multiplied
+  // by qty, the difference against the actual line total is the saving.
+  const { savings, undiscountedTotal } = useMemo(() => {
+    if (qty <= 1 || lineTotal <= 0) return { savings: 0, undiscountedTotal: 0 };
+    const { total: singleTotal } = computeTotal(1, colIdx, 0);
+    const undiscounted = singleTotal * qty;
+    return {
+      savings: Math.max(0, undiscounted - lineTotal),
+      undiscountedTotal: undiscounted,
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qty, colIdx, cfgState, visibleSteps, product.pricing, lineTotal]);
+  const savingsPct = undiscountedTotal > 0 ? Math.round((savings / undiscountedTotal) * 100) : 0;
+
   const fromPrice = useMemo(() => {
     let min: number | null = null;
     if (product.pricing) {
@@ -709,12 +724,32 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     <span>Quantity</span>
                     <span style={{ fontWeight: 700 }}>× {qty}</span>
                   </div>
+                  {savings > 0 && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, padding: '5px 0', color: 'rgba(255,255,255,0.5)' }}>
+                        <span>Subtotal at 1-pc rate</span>
+                        <span style={{ fontWeight: 600, textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatSGD(undiscountedTotal)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, padding: '5px 0', color: '#4ADE80', fontWeight: 700 }}>
+                        <span>Volume discount{savingsPct > 0 ? ` (${savingsPct}% off)` : ''}</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>− {formatSGD(savings)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 20 }}>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                   <div style={{ fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>{isBase ? 'From' : 'Total'}</div>
                   <div style={{ fontSize: 30, fontWeight: 900, color: '#fff' }}>{formatSGD(displayPrice)}</div>
                 </div>
+                {savings > 0 && (
+                  <div style={{ marginBottom: 20, padding: '8px 12px', borderRadius: 8, background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', fontSize: 12, fontWeight: 700, color: '#4ADE80', textAlign: 'center' }}>
+                    💚 You save {formatSGD(savings)}{savingsPct > 0 ? ` (${savingsPct}% off)` : ''}
+                  </div>
+                )}
+                {!(savings > 0) && <div style={{ marginBottom: 20 }} />}
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>
