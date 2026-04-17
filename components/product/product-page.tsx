@@ -152,10 +152,8 @@ export function ProductPage({ product, productRoutes }: Props) {
 
   const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
   const heroImg = product.extras?.image_url || (iconIsUrl ? product.icon : null);
-  // Hero bg: ALWAYS dark. Legacy data has brand pink stored in
-  // hero_color on many products, which breaks the pink accents + white
-  // text inside the hero. Ignore stored value entirely.
-  const heroColor = '#0d0d1a';
+  // Hero uses a fixed light cream background with brand design elements;
+  // legacy `hero_color` is ignored.
   const heroBig = product.extras?.hero_big || product.name.split(' ').pop()?.toUpperCase() || '';
   const h1 = product.extras?.h1 ?? product.name;
   const h1em = product.extras?.h1em ?? '';
@@ -261,12 +259,68 @@ export function ProductPage({ product, productRoutes }: Props) {
         </div>
       </div>
 
-      {/* =============== SECTION 1 — HERO =============== */}
-      <section className="pp3-hero" style={{ background: heroColor, color: '#fff', position: 'relative', overflow: 'hidden' }}>
-        <div className="pp3-hero-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 24px 80px', display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 56, alignItems: 'center' }}>
+      {/* =============== SECTION 1 — HERO (light, brand design) =============== */}
+      <section
+        className="pp3-hero"
+        style={{
+          background: '#FAF7F0',
+          color: '#0a0a0a',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Dotted pattern backdrop */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', inset: 0, opacity: 0.5,
+            backgroundImage: 'radial-gradient(rgba(10,10,10,0.12) 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+          }}
+        />
+        {/* Pink blob top-right */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: '-180px', right: '-180px',
+            width: 420, height: 420, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(233,30,140,0.35) 0%, rgba(233,30,140,0) 70%)',
+            filter: 'blur(2px)', pointerEvents: 'none',
+          }}
+        />
+        {/* Yellow square bottom-left, rotated */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', bottom: '-60px', left: '-60px',
+            width: 200, height: 200, background: '#FFD100', opacity: 0.35,
+            transform: 'rotate(18deg)', pointerEvents: 'none',
+          }}
+        />
+        {/* Cyan dot row */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', top: 30, left: '40%',
+            display: 'flex', gap: 8, pointerEvents: 'none',
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i === 1 ? '#00B8D9' : (i === 0 ? '#E91E8C' : '#FFD100') }} />
+          ))}
+        </div>
+
+        <div
+          className="pp3-hero-inner"
+          style={{
+            position: 'relative',
+            maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px',
+            display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 56, alignItems: 'center',
+          }}
+        >
           <div>
             {/* Breadcrumbs */}
-            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 18, letterSpacing: 0.3 }}>
+            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: '#666', marginBottom: 18, letterSpacing: 0.3 }}>
               <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
               <span style={{ margin: '0 8px' }}>›</span>
               {product.category ? (
@@ -278,19 +332,19 @@ export function ProductPage({ product, productRoutes }: Props) {
 
             {/* Category pill */}
             {product.category && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: 'rgba(233,30,140,0.14)', color: '#E91E8C', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C', boxShadow: '0 0 0 3px rgba(233,30,140,0.3)' }} />
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C' }} />
                 {product.category.name}
               </div>
             )}
 
-            {/* H1 with serif italic em */}
-            <h1 style={{ fontSize: 'clamp(34px, 4.6vw, 60px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.02em', margin: '0 0 18px', color: '#fff' }}>
+            {/* H1 */}
+            <h1 style={{ fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.025em', margin: '0 0 18px', color: '#0a0a0a' }}>
               {h1}
               {h1em && (
                 <>
                   <br />
-                  <em style={{ fontFamily: 'var(--serif, Cormorant Garamond, Georgia, serif)', fontStyle: 'italic', fontWeight: 500, fontSize: '0.78em', color: 'rgba(255,255,255,0.85)' }}>
+                  <em style={{ fontFamily: 'var(--serif, Fraunces, Cormorant Garamond, Georgia, serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '0.8em', color: '#E91E8C' }}>
                     {h1em}
                   </em>
                 </>
@@ -298,7 +352,7 @@ export function ProductPage({ product, productRoutes }: Props) {
             </h1>
 
             {product.tagline && (
-              <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, margin: '0 0 26px', maxWidth: 520 }}>
+              <p style={{ fontSize: 18, color: '#555', lineHeight: 1.55, margin: '0 0 26px', maxWidth: 520 }}>
                 {product.tagline}
               </p>
             )}
@@ -307,7 +361,7 @@ export function ProductPage({ product, productRoutes }: Props) {
             {chips.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 30 }}>
                 {chips.slice(0, 4).map((c, i) => (
-                  <div key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+                  <div key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 14px', background: '#fff', border: '1px solid #e5e5e5', borderRadius: 999, fontSize: 12, color: '#333', fontWeight: 600 }}>
                     {c}
                   </div>
                 ))}
@@ -321,7 +375,7 @@ export function ProductPage({ product, productRoutes }: Props) {
                 onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 10,
-                  padding: '14px 22px', borderRadius: 999, background: '#E91E8C', color: '#fff',
+                  padding: '14px 24px', borderRadius: 999, background: '#E91E8C', color: '#fff',
                   fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: 0.3,
                   boxShadow: '0 6px 20px rgba(233,30,140,0.4)',
                 }}
@@ -340,9 +394,9 @@ export function ProductPage({ product, productRoutes }: Props) {
                 rel="noopener"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '14px 22px', borderRadius: 999,
-                  border: '1px solid rgba(255,255,255,0.25)', color: '#fff',
-                  fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                  padding: '14px 24px', borderRadius: 999,
+                  background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a',
+                  fontSize: 13, fontWeight: 800, textDecoration: 'none',
                 }}
               >
                 💬 Quick enquiry
@@ -350,24 +404,36 @@ export function ProductPage({ product, productRoutes }: Props) {
             </div>
           </div>
 
-          {/* Right: poster frame with faded watermark */}
+          {/* Right: poster frame with offset brand-colored accent */}
           <div style={{ position: 'relative', height: 'min(520px, 60vh)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Offset pink block behind */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', width: '78%', maxWidth: 400, aspectRatio: '1/1',
+                background: '#E91E8C', borderRadius: 18,
+                transform: 'translate(22px, 22px)',
+                pointerEvents: 'none',
+              }}
+            />
+            {/* Watermark word at low opacity */}
             <div
               aria-hidden
               style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 'clamp(96px, 16vw, 220px)', fontWeight: 900, letterSpacing: '-0.04em',
-                color: 'rgba(255,255,255,0.045)', lineHeight: 1, userSelect: 'none', whiteSpace: 'nowrap',
+                color: 'rgba(10,10,10,0.05)', lineHeight: 1, userSelect: 'none', whiteSpace: 'nowrap',
               }}
             >
               {heroBig}
             </div>
             <div
               style={{
-                position: 'relative', width: '82%', maxWidth: 420, aspectRatio: '1 / 1',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                position: 'relative', width: '78%', maxWidth: 400, aspectRatio: '1 / 1',
+                background: '#fff', border: '2px solid #0a0a0a',
                 borderRadius: 18, overflow: 'hidden', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '8px 8px 0 #0a0a0a',
               }}
             >
               {heroImg ? (
@@ -803,12 +869,6 @@ export function ProductPage({ product, productRoutes }: Props) {
       </section>
 
       <style jsx>{`
-        /* Defensive: guarantee dark hero regardless of cached CSS */
-        .pp3 .pp3-hero { background: #0d0d1a !important; color: #fff !important; }
-        .pp3 .pp3-hero h1 { color: #fff !important; }
-        .pp3 .pp3-hero em { color: rgba(255,255,255,0.85) !important; }
-        .pp3 .pp3-hero p { color: rgba(255,255,255,0.72) !important; }
-        .pp3 .pp3-hero nav a { color: rgba(255,255,255,0.55) !important; }
         @media (max-width: 960px) {
           .pp3-hero-inner { grid-template-columns: 1fr !important; gap: 40px !important; padding: 48px 24px 56px !important; }
           .pp3-pricing-layout { grid-template-columns: 1fr !important; gap: 32px !important; }
