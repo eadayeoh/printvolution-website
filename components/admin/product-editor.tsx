@@ -402,88 +402,295 @@ export function ProductEditor({ product, categories }: { product: ProductDetail;
   );
 }
 
-/** Configurator editor as a separate sub-component */
+/** Configurator editor — redesigned for clarity */
 function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configurator']; setSteps: (s: ProductDetail['configurator']) => void }) {
   function update(i: number, patch: Partial<ProductDetail['configurator'][0]>) {
     setSteps(steps.map((s, j) => j === i ? { ...s, ...patch } as any : s));
   }
+  function autoSlug(label: string): string {
+    return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'step';
+  }
+
+  const TYPES: Array<{ v: string; label: string; hint: string; icon: string }> = [
+    { v: 'swatch', label: 'Swatches', hint: 'Visual buttons (size, color, material)', icon: '🎨' },
+    { v: 'select', label: 'Dropdown', hint: 'Simple list for long option lists', icon: '📋' },
+    { v: 'qty', label: 'Quantity', hint: 'Number stepper (quantity of items)', icon: '#' },
+    { v: 'text', label: 'Text input', hint: 'Free text (name to engrave, etc.)', icon: '✍' },
+    { v: 'number', label: 'Number', hint: 'Numeric input (custom size, etc.)', icon: '🔢' },
+  ];
+
   return (
     <div className="max-w-5xl space-y-4">
+      {steps.length === 0 && (
+        <div className="rounded-lg border-2 border-dashed border-neutral-200 bg-white p-8 text-center">
+          <div className="mb-2 text-sm font-bold text-neutral-400">No options yet</div>
+          <div className="text-xs text-neutral-500">Add a step below to let customers pick a size, material, etc.</div>
+        </div>
+      )}
+
       {steps.map((s, i) => (
-        <div key={i} className="rounded-lg border border-neutral-200 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <input value={s.step_id} onChange={(e) => update(i, { step_id: e.target.value })}
-                className={`${inputCls} w-28 font-mono text-xs`} placeholder="step_id" />
-              <input value={s.label} onChange={(e) => update(i, { label: e.target.value })}
-                className={`${inputCls} w-56`} placeholder="Label" />
-              <select value={s.type} onChange={(e) => update(i, { type: e.target.value as any })}
-                className={`${inputCls} w-32`}>
-                <option value="swatch">swatch</option>
-                <option value="select">select</option>
-                <option value="text">text</option>
-                <option value="qty">qty</option>
-                <option value="number">number</option>
-              </select>
-              <label className="flex items-center gap-1 text-xs">
-                <input type="checkbox" checked={s.required} onChange={(e) => update(i, { required: e.target.checked })} />
-                required
-              </label>
+        <div key={i} className="overflow-hidden rounded-lg border-2 border-neutral-200 bg-white">
+          {/* Step header bar */}
+          <div className="flex items-center justify-between border-b border-neutral-100 bg-gradient-to-r from-pink/5 to-transparent px-5 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[11px] font-black text-white">
+                {i + 1}
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-500">Step {i + 1}</div>
+                <div className="text-sm font-bold text-ink">{s.label || 'Untitled step'}</div>
+              </div>
             </div>
-            <button type="button" onClick={() => setSteps(steps.filter((_, j) => j !== i))}
-              className="text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
+            <button
+              type="button"
+              onClick={() => setSteps(steps.filter((_, j) => j !== i))}
+              className="rounded p-2 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              aria-label="Remove step"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
 
-          {(s.type === 'swatch' || s.type === 'select') && (
-            <div>
-              <div className="mb-2 text-[11px] font-bold text-neutral-500">Options:</div>
-              <div className="space-y-3">
-                {(s.options ?? []).map((opt, oi) => (
-                  <div key={oi} className="rounded border border-neutral-200 bg-neutral-50/50 p-3">
-                    <div className="mb-2 grid grid-cols-[120px_1fr_180px_32px] gap-2">
-                      <input
-                        value={opt.slug}
-                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, slug: e.target.value } : x) })}
-                        placeholder="slug"
-                        className={`${inputCls} font-mono text-[11px]`}
-                      />
-                      <input
-                        value={opt.label}
-                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, label: e.target.value } : x) })}
-                        placeholder="Label (e.g. 85cm × 200cm)"
-                        className={inputCls}
-                      />
-                      <input
-                        value={opt.note ?? ''}
-                        onChange={(e) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, note: e.target.value } : x) })}
-                        placeholder='Note (e.g. "Most popular")'
-                        className={inputCls}
-                      />
-                      <button type="button" onClick={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
-                        className="justify-self-center text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
-                    </div>
-                    <FormulaBuilder
-                      value={opt.price_formula ?? ''}
-                      onChange={(formula) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, price_formula: formula } : x) })}
-                    />
-                  </div>
-                ))}
-              </div>
-              <button type="button" onClick={() => update(i, { options: [...(s.options ?? []), { slug: 'new', label: 'New option', price_formula: '' }] })}
-                className="mt-3 flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
-                <Plus size={12} /> Add option
-              </button>
+          <div className="space-y-5 p-5">
+            {/* Label + required */}
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                  What do customers pick?
+                </span>
+                <input
+                  value={s.label}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    // Auto-update slug only if it was still auto-generated (looks default)
+                    const prevAuto = autoSlug(s.label);
+                    const shouldUpdateSlug = !s.step_id || s.step_id === prevAuto || /^step\d+$/.test(s.step_id);
+                    update(i, { label, ...(shouldUpdateSlug ? { step_id: autoSlug(label) } : {}) });
+                  }}
+                  placeholder="Size, Material, Colour, etc."
+                  className={`${inputCls} text-base font-semibold`}
+                />
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 rounded border-2 border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-bold text-ink">
+                <input
+                  type="checkbox"
+                  checked={s.required}
+                  onChange={(e) => update(i, { required: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                Required
+              </label>
             </div>
-          )}
+
+            {/* Type picker as visual pills */}
+            <div>
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                How do they pick?
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {TYPES.map((t) => {
+                  const active = s.type === t.v;
+                  return (
+                    <button
+                      key={t.v}
+                      type="button"
+                      onClick={() => update(i, { type: t.v as any })}
+                      title={t.hint}
+                      className={`group rounded-lg border-2 p-3 text-center transition-all ${
+                        active
+                          ? 'border-ink bg-ink text-white shadow-sm'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400'
+                      }`}
+                    >
+                      <div className="text-lg leading-none">{t.icon}</div>
+                      <div className="mt-1.5 text-[10px] font-bold uppercase tracking-wide">{t.label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-1.5 text-[10px] text-neutral-500">
+                {TYPES.find((t) => t.v === s.type)?.hint}
+              </div>
+            </div>
+
+            {/* Options (swatch / select) */}
+            {(s.type === 'swatch' || s.type === 'select') && (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                      Options
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      {(s.options ?? []).length} option{(s.options ?? []).length === 1 ? '' : 's'} — click to edit pricing
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => update(i, { options: [...(s.options ?? []), { slug: `option-${((s.options ?? []).length) + 1}`, label: 'New option', price_formula: '' }] })}
+                    className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark"
+                  >
+                    <Plus size={12} /> Add option
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {(s.options ?? []).map((opt, oi) => (
+                    <OptionCard
+                      key={oi}
+                      option={opt}
+                      index={oi}
+                      inputCls={inputCls}
+                      onChange={(patch) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, ...patch } as any : x) })}
+                      onRemove={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
+                    />
+                  ))}
+                  {(s.options ?? []).length === 0 && (
+                    <div className="rounded border border-dashed border-neutral-300 bg-white p-6 text-center text-xs text-neutral-500">
+                      No options yet. Click <strong>Add option</strong> above.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Qty type info */}
+            {s.type === 'qty' && (
+              <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
+                Customers will see a <strong>− / + stepper</strong>. Price scales with quantity using the <em>Pricing & base pricing</em> matrix above, or any option-level formulas that reference <code>qty</code>.
+              </div>
+            )}
+
+            {(s.type === 'text' || s.type === 'number') && (
+              <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
+                Free {s.type === 'text' ? 'text' : 'number'} input — customers type their own value (engraved name, custom dimensions, etc). No price impact on its own.
+              </div>
+            )}
+          </div>
         </div>
       ))}
-      <button type="button" onClick={() => setSteps([...steps, {
-        step_id: `step${steps.length + 1}`, label: 'New step', type: 'swatch', required: false, step_order: steps.length,
-        options: [], show_if: null, step_config: null,
-      } as any])}
-        className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
-        <Plus size={12} /> Add configurator step
+
+      <button
+        type="button"
+        onClick={() => setSteps([...steps, {
+          step_id: `step${steps.length + 1}`, label: '', type: 'swatch', required: false, step_order: steps.length,
+          options: [], show_if: null, step_config: null,
+        } as any])}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-neutral-300 bg-white px-4 py-4 text-sm font-bold text-neutral-500 transition-colors hover:border-ink hover:text-ink"
+      >
+        <Plus size={16} /> Add another step
       </button>
+    </div>
+  );
+}
+
+/** Collapsible option card with pricing preview */
+function OptionCard({
+  option,
+  index,
+  inputCls,
+  onChange,
+  onRemove,
+}: {
+  option: { slug: string; label: string; note?: string | null; price_formula?: string | null };
+  index: number;
+  inputCls: string;
+  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null }>) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(!option.label || option.label === 'New option');
+
+  // Preview price: evaluate at qty 1
+  let previewCents: number | null = null;
+  if (option.price_formula) {
+    try {
+      const val = (window as any).evaluateFormulaCache?.(option.price_formula) ?? null;
+      previewCents = val !== null ? val : null;
+    } catch { /* */ }
+  }
+
+  return (
+    <div className={`rounded-lg border-2 bg-white transition-colors ${open ? 'border-ink' : 'border-neutral-200'}`}>
+      {/* Collapsed summary row */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${open ? 'bg-ink text-white' : 'bg-neutral-100 text-neutral-500'}`}>
+            {index + 1}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-bold text-ink">{option.label || 'Untitled option'}</div>
+            <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+              {option.price_formula ? (
+                <>
+                  <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 font-bold text-green-700">
+                    💲 Priced
+                  </span>
+                </>
+              ) : (
+                <span className="text-neutral-400">No price rule set</span>
+              )}
+              {option.note && <span className="truncate">· {option.note}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`text-neutral-400 transition-transform ${open ? 'rotate-90' : ''}`}>▸</div>
+        </div>
+      </button>
+
+      {/* Expanded editor */}
+      {open && (
+        <div className="space-y-4 border-t border-neutral-100 px-4 py-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                Option label
+              </span>
+              <input
+                value={option.label}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="e.g. 85cm × 200cm"
+                className={`${inputCls} font-semibold`}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                Badge (optional)
+              </span>
+              <input
+                value={option.note ?? ''}
+                onChange={(e) => onChange({ note: e.target.value || null })}
+                placeholder='e.g. "Most popular" or "Standard"'
+                className={inputCls}
+              />
+            </label>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+              Price rule
+            </div>
+            <FormulaBuilder
+              value={option.price_formula ?? ''}
+              onChange={(formula) => onChange({ price_formula: formula || null })}
+            />
+          </div>
+
+          <div className="flex justify-end border-t border-neutral-100 pt-3">
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-bold text-red-600 transition-colors hover:bg-red-50"
+            >
+              <Trash2 size={12} /> Remove option
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
