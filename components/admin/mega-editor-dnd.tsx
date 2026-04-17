@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Trash2, X, Search } from 'lucide-react';
 import { saveMegaMenu } from '@/app/admin/pages/actions';
@@ -159,8 +159,8 @@ export function MegaEditorDnd({
         </div>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <SortableContext items={sections.map((_, i) => `sec:${i}`)} strategy={verticalListSortingStrategy}>
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+        <SortableContext items={sections.map((_, i) => `sec:${i}`)} strategy={rectSortingStrategy}>
           <div className="space-y-3">
             {sections.length === 0 && (
               <div className="rounded border-2 border-dashed border-neutral-200 p-8 text-center text-xs text-neutral-500">
@@ -175,26 +175,28 @@ export function MegaEditorDnd({
                   onRemove={() => removeSection(si)}
                   itemCount={section.items.length}
                 >
-                  <SortableContext items={section.items.map((_, ii) => `it:${si}:${ii}`)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={section.items.map((_, ii) => `it:${si}:${ii}`)} strategy={rectSortingStrategy}>
                     <div
                       className="flex flex-wrap gap-2"
                       data-dropzone={`dropzone:${si}`}
                       id={`dropzone:${si}`}
                     >
-                      {section.items.length === 0 ? (
-                        <EmptyDropZone sectionIdx={si} />
-                      ) : (
-                        section.items.map((it, ii) => (
-                          <SortableItem
-                            key={`it:${si}:${ii}`}
-                            id={`it:${si}:${ii}`}
-                            label={it.label || productBySlug.get(it.product_slug)?.name || it.product_slug}
-                            slug={it.product_slug}
-                            onLabelChange={(v) => setSections(sections.map((s, j) => j === si ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: v } : x) } : s))}
-                            onRemove={() => removeItem(si, ii)}
-                          />
-                        ))
-                      )}
+                      {section.items.map((it, ii) => (
+                        <SortableItem
+                          key={`it:${si}:${ii}`}
+                          id={`it:${si}:${ii}`}
+                          label={it.label || productBySlug.get(it.product_slug)?.name || it.product_slug}
+                          slug={it.product_slug}
+                          onLabelChange={(v) => setSections(sections.map((s, j) => j === si ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: v } : x) } : s))}
+                          onRemove={() => removeItem(si, ii)}
+                        />
+                      ))}
+                      {/* Always-rendered drop target so a drag can land at
+                          the END of any section regardless of size. While
+                          idle it stays narrow / muted; expands + glows
+                          while a drag is in progress. */}
+                      <EmptyDropZone sectionIdx={si} active={!!activeKey && activeKey.startsWith('it:')} empty={section.items.length === 0} />
+
                       <button
                         type="button"
                         onClick={() => setAddingToSection(si)}
@@ -306,8 +308,14 @@ function SortableItem({
   id: string; label: string; slug: string;
   onLabelChange: (v: string) => void; onRemove: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+    outline: isOver && !isDragging ? '2px dashed #E91E8C' : undefined,
+    outlineOffset: 2,
+  };
   const [editing, setEditing] = useState(false);
   return (
     <div ref={setNodeRef} style={style} className="group flex h-10 items-center rounded-full border border-neutral-200 bg-white pr-1 text-xs font-semibold text-ink">
@@ -354,14 +362,21 @@ function ItemChip({ label, ghost }: { label: string; ghost?: boolean }) {
   );
 }
 
-function EmptyDropZone({ sectionIdx }: { sectionIdx: number }) {
-  const { setNodeRef, isOver } = useSortable({ id: `dropzone:${sectionIdx}` });
+function EmptyDropZone({ sectionIdx, active, empty }: { sectionIdx: number; active: boolean; empty: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `dropzone:${sectionIdx}` });
+  if (!active && !empty) {
+    // Hidden drop target — keeps the listener registered but doesn't
+    // take up visual space when nothing is being dragged.
+    return <div ref={setNodeRef} aria-hidden style={{ width: 0, height: 0 }} />;
+  }
   return (
     <div
       ref={setNodeRef}
-      className={`flex h-10 w-full items-center justify-center rounded-full border-2 border-dashed px-4 text-xs italic ${isOver ? 'border-pink bg-pink/10 text-pink' : 'border-neutral-200 text-neutral-400'}`}
+      className={`flex h-10 ${empty ? 'min-w-[220px] flex-1' : 'min-w-[160px]'} items-center justify-center rounded-full border-2 border-dashed px-4 text-xs italic transition-all ${
+        isOver ? 'border-pink bg-pink/15 text-pink scale-105' : 'border-neutral-300 text-neutral-400'
+      }`}
     >
-      Drop products here
+      {isOver ? '↓ Drop here' : empty ? 'Drop products here' : 'Drop at end'}
     </div>
   );
 }
