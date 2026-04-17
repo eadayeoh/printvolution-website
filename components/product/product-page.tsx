@@ -206,7 +206,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   }, [product.pricing, product.configurator, colIdx, cfgState, visibleSteps]);
 
   const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
-  const heroImg = product.extras?.image_url || (iconIsUrl ? product.icon : null);
+  // Hero banner is driven by product_extras.image_url only. The thumbnail
+  // (product.icon) is kept out of the hero so every product gets the same
+  // pink gradient + big-word treatment unless an explicit banner is set.
+  const heroImg = product.extras?.image_url || null;
   // Hero uses a fixed light cream background with brand design elements;
   // legacy `hero_color` is ignored.
   const heroBig = product.extras?.hero_big || product.name.split(' ').pop()?.toUpperCase() || '';
