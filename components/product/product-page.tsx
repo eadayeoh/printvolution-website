@@ -546,28 +546,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               )}
             </div>
 
-            {/* Floating From-price glass chip — bottom-left of image */}
-            {fromPrice !== null && (
-              <div aria-hidden style={{
-                position: 'absolute',
-                left: -14,
-                bottom: -14,
-                display: 'inline-flex',
-                alignItems: 'baseline',
-                gap: 8,
-                padding: '14px 20px',
-                borderRadius: 999,
-                background: 'rgba(255,255,255,0.8)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.9)',
-                boxShadow: '0 20px 40px -12px rgba(156,20,98,0.28)',
-                zIndex: 2,
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: 'rgba(156,20,98,0.75)' }}>From</span>
-                <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.01em', color: '#E91E8C' }}>{formatSGD(fromPrice)}</span>
-              </div>
-            )}
           </div>
         </div>
       </section>

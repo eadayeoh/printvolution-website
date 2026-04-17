@@ -78,6 +78,7 @@ export type ProductListItem = {
   slug: string;
   name: string;
   icon: string | null;
+  image_url: string | null;
   tagline: string | null;
   is_gift: boolean;
   category: { slug: string; name: string } | null;
@@ -94,7 +95,8 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
       id, slug, name, icon, tagline, is_gift,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
-      product_pricing(rows)
+      product_pricing(rows),
+      product_extras(image_url)
     `)
     .eq('is_active', true)
     .order('sort_order');
@@ -109,11 +111,13 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
         if (typeof price === 'number' && (min === null || price < min)) min = price;
       }
     }
+    const extras = embedOne<any>(p.product_extras);
     return {
       id: p.id,
       slug: p.slug,
       name: p.name,
       icon: p.icon,
+      image_url: extras?.image_url ?? null,
       tagline: p.tagline,
       is_gift: p.is_gift,
       category: Array.isArray(p.category) ? p.category[0] ?? null : p.category,
@@ -143,7 +147,8 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
           slug, name, icon,
           category:categories!products_category_id_fkey(slug),
           subcategory:categories!products_subcategory_id_fkey(slug),
-          product_pricing(rows)
+          product_pricing(rows),
+          product_extras(image_url)
         )
       )
     `)
@@ -172,6 +177,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
         slug: rp.slug,
         name: rp.name,
         icon: rp.icon,
+        image_url: embedOne<any>(rp.product_extras)?.image_url ?? null,
         category_slug: rp.category?.slug ?? rp.category?.[0]?.slug ?? 'misc',
         subcategory_slug: rp.subcategory?.slug ?? rp.subcategory?.[0]?.slug ?? null,
         min_price: min,
