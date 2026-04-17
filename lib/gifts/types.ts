@@ -55,7 +55,7 @@ export type GiftProduct = {
   mockup_area?: { x: number; y: number; width: number; height: number } | null;
 };
 
-export type GiftTemplateZone = {
+export type GiftTemplateZoneBase = {
   id: string;
   label: string;
   x_mm: number;
@@ -63,8 +63,52 @@ export type GiftTemplateZone = {
   width_mm: number;
   height_mm: number;
   rotation_deg?: number;
-  mask_url?: string | null;
 };
+
+export type GiftTemplateImageZone = GiftTemplateZoneBase & {
+  type?: 'image';
+  mask_url?: string | null;
+  fit_mode?: 'cover' | 'contain' | 'fill';
+  bg_color?: string | null;
+  border_radius_mm?: number;
+  allow_rotate?: boolean;
+  allow_zoom?: boolean;
+  default_image_url?: string | null;
+};
+
+export type GiftTemplateTextZone = GiftTemplateZoneBase & {
+  type: 'text';
+  default_text?: string;
+  placeholder?: string;
+  font_family?: string;
+  font_size_mm?: number;
+  font_weight?: '300' | '400' | '600' | '700' | '800' | '900';
+  font_style?: 'normal' | 'italic';
+  color?: string;
+  align?: 'left' | 'center' | 'right';
+  vertical_align?: 'top' | 'middle' | 'bottom';
+  max_chars?: number | null;
+  editable?: boolean;
+  text_transform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  line_height?: number;
+  letter_spacing_em?: number;
+};
+
+export type GiftTemplateZone = GiftTemplateImageZone | GiftTemplateTextZone;
+
+export const GIFT_FONT_FAMILIES: Array<{ value: string; label: string; stack: string }> = [
+  { value: 'inter', label: 'Inter (sans)', stack: 'Inter, ui-sans-serif, system-ui, sans-serif' },
+  { value: 'fraunces', label: 'Fraunces (serif)', stack: 'Fraunces, Georgia, serif' },
+  { value: 'cormorant', label: 'Cormorant (serif italic)', stack: '"Cormorant Garamond", Georgia, serif' },
+  { value: 'playfair', label: 'Playfair (display)', stack: '"Playfair Display", Georgia, serif' },
+  { value: 'caveat', label: 'Caveat (handwritten)', stack: 'Caveat, cursive' },
+  { value: 'bebas', label: 'Bebas Neue (condensed)', stack: '"Bebas Neue", Impact, sans-serif' },
+  { value: 'mono', label: 'JetBrains Mono', stack: '"JetBrains Mono", ui-monospace, monospace' },
+];
+
+export function giftFontStack(value: string | undefined): string {
+  return GIFT_FONT_FAMILIES.find((f) => f.value === value)?.stack ?? GIFT_FONT_FAMILIES[0].stack;
+}
 
 export type GiftTemplate = {
   id: string;

@@ -311,193 +311,199 @@ export function ProductPage({ product, productRoutes }: Props) {
         </div>
       </div>
 
-      {/* =============== SECTION 1 — HERO (split panel: dark info left, image right) =============== */}
-      {/* CMYK signature stripe */}
-      <div aria-hidden style={{ height: 4, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <div style={{ background: '#00B8D9' }} />
-        <div style={{ background: '#E91E8C' }} />
-        <div style={{ background: '#FFD100' }} />
-        <div style={{ background: '#0a0a0a' }} />
-      </div>
+      {/* =============== SECTION 1 — HERO (edge-to-edge dark, image bleeds right) =============== */}
+      <section
+        className="pp3-hero"
+        style={{
+          position: 'relative',
+          background: '#0a0a0a',
+          overflow: 'hidden',
+          width: '100%',
+        }}
+      >
+        {/* Soft radial glow behind text for depth */}
+        <div aria-hidden style={{
+          position: 'absolute', top: '-20%', left: '-10%',
+          width: '60%', height: '140%',
+          background: 'radial-gradient(ellipse at center, rgba(233,30,140,0.12), transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Fine dotted texture */}
+        <div aria-hidden style={{
+          position: 'absolute', inset: 0, opacity: 0.05, pointerEvents: 'none',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+        }} />
 
-      <section className="pp3-hero" style={{ position: 'relative', background: '#0a0a0a', overflow: 'hidden' }}>
         <div
           className="pp3-hero-inner"
           style={{
+            position: 'relative',
             maxWidth: 1400, margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 7fr)',
-            minHeight: 560,
+            gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 6fr)',
+            minHeight: 540,
             alignItems: 'stretch',
+            gap: 0,
           }}
         >
           {/* LEFT — text panel */}
           <div
+            className="pp3-hero-left"
             style={{
               position: 'relative',
-              padding: '56px clamp(24px, 4vw, 56px) 64px',
+              padding: '64px clamp(24px, 4vw, 56px) 72px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
               color: '#fff',
-              background: '#0a0a0a',
               zIndex: 2,
             }}
           >
-            {/* Subtle dotted pattern in the dark panel */}
-            <div aria-hidden style={{
-              position: 'absolute', inset: 0, opacity: 0.06, pointerEvents: 'none',
-              backgroundImage: 'radial-gradient(rgba(255,255,255,0.5) 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }} />
-            <div style={{ position: 'relative' }}>
-              {/* Breadcrumbs */}
-              <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 18, letterSpacing: 0.3 }}>
-                <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
-                <span style={{ margin: '0 8px' }}>›</span>
-                {product.category ? (
-                  <Link href={`/shop?category=${product.category.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                    {product.category.name}
-                  </Link>
-                ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
-              </nav>
-
-              {/* Category pill */}
-              {product.category && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '6px 14px', borderRadius: 999,
-                  background: 'rgba(233,30,140,0.14)', color: '#E91E8C',
-                  fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
-                  marginBottom: 22,
-                }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C', boxShadow: '0 0 0 3px rgba(233,30,140,0.3)' }} />
+            {/* Breadcrumbs */}
+            <nav aria-label="Breadcrumb" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 20, letterSpacing: 0.3 }}>
+              <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
+              <span style={{ margin: '0 8px' }}>/</span>
+              {product.category ? (
+                <Link href={`/shop?category=${product.category.slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                   {product.category.name}
-                </div>
-              )}
+                </Link>
+              ) : <Link href="/shop" style={{ color: 'inherit', textDecoration: 'none' }}>Shop</Link>}
+            </nav>
 
-              {/* H1 */}
-              <h1 style={{
-                fontSize: 'clamp(36px, 4.6vw, 58px)',
-                fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.02em',
-                margin: '0 0 16px', color: '#fff',
+            {/* Eyebrow: category tag with CMYK dot */}
+            {product.category && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase',
+                color: '#E91E8C', marginBottom: 18,
               }}>
-                {h1}
-                {h1em && (
-                  <>
-                    <br />
-                    <em style={{
-                      fontFamily: 'var(--serif, Fraunces, Georgia, serif)',
-                      fontStyle: 'italic', fontWeight: 400, fontSize: '0.78em',
-                      color: '#FFD166',
-                    }}>
-                      {h1em}
-                    </em>
-                  </>
-                )}
-              </h1>
-
-              {product.tagline && (
-                <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, margin: '0 0 24px', maxWidth: 520 }}>
-                  {product.tagline}
-                </p>
-              )}
-
-              {/* Trust chips */}
-              {chips.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 26 }}>
-                  {chips.slice(0, 3).map((c, i) => (
-                    <div key={i} style={{
-                      display: 'inline-flex', alignItems: 'center', padding: '6px 12px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      color: 'rgba(255,255,255,0.85)',
-                      borderRadius: 999, fontSize: 11, fontWeight: 600,
-                    }}>
-                      {c}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* CTAs */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                <a
-                  href="#pricing"
-                  onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 10,
-                    padding: '13px 22px', borderRadius: 999, background: '#E91E8C', color: '#fff',
-                    fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: 0.3,
-                    boxShadow: '0 10px 30px -8px rgba(233,30,140,0.6)',
-                  }}
-                >
-                  {fromPrice !== null && (
-                    <>From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.7 }}>·</span></>
-                  )}
-                  See Pricing →
-                </a>
-                <a
-                  href="https://wa.me/6591234567"
-                  target="_blank"
-                  rel="noopener"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '13px 22px', borderRadius: 999,
-                    border: '1px solid rgba(255,255,255,0.25)', color: '#fff',
-                    fontSize: 13, fontWeight: 700, textDecoration: 'none',
-                  }}
-                >
-                  💬 Quick enquiry
-                </a>
+                <span aria-hidden style={{ display: 'inline-flex', gap: 3 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00B8D9' }} />
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#E91E8C' }} />
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#FFD100' }} />
+                </span>
+                {product.category.name}
               </div>
+            )}
+
+            {/* H1 */}
+            <h1 style={{
+              fontSize: 'clamp(36px, 4.8vw, 60px)',
+              fontWeight: 900, lineHeight: 1.02, letterSpacing: '-0.025em',
+              margin: '0 0 18px', color: '#fff',
+            }}>
+              {h1}
+              {h1em && (
+                <>
+                  <br />
+                  <em style={{
+                    fontFamily: 'var(--serif, Fraunces, Georgia, serif)',
+                    fontStyle: 'italic', fontWeight: 400, fontSize: '0.78em',
+                    color: '#FFD166',
+                  }}>
+                    {h1em}
+                  </em>
+                </>
+              )}
+            </h1>
+
+            {product.tagline && (
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, margin: '0 0 28px', maxWidth: 520 }}>
+                {product.tagline}
+              </p>
+            )}
+
+            {/* Trust chips */}
+            {chips.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
+                {chips.slice(0, 3).map((c, i) => (
+                  <div key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '6px 12px',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.85)',
+                    borderRadius: 999, fontSize: 11, fontWeight: 600,
+                  }}>
+                    {c}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* CTAs */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <a
+                href="#pricing"
+                onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 10,
+                  padding: '14px 24px', borderRadius: 999, background: '#E91E8C', color: '#fff',
+                  fontSize: 13, fontWeight: 800, textDecoration: 'none', letterSpacing: 0.3,
+                  boxShadow: '0 10px 30px -8px rgba(233,30,140,0.6)',
+                }}
+              >
+                {fromPrice !== null && (
+                  <>From <strong style={{ fontSize: 15 }}>{formatSGD(fromPrice)}</strong><span style={{ opacity: 0.7 }}>·</span></>
+                )}
+                See Pricing →
+              </a>
+              <a
+                href="https://wa.me/6591234567"
+                target="_blank"
+                rel="noopener"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '14px 24px', borderRadius: 999,
+                  border: '1px solid rgba(255,255,255,0.25)', color: '#fff',
+                  fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                }}
+              >
+                💬 Quick enquiry
+              </a>
             </div>
           </div>
 
-          {/* RIGHT — banner image with pink offset block + rounded corners */}
+          {/* RIGHT — image bleeds to edge, CMYK corner marks */}
           <div
             className="pp3-hero-right"
             style={{
               position: 'relative',
-              background: '#0a0a0a',
-              padding: '32px 32px 32px 0',
-              display: 'flex', alignItems: 'center',
+              display: 'flex',
+              alignItems: 'stretch',
+              minHeight: 480,
             }}
           >
-            {/* Offset pink block peeks behind the image */}
-            {heroImg && (
-              <div
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  right: 16, bottom: 16, top: 48, left: 32,
-                  background: '#E91E8C',
-                  borderRadius: 16,
-                  transform: 'translate(16px, 16px)',
-                  zIndex: 1,
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
             {heroImg ? (
-              <img
-                src={heroImg}
-                alt={product.name}
-                style={{
-                  position: 'relative', zIndex: 2,
-                  width: '100%', height: '100%', maxHeight: 520,
-                  objectFit: 'cover',
-                  borderRadius: 16,
-                }}
-              />
+              <>
+                <img
+                  src={heroImg}
+                  alt={product.name}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+                {/* Left-edge fade so image blends into dark panel */}
+                <div aria-hidden style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(to right, #0a0a0a 0%, rgba(10,10,10,0.4) 12%, transparent 28%)',
+                  pointerEvents: 'none',
+                }} />
+                {/* CMYK registration marks — print-shop signature */}
+                <div aria-hidden style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 6, zIndex: 3 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00B8D9', boxShadow: '0 0 0 2px rgba(0,0,0,0.4)' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#E91E8C', boxShadow: '0 0 0 2px rgba(0,0,0,0.4)' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FFD100', boxShadow: '0 0 0 2px rgba(0,0,0,0.4)' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', boxShadow: '0 0 0 2px rgba(0,0,0,0.4)' }} />
+                </div>
+              </>
             ) : (
-              // No-banner fallback — big italic watermark word
               <div style={{
-                position: 'relative', zIndex: 2,
-                width: '100%', height: '100%', minHeight: 420,
+                position: 'absolute', inset: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'linear-gradient(135deg, #141422, #0a0a0a)',
-                borderRadius: 16,
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%)',
                 color: 'rgba(255,255,255,0.08)',
-                fontSize: 'clamp(80px, 12vw, 180px)',
+                fontSize: 'clamp(80px, 12vw, 200px)',
                 fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                 fontFamily: 'var(--serif, Fraunces, Georgia, serif)',
                 fontStyle: 'italic',
@@ -507,6 +513,14 @@ export function ProductPage({ product, productRoutes }: Props) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* CMYK footer stripe — bookends the hero with intent */}
+        <div aria-hidden style={{ height: 4, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative', zIndex: 2 }}>
+          <div style={{ background: '#00B8D9' }} />
+          <div style={{ background: '#E91E8C' }} />
+          <div style={{ background: '#FFD100' }} />
+          <div style={{ background: '#0a0a0a' }} />
         </div>
       </section>
 
@@ -978,9 +992,12 @@ export function ProductPage({ product, productRoutes }: Props) {
             grid-template-columns: 1fr !important;
             min-height: 0 !important;
           }
+          .pp3-hero-left {
+            padding: 40px 24px 28px !important;
+          }
           .pp3-hero-right {
-            padding: 0 20px 28px !important;
-            max-height: 300px;
+            min-height: 260px !important;
+            height: 260px !important;
           }
           .pp3-pricing-layout { grid-template-columns: 1fr !important; gap: 32px !important; }
           .pp3-pricing-layout aside { position: static !important; }
