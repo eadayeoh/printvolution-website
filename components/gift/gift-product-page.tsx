@@ -7,17 +7,23 @@ import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
+import type { GiftPrompt } from '@/lib/gifts/prompts';
 
 type Props = {
   product: GiftProduct;
   templates: GiftTemplate[];
+  prompts: GiftPrompt[];
 };
 
-export function GiftProductPage({ product, templates }: Props) {
+export function GiftProductPage({ product, templates, prompts }: Props) {
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  // If there's exactly one active prompt, pre-select it so the picker can be hidden.
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(
+    prompts.length === 1 ? prompts[0].id : null
+  );
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -26,6 +32,8 @@ export function GiftProductPage({ product, templates }: Props) {
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
+  const showPromptPicker = prompts.length >= 2;
+  const needPrompt = showPromptPicker && !selectedPromptId;
 
   async function onFile(file: File) {
     setErr(null);
@@ -35,12 +43,21 @@ export function GiftProductPage({ product, templates }: Props) {
     fd.append('file', file);
     fd.append('product_slug', product.slug);
     if (selectedTemplateId) fd.append('template_id', selectedTemplateId);
+    if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
     try {
       const r = await uploadAndPreviewGift(fd);
-      if (!r.ok) setErr(r.error);
-      else setPreview(r);
+      // Defensive: server action could reject/return undefined in flaky
+      // situations (mid-deploy, runtime boot error). Treat as error.
+      if (!r || typeof r !== 'object') {
+        setErr('Server returned no response. Please try again in a moment.');
+      } else if (r.ok === true) {
+        setPreview(r);
+      } else {
+        setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
+      }
     } catch (e: any) {
-      setErr(e.message ?? 'Upload failed');
+      const msg = e?.message || e?.toString?.() || 'Upload failed';
+      setErr(String(msg));
     } finally {
       setUploading(false);
     }
@@ -153,16 +170,64 @@ export function GiftProductPage({ product, templates }: Props) {
               </div>
             )}
 
-            {/* Step 2: upload */}
+            {/* Prompt picker (if 2+ active prompts for this mode) */}
+            {showPromptPicker && (
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
+                    {hasTemplates ? '2' : '1'}
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Pick a style</span>
+                </div>
+                <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+                  {prompts.map((p) => {
+                    const active = selectedPromptId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedPromptId(p.id)}
+                        style={{
+                          border: active ? '3px solid #E91E8C' : '3px solid transparent',
+                          borderRadius: 12, background: '#fff', cursor: 'pointer', padding: 0,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div style={{ aspectRatio: '1/1', background: '#fafaf7', overflow: 'hidden' }}>
+                          {p.thumbnail_url ? (
+                            <img src={p.thumbnail_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>✨</div>
+                          )}
+                        </div>
+                        <div style={{ padding: 10, textAlign: 'left' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0a0a0a' }}>{p.name}</div>
+                          {p.description && <div style={{ marginTop: 2, fontSize: 11, color: '#666' }}>{p.description}</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Upload step */}
             <div style={{ marginBottom: 32 }}>
               <div style={{ marginBottom: 12 }}>
-                <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>{hasTemplates ? '2' : '1'}</span>
+                <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
+                  {[hasTemplates, showPromptPicker].filter(Boolean).length + 1}
+                </span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Upload your photo</span>
               </div>
 
               {needTemplate && (
                 <div style={{ padding: 12, background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 10 }}>
                   ⚠️ Pick a template above first.
+                </div>
+              )}
+              {needPrompt && !needTemplate && (
+                <div style={{ padding: 12, background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 10 }}>
+                  ⚠️ Pick a style above first.
                 </div>
               )}
 
@@ -180,14 +245,14 @@ export function GiftProductPage({ product, templates }: Props) {
 
               <button
                 type="button"
-                disabled={uploading || needTemplate}
+                disabled={uploading || needTemplate || needPrompt}
                 onClick={() => fileRef.current?.click()}
                 style={{
                   width: '100%', padding: '24px', background: '#fafaf7',
                   border: '2px dashed #d4d4d4', borderRadius: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-                  cursor: uploading || needTemplate ? 'not-allowed' : 'pointer',
-                  opacity: uploading || needTemplate ? 0.6 : 1,
+                  cursor: uploading || needTemplate || needPrompt ? 'not-allowed' : 'pointer',
+                  opacity: uploading || needTemplate || needPrompt ? 0.6 : 1,
                 }}
               >
                 {uploading ? (
@@ -223,7 +288,9 @@ export function GiftProductPage({ product, templates }: Props) {
             {preview && (
               <div>
                 <div style={{ marginBottom: 12 }}>
-                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>{hasTemplates ? '3' : '2'}</span>
+                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
+                    {[hasTemplates, showPromptPicker].filter(Boolean).length + 2}
+                  </span>
                   <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Preview</span>
                 </div>
                 <div style={{ border: '2px solid #0a0a0a', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>

@@ -135,6 +135,48 @@ export async function deleteTemplate(id: string) {
 // ASSET UPLOAD — admin-side (for template backgrounds, thumbnails, etc.)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// GIFT PROMPTS CRUD (mode-level transformation presets)
+// ---------------------------------------------------------------------------
+
+const PromptSchema = z.object({
+  mode: z.enum(['laser', 'uv', 'embroidery']),
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  thumbnail_url: z.string().nullable().optional(),
+  transformation_prompt: z.string().default(''),
+  negative_prompt: z.string().nullable().optional(),
+  params: z.record(z.string(), z.unknown()).default({}),
+  display_order: z.number().int().default(0),
+  is_active: z.boolean().default(true),
+});
+
+export async function createGiftPrompt(input: z.input<typeof PromptSchema>) {
+  const sb = await requireAdmin();
+  const parsed = PromptSchema.parse(input);
+  const { data, error } = await sb.from('gift_prompts').insert(parsed as any).select('id').single();
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/prompts');
+  return { ok: true as const, id: data.id };
+}
+
+export async function updateGiftPrompt(id: string, input: Partial<z.input<typeof PromptSchema>>) {
+  const sb = await requireAdmin();
+  const { error } = await sb.from('gift_prompts').update(input as any).eq('id', id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/prompts');
+  revalidatePath(`/admin/gifts/prompts/${id}`);
+  return { ok: true as const };
+}
+
+export async function deleteGiftPrompt(id: string) {
+  const sb = await requireAdmin();
+  const { error } = await sb.from('gift_prompts').delete().eq('id', id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/prompts');
+  return { ok: true as const };
+}
+
 export async function uploadTemplateAsset(formData: FormData): Promise<{ ok: boolean; url?: string; error?: string }> {
   try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
 

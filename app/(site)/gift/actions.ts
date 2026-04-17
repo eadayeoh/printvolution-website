@@ -31,9 +31,22 @@ export async function uploadAndPreviewGift(formData: FormData): Promise<
   { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
   | { ok: false; error: string }
 > {
+  try {
+    return await uploadAndPreviewGiftInner(formData);
+  } catch (e: any) {
+    console.error('[gift upload] uncaught error', e);
+    return { ok: false, error: e?.message || 'Server error during upload' };
+  }
+}
+
+async function uploadAndPreviewGiftInner(formData: FormData): Promise<
+  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
+  | { ok: false; error: string }
+> {
   const file = formData.get('file');
   const productSlug = (formData.get('product_slug') || '').toString();
   const templateId = (formData.get('template_id') || '').toString() || null;
+  const promptId = (formData.get('prompt_id') || '').toString() || null;
   const cropRaw = (formData.get('crop_rect') || '').toString();
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (!ALLOWED_MIME.has(file.type)) return { ok: false, error: `Unsupported format: ${file.type}` };
@@ -52,6 +65,23 @@ export async function uploadAndPreviewGift(formData: FormData): Promise<
   if (!product) return { ok: false, error: 'Product not found' };
 
   const cropRect = cropRaw ? CropSchema.parse(JSON.parse(cropRaw)) : null;
+
+  // Resolve the prompt (if AI mode and a prompt_id was supplied or there is
+  // exactly one active prompt for this mode).
+  let prompt: { id: string; transformation_prompt: string; negative_prompt: string | null; params: Record<string, unknown> } | null = null;
+  if (product.mode !== 'photo-resize') {
+    if (promptId) {
+      const { data } = await sb.from('gift_prompts')
+        .select('id, transformation_prompt, negative_prompt, params, mode, is_active')
+        .eq('id', promptId).maybeSingle();
+      if (data && data.is_active && data.mode === product.mode) prompt = data as any;
+    } else {
+      const { data } = await sb.from('gift_prompts')
+        .select('id, transformation_prompt, negative_prompt, params')
+        .eq('mode', product.mode).eq('is_active', true).order('display_order').limit(1);
+      if (data && data.length > 0) prompt = data[0] as any;
+    }
+  }
 
   // 1. Write source to private bucket
   const ext = extFromMime(file.type);
@@ -81,7 +111,14 @@ export async function uploadAndPreviewGift(formData: FormData): Promise<
   let preview;
   try {
     preview = await runPreviewPipeline({
-      product: product as unknown as GiftProduct,
+      product: {
+        ...(product as unknown as GiftProduct),
+        // Override product-level fields with the resolved prompt so the
+        // pipeline uses mode-level settings, not stale per-product fields.
+        ai_prompt: prompt?.transformation_prompt ?? (product as any).ai_prompt ?? null,
+        ai_negative_prompt: prompt?.negative_prompt ?? null,
+        ai_params: (prompt?.params ?? {}) as Record<string, unknown>,
+      },
       sourceBytes: bytes,
       sourceMime: file.type,
       cropRect: cropRect ?? null,

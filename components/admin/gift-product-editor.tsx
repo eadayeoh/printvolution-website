@@ -18,7 +18,7 @@ type Props = {
   assignedTemplateIds: string[];
 };
 
-type Tab = 'basics' | 'mode' | 'ai' | 'pricing' | 'templates' | 'production' | 'seo';
+type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'seo';
 
 const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: string }> = [
   { v: 'laser', label: 'Laser', desc: GIFT_MODE_DESCRIPTION['laser'], emoji: '🔥' },
@@ -52,9 +52,6 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [safeZoneMm, setSafeZoneMm] = useState(product?.safe_zone_mm.toString() ?? '3');
   const [minSourcePx, setMinSourcePx] = useState(product?.min_source_px.toString() ?? '1200');
 
-  const [aiPrompt, setAiPrompt] = useState(product?.ai_prompt ?? '');
-  const [aiNegative, setAiNegative] = useState(product?.ai_negative_prompt ?? '');
-  const [colorProfile, setColorProfile] = useState(product?.color_profile ?? '');
 
   const [basePrice, setBasePrice] = useState(((product?.base_price_cents ?? 0) / 100).toFixed(2));
   const [priceTiers, setPriceTiers] = useState<Array<{ qty: string; price: string }>>(
@@ -89,9 +86,6 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       safe_zone_mm: parseFloat(safeZoneMm) || 0,
       min_source_px: parseInt(minSourcePx, 10) || 1200,
       template_mode: templateMode,
-      ai_prompt: aiPrompt.trim() || null,
-      ai_negative_prompt: aiNegative.trim() || null,
-      color_profile: colorProfile.trim() || null,
       base_price_cents: Math.round((parseFloat(basePrice) || 0) * 100),
       price_tiers: priceTiers
         .filter((t) => t.qty && t.price)
@@ -137,7 +131,6 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const TABS: Array<{ v: Tab; label: string; hide?: boolean }> = [
     { v: 'basics', label: 'Basics' },
     { v: 'mode', label: 'Mode' },
-    { v: 'ai', label: 'AI settings', hide: mode === 'photo-resize' },
     { v: 'pricing', label: 'Pricing' },
     { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
@@ -243,6 +236,22 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
           </div>
 
+          {mode !== 'photo-resize' && (
+            <div className="rounded-lg border border-neutral-200 bg-white p-6">
+              <div className="mb-1 text-xs font-bold text-ink">Transformation prompts</div>
+              <p className="mb-3 text-[11px] text-neutral-500">
+                Prompts live at the <strong>mode level</strong> — every {GIFT_MODE_LABEL[mode]} product shares the same prompt library.
+                If 2+ are active, customers pick one (with thumbnails). If 1 is active, it&apos;s auto-applied.
+              </p>
+              <Link
+                href={`/admin/gifts/prompts?mode=${mode}`}
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
+              >
+                Manage {GIFT_MODE_LABEL[mode]} prompts →
+              </Link>
+            </div>
+          )}
+
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <div className="mb-1 text-xs font-bold text-ink">Template selection</div>
             <p className="mb-3 text-[11px] text-neutral-500">
@@ -275,54 +284,6 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       )}
 
       {/* AI settings */}
-      {tab === 'ai' && mode !== 'photo-resize' && (
-        <div className="max-w-4xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
-          <div className="rounded border border-blue-200 bg-blue-50 p-3 text-[11px] text-blue-900">
-            These prompts and parameters control how the customer&apos;s uploaded photo is transformed for <strong>{GIFT_MODE_LABEL[mode]}</strong> production. Customers never see these settings.
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Transformation prompt</span>
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              rows={5}
-              className={`${inputCls} font-mono text-xs leading-relaxed`}
-              placeholder={mode === 'laser'
-                ? 'e.g. Convert this photo into high-contrast black-and-white line art suitable for laser engraving on wood. Bold outlines, no mid-tones.'
-                : mode === 'uv'
-                ? 'e.g. Stylise this photo as a flat cel-shaded illustration with bold saturated colours. Simplified features, solid colour regions.'
-                : 'e.g. Simplify this photo into embroidery-ready art with no more than 8 solid colours. Bold shapes, no gradients, minimum feature size 1.5mm.'
-              }
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Negative prompt (optional)</span>
-            <textarea
-              value={aiNegative}
-              onChange={(e) => setAiNegative(e.target.value)}
-              rows={2}
-              className={`${inputCls} font-mono text-xs`}
-              placeholder="e.g. blurry, gradient, photorealistic, low contrast"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Colour profile (optional)</span>
-            <input
-              value={colorProfile}
-              onChange={(e) => setColorProfile(e.target.value)}
-              className={inputCls}
-              placeholder={mode === 'uv' ? 'printvolution-uv.icc' : mode === 'embroidery' ? 'madeira-classic' : ''}
-            />
-          </label>
-
-          <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
-            <strong>How it works:</strong> On customer upload, your prompt is passed to our image pipeline. The output is downscaled to a watermarked preview. At order placement, the <strong>full-resolution</strong> version is regenerated and saved as a 300 DPI production file — only visible to admins.
-          </div>
-        </div>
-      )}
 
       {/* Pricing */}
       {tab === 'pricing' && (
