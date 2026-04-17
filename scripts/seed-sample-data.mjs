@@ -131,9 +131,10 @@ try {
   for (const m of MEMBERS) {
     const [exists] = await pg`select id from members where email = ${m.email} limit 1`;
     if (exists) { mSkipped++; continue; }
+    const joinedDate = new Date(Date.now() - (100 - mAdded * 10) * 24 * 60 * 60 * 1000).toISOString();
     await pg`
       insert into members (email, name, phone, tier, points_balance, total_earned, joined_at)
-      values (${m.email}, ${m.name}, ${m.phone}, ${m.tier}, ${m.points_balance}, ${m.total_earned}, now() - interval '${100 - mAdded * 10} days')
+      values (${m.email}, ${m.name}, ${m.phone}, ${m.tier}, ${m.points_balance}, ${m.total_earned}, ${joinedDate})
     `;
     mAdded++;
   }

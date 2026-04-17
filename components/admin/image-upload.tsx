@@ -31,10 +31,10 @@ export function ImageUpload({
 
   const dim = size === 'sm' ? 80 : size === 'lg' ? 160 : 120;
 
-  function onPickFile(file: File) {
+  async function onPickFile(file: File) {
     setError(null);
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File too large (max 10MB)');
+    if (file.size > 20 * 1024 * 1024) {
+      setError('File too large (max 20MB)');
       return;
     }
     // SVG isn't croppable on canvas reliably — upload as-is.
@@ -42,29 +42,62 @@ export function ImageUpload({
       uploadBlob(file, file.name, file.type);
       return;
     }
-    // Read to data URL so the cropper can display it
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPending({ src: String(reader.result), name: file.name, type: file.type });
-    };
-    reader.onerror = () => setError('Could not read file');
-    reader.readAsDataURL(file);
+    // Auto-compress oversized images BEFORE the crop tool so we stay
+    // well under Vercel's server-action body limit. Anything over ~3MB
+    // gets re-encoded at 2400px max / quality 0.85.
+    let displaySrc: string;
+    let srcName = file.name;
+    let srcType = file.type;
+    try {
+      if (file.size > 3 * 1024 * 1024) {
+        const compressed = await compressImage(file, 2400, 0.85);
+        displaySrc = await blobToDataUrl(compressed.blob);
+        srcType = compressed.type;
+        srcName = file.name.replace(/\.[^.]+$/, '') + '-compressed.jpg';
+      } else {
+        displaySrc = await blobToDataUrl(file);
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not read image');
+      return;
+    }
+    setPending({ src: displaySrc, name: srcName, type: srcType });
   }
 
   async function uploadBlob(blob: Blob, name: string, type: string) {
     setUploading(true);
     setError(null);
+    // Final safety: re-encode again if the blob is over 4MB (Vercel's
+    // practical server-action body limit on some plans).
+    let sendBlob = blob;
+    let sendType = type;
+    let sendName = name;
+    if (blob.size > 4 * 1024 * 1024 && type !== 'image/svg+xml') {
+      try {
+        const shrunk = await compressImage(blob, 2000, 0.82);
+        sendBlob = shrunk.blob;
+        sendType = shrunk.type;
+        sendName = name.replace(/\.[^.]+$/, '') + '.jpg';
+      } catch {
+        // fall through — try original
+      }
+    }
     const fd = new FormData();
-    const file = new File([blob], name, { type });
+    const file = new File([sendBlob], sendName, { type: sendType });
     fd.append('file', file);
     fd.append('prefix', prefix);
-    const result = await uploadProductImage(fd);
-    setUploading(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Upload failed');
-      return;
+    try {
+      const result = await uploadProductImage(fd);
+      setUploading(false);
+      if (!result || !result.ok) {
+        setError((result && result.error) || 'Upload failed — try again');
+        return;
+      }
+      if (result.url) onChange(result.url);
+    } catch (e: any) {
+      setUploading(false);
+      setError(e?.message ?? 'Upload failed — try again');
     }
-    if (result.url) onChange(result.url);
   }
 
   function onCropConfirm(blob: Blob) {
@@ -164,4 +197,43 @@ export function ImageUpload({
       )}
     </div>
   );
+}
+
+/** Resize a file to a max long-edge (pixels) and re-encode as JPEG. */
+async function compressImage(
+  source: Blob,
+  maxEdge: number,
+  quality: number
+): Promise<{ blob: Blob; type: string }> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(source);
+    const i = new Image();
+    i.onload = () => { URL.revokeObjectURL(url); resolve(i); };
+    i.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not decode image')); };
+    i.src = url;
+  });
+  const srcW = img.naturalWidth;
+  const srcH = img.naturalHeight;
+  const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
+  const w = Math.round(srcW * scale);
+  const h = Math.round(srcH * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas unavailable');
+  ctx.drawImage(img, 0, 0, w, h);
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Compress failed'))), 'image/jpeg', quality);
+  });
+  return { blob, type: 'image/jpeg' };
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error('Could not read file'));
+    r.readAsDataURL(blob);
+  });
 }
