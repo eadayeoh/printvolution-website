@@ -20,8 +20,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = product.extras?.seo_title ?? `${product.name} Printing Singapore`;
   const description = product.extras?.seo_desc ?? product.tagline ?? undefined;
 
+  // DB seo_title already ends with "| Printvolution", so bypass the
+  // "%s | Printvolution" template from the root layout with an absolute
+  // title — otherwise we'd render "... | Printvolution | Printvolution".
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {

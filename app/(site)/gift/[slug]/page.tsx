@@ -9,8 +9,11 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const p = await getGiftProductBySlug(params.slug);
   if (!p) return { title: 'Gift not found' };
+  // Bypass the "%s | Printvolution" template when the DB value already
+  // includes the brand suffix (all rewritten SEO titles do).
+  const rawTitle = p.seo_title || p.name;
   return {
-    title: p.seo_title || p.name,
+    title: p.seo_title ? { absolute: rawTitle } : rawTitle,
     description: p.seo_desc || p.tagline || p.description || undefined,
   };
 }
