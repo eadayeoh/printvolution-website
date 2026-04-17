@@ -196,6 +196,46 @@ export async function signGiftAssetUrl(assetId: string, expiresInSec = 300): Pro
   }
 }
 
+/**
+ * Quick test: admin uploads a sample photo with a prompt's transformation
+ * settings (without saving the prompt first). Returns a preview URL.
+ */
+export async function testGiftPrompt(formData: FormData): Promise<{ ok: boolean; previewUrl?: string; error?: string }> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
+  const file = formData.get('file');
+  const mode = (formData.get('mode') || '').toString() as 'laser' | 'uv' | 'embroidery';
+  const transformationPrompt = (formData.get('transformation_prompt') || '').toString();
+  const negativePrompt = (formData.get('negative_prompt') || '').toString();
+
+  if (!(file instanceof File)) return { ok: false, error: 'No file' };
+  if (!['laser', 'uv', 'embroidery'].includes(mode)) return { ok: false, error: 'Invalid mode' };
+  if (file.size === 0) return { ok: false, error: 'Empty file' };
+  if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'File too large (max 20 MB)' };
+
+  try {
+    const { runPreviewPipeline } = await import('@/lib/gifts/pipeline');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const fakeProduct: any = {
+      slug: 'prompt-test',
+      name: 'Prompt Test',
+      mode,
+      width_mm: 100, height_mm: 100, bleed_mm: 2, safe_zone_mm: 3,
+      ai_prompt: transformationPrompt,
+      ai_negative_prompt: negativePrompt || null,
+      ai_params: {},
+    };
+    const out = await runPreviewPipeline({
+      product: fakeProduct,
+      sourceBytes: bytes,
+      sourceMime: file.type,
+      cropRect: null,
+    });
+    return { ok: true, previewUrl: out.previewPublicUrl };
+  } catch (e: any) {
+    return { ok: false, error: e.message ?? 'test failed' };
+  }
+}
+
 /** Re-run the production pipeline for a failed or stale gift line */
 export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean; error?: string }> {
   try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }

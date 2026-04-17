@@ -34,9 +34,15 @@ const STATUS_STYLES: Record<string, string> = {
   failed: 'bg-red-100 text-red-700',
 };
 
+function publicPreviewUrl(bucket: string, path: string): string {
+  // `NEXT_PUBLIC_SUPABASE_URL` is available client-side. The public bucket
+  // URL format is: <url>/storage/v1/object/public/<bucket>/<path>.
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  return `${base}/storage/v1/object/public/${bucket}/${encodeURIComponent(path)}`;
+}
+
 export function GiftOrderLine({ line }: Props) {
   const [isPending, startTransition] = useTransition();
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [rerunFlash, setRerunFlash] = useState<string | null>(null);
 
   async function openSigned(assetId: string | undefined) {
@@ -91,25 +97,25 @@ export function GiftOrderLine({ line }: Props) {
 
           {/* Preview + assets */}
           <div className="mt-3 grid gap-2 md:grid-cols-2">
-            {/* Preview (what the customer saw) */}
+            {/* Preview (what the customer saw) — bucket is public so the
+                URL can be computed directly from the storage base. */}
             <div className="rounded border border-neutral-200 bg-white p-3">
               <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Customer preview</div>
               {line.preview ? (
-                <div className="space-y-2">
-                  {previewOpen ? (
-                    <button type="button" onClick={() => openSigned(line.preview?.id)} className="block w-full overflow-hidden rounded bg-neutral-100">
-                      {/* Preview bucket is public so we don't need signing for display, but using signed URL as consistent pattern.
-                          Actually we'll use direct URL since bucket is public. */}
-                      <div className="text-[11px] text-neutral-500 p-4">Preview loaded — click to open full</div>
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => setPreviewOpen(true)} className="w-full rounded border border-neutral-200 px-2 py-2 text-[11px] font-bold text-ink hover:border-pink">
-                      View preview JPG
-                    </button>
-                  )}
-                </div>
+                <a
+                  href={publicPreviewUrl(line.preview.bucket, line.preview.path)}
+                  target="_blank"
+                  rel="noopener"
+                  className="block overflow-hidden rounded bg-neutral-100 transition-opacity hover:opacity-85"
+                >
+                  <img
+                    src={publicPreviewUrl(line.preview.bucket, line.preview.path)}
+                    alt="Customer preview"
+                    style={{ width: '100%', maxHeight: 200, objectFit: 'contain' }}
+                  />
+                </a>
               ) : (
-                <div className="text-[11px] italic text-neutral-400">No preview</div>
+                <div className="text-[11px] italic text-neutral-400">No preview generated yet</div>
               )}
             </div>
 

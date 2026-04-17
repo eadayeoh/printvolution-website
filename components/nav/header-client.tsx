@@ -129,47 +129,31 @@ export function HeaderClient({ nav, mega, productRoutes }: Props) {
           style={{ paddingTop: 2 }}
         >
           <div className="mx-auto max-w-7xl px-8 py-8">
-            <div className="grid grid-cols-4 gap-x-10 gap-y-8">
-              {mega[openMega].map((section) => {
-                const SHOWN = 6;
-                const items = section.items.slice(0, SHOWN);
-                const more = section.items.length - SHOWN;
-                return (
-                  <div key={section.id} className="min-w-0">
-                    <h4 className="mb-3 border-b border-pink/15 pb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-pink">
-                      {section.section_heading}
-                    </h4>
-                    <ul className="space-y-1.5">
-                      {items.map((it) => (
-                        <li key={it.product_slug}>
-                          <Link
-                            href={productHref(it.product_slug, productRoutes)}
-                            onClick={() => setOpenMega(null)}
-                            className="group flex items-center gap-1.5 truncate text-[13px] text-neutral-700 transition-colors hover:text-pink"
-                          >
-                            <span className="h-1 w-1 rounded-full bg-neutral-300 transition-colors group-hover:bg-pink" />
-                            <span className="truncate">{it.label}</span>
-                          </Link>
-                        </li>
-                      ))}
-                      {more > 0 && (
-                        <li>
-                          <Link
-                            href="/shop"
-                            onClick={() => setOpenMega(null)}
-                            className="text-[11px] font-semibold text-neutral-400 hover:text-pink"
-                          >
-                            +{more} more →
-                          </Link>
-                        </li>
-                      )}
-                      {section.items.length === 0 && (
-                        <li className="text-[11px] italic text-neutral-300">Coming soon</li>
-                      )}
-                    </ul>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-3 gap-x-10 gap-y-8">
+              {mega[openMega].map((section) => (
+                <div key={section.id} className="min-w-0">
+                  <h4 className="mb-3 border-b border-pink/15 pb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-pink">
+                    {section.section_heading}
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {section.items.map((it) => (
+                      <li key={it.product_slug}>
+                        <Link
+                          href={productHref(it.product_slug, productRoutes)}
+                          onClick={() => setOpenMega(null)}
+                          className="group flex items-center gap-1.5 truncate text-[13px] text-neutral-700 transition-colors hover:text-pink"
+                        >
+                          <span className="h-1 w-1 rounded-full bg-neutral-300 transition-colors group-hover:bg-pink" />
+                          <span className="truncate">{it.label}</span>
+                        </Link>
+                      </li>
+                    ))}
+                    {section.items.length === 0 && (
+                      <li className="text-[11px] italic text-neutral-300">Coming soon</li>
+                    )}
+                  </ul>
+                </div>
+              ))}
             </div>
             {/* Footer callout */}
             <div className="mt-8 flex items-center justify-between border-t border-neutral-100 pt-5">

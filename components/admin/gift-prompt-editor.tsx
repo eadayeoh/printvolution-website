@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
-import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt } from '@/app/admin/gifts/actions';
+import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt, testGiftPrompt } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
@@ -26,6 +26,32 @@ export function GiftPromptEditor({ prompt, defaultMode }: { prompt: GiftPrompt |
   const [negative, setNegative] = useState(prompt?.negative_prompt ?? '');
   const [displayOrder, setDisplayOrder] = useState((prompt?.display_order ?? 0).toString());
   const [isActive, setIsActive] = useState(prompt?.is_active ?? true);
+
+  // Test panel state
+  const testFileRef = useRef<HTMLInputElement | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testPreviewUrl, setTestPreviewUrl] = useState<string | null>(null);
+  const [testErr, setTestErr] = useState<string | null>(null);
+
+  async function runTest(f: File) {
+    setTestErr(null);
+    setTesting(true);
+    setTestPreviewUrl(null);
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('mode', mode);
+    fd.append('transformation_prompt', transformation);
+    if (negative) fd.append('negative_prompt', negative);
+    try {
+      const r = await testGiftPrompt(fd);
+      if (r.ok && r.previewUrl) setTestPreviewUrl(r.previewUrl);
+      else setTestErr(r.error ?? 'Test failed');
+    } catch (e: any) {
+      setTestErr(e?.message ?? 'Test failed');
+    } finally {
+      setTesting(false);
+    }
+  }
 
   function save() {
     setErr(null);
@@ -133,6 +159,55 @@ export function GiftPromptEditor({ prompt, defaultMode }: { prompt: GiftPrompt |
               <span className="mb-1 block text-xs font-bold text-ink">Negative prompt (optional)</span>
               <textarea value={negative} onChange={(e) => setNegative(e.target.value)} rows={2} className={`${inputCls} font-mono text-xs`} placeholder="blurry, photorealistic, low contrast" />
             </label>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold text-ink">Test this prompt</div>
+                <div className="mt-1 text-[11px] text-neutral-500">
+                  Upload a sample photo to see what the pipeline produces with the current settings. This runs the preview pipeline live — you don&apos;t need to save first.
+                </div>
+              </div>
+              <input
+                ref={testFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) runTest(f);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                disabled={testing || !transformation.trim()}
+                onClick={() => testFileRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-pink disabled:opacity-50"
+              >
+                {testing ? 'Running…' : 'Run test'}
+              </button>
+            </div>
+            {testErr && (
+              <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">✗ {testErr}</div>
+            )}
+            {testPreviewUrl && (
+              <div>
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Preview output</div>
+                <a href={testPreviewUrl} target="_blank" rel="noopener" className="block overflow-hidden rounded border border-neutral-200 bg-neutral-50 hover:border-pink">
+                  <img src={testPreviewUrl} alt="Test preview" className="w-full" style={{ maxHeight: 400, objectFit: 'contain' }} />
+                </a>
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  This is watermarked and downsized — the same preview the customer would see. Run again if you tweak the prompt.
+                </p>
+              </div>
+            )}
+            {!testErr && !testPreviewUrl && !testing && (
+              <div className="rounded border border-dashed border-neutral-300 p-6 text-center text-[11px] text-neutral-500">
+                Click <strong>Run test</strong> and pick any photo to try the prompt.
+              </div>
+            )}
           </div>
         </div>
 
