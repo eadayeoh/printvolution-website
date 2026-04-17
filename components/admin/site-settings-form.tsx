@@ -108,55 +108,51 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettings }) {
           </p>
           <div className="grid gap-4 md:grid-cols-2">
             {features.map((f, i) => (
-              <div key={i} className="rounded border border-neutral-200 p-4 bg-neutral-50/50">
+              <div key={i} className="rounded border border-neutral-200 p-4 bg-neutral-50/50 min-w-0">
                 <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-pink text-[10px] text-white">{i + 1}</span>
                   Feature {i + 1}
                 </div>
-                <div className="flex gap-3">
-                  <div className="shrink-0">
-                    <ImageUpload
-                      value={f.icon_url ?? ''}
-                      onChange={(v) => updateFeature(i, { icon_url: v || null })}
-                      prefix={`feat-${i + 1}`}
-                      aspect={1}
-                      size="sm"
-                      label="Icon"
+                <div className="space-y-3 min-w-0">
+                  <ImageUpload
+                    value={f.icon_url ?? ''}
+                    onChange={(v) => updateFeature(i, { icon_url: v || null })}
+                    prefix={`feat-${i + 1}`}
+                    aspect={1}
+                    size="sm"
+                    label="Icon"
+                  />
+                  <label className="block">
+                    <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">
+                      Emoji fallback {f.icon_url && <em className="font-normal normal-case text-neutral-400">(ignored while icon is set)</em>}
+                    </span>
+                    <input
+                      value={f.emoji ?? ''}
+                      onChange={(e) => updateFeature(i, { emoji: e.target.value })}
+                      className={`${inputCls} w-20`}
+                      placeholder="✓"
+                      maxLength={4}
                     />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <label className="block">
-                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">
-                        Emoji fallback {f.icon_url && <em className="font-normal normal-case text-neutral-400">(ignored while icon is set)</em>}
-                      </span>
-                      <input
-                        value={f.emoji ?? ''}
-                        onChange={(e) => updateFeature(i, { emoji: e.target.value })}
-                        className={`${inputCls} w-20`}
-                        placeholder="✓"
-                        maxLength={4}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Title</span>
-                      <input
-                        value={f.title}
-                        onChange={(e) => updateFeature(i, { title: e.target.value })}
-                        className={inputCls}
-                        maxLength={60}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Description</span>
-                      <textarea
-                        value={f.desc}
-                        onChange={(e) => updateFeature(i, { desc: e.target.value })}
-                        className={inputCls}
-                        rows={2}
-                        maxLength={200}
-                      />
-                    </label>
-                  </div>
+                  </label>
+                  <label className="block">
+                    <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Title</span>
+                    <input
+                      value={f.title}
+                      onChange={(e) => updateFeature(i, { title: e.target.value })}
+                      className={inputCls}
+                      maxLength={60}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-0.5 block text-[10px] font-bold uppercase text-neutral-500">Description</span>
+                    <textarea
+                      value={f.desc}
+                      onChange={(e) => updateFeature(i, { desc: e.target.value })}
+                      className={inputCls}
+                      rows={2}
+                      maxLength={200}
+                    />
+                  </label>
                 </div>
               </div>
             ))}
