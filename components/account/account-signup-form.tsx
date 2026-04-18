@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { signUpWithPassword } from '@/app/(site)/account/actions';
 
 export function AccountSignupForm() {
   const router = useRouter();
@@ -18,19 +18,10 @@ export function AccountSignupForm() {
     setErr(null);
     if (password.length < 8) { setErr('Password must be at least 8 characters'); return; }
     startTransition(async () => {
-      const sb = createClient();
-      const { error, data } = await sb.auth.signUp({
-        email: email.trim(), password,
-        options: { data: { name: name.trim(), phone: phone.trim() } },
-      });
-      if (error) { setErr(error.message); return; }
-      // Try to immediately sign them in (in case email confirmation is off)
-      if (data.session) {
-        router.push('/account');
-        router.refresh();
-        return;
-      }
-      // Otherwise, show a "check your email" state via query param
+      const r = await signUpWithPassword({ email, password, name: name || phone || null });
+      if (!r.ok) { setErr(r.error); return; }
+      // Show "check your email" state — the action flow lets Supabase
+      // send its verification email rather than auto-signing in here.
       router.push('/account/login?check=1');
     });
   }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { loginWithPassword } from '@/app/(site)/account/actions';
 
 export function AccountLoginForm() {
   const router = useRouter();
@@ -15,13 +15,10 @@ export function AccountLoginForm() {
     e.preventDefault();
     setErr(null);
     startTransition(async () => {
-      const sb = createClient();
-      const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) setErr(error.message);
-      else {
-        router.push('/account');
-        router.refresh();
-      }
+      const r = await loginWithPassword({ email, password });
+      if (!r.ok) { setErr(r.error); return; }
+      router.push('/account');
+      router.refresh();
     });
   }
 
@@ -31,11 +28,11 @@ export function AccountLoginForm() {
     <form onSubmit={submit} className="space-y-4">
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Email</span>
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" />
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" maxLength={200} />
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Password</span>
-        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inp} autoComplete="current-password" />
+        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inp} autoComplete="current-password" maxLength={200} />
       </label>
       {err && <div className="rounded border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800">✗ {err}</div>}
       <button type="submit" disabled={isPending} className="w-full rounded-full bg-pink py-3 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50">
