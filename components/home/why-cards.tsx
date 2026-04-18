@@ -1,3 +1,5 @@
+import { SectionLabel } from './section-label';
+
 export type WhyItem = { num?: string; title?: string; body?: string };
 
 const NUM_COLORS = ['var(--pv-magenta)', 'var(--pv-cyan)', 'var(--pv-purple)'];
@@ -26,24 +28,8 @@ export function WhyCards({
       }}
     >
       <div style={{ maxWidth: 1560, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'var(--pv-ink)',
-            color: '#fff',
-            padding: '6px 14px',
-            fontFamily: 'var(--pv-f-mono)',
-            fontSize: 12,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 24,
-          }}
-        >
-          {label}
-        </div>
+        <SectionLabel text={label} />
+
         <h2
           style={{
             fontFamily: 'var(--pv-f-display)',

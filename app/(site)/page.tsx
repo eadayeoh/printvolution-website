@@ -3,7 +3,6 @@ import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { getHomePageContent, homeItems, homeFirst } from '@/lib/data/home';
 import { LocalBusinessSchema, FAQPageSchema } from '@/components/seo/json-ld';
 import { SplitHero, type SplitHeroItem } from '@/components/home/split-hero';
-import { Ticker, type TickerItem } from '@/components/home/ticker';
 import { WhyCards, type WhyItem } from '@/components/home/why-cards';
 import { CategoryTiles, type CategoryTab } from '@/components/home/category-tiles';
 import { Proof, type ProofItem } from '@/components/home/proof';
@@ -36,7 +35,6 @@ export default async function HomePage() {
   const bySlug = new Map(products.map((p) => [p.slug, p]));
 
   const heroItems = homeItems(sections, 'hero.split') as SplitHeroItem[];
-  const tickerItems = homeItems(sections, 'ticker') as TickerItem[];
   const whyItems = homeItems(sections, 'why.cards') as WhyItem[];
   const proofItems = homeItems(sections, 'proof.main') as ProofItem[];
   const howHeader = homeFirst<HowHeader>(sections, 'how.header');
@@ -74,7 +72,6 @@ export default async function HomePage() {
       <LocalBusinessSchema />
       <FAQPageSchema items={faqItems} />
       <SplitHero items={heroItems} />
-      <Ticker items={tickerItems} />
       <WhyCards items={whyItems} />
       <CategoryTiles tabs={categoryTabs} />
       <Proof items={proofItems} />

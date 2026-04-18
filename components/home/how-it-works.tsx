@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SectionLabel } from './section-label';
 
 export type HowHeader = {
   headline?: string;
@@ -34,24 +35,7 @@ export function HowItWorks({ header, steps }: { header: HowHeader | null; steps:
       >
         {header && (
           <div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 10,
-                background: 'var(--pv-ink)',
-                color: '#fff',
-                padding: '6px 14px',
-                fontFamily: 'var(--pv-f-mono)',
-                fontSize: 12,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: 24,
-              }}
-            >
-              04 How it works
-            </div>
+            <SectionLabel text="04 How it works" />
             <h2
               style={{
                 fontFamily: 'var(--pv-f-display)',

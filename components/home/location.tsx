@@ -1,3 +1,5 @@
+import { SectionLabel } from './section-label';
+
 export type LocationItem = {
   kind?: string;
   label?: string;
@@ -26,24 +28,7 @@ export function Location({ items, imageSrc }: { items: LocationItem[]; imageSrc?
         }}
       >
         <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'var(--pv-ink)',
-              color: '#fff',
-              padding: '6px 14px',
-              fontFamily: 'var(--pv-f-mono)',
-              fontSize: 12,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: 24,
-            }}
-          >
-            06 Visit Us
-          </div>
+          <SectionLabel text="06 Visit Us" />
           <h2
             style={{
               fontFamily: 'var(--pv-f-display)',

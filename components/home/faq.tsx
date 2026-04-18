@@ -1,3 +1,5 @@
+import { SectionLabel } from './section-label';
+
 export type FaqItem = { question?: string; answer?: string };
 
 export function Faq({ items }: { items: FaqItem[] }) {
@@ -11,24 +13,7 @@ export function Faq({ items }: { items: FaqItem[] }) {
       }}
     >
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'var(--pv-ink)',
-            color: '#fff',
-            padding: '6px 14px',
-            fontFamily: 'var(--pv-f-mono)',
-            fontSize: 12,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: 24,
-          }}
-        >
-          05 Questions
-        </div>
+        <SectionLabel text="05 Questions" />
         <h2
           style={{
             fontFamily: 'var(--pv-f-display)',
