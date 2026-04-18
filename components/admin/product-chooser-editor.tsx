@@ -13,6 +13,11 @@ export type ChooserCombo = {
   tag?: string;
   match?: string;
   title?: string;
+  /** Preferred: map of configurator step_id -> option_slug (or raw value for
+   *  qty/number/text step types). The chooser component resolves these to
+   *  labels at render time by looking up the product's configurator. */
+  picks?: Record<string, string>;
+  /** Legacy free-text specs. Still supported as a fallback if picks is empty. */
   specs?: ChooserSpec[];
   why?: string;
   price?: string;
@@ -28,6 +33,14 @@ export type ChooserValue = {
   combos?: ChooserCombo[];
 };
 
+/** Minimal shape of a configurator step we need to build dropdowns + labels. */
+export type ConfiguratorStepMin = {
+  step_id: string;
+  label: string;
+  type: string;
+  options?: Array<{ slug: string; label: string }>;
+};
+
 const input =
   'w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-ink';
 const label = 'mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500';
@@ -35,9 +48,13 @@ const label = 'mb-1 block text-[11px] font-bold uppercase tracking-wide text-neu
 export function ChooserEditor({
   value,
   onChange,
+  configurator,
 }: {
   value: ChooserValue | null;
   onChange: (next: ChooserValue | null) => void;
+  /** Product's configurator steps — drives the per-combo dropdowns so
+   *  admin picks from real options instead of typing spec labels. */
+  configurator?: ConfiguratorStepMin[];
 }) {
   const [enabled, setEnabled] = useState(value != null);
   const [data, setData] = useState<ChooserValue>(
@@ -52,9 +69,9 @@ export function ChooserEditor({
         { num: 'Q 03', title: '', choices: [{ primary: '' }, { primary: '' }, { primary: '' }] },
       ],
       combos: [
-        { tag: 'Safe Bet', match: '88% match', title: 'The Classic.', specs: [{}, {}, {}, {}], why: '', price: 'Live pricing', cta_label: 'Use this combo' },
-        { tag: '★ Recommended', match: '96% match', title: 'The Sweet Spot.', specs: [{}, {}, {}, {}], why: '', price: 'Live pricing', cta_label: 'Use this combo', recommended: true },
-        { tag: 'Step Up', match: '82% match', title: 'The Statement.', specs: [{}, {}, {}, {}], why: '', price: 'Live pricing', cta_label: 'Use this combo' },
+        { tag: 'Safe Bet', match: '88% match', title: 'The Classic.', picks: {}, why: '', price: 'Live pricing', cta_label: 'Use this combo' },
+        { tag: '★ Recommended', match: '96% match', title: 'The Sweet Spot.', picks: {}, why: '', price: 'Live pricing', cta_label: 'Use this combo', recommended: true },
+        { tag: 'Step Up', match: '82% match', title: 'The Statement.', picks: {}, why: '', price: 'Live pricing', cta_label: 'Use this combo' },
       ],
     },
   );
@@ -210,36 +227,63 @@ export function ChooserEditor({
                   }} placeholder="The Sweet Spot." />
                 </div>
               </div>
-              <div className="mt-3 grid gap-2">
-                <span className={label}>Spec rows (key / value)</span>
-                {(c.specs ?? []).map((s, si) => (
-                  <div key={si} className="grid grid-cols-[150px_1fr_28px] gap-2">
-                    <input className={input} placeholder="Paper" value={s.k ?? ''} onChange={(e) => {
-                      const cs = [...(data.combos ?? [])];
-                      const sp = [...(cs[ci].specs ?? [])];
-                      sp[si] = { ...sp[si], k: e.target.value };
-                      cs[ci] = { ...cs[ci], specs: sp };
-                      commit({ ...data, combos: cs });
-                    }} />
-                    <input className={input} placeholder="Matt Art 350gsm" value={s.v ?? ''} onChange={(e) => {
-                      const cs = [...(data.combos ?? [])];
-                      const sp = [...(cs[ci].specs ?? [])];
-                      sp[si] = { ...sp[si], v: e.target.value };
-                      cs[ci] = { ...cs[ci], specs: sp };
-                      commit({ ...data, combos: cs });
-                    }} />
-                    <button type="button" className="text-red-600 hover:text-red-700" onClick={() => {
-                      const cs = [...(data.combos ?? [])];
-                      cs[ci] = { ...cs[ci], specs: (cs[ci].specs ?? []).filter((_, j) => j !== si) };
-                      commit({ ...data, combos: cs });
-                    }}><Trash2 size={14} /></button>
+              <div className="mt-3">
+                <span className={label}>Config snapshot for this combo</span>
+                <p className="-mt-0.5 mb-2 text-[10px] text-neutral-500">
+                  Pick one value per configurator step. The chooser will list these as the spec rows — no manual typing needed.
+                </p>
+                {configurator && configurator.length > 0 ? (
+                  <div className="grid gap-2">
+                    {configurator
+                      .filter((s) => s.type === 'swatch' || s.type === 'select' || s.type === 'qty' || s.type === 'number' || s.type === 'text')
+                      .map((step) => {
+                        const picked = c.picks?.[step.step_id] ?? '';
+                        return (
+                          <div key={step.step_id} className="grid grid-cols-[200px_1fr] items-center gap-2">
+                            <div className="text-xs font-bold text-neutral-600">{step.label}</div>
+                            {step.type === 'swatch' || step.type === 'select' ? (
+                              <select
+                                className={input}
+                                value={picked}
+                                onChange={(e) => {
+                                  const cs = [...(data.combos ?? [])];
+                                  const picks = { ...(cs[ci].picks ?? {}) };
+                                  if (e.target.value) picks[step.step_id] = e.target.value;
+                                  else delete picks[step.step_id];
+                                  cs[ci] = { ...cs[ci], picks };
+                                  commit({ ...data, combos: cs });
+                                }}
+                              >
+                                <option value="">— skip (hide row) —</option>
+                                {(step.options ?? []).map((o) => (
+                                  <option key={o.slug} value={o.slug}>{o.label}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                className={input}
+                                placeholder={step.type === 'qty' ? 'e.g. 500' : ''}
+                                value={picked}
+                                onChange={(e) => {
+                                  const cs = [...(data.combos ?? [])];
+                                  const picks = { ...(cs[ci].picks ?? {}) };
+                                  if (e.target.value) picks[step.step_id] = e.target.value;
+                                  else delete picks[step.step_id];
+                                  cs[ci] = { ...cs[ci], picks };
+                                  commit({ ...data, combos: cs });
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
-                ))}
-                <button type="button" className="flex w-fit items-center gap-1 rounded border border-neutral-200 px-2 py-1 text-[11px] font-bold text-ink hover:border-ink" onClick={() => {
-                  const cs = [...(data.combos ?? [])];
-                  cs[ci] = { ...cs[ci], specs: [...(cs[ci].specs ?? []), {}] };
-                  commit({ ...data, combos: cs });
-                }}><Plus size={12} /> Add spec row</button>
+                ) : (
+                  <div className="rounded border border-dashed border-neutral-300 bg-white p-3 text-[11px] text-neutral-500">
+                    This product has no configurator steps yet. Add steps on the{' '}
+                    <strong>Pricing &amp; Options</strong> tab and they&apos;ll appear here.
+                  </div>
+                )}
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="md:col-span-2">

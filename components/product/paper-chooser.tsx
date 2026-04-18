@@ -14,7 +14,11 @@ type Combo = {
   tag: string;
   match: string;
   title: string;
-  specs: Array<{ k: string; v: string }>;
+  /** New preferred shape: step_id -> option_slug (or raw value for qty/text).
+   *  Resolved against the product's configurator at render. */
+  picks?: Record<string, string>;
+  /** Legacy manually-typed spec rows. Used as a fallback when `picks` is empty. */
+  specs?: Array<{ k: string; v: string }>;
   why: string;
   price: string;
   cta_label: string;
@@ -32,6 +36,35 @@ export type ChooserData = {
   results_title?: string;
   combos?: Combo[];
 };
+
+/** Configurator shape used to resolve combo `picks` into readable spec rows. */
+export type ChooserConfiguratorStep = {
+  step_id: string;
+  label: string;
+  type: string;
+  options?: Array<{ slug: string; label: string }>;
+};
+
+function resolveSpecs(
+  combo: Combo,
+  configurator: ChooserConfiguratorStep[] | undefined,
+): Array<{ k: string; v: string }> {
+  if (combo.picks && configurator && configurator.length > 0) {
+    const rows: Array<{ k: string; v: string }> = [];
+    for (const step of configurator) {
+      const picked = combo.picks[step.step_id];
+      if (!picked) continue;
+      if (step.type === 'swatch' || step.type === 'select') {
+        const opt = (step.options ?? []).find((o) => o.slug === picked);
+        rows.push({ k: step.label, v: opt?.label ?? picked });
+      } else {
+        rows.push({ k: step.label, v: picked });
+      }
+    }
+    if (rows.length > 0) return rows;
+  }
+  return combo.specs ?? [];
+}
 
 export const DEFAULT_NAME_CARD_CHOOSER: ChooserData = {
   kicker: 'Not sure which paper?',
@@ -139,7 +172,7 @@ function extractOptionLabels(
 export function buildDefaultChooser(input: {
   name: string;
   category_name?: string | null;
-  configurator?: Array<{ type?: string; options?: Array<{ label?: string }> }>;
+  configurator?: Array<{ step_id?: string; type?: string; options?: Array<{ slug?: string; label?: string }> }>;
 }): ChooserData {
   const name = input.name;
   const lower = name.toLowerCase();
@@ -150,6 +183,21 @@ export function buildDefaultChooser(input: {
   const defaultOpt = optLabels[0] ?? 'Standard';
   const premiumOpt = optLabels[1] ?? 'Premium';
   const topOpt = optLabels[2] ?? premiumOpt;
+
+  // For generated combos, pick the first swatch/select step and assign
+  // option 0 / 1 / 2 across Safe Bet / Recommended / Step Up combos.
+  // Renderer resolves these picks to the step's option labels.
+  const firstStep = (input.configurator ?? []).find(
+    (s) => (s.type === 'swatch' || s.type === 'select') && (s.options ?? []).length >= 1,
+  );
+  const firstStepId = firstStep?.step_id;
+  const firstStepOptionSlugs = (firstStep?.options ?? []).map((o) => o.slug ?? '').filter(Boolean);
+  function picksFor(index: 0 | 1 | 2): Record<string, string> | undefined {
+    if (!firstStepId) return undefined;
+    const optIdx = Math.min(index, firstStepOptionSlugs.length - 1);
+    const slug = firstStepOptionSlugs[optIdx];
+    return slug ? { [firstStepId]: slug } : undefined;
+  }
   return {
     kicker: 'Not sure which option?',
     title: `Find your perfect ${lower}`,
@@ -191,9 +239,10 @@ export function buildDefaultChooser(input: {
         tag: 'Safe Bet',
         match: '88% match',
         title: 'The Classic.',
-        specs: [
+        picks: picksFor(0),
+        // Specs fallback for products with no configurator at all.
+        specs: firstStep ? undefined : [
           { k: 'Option', v: defaultOpt },
-          { k: 'Finish', v: 'As default' },
           { k: 'Turnaround', v: '3 working days' },
           { k: 'Best for', v: 'Everyday use' },
         ],
@@ -205,9 +254,9 @@ export function buildDefaultChooser(input: {
         tag: '★ Recommended',
         match: '96% match',
         title: 'The Sweet Spot.',
-        specs: [
+        picks: picksFor(1),
+        specs: firstStep ? undefined : [
           { k: 'Option', v: premiumOpt },
-          { k: 'Finish', v: 'Premium option' },
           { k: 'Turnaround', v: '3 working days' },
           { k: 'Best for', v: 'Most corporate orders' },
         ],
@@ -220,9 +269,9 @@ export function buildDefaultChooser(input: {
         tag: 'Step Up',
         match: '82% match',
         title: 'The Statement.',
-        specs: [
+        picks: picksFor(2),
+        specs: firstStep ? undefined : [
           { k: 'Option', v: topOpt },
-          { k: 'Finish', v: 'Top-tier finish' },
           { k: 'Turnaround', v: '4–5 working days' },
           { k: 'Best for', v: 'First impressions' },
         ],
@@ -249,7 +298,13 @@ function inlineStars(text: string) {
   });
 }
 
-export function PaperChooser({ data }: { data?: ChooserData | null }) {
+export function PaperChooser({
+  data,
+  configurator,
+}: {
+  data?: ChooserData | null;
+  configurator?: ChooserConfiguratorStep[];
+}) {
   const d = data ?? DEFAULT_NAME_CARD_CHOOSER;
   const questions = d.questions ?? [];
   const combos = d.combos ?? [];
@@ -536,7 +591,7 @@ export function PaperChooser({ data }: { data?: ChooserData | null }) {
                     {c.title}
                   </h4>
                   <div style={{ marginBottom: 16, padding: 12, background: 'var(--pv-cream)', border: '1px solid var(--pv-rule)' }}>
-                    {c.specs.map((s, si) => (
+                    {resolveSpecs(c, configurator).map((s, si) => (
                       <div key={si} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 13 }}>
                         <span
                           style={{

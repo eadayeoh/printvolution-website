@@ -982,7 +982,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 category_name: product.category?.name ?? null,
                 configurator: product.configurator,
               }));
-        return <PaperChooser data={data} />;
+        return <PaperChooser data={data} configurator={product.configurator} />;
       })()}
 
       {/* SEO MAGAZINE — rendered on every product page, same precedence order. */}

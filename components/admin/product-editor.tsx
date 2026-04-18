@@ -272,7 +272,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           </div>
 
           <HowWePrintEditor value={howWePrint} onChange={setHowWePrint} productSlug={product.slug} />
-          <ChooserEditor value={chooser} onChange={setChooser} />
+          <ChooserEditor value={chooser} onChange={setChooser} configurator={configurator} />
           <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
         </div>
       )}
