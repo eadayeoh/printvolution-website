@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { formatSGD } from '@/lib/utils';
-import { ProductIcon } from '@/components/product/product-icon';
 
 type Item = {
   slug: string;

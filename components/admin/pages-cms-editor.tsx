@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
-import { saveSection, saveContactMethods, saveNavigation, saveMegaMenu } from '@/app/admin/pages/actions';
+import { Trash2, Plus } from 'lucide-react';
+import { saveSection, saveContactMethods, saveNavigation } from '@/app/admin/pages/actions';
 import { MegaEditorDnd } from '@/components/admin/mega-editor-dnd';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { DndContext, DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';

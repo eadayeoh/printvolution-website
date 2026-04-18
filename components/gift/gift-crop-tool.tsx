@@ -36,11 +36,6 @@ export function GiftCropTool({ product, fileSrc, file, onCancel, onConfirm }: Pr
     setPixelArea(pixels);
   }, []);
 
-  // Bleed and safe zone as percentage overlays relative to the trim rect
-  const totalMm = product.width_mm + product.bleed_mm * 2;
-  const bleedPct = (product.bleed_mm / totalMm) * 100;
-  const safePct = (product.safe_zone_mm / product.width_mm) * 100;
-
   function confirm() {
     if (!pixelArea) return;
     onConfirm(file, { x: pixelArea.x, y: pixelArea.y, width: pixelArea.width, height: pixelArea.height });

@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { putObject, GIFT_BUCKETS } from '@/lib/gifts/storage';
-import type { GiftMode, GiftTemplateMode } from '@/lib/gifts/types';
-
 async function requireAdmin() {
   const sb = createClient();
   const { data: { user } } = await sb.auth.getUser();

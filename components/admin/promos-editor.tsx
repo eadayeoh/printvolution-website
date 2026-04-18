@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus, Pencil, X } from 'lucide-react';
+import { Plus, Pencil, X } from 'lucide-react';
 import { formatSGD } from '@/lib/utils';
 import { saveCoupon, deleteCoupon, saveRule, deleteRule } from '@/app/admin/promos/actions';
 

@@ -25,7 +25,6 @@ type Token =
   | { type: 'rparen' }
   | { type: 'comma' };
 
-const MATH_CALLS = new Set(['min', 'max']);
 const VARS = new Set(['qty', 'base']);
 
 function tokenize(src: string): Token[] {

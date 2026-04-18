@@ -7,7 +7,6 @@ import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { FormulaBuilder } from '@/components/admin/formula-builder';
 import type { ProductDetail } from '@/lib/data/products';
-import { formatSGD } from '@/lib/utils';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 type Tab = 'basics' | 'pricing' | 'faqs' | 'content';
@@ -46,7 +45,9 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   // Prefill with the live fallback text so the admin edits the paragraph
   // they actually see on the page, instead of staring at an empty field.
   const [seoBody, setSeoBody] = useState(product.extras?.seo_body ?? defaultSeoBody ?? '');
-  const [heroColor, setHeroColor] = useState(product.extras?.hero_color ?? '#0D0D0D');
+  // hero_color is no longer edited from the UI; pass the existing DB
+  // value through on save so nothing is wiped.
+  const heroColor = product.extras?.hero_color ?? null;
   const [heroBig, setHeroBig] = useState(product.extras?.hero_big ?? '');
   const [h1, setH1] = useState(product.extras?.h1 ?? '');
   const [h1em, setH1em] = useState(product.extras?.h1em ?? '');
@@ -656,15 +657,6 @@ function OptionCard({
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(!option.label || option.label === 'New option');
-
-  // Preview price: evaluate at qty 1
-  let previewCents: number | null = null;
-  if (option.price_formula) {
-    try {
-      const val = (window as any).evaluateFormulaCache?.(option.price_formula) ?? null;
-      previewCents = val !== null ? val : null;
-    } catch { /* */ }
-  }
 
   return (
     <div className={`rounded-lg border-2 bg-white transition-colors ${open ? 'border-ink' : 'border-neutral-200'}`}>

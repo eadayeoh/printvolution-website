@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, Plus, Eye, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, RotateCw } from 'lucide-react';
+import { Trash2, Eye, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, RotateCw } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import {

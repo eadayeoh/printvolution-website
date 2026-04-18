@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { GiftProductEditor } from '@/components/admin/gift-product-editor';
-import { getGiftProductByIdAdmin, listAllTemplatesAdmin, listCategoriesForGifts, listTemplateAssignments } from '@/lib/gifts/data';
+import { getGiftProductByIdAdmin, listAllTemplatesAdmin, listCategoriesForGifts } from '@/lib/gifts/data';
 
 export const dynamic = 'force-dynamic';
 

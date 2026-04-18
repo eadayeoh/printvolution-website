@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { DndContext, DragEndEvent, DragOverEvent, DragOverlay, DragStartEvent, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Trash2, X, Search } from 'lucide-react';
@@ -85,7 +85,7 @@ export function MegaEditorDnd({
         const item = sections[fromSec].items[fromItem];
 
         setSections((prev) => {
-          const next = prev.map((s, i) => ({ ...s, items: [...s.items] }));
+          const next = prev.map((s) => ({ ...s, items: [...s.items] }));
           // remove from source
           next[fromSec].items.splice(fromItem, 1);
           // insert at destination (account for index shift if same section & after)

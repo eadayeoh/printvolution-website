@@ -216,7 +216,6 @@ async function renderPhotoResize(
 async function runAiTransform(input: Buffer, product: GiftProduct, preview: boolean): Promise<Buffer> {
   const sharp = await loadSharp();
   let img = sharp(input).rotate();
-  const meta = await img.metadata();
 
   // Approximate each mode's visual effect in the preview so the customer
   // sees something mode-appropriate until the real AI call is wired in.

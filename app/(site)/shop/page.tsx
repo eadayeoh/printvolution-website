@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import { listProducts } from '@/lib/data/products';
 import { listTopCategories } from '@/lib/data/categories';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
-import { formatSGD } from '@/lib/utils';
 import { ShopClient } from '@/components/shop/shop-client';
 
 export const metadata = {

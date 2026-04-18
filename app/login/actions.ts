@@ -23,9 +23,8 @@ export async function checkLoginRateLimit(): Promise<{
  * burn through quota faster than successful logins (which only count once).
  */
 export async function recordFailedLogin(email: string) {
-  const ip = getClientIp();
-  // Record once per IP (already done by checkLoginRateLimit) AND once per email
-  // so a single attacker can't spread across emails to bypass.
+  // Record once per email so a single attacker can't spread across
+  // emails to bypass. Per-IP is already counted by checkLoginRateLimit.
   await checkRateLimit(`login:email:${email.toLowerCase()}`, { max: 5, windowSeconds: 300 });
   return { ok: true };
 }

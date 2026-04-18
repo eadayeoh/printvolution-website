@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
@@ -19,10 +18,12 @@ type Props = {
 
 export function ProductPage({ product, productRoutes, features }: Props) {
   const productFeatures = features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES;
-  const router = useRouter();
   const addToCart = useCart((s) => s.add);
 
-  const [manualColIdx, setManualColIdx] = useState(0);
+  // Column index used when no size/dimension configurator step is
+  // present. Always 0 today — kept as a named constant so the
+  // computeTotal / colIdx memo below reads clearly.
+  const manualColIdx = 0;
   const [rowIdx, setRowIdx] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [designFilesUrl, setDesignFilesUrl] = useState('');

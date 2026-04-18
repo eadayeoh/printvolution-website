@@ -115,21 +115,6 @@ export default async function AdminDashboard() {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string; color: 'blue' | 'pink' | 'amber' | 'cyan' }) {
-  const styles = {
-    blue: 'border-blue-200 bg-blue-50 text-blue-900',
-    pink: 'border-pink/40 bg-pink/5 text-pink',
-    amber: 'border-amber-200 bg-amber-50 text-amber-900',
-    cyan: 'border-cyan-200 bg-cyan-50 text-cyan-900',
-  };
-  return (
-    <div className={`rounded-lg border-2 p-4 ${styles[color]}`}>
-      <div className="text-2xl font-black lg:text-3xl">{value}</div>
-      <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider opacity-80">{label}</div>
-    </div>
-  );
-}
-
 function PipelineRow({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-2 text-sm">
