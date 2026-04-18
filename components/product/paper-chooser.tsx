@@ -23,6 +23,11 @@ type Combo = {
   price: string;
   cta_label: string;
   recommended?: boolean;
+  /** The "ideal answer" this combo was built for, keyed by question
+   *  index: { 0: 'small', 1: 'corporate', 2: 'mid' }. Runtime compares
+   *  this against the user's live picks to compute a real match % —
+   *  replaces the static '88% match' string when present. */
+  profile?: Record<number, string>;
 };
 
 export type ChooserData = {
@@ -378,6 +383,39 @@ export function PaperChooser({
     }).filter(Boolean);
   }, [questions, picks]);
 
+  // Compute match % per combo by counting profile entries that match
+  // the user's live picks. Combos without a profile fall back to the
+  // admin-authored static string so old content keeps rendering.
+  const comboMatches = useMemo(() => {
+    const totalQuestions = Math.max(1, questions.length);
+    return combos.map((c) => {
+      if (!c.profile) return { percent: null as number | null, str: c.match };
+      let hits = 0;
+      for (let qi = 0; qi < questions.length; qi++) {
+        const want = c.profile[qi];
+        if (!want) continue;
+        if (want === picks[qi]) hits += 1;
+      }
+      // Scale 0..totalQuestions → 55..100 so even a zero-match combo
+      // doesn't look "0%" broken; real difference lands between combos.
+      const ratio = hits / totalQuestions;
+      const pct = Math.round(55 + ratio * 45);
+      return { percent: pct, str: `${pct}% match` };
+    });
+  }, [combos, questions, picks]);
+
+  const topMatchIdx = useMemo(() => {
+    let best = -1;
+    let bestPct = -1;
+    comboMatches.forEach((m, i) => {
+      if (m.percent !== null && m.percent > bestPct) {
+        bestPct = m.percent;
+        best = i;
+      }
+    });
+    return best;
+  }, [comboMatches]);
+
   if (questions.length === 0 || combos.length === 0) return null;
 
   return (
@@ -604,15 +642,18 @@ export function PaperChooser({
             className="pv-chooser-combos"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}
           >
-            {combos.map((c, ci) => (
+            {combos.map((c, ci) => {
+              const hasProfiles = comboMatches.some((m) => m.percent !== null);
+              const isRecommended = hasProfiles ? ci === topMatchIdx : !!c.recommended;
+              return (
               <div
                 key={ci}
                 className="pv-chooser-combo-card"
-                data-recommended={c.recommended ? '1' : '0'}
+                data-recommended={isRecommended ? '1' : '0'}
                 style={{
                   background: '#fff',
                   border: '3px solid var(--pv-ink)',
-                  boxShadow: c.recommended ? '6px 6px 0 var(--pv-magenta)' : '6px 6px 0 var(--pv-ink)',
+                  boxShadow: isRecommended ? '6px 6px 0 var(--pv-magenta)' : '6px 6px 0 var(--pv-ink)',
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
@@ -622,8 +663,8 @@ export function PaperChooser({
                 <div
                   style={{
                     padding: '12px 18px',
-                    background: c.recommended ? 'var(--pv-magenta)' : 'var(--pv-cream)',
-                    color: c.recommended ? '#fff' : 'var(--pv-ink)',
+                    background: isRecommended ? 'var(--pv-magenta)' : 'var(--pv-cream)',
+                    color: isRecommended ? '#fff' : 'var(--pv-ink)',
                     borderBottom: '2px solid var(--pv-ink)',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -631,7 +672,7 @@ export function PaperChooser({
                   }}
                 >
                   <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {c.tag}
+                    {isRecommended && hasProfiles ? '★ Best match' : c.tag}
                   </span>
                   <span
                     style={{
@@ -639,11 +680,11 @@ export function PaperChooser({
                       fontSize: 10,
                       letterSpacing: '0.04em',
                       padding: '3px 8px',
-                      background: c.recommended ? 'var(--pv-yellow)' : 'var(--pv-ink)',
-                      color: c.recommended ? 'var(--pv-ink)' : 'var(--pv-yellow)',
+                      background: isRecommended ? 'var(--pv-yellow)' : 'var(--pv-ink)',
+                      color: isRecommended ? 'var(--pv-ink)' : 'var(--pv-yellow)',
                     }}
                   >
-                    {c.match}
+                    {comboMatches[ci]?.str ?? c.match}
                   </span>
                 </div>
                 <div style={{ padding: 22, flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -691,7 +732,7 @@ export function PaperChooser({
                   <button
                     type="button"
                     style={{
-                      background: c.recommended ? 'var(--pv-magenta)' : 'var(--pv-ink)',
+                      background: isRecommended ? 'var(--pv-magenta)' : 'var(--pv-ink)',
                       color: '#fff',
                       padding: '13px 16px',
                       border: 'none',
@@ -714,7 +755,8 @@ export function PaperChooser({
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
