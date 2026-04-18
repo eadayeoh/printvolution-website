@@ -11,7 +11,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 
-type Tab = 'home' | 'about' | 'contact' | 'nav' | 'mega';
+type Tab = 'home' | 'global' | 'about' | 'contact' | 'nav' | 'mega';
 
 type MegaSection = { section_heading: string; items: Array<{ product_slug: string; label: string }> };
 
@@ -33,7 +33,7 @@ export function PagesCmsEditor({
   return (
     <div>
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-neutral-200">
-        {(['home', 'about', 'contact', 'nav', 'mega'] as Tab[]).map((t) => (
+        {(['home', 'global', 'about', 'contact', 'nav', 'mega'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -42,6 +42,7 @@ export function PagesCmsEditor({
             }`}
           >
             {t === 'home' && 'Home sections'}
+            {t === 'global' && 'Global (announce + footer)'}
             {t === 'about' && 'About page'}
             {t === 'contact' && 'Contact methods'}
             {t === 'nav' && 'Navigation'}
@@ -77,12 +78,219 @@ export function PagesCmsEditor({
           <SectionEditor
             pageKey="home"
             sectionKey="why"
-            title="Why us bullets"
-            hint="Homepage 'Why Printvolution' dark section."
+            title="Why us bullets (legacy)"
+            hint="Legacy section for the old homepage. Not shown on v4."
             initial={sections['home:why'] ?? []}
             fields={[
               { key: 'title', label: 'Title', type: 'text' },
               { key: 'desc', label: 'Description', type: 'textarea' },
+            ]}
+          />
+
+          <SectionHeader label="v4 sections" />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="hero.split"
+            title="Split hero (Print | Gifts)"
+            hint="Two items — one per side. side=print or side=gifts."
+            initial={sections['home:hero.split'] ?? []}
+            fields={[
+              { key: 'side', label: 'side (print | gifts)', type: 'text' },
+              { key: 'kicker', label: 'Kicker (small label above headline)', type: 'text' },
+              { key: 'headline', label: 'Headline (first line)', type: 'text' },
+              { key: 'headline_accent', label: 'Headline accent (second line, coloured)', type: 'text' },
+              { key: 'body', label: 'Body copy', type: 'textarea' },
+              { key: 'cta_label', label: 'CTA label', type: 'text' },
+              { key: 'cta_href', label: 'CTA URL', type: 'text' },
+              { key: 'image_url', label: 'Image (URL or upload)', type: 'image' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="ticker"
+            title="Ticker marquee"
+            hint="Horizontal scrolling labels (magenta bar)."
+            initial={sections['home:ticker'] ?? []}
+            fields={[{ key: 'text', label: 'Text', type: 'text' }]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="why.cards"
+            title="Why cards (3)"
+            hint="Three numbered brutalist why cards on cream background."
+            initial={sections['home:why.cards'] ?? []}
+            fields={[
+              { key: 'num', label: 'Number (01, 02, 03)', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'body', label: 'Body', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="proof.main"
+            title="Proof — quote + stats"
+            hint="Set kind=quote with text+cite, OR kind=stat with num, suffix, label."
+            initial={sections['home:proof.main'] ?? []}
+            fields={[
+              { key: 'kind', label: 'Kind (quote | stat)', type: 'text' },
+              { key: 'text', label: 'Quote text (if kind=quote)', type: 'textarea' },
+              { key: 'cite', label: 'Attribution (if kind=quote)', type: 'text' },
+              { key: 'num', label: 'Stat number (if kind=stat)', type: 'text' },
+              { key: 'suffix', label: 'Stat suffix e.g. + or yrs (if kind=stat)', type: 'text' },
+              { key: 'label', label: 'Stat label (if kind=stat)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="how.header"
+            title="How it works header"
+            hint="Left-column headline + CTA for the How it works section."
+            initial={sections['home:how.header'] ?? []}
+            fields={[
+              { key: 'headline', label: 'Headline', type: 'text' },
+              { key: 'headline_accent', label: 'Headline accent (last word, magenta)', type: 'text' },
+              { key: 'body', label: 'Body', type: 'textarea' },
+              { key: 'cta_label', label: 'CTA label', type: 'text' },
+              { key: 'cta_href', label: 'CTA URL', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="how.steps"
+            title="How it works — step list"
+            hint="Numbered steps shown to the right of the header."
+            initial={sections['home:how.steps'] ?? []}
+            fields={[
+              { key: 'num', label: 'Number', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'body', label: 'Description', type: 'textarea' },
+              { key: 'time', label: 'Time chip e.g. ~2 min', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="faq.items"
+            title="FAQ"
+            hint="Accordion FAQs on the homepage."
+            initial={sections['home:faq.items'] ?? []}
+            fields={[
+              { key: 'question', label: 'Question', type: 'text' },
+              { key: 'answer', label: 'Answer', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="location.main"
+            title="Location details"
+            hint="Address / hours / phone / email / MRT rows."
+            initial={sections['home:location.main'] ?? []}
+            fields={[
+              { key: 'kind', label: 'Kind (address | hours | phone | email | mrt)', type: 'text' },
+              { key: 'label', label: 'Row label', type: 'text' },
+              { key: 'detail', label: 'Detail (supports \\n for line breaks)', type: 'textarea' },
+              { key: 'href', label: 'Optional link (tel: / mailto: / https:)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="final_cta.main"
+            title="Final CTA band"
+            hint="Magenta band at the bottom of the homepage."
+            initial={sections['home:final_cta.main'] ?? []}
+            fields={[
+              { key: 'headline', label: 'Headline', type: 'text' },
+              { key: 'headline_accent', label: 'Headline accent (yellow)', type: 'text' },
+              { key: 'body', label: 'Body', type: 'textarea' },
+              { key: 'cta_label', label: 'CTA label', type: 'text' },
+              { key: 'cta_href', label: 'CTA URL', type: 'text' },
+            ]}
+          />
+
+          <div className="rounded border-2 border-dashed border-neutral-300 bg-neutral-50 p-4 text-xs text-neutral-600">
+            <b className="text-ink">Category tiles</b> (the Print / Gifts tabs) use nested arrays and are not
+            yet editable from this screen. To change which products are featured, edit{' '}
+            <code className="rounded bg-white px-1 py-0.5">page_content</code> where{' '}
+            <code className="rounded bg-white px-1 py-0.5">page_key=&#39;home&#39;</code> and{' '}
+            <code className="rounded bg-white px-1 py-0.5">section_key=&#39;categories.tabs&#39;</code> via Supabase Studio.
+          </div>
+        </div>
+      )}
+
+      {tab === 'global' && (
+        <div className="space-y-6">
+          <SectionEditor
+            pageKey="global"
+            sectionKey="announce"
+            title="Announcement bar"
+            hint="Thin strip at the very top of every site page."
+            initial={sections['global:announce'] ?? []}
+            fields={[
+              { key: 'text', label: 'Text', type: 'text' },
+              { key: 'bold_part', label: 'Substring to colour yellow (optional)', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="global"
+            sectionKey="footer.brand"
+            title="Footer brand tagline"
+            hint="Single paragraph shown under the wordmark in the footer."
+            initial={sections['global:footer.brand'] ?? []}
+            fields={[{ key: 'tagline', label: 'Tagline', type: 'textarea' }]}
+          />
+          <SectionEditor
+            pageKey="global"
+            sectionKey="footer.company"
+            title="Footer — Company column"
+            hint="Left footer link column."
+            initial={sections['global:footer.company'] ?? []}
+            fields={[
+              { key: 'label', label: 'Link label', type: 'text' },
+              { key: 'href', label: 'Link URL', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="global"
+            sectionKey="footer.support"
+            title="Footer — Support column"
+            hint="Middle footer link column."
+            initial={sections['global:footer.support'] ?? []}
+            fields={[
+              { key: 'label', label: 'Link label', type: 'text' },
+              { key: 'href', label: 'Link URL', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="global"
+            sectionKey="footer.visit"
+            title="Footer — Visit the shop column"
+            hint="Address, hours, email, phone."
+            initial={sections['global:footer.visit'] ?? []}
+            fields={[
+              { key: 'kind', label: 'Kind (address|hours|email|phone)', type: 'text' },
+              { key: 'label', label: 'Label / heading', type: 'text' },
+              { key: 'detail', label: 'Detail (supports \\n)', type: 'textarea' },
+              { key: 'href', label: 'Optional link (tel: / mailto: / https:)', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="global"
+            sectionKey="footer.social"
+            title="Footer — Socials"
+            hint="2-letter label + URL for each social pill."
+            initial={sections['global:footer.social'] ?? []}
+            fields={[
+              { key: 'label', label: 'Pill label e.g. IG, WA', type: 'text' },
+              { key: 'href', label: 'Link URL', type: 'text' },
+              { key: 'aria', label: 'Aria label', type: 'text' },
             ]}
           />
         </div>
@@ -189,6 +397,14 @@ function MegaEditor(props: {
   products: Array<{ slug: string; name: string }>;
 }) {
   return <MegaEditorDnd {...props} />;
+}
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="mt-4 border-t border-neutral-200 pt-4 text-[10px] font-black uppercase tracking-[0.2em] text-pink">
+      {label}
+    </div>
+  );
 }
 
 type FieldDef = { key: string; label: string; type: 'text' | 'textarea' | 'image' };
