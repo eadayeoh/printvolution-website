@@ -70,23 +70,47 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   v4 typography enforcement — pins the 3 v4 fonts to the styles set
-   via inline fontFamily: var(--pv-f-*). Legacy-design.css still
-   carries some !important font-family rules that target elements
-   generically (p,span,div,li,etc.); those can override inline styles.
-   These rules have higher specificity AND !important so they always
-   win, making the v4 fonts deterministic on every brutalist page
-   regardless of the legacy-CSS ordering.
+   v4 typography enforcement.
+   Goal: guarantee the 3 v4 fonts render on every brutalist page
+   regardless of what legacy-design.css's !important rules try to
+   force. We layer this as:
+     1. Universal body + heading defaults (beats generic element rules)
+     2. Attribute selectors for elements that explicitly opt into
+        var(--pv-f-*) inline styles (covers mono contexts and
+        anything that names a font through our CSS variables)
    ────────────────────────────────────────────────────────────────── */
+
+/* All regular text on the site defaults to Archivo. */
+html, body {
+  font-family: 'Archivo', system-ui, sans-serif !important;
+}
+
+/* All headings are display (Archivo Black). Archivo Black only ships
+   weight 400 — forcing 700/800 makes the browser synth-bold it and
+   produces off-shape letters. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Archivo Black', 'Archivo', sans-serif !important;
+  font-weight: 400 !important;
+}
+
+/* Mono chips / labels / kickers / timestamps use JetBrains Mono.
+   Match any element that names the mono family via our CSS var or
+   the literal family name. */
+[style*="--pv-f-mono"],
+[style*="var(--pv-f-mono)"],
+[style*="JetBrains Mono"] {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace !important;
+}
+
+/* Explicit display opt-in (for non-heading elements we want in
+   Archivo Black — big numerals, price numbers, etc.). */
 [style*="--pv-f-display"],
 [style*="var(--pv-f-display)"] {
   font-family: 'Archivo Black', 'Archivo', sans-serif !important;
 }
+
+/* Explicit body opt-in. */
 [style*="--pv-f-body"],
 [style*="var(--pv-f-body)"] {
   font-family: 'Archivo', system-ui, sans-serif !important;
-}
-[style*="--pv-f-mono"],
-[style*="var(--pv-f-mono)"] {
-  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace !important;
 }
