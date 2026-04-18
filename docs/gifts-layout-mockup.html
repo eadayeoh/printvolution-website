@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="en-SG">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Custom LED Photo Base Singapore | From S$48 · PrintVolution</title>
+<meta name="description" content="Personalised LED photo base in Singapore. Upload a photo, pick an art style, we'll laser-engrave it on acrylic with a warm LED light base. Ships in 5 days. From S$48." />
+<link rel="canonical" href="https://printvolution.sg/gifts/led-base" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --pv-magenta: #EC008C;
+    --pv-cyan: #00AEEF;
+    --pv-yellow: #FFDD00;
+    --pv-purple: #7B2CBF;
+    --pv-green: #06D6A0;
+    --pv-ink: #0A0A0A;
+    --pv-ink-soft: #2A2A2A;
+    --pv-white: #FFFFFF;
+    --pv-cream: #FFF9F0;
+    --pv-cream-warm: #FFF4E5;
+    --pv-muted: #6B6B6B;
+    --pv-rule: #E8E8E8;
+
+    --f-display: 'Archivo Black', sans-serif;
+    --f-body: 'Archivo', system-ui, sans-serif;
+    --f-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--pv-cream); color: var(--pv-ink); font-family: var(--f-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+
+  .img-placeholder {
+    background: var(--pv-cream);
+    border: 2px dashed rgba(236,0,140,0.3);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--pv-muted);
+    font-family: var(--f-mono); font-size: 11px;
+    text-align: center; position: relative; overflow: hidden;
+    height: 100%; width: 100%;
+  }
+  .img-placeholder::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(45deg, transparent 48%, rgba(236,0,140,0.08) 49%, rgba(236,0,140,0.08) 51%, transparent 52%);
+    background-size: 16px 16px;
+  }
+  .img-placeholder .ph-tag {
+    background: var(--pv-magenta); color: var(--pv-white);
+    padding: 6px 14px; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 700; position: relative; z-index: 1;
+  }
+
+  /* ---------- ANNOUNCE + NAV ---------- */
+  .announce {
+    background: var(--pv-ink); color: var(--pv-white);
+    padding: 10px 24px;
+    font-family: var(--f-mono); font-size: 12px;
+    display: flex; justify-content: center; gap: 32px;
+    letter-spacing: 0.02em;
+  }
+  .announce .dot { color: var(--pv-yellow); animation: pulse 1.5s infinite; }
+  .announce b { color: var(--pv-yellow); font-weight: 500; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .topbar {
+    background: var(--pv-cream);
+    border-bottom: 2px solid var(--pv-ink);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; padding: 16px 32px; gap: 48px; max-width: 1560px; margin: 0 auto; }
+  .logo-img { height: 44px; }
+  .nav-links { display: flex; gap: 32px; font-size: 15px; font-weight: 600; justify-content: center; }
+  .nav-links a { padding: 6px 0; position: relative; transition: color 0.15s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--pv-magenta); }
+  .nav-links a::after {
+    content: ""; position: absolute; bottom: 0; left: 0;
+    width: 0; height: 3px; background: var(--pv-magenta);
+    transition: width 0.2s;
+  }
+  .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+  .nav-cta { display: flex; align-items: center; gap: 16px; }
+  .nav-cta .login { color: var(--pv-muted); font-size: 14px; font-weight: 600; }
+  .nav-cta .cart {
+    background: var(--pv-magenta); color: var(--pv-white);
+    padding: 12px 22px; font-weight: 800; font-size: 14px;
+    border: 2px solid var(--pv-ink);
+    box-shadow: 4px 4px 0 var(--pv-ink);
+    transition: all 0.15s;
+    letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  .nav-cta .cart:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pv-ink); }
+
+  /* ---------- BREADCRUMB ---------- */
+  .breadcrumb {
+    padding: 14px 32px;
+    background: var(--pv-cream);
+    font-family: var(--f-mono); font-size: 12px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--pv-rule);
+  }
+  .breadcrumb-inner { max-width: 1560px; margin: 0 auto; }
+  .breadcrumb a { color: var(--pv-ink); font-weight: 600; }
+  .breadcrumb a:hover { color: var(--pv-magenta); }
+  .breadcrumb .sep { margin: 0 8px; color: var(--pv-rule); }
+
+  /* ---------- HERO ---------- */
+  .product-hero {
+    padding: 48px 32px 32px;
+    background: var(--pv-cream);
+    border-bottom: 2px solid var(--pv-ink);
+  }
+  .hero-inner { max-width: 1560px; margin: 0 auto; }
+  .hero-title-row {
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 32px; align-items: end;
+    margin-bottom: 12px;
+  }
+  .hero-h1 {
+    font-family: var(--f-display);
+    font-size: clamp(44px, 5.5vw, 80px);
+    line-height: 0.92; letter-spacing: -0.03em;
+  }
+  .hero-h1 em {
+    font-style: normal; position: relative; display: inline-block;
+  }
+  .hero-h1 em::after {
+    content: ""; position: absolute;
+    bottom: 4px; left: -2%; width: 104%; height: 16px;
+    background: var(--pv-yellow); z-index: -1;
+    transform: skew(-6deg);
+  }
+  .hero-meta {
+    display: flex; gap: 14px; align-items: center;
+    font-family: var(--f-mono); font-size: 12px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+  }
+  .hero-meta .dot { color: var(--pv-rule); }
+  .hero-lede {
+    font-size: 17px; line-height: 1.5;
+    max-width: 760px;
+    color: var(--pv-ink-soft); font-weight: 500;
+  }
+
+  /* ---------- CONFIGURATOR ---------- */
+  .config {
+    background: var(--pv-cream-warm);
+    padding: 48px 32px;
+    border-bottom: 2px solid var(--pv-ink);
+  }
+  .config-inner {
+    max-width: 1560px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 40px; align-items: start;
+  }
+
+  /* ===== LEFT: LIVE PREVIEW ===== */
+  .preview-col { position: sticky; top: 100px; }
+
+  .live-preview {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 8px 8px 0 var(--pv-ink);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .preview-head {
+    background: var(--pv-ink); color: var(--pv-white);
+    padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--f-mono); font-size: 11px;
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .preview-head .live-dot {
+    color: var(--pv-yellow);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .preview-head .live-dot::before {
+    content: ""; width: 8px; height: 8px;
+    background: var(--pv-magenta); border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  .preview-head .light-toggle {
+    display: flex; border: 1px solid var(--pv-white);
+  }
+  .preview-head .light-toggle button {
+    background: transparent; color: var(--pv-white);
+    padding: 4px 10px; font-family: var(--f-mono); font-size: 10px;
+    font-weight: 700; border: none; cursor: pointer;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .preview-head .light-toggle button.active { background: var(--pv-yellow); color: var(--pv-ink); }
+  .preview-head .light-toggle button + button { border-left: 1px solid var(--pv-white); }
+
+  /* The stage */
+  .preview-stage {
+    padding: 40px 32px;
+    background: var(--pv-cream-warm);
+    background-image: radial-gradient(circle at 1px 1px, rgba(10,10,10,0.06) 1px, transparent 0);
+    background-size: 6px 6px;
+    min-height: 460px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: all 0.4s;
+  }
+  /* Lights-on variant — darker warm glow */
+  .preview-stage.lights-on {
+    background: #1a1410;
+    background-image: radial-gradient(circle at center bottom, rgba(255,221,0,0.15), transparent 70%);
+  }
+
+  /* LED base product — CSS drawn */
+  .led-base {
+    position: relative;
+    width: 280px;
+    height: 380px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* The acrylic plate on top */
+  .acrylic {
+    width: 240px;
+    height: 280px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 100%);
+    border: 2px solid rgba(10,10,10,0.4);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    transition: all 0.4s;
+    z-index: 2;
+  }
+  .preview-stage.lights-on .acrylic {
+    background: linear-gradient(180deg, rgba(255,221,0,0.05) 0%, rgba(255,221,0,0.4) 100%);
+    border-color: rgba(255,221,0,0.5);
+    box-shadow: 0 0 40px rgba(255,221,0,0.3), 0 -20px 60px rgba(255,221,0,0.25);
+  }
+
+  /* The engraved art layer inside acrylic */
+  .engraved-art {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .engraved-art img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    filter: grayscale(1) contrast(1.4) brightness(0.85);
+    opacity: 0.7;
+    mix-blend-mode: multiply;
+    transition: all 0.4s;
+  }
+  .preview-stage.lights-on .engraved-art img {
+    filter: grayscale(1) contrast(1.6) brightness(1) invert(1);
+    opacity: 0.85;
+    mix-blend-mode: screen;
+  }
+
+  .engraved-art .empty-state {
+    font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(10,10,10,0.4);
+    text-align: center;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .engraved-art .empty-state span {
+    display: block;
+    font-family: var(--f-display);
+    font-size: 24px;
+    margin-bottom: 6px;
+    color: var(--pv-magenta);
+  }
+  .preview-stage.lights-on .engraved-art .empty-state {
+    color: rgba(255,221,0,0.5);
+  }
+
+  /* Engraved text (goes under the art) */
+  .engraved-text {
+    position: absolute;
+    bottom: 28px; left: 0; right: 0;
+    text-align: center;
+    font-family: var(--f-display);
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    color: rgba(10,10,10,0.55);
+    transition: all 0.4s;
+    padding: 0 16px;
+  }
+  .preview-stage.lights-on .engraved-text {
+    color: rgba(255,221,0,0.9);
+    text-shadow: 0 0 8px rgba(255,221,0,0.5);
+  }
+  .engraved-text:empty { display: none; }
+
+  /* The LED wood base */
+  .led-wood {
+    width: 260px;
+    height: 60px;
+    background: linear-gradient(180deg, #9B7653 0%, #6B4E30 100%);
+    border: 2px solid var(--pv-ink);
+    border-radius: 4px;
+    margin-top: -4px;
+    position: relative;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    z-index: 1;
+  }
+  .led-wood::before {
+    content: "";
+    position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 240px; height: 4px;
+    background: #3D2817;
+    border-radius: 2px;
+  }
+  .led-wood::after {
+    content: "PV";
+    position: absolute;
+    bottom: 6px; right: 10px;
+    font-family: var(--f-display);
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.35);
+  }
+  /* Glowing LED line when lights on */
+  .preview-stage.lights-on .led-wood::before {
+    background: var(--pv-yellow);
+    box-shadow: 0 0 20px rgba(255,221,0,0.8), 0 0 40px rgba(255,221,0,0.5);
+  }
+
+  /* Ghost image (raw photo, before AI) */
+  .engraved-art.ghost img {
+    opacity: 0.2;
+    filter: grayscale(1) contrast(1) brightness(0.9);
+  }
+
+  /* Loading overlay during AI gen */
+  .gen-loading {
+    position: absolute; inset: 0;
+    background: rgba(255,244,229,0.92);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 10;
+    flex-direction: column; gap: 16px;
+  }
+  .gen-loading.active { display: flex; }
+  .preview-stage.lights-on .gen-loading {
+    background: rgba(26,20,16,0.92);
+  }
+  .loading-spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--pv-ink);
+    border-top-color: var(--pv-magenta);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .preview-stage.lights-on .loading-spinner {
+    border-color: rgba(255,221,0,0.3);
+    border-top-color: var(--pv-yellow);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gen-loading-text {
+    font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700;
+    color: var(--pv-ink);
+  }
+  .preview-stage.lights-on .gen-loading-text {
+    color: var(--pv-yellow);
+  }
+
+  /* Reset */
+  .preview-reset {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    padding: 6px 10px;
+    font-family: var(--f-mono); font-size: 10px;
+    font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--pv-ink);
+    z-index: 5;
+  }
+  .preview-reset:hover { background: var(--pv-yellow); }
+
+  /* ===== COMPOSE CONTROLS (below preview) ===== */
+  .compose-controls {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 5px 5px 0 var(--pv-ink);
+  }
+
+  .cc-section {
+    border-bottom: 1px solid var(--pv-rule);
+    padding: 20px;
+  }
+  .cc-section:last-of-type { border-bottom: none; }
+  .cc-section-head {
+    font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700;
+    color: var(--pv-ink);
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cc-section-head .step-num {
+    display: inline-flex; align-items: center;
+    gap: 8px;
+  }
+  .cc-section-head .step-num .n {
+    width: 22px; height: 22px;
+    background: var(--pv-ink); color: var(--pv-white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-display); font-size: 11px;
+  }
+  .cc-section-head .gen-count {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-magenta);
+    font-weight: 700;
+  }
+
+  /* Upload area */
+  .photo-upload-area {
+    background: var(--pv-cream);
+    border: 3px dashed var(--pv-magenta);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .photo-upload-area:hover {
+    background: var(--pv-yellow);
+    border-style: solid; border-color: var(--pv-ink);
+  }
+  .photo-upload-area .pu-icon {
+    width: 48px; height: 48px;
+    border: 2px solid var(--pv-ink);
+    background: var(--pv-magenta); color: var(--pv-white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-display); font-size: 22px;
+    margin: 0 auto 10px;
+    transform: rotate(-4deg);
+    box-shadow: 2px 2px 0 var(--pv-ink);
+  }
+  .photo-upload-area h4 {
+    font-family: var(--f-display); font-size: 18px;
+    letter-spacing: -0.02em; margin-bottom: 4px;
+  }
+  .photo-upload-area .pu-hint {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+  }
+
+  .photo-uploaded {
+    background: var(--pv-cream);
+    border: 2px solid var(--pv-ink);
+    padding: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .photo-uploaded .thumb {
+    width: 56px; height: 56px;
+    border: 2px solid var(--pv-ink);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--pv-white);
+    flex-shrink: 0;
+  }
+  .photo-uploaded .ph-info { flex: 1; }
+  .photo-uploaded .ph-name {
+    font-weight: 800; font-size: 13px;
+    margin-bottom: 2px;
+    word-break: break-all;
+  }
+  .photo-uploaded .ph-status {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-green); letter-spacing: 0.06em;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .photo-uploaded .remove-btn {
+    background: var(--pv-ink); color: var(--pv-white);
+    border: none; padding: 6px 10px;
+    font-family: var(--f-mono); font-size: 10px;
+    font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; cursor: pointer;
+  }
+  .photo-uploaded .remove-btn:hover { background: var(--pv-magenta); }
+
+  /* Style presets */
+  .style-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .style-opt {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-rule);
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    position: relative;
+  }
+  .style-opt:hover { border-color: var(--pv-ink); }
+  .style-opt.active {
+    border-color: var(--pv-ink); border-width: 2px;
+    background: var(--pv-cream);
+  }
+  .style-opt.active::after {
+    content: "✓";
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 18px; height: 18px;
+    background: var(--pv-magenta); color: var(--pv-white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900;
+  }
+  .style-opt .style-preview {
+    aspect-ratio: 1;
+    border: 1.5px solid var(--pv-ink);
+    background: var(--pv-cream);
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-display);
+    font-size: 20px;
+    color: var(--pv-ink);
+  }
+  .style-opt:nth-child(1) .style-preview { background: var(--pv-cream); }
+  .style-opt:nth-child(2) .style-preview { background: var(--pv-yellow); }
+  .style-opt:nth-child(3) .style-preview { background: var(--pv-cyan); color: var(--pv-white); }
+  .style-opt:nth-child(4) .style-preview { background: var(--pv-purple); color: var(--pv-white); }
+
+  .style-opt .style-name {
+    font-family: var(--f-body); font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .style-opt .style-sub {
+    font-family: var(--f-mono); font-size: 9px;
+    color: var(--pv-muted);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+
+  /* Generate button */
+  .gen-btn {
+    width: 100%;
+    margin-top: 12px;
+    background: var(--pv-magenta); color: var(--pv-white);
+    padding: 14px;
+    border: 2px solid var(--pv-ink);
+    box-shadow: 4px 4px 0 var(--pv-ink);
+    font-family: var(--f-body); font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .gen-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--pv-ink);
+  }
+  .gen-btn:disabled {
+    background: var(--pv-rule); color: var(--pv-muted);
+    cursor: not-allowed;
+    box-shadow: 4px 4px 0 var(--pv-rule);
+    transform: none;
+  }
+  .gen-btn .spark {
+    font-family: var(--f-display);
+    font-size: 16px;
+  }
+
+  .gen-info {
+    margin-top: 8px;
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .gen-info b { color: var(--pv-magenta); }
+
+  /* Generated results grid */
+  .results-section { display: none; }
+  .results-section.has-results { display: block; }
+  .results-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-bottom: 12px;
+  }
+  .result-thumb {
+    aspect-ratio: 1;
+    background: var(--pv-cream);
+    border: 2px solid var(--pv-rule);
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .result-thumb:hover { border-color: var(--pv-ink); }
+  .result-thumb.selected {
+    border-color: var(--pv-magenta); border-width: 3px;
+    box-shadow: 3px 3px 0 var(--pv-magenta);
+    transform: translate(-1px, -1px);
+  }
+  .result-thumb.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 18px; height: 18px;
+    background: var(--pv-magenta); color: var(--pv-white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900;
+  }
+  .result-thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .result-placeholder {
+    font-family: var(--f-mono); font-size: 9px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--pv-muted); font-weight: 700;
+    text-align: center; padding: 6px;
+  }
+
+  /* Text input */
+  .text-input-wrap { }
+  .text-input-wrap input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    font-family: var(--f-body); font-size: 15px;
+    font-weight: 500;
+    transition: all 0.12s;
+  }
+  .text-input-wrap input:focus {
+    outline: none;
+    background: var(--pv-cream);
+    box-shadow: 3px 3px 0 var(--pv-magenta);
+    transform: translate(-2px, -2px);
+  }
+  .char-count {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+    margin-top: 6px; text-align: right;
+  }
+  .char-count.limit { color: var(--pv-magenta); }
+
+  /* Admin notice */
+  .admin-notice {
+    margin: 20px;
+    padding: 12px 14px;
+    background: rgba(10,10,10,0.04);
+    border: 1px dashed var(--pv-ink);
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-muted);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+  }
+  .admin-notice b {
+    color: var(--pv-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  /* ===== RIGHT SIDE: PRODUCT OPTIONS ===== */
+  .options-col { }
+  .step {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 6px 6px 0 var(--pv-ink);
+    padding: 24px;
+    margin-bottom: 14px;
+  }
+  .step-head {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--pv-rule);
+  }
+  .step-title {
+    font-family: var(--f-display); font-size: 18px;
+    letter-spacing: -0.02em;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .step-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--pv-ink); color: var(--pv-white);
+    font-family: var(--f-display); font-size: 12px;
+  }
+  .step-current {
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--pv-magenta); font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    background: var(--pv-white); color: var(--pv-ink);
+    padding: 9px 14px;
+    border: 1.5px solid var(--pv-rule);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .pill:hover { border-color: var(--pv-ink); background: var(--pv-cream); }
+  .pill.active {
+    background: var(--pv-ink); color: var(--pv-white);
+    border-color: var(--pv-ink);
+  }
+  .pill .delta {
+    font-size: 11px; color: var(--pv-muted);
+    font-weight: 500; margin-left: 6px;
+  }
+  .pill.active .delta { color: var(--pv-yellow); }
+
+  .qty-stepper {
+    display: flex; align-items: stretch;
+    border: 2px solid var(--pv-ink);
+    max-width: 200px;
+  }
+  .qty-stepper button {
+    background: var(--pv-white); border: none;
+    width: 48px; font-family: var(--f-display);
+    font-size: 20px; cursor: pointer;
+  }
+  .qty-stepper button:hover { background: var(--pv-yellow); }
+  .qty-stepper .qty-val {
+    flex: 1; text-align: center;
+    padding: 14px; font-family: var(--f-display);
+    font-size: 22px; letter-spacing: -0.02em;
+    background: var(--pv-cream);
+    border-left: 2px solid var(--pv-ink);
+    border-right: 2px solid var(--pv-ink);
+  }
+
+  /* Price box */
+  .price-box {
+    background: var(--pv-ink); color: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 6px 6px 0 var(--pv-magenta);
+    padding: 24px 28px;
+    margin-top: 8px;
+  }
+  .price-top {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed rgba(255,255,255,0.2);
+  }
+  .price-box .label {
+    font-family: var(--f-mono); font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .price-box .total {
+    font-family: var(--f-display); font-size: 48px;
+    line-height: 0.9; letter-spacing: -0.04em;
+    color: var(--pv-yellow);
+  }
+  .price-box .total .cents { color: rgba(255,221,0,0.5); font-size: 32px; }
+
+  .btn-add {
+    background: var(--pv-magenta); color: var(--pv-white);
+    width: 100%;
+    padding: 16px 24px; font-weight: 800;
+    border: 2px solid var(--pv-white);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    font-size: 14px; cursor: pointer;
+    font-family: var(--f-body);
+    margin-top: 18px;
+  }
+  .btn-add:hover { background: var(--pv-yellow); color: var(--pv-ink); }
+  .btn-add:disabled {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.4);
+    cursor: not-allowed;
+  }
+  .delivery-note {
+    margin-top: 14px; font-family: var(--f-mono); font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.04em; text-align: center;
+    padding: 8px; border: 1px dashed rgba(255,255,255,0.2);
+  }
+  .delivery-note b { color: var(--pv-yellow); }
+  .delivery-note.warn b { color: var(--pv-magenta); }
+
+  /* ---------- BELOW-FOLD SECTIONS ---------- */
+  .band {
+    padding: 72px 32px;
+    border-bottom: 2px solid var(--pv-ink);
+  }
+  .band-inner { max-width: 1400px; margin: 0 auto; }
+  .band-kicker {
+    font-family: var(--f-mono); font-size: 11px;
+    font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--pv-magenta);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .band-kicker::before {
+    content: ""; width: 24px; height: 2px; background: var(--pv-magenta);
+  }
+  .band h2 {
+    font-family: var(--f-display);
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 0.92; letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+  .band h2 .hl {
+    position: relative; display: inline-block;
+  }
+  .band h2 .hl::after {
+    content: ""; position: absolute;
+    bottom: 2px; left: -2%; width: 104%; height: 14px;
+    background: var(--pv-yellow); z-index: -1;
+    transform: skew(-6deg);
+  }
+  .band .band-lede {
+    font-size: 16px; color: var(--pv-muted);
+    max-width: 640px; margin-bottom: 40px;
+    font-weight: 500; line-height: 1.55;
+  }
+
+  /* OCCASION MATCHER */
+  .band.occasion-band { background: var(--pv-cream-warm); }
+  .occasion-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .occasion-card {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 5px 5px 0 var(--pv-ink);
+    padding: 24px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .occasion-card:nth-child(1) { transform: rotate(-0.5deg); }
+  .occasion-card:nth-child(2) { transform: rotate(0.4deg); margin-top: 12px; }
+  .occasion-card:nth-child(3) { transform: rotate(-0.3deg); }
+  .occasion-card:nth-child(4) { transform: rotate(0.6deg); }
+  .occasion-card:nth-child(5) { transform: rotate(-0.4deg); margin-top: 12px; }
+  .occasion-card:nth-child(6) { transform: rotate(0.5deg); }
+  .occasion-card:hover {
+    transform: rotate(0deg) translate(-3px, -3px);
+    box-shadow: 8px 8px 0 var(--pv-ink);
+  }
+  .occasion-card .occ-icon {
+    font-family: var(--f-display);
+    font-size: 28px;
+    width: 52px; height: 52px;
+    border: 2px solid var(--pv-ink);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .occasion-card:nth-child(1) .occ-icon { background: var(--pv-magenta); color: var(--pv-white); }
+  .occasion-card:nth-child(2) .occ-icon { background: var(--pv-yellow); color: var(--pv-ink); }
+  .occasion-card:nth-child(3) .occ-icon { background: var(--pv-cyan); color: var(--pv-white); }
+  .occasion-card:nth-child(4) .occ-icon { background: var(--pv-green); color: var(--pv-ink); }
+  .occasion-card:nth-child(5) .occ-icon { background: var(--pv-purple); color: var(--pv-white); }
+  .occasion-card:nth-child(6) .occ-icon { background: var(--pv-ink); color: var(--pv-yellow); }
+  .occasion-card h3 {
+    font-family: var(--f-display);
+    font-size: 20px; letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .occasion-card .occ-tip {
+    font-size: 13px; line-height: 1.55;
+    color: var(--pv-ink-soft); font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .occasion-card .occ-tip b {
+    background: var(--pv-yellow);
+    padding: 1px 4px; font-weight: 700;
+  }
+  .occasion-card .occ-style {
+    font-family: var(--f-mono); font-size: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--pv-rule);
+    color: var(--pv-magenta);
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  /* HOW IT WORKS — 4 step process */
+  .band.process-band {
+    background: var(--pv-ink); color: var(--pv-white);
+  }
+  .band.process-band .band-kicker { color: var(--pv-yellow); }
+  .band.process-band .band-kicker::before { background: var(--pv-yellow); }
+  .band.process-band h2 { color: var(--pv-white); }
+  .band.process-band h2 .hl::after { background: var(--pv-magenta); }
+  .band.process-band .band-lede { color: rgba(255,255,255,0.7); }
+
+  .process-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 20px; margin-top: 32px;
+  }
+  .process-step {
+    padding: 24px 20px;
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(255,255,255,0.15);
+    transition: all 0.15s;
+  }
+  .process-step:hover {
+    border-color: var(--pv-magenta);
+    background: rgba(236,0,140,0.08);
+  }
+  .process-step .step-num {
+    font-family: var(--f-display);
+    font-size: 40px; line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 16px;
+  }
+  .process-step:nth-child(1) .step-num { color: var(--pv-yellow); }
+  .process-step:nth-child(2) .step-num { color: var(--pv-magenta); }
+  .process-step:nth-child(3) .step-num { color: var(--pv-yellow); }
+  .process-step:nth-child(4) .step-num { color: var(--pv-magenta); }
+  .process-step h4 {
+    font-family: var(--f-display);
+    font-size: 18px; letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .process-step .time {
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--pv-yellow); font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .process-step p {
+    font-size: 13px; line-height: 1.5;
+    color: rgba(255,255,255,0.75);
+    font-weight: 500;
+  }
+
+  /* GALLERY */
+  .band.gallery-band { background: var(--pv-cream); }
+  .gallery {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+  .gal-item {
+    aspect-ratio: 1;
+    border: 2px solid var(--pv-ink);
+    box-shadow: 5px 5px 0 var(--pv-ink);
+    transition: all 0.15s;
+    overflow: hidden;
+  }
+  .gal-item:hover { transform: translate(-3px, -3px); box-shadow: 8px 8px 0 var(--pv-ink); }
+
+  /* SEO MAGAZINE — matching name cards product page */
+  .band.seo-band { background: var(--pv-white); }
+  .seo-title-row {
+    display: grid; grid-template-columns: auto 1fr;
+    gap: 24px; align-items: end;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--pv-ink);
+  }
+  .seo-issue-mark {
+    font-family: var(--f-mono); font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--pv-muted); font-weight: 700;
+    padding: 6px 10px;
+    border: 1.5px solid var(--pv-ink);
+    background: var(--pv-yellow);
+    align-self: start;
+    margin-top: 8px;
+  }
+  .seo-title-row h2 {
+    font-family: var(--f-display);
+    font-size: clamp(40px, 5vw, 68px);
+    line-height: 0.92; letter-spacing: -0.04em;
+  }
+  .seo-title-row h2 em {
+    font-style: normal; color: var(--pv-magenta);
+  }
+  .seo-intro-p {
+    font-size: 17px; line-height: 1.55;
+    color: var(--pv-muted);
+    max-width: 720px;
+    margin-bottom: 40px;
+    font-weight: 500;
+  }
+  .seo-intro-p b { color: var(--pv-ink); }
+  .seo-article {
+    display: grid;
+    grid-template-columns: 100px 1fr 280px;
+    gap: 40px;
+    padding: 40px 0;
+    border-bottom: 1px solid var(--pv-rule);
+    align-items: start;
+  }
+  .seo-article:last-child { border-bottom: none; }
+  .seo-article-num {
+    font-family: var(--f-display);
+    font-size: clamp(60px, 8vw, 96px);
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    color: var(--pv-magenta);
+  }
+  .seo-article-num .slash {
+    display: block;
+    width: 50px; height: 3px;
+    background: var(--pv-ink);
+    margin-top: 12px;
+  }
+  .seo-article-body h3 {
+    font-family: var(--f-display);
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+  .seo-article-body p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--pv-ink-soft);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .seo-article-body p b {
+    color: var(--pv-ink);
+    font-weight: 700;
+  }
+  .seo-side {
+    padding: 20px;
+    background: var(--pv-cream);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 4px 4px 0 var(--pv-ink);
+  }
+  .seo-side-label {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--pv-magenta);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--pv-rule);
+  }
+  .seo-side-pills {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .seo-side-pills span {
+    font-family: var(--f-mono); font-size: 10px;
+    padding: 5px 9px;
+    background: var(--pv-white);
+    border: 1px solid var(--pv-rule);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .seo-side-pills span.pop {
+    background: var(--pv-magenta); color: var(--pv-white);
+    border-color: var(--pv-magenta);
+  }
+  .seo-side-stat { text-align: center; padding: 8px 0; }
+  .seo-side-stat .big {
+    font-family: var(--f-display);
+    font-size: 56px;
+    line-height: 0.9; letter-spacing: -0.04em;
+    color: var(--pv-ink);
+    margin-bottom: 6px;
+  }
+  .seo-side-stat .big sup {
+    font-size: 20px;
+    color: var(--pv-magenta);
+    margin-left: 2px;
+  }
+  .seo-side-stat .small {
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--pv-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .seo-side-list { list-style: none; }
+  .seo-side-list li {
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--pv-rule);
+    font-size: 13px;
+    display: flex; justify-content: space-between;
+    font-family: var(--f-mono);
+    letter-spacing: 0.04em;
+  }
+  .seo-side-list li:last-child { border-bottom: none; }
+  .seo-side-list li span.val {
+    font-weight: 700; color: var(--pv-magenta);
+  }
+
+  /* FAQ */
+  .band.faq-band { background: var(--pv-cream); }
+  .faq { max-width: 800px; margin: 0 auto; }
+  .faq-item {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 4px 4px 0 var(--pv-ink);
+    margin-bottom: 12px;
+    transition: all 0.15s;
+  }
+  .faq-item:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--pv-ink); }
+  .faq-item summary {
+    font-family: var(--f-display); font-size: 18px;
+    letter-spacing: -0.01em; padding: 18px 22px;
+    cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: "+";
+    width: 32px; height: 32px;
+    background: var(--pv-magenta); color: var(--pv-white);
+    font-family: var(--f-display); font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .faq-item[open] summary::after { content: "×"; background: var(--pv-ink); }
+  .faq-item .answer {
+    padding: 0 22px 22px;
+    font-size: 14px; line-height: 1.6;
+    color: var(--pv-ink-soft); font-weight: 500;
+  }
+
+  /* MORE GIFTS */
+  .band.more-band { background: var(--pv-cream-warm); }
+  .more-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .more-card {
+    background: var(--pv-white);
+    border: 2px solid var(--pv-ink);
+    box-shadow: 6px 6px 0 var(--pv-ink);
+    overflow: hidden;
+    transition: all 0.15s;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+  }
+  .more-card:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--pv-ink); }
+  .more-card .m-img {
+    aspect-ratio: 1;
+    border-bottom: 2px solid var(--pv-ink);
+  }
+  .more-card .m-body { padding: 16px 18px; }
+  .more-card h4 {
+    font-family: var(--f-display); font-size: 18px;
+    letter-spacing: -0.02em; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .more-card .m-from {
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--pv-muted); letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .more-card .m-from .amt {
+    font-family: var(--f-display); color: var(--pv-magenta);
+    font-size: 16px; margin-left: 6px;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    background: var(--pv-ink); color: var(--pv-white);
+    padding: 80px 32px 32px;
+    border-top: 3px solid var(--pv-magenta);
+  }
+  .footer-inner {
+    max-width: 1560px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 56px;
+  }
+  .footer-brand .logo-img { filter: brightness(0) invert(1); height: 44px; margin-bottom: 20px; }
+  .footer-brand p {
+    font-size: 15px; line-height: 1.55;
+    color: rgba(255,255,255,0.75);
+    max-width: 340px; font-weight: 500;
+    margin-bottom: 20px;
+  }
+  .footer-col h4 {
+    font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--pv-yellow); margin-bottom: 20px; font-weight: 700;
+  }
+  .footer-col ul { list-style: none; }
+  .footer-col li {
+    margin-bottom: 12px; font-size: 14px;
+    color: rgba(255,255,255,0.85); line-height: 1.5;
+  }
+  .footer-col li a:hover { color: var(--pv-magenta); }
+  .footer-col li.value {
+    font-family: var(--f-mono); font-size: 12px;
+    color: rgba(255,255,255,0.65); letter-spacing: 0.02em;
+  }
+  .footer-col li.value b { color: var(--pv-white); font-weight: 600; }
+  .footer-bottom {
+    max-width: 1560px; margin: 56px auto 0;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+    font-family: var(--f-mono); font-size: 11px;
+    color: rgba(255,255,255,0.4); letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .footer-bottom .legal-links { display: flex; gap: 20px; }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .config-inner { grid-template-columns: 1fr; }
+    .preview-col { position: static; }
+    .hero-title-row { grid-template-columns: 1fr; align-items: start; }
+    .style-grid { grid-template-columns: 1fr 1fr; }
+    .announce { flex-direction: column; gap: 6px; font-size: 11px; }
+    .footer-inner { grid-template-columns: 1fr 1fr; gap: 32px; }
+    .occasion-grid { grid-template-columns: 1fr; }
+    .occasion-card:nth-child(n) { transform: none; margin-top: 0; }
+    .process-grid { grid-template-columns: 1fr 1fr; }
+    .gallery { grid-template-columns: 1fr 1fr; }
+    .seo-title-row { grid-template-columns: 1fr; align-items: start; }
+    .seo-article { grid-template-columns: 1fr; gap: 20px; }
+    .seo-article-num { font-size: 48px; }
+    .more-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="announce">
+  <span><span class="dot">●</span> Free SG delivery over <b>S$80</b></span>
+  <span>Gift wrap &amp; handwritten note available</span>
+  <span>5-day turnaround</span>
+</div>
+
+<header class="topbar">
+  <nav class="nav">
+    <a href="/" aria-label="Home"><img src="assets/logo-full.png" alt="PrintVolution" class="logo-img" onerror="this.style.display='none'"></a>
+    <div class="nav-links">
+      <a href="/print">Printing</a>
+      <a href="/gifts" class="active">Gifts</a>
+      <a href="/corporate">Corporate</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </div>
+    <div class="nav-cta">
+      <a href="/login" class="login">Sign in</a>
+      <a href="/cart" class="cart">Cart (0)</a>
+    </div>
+  </nav>
+</header>
+
+<div class="breadcrumb">
+  <div class="breadcrumb-inner">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/gifts">Gifts</a><span class="sep">/</span>
+    <span>LED Photo Base</span>
+  </div>
+</div>
+
+<main>
+
+<!-- HERO -->
+<section class="product-hero">
+  <div class="hero-inner">
+    <div class="hero-title-row">
+      <h1 class="hero-h1">LED Photo Base,<br>made <em>for the memory.</em></h1>
+      <div class="hero-meta">
+        <span>★ Most giftable</span>
+        <span class="dot">•</span>
+        <span>Ships in 5 days</span>
+        <span class="dot">•</span>
+        <span>From S$48</span>
+      </div>
+    </div>
+    <p class="hero-lede">Upload a photo, pick an art style, and our AI turns it into laser-ready line art. Warm LED base lights it up at night. Acrylic, walnut base, 5-day delivery across SG.</p>
+  </div>
+</section>
+
+<!-- CONFIGURATOR -->
+<section class="config">
+  <div class="config-inner">
+
+    <!-- LEFT: LIVE PREVIEW + COMPOSE -->
+    <div class="preview-col">
+
+      <div class="live-preview">
+        <div class="preview-head">
+          <span class="live-dot">Live Preview</span>
+          <div class="light-toggle">
+            <button class="active" data-light="off">Day</button>
+            <button data-light="on">✦ Night</button>
+          </div>
+        </div>
+        <div class="preview-stage" id="preview-stage">
+          <button class="preview-reset" id="reset-btn">Reset</button>
+
+          <div class="gen-loading" id="gen-loading">
+            <div class="loading-spinner"></div>
+            <div class="gen-loading-text">Generating your art…</div>
+          </div>
+
+          <div class="led-base">
+            <div class="acrylic">
+              <div class="engraved-art" id="engraved-art">
+                <div class="empty-state">
+                  <span>✦</span>
+                  Upload a photo<br>&amp; pick a style
+                </div>
+              </div>
+              <div class="engraved-text" id="engraved-text"></div>
+            </div>
+            <div class="led-wood"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compose-controls">
+
+        <!-- STEP A: UPLOAD -->
+        <div class="cc-section">
+          <div class="cc-section-head">
+            <span class="step-num"><span class="n">A</span> Upload Photo</span>
+          </div>
+
+          <label for="photo-input" class="photo-upload-area" id="photo-upload">
+            <div class="pu-icon">↑</div>
+            <h4>Upload your photo</h4>
+            <div class="pu-hint">JPG · PNG · HEIC · Up to 50MB</div>
+            <input type="file" id="photo-input" accept="image/*" style="display:none;">
+          </label>
+
+          <div class="photo-uploaded" id="photo-uploaded" style="display:none;">
+            <div class="thumb" id="photo-thumb"></div>
+            <div class="ph-info">
+              <div class="ph-name" id="photo-name">photo.jpg</div>
+              <div class="ph-status">✓ Ready to generate</div>
+            </div>
+            <button class="remove-btn" id="remove-photo">Remove</button>
+          </div>
+        </div>
+
+        <!-- STEP B: STYLE + GENERATE -->
+        <div class="cc-section">
+          <div class="cc-section-head">
+            <span class="step-num"><span class="n">B</span> Pick Art Style</span>
+            <span class="gen-count" id="gen-count">3 free regens left</span>
+          </div>
+
+          <div class="style-grid">
+            <div class="style-opt active" data-style="line">
+              <div class="style-preview">◎</div>
+              <div class="style-name">Line Art</div>
+              <div class="style-sub">Single stroke</div>
+            </div>
+            <div class="style-opt" data-style="silhouette">
+              <div class="style-preview">◆</div>
+              <div class="style-name">Silhouette</div>
+              <div class="style-sub">Bold shape</div>
+            </div>
+            <div class="style-opt" data-style="sketch">
+              <div class="style-preview">✎</div>
+              <div class="style-name">Sketch</div>
+              <div class="style-sub">Hatched pencil</div>
+            </div>
+            <div class="style-opt" data-style="geometric">
+              <div class="style-preview">▲</div>
+              <div class="style-name">Geometric</div>
+              <div class="style-sub">Low poly</div>
+            </div>
+          </div>
+
+          <button class="gen-btn" id="gen-btn" disabled>
+            <span class="spark">✦</span> Generate Art
+          </button>
+          <div class="gen-info">
+            <b>3 free regenerations</b> included with every order
+          </div>
+        </div>
+
+        <!-- STEP C: GENERATED RESULTS (shown after generation) -->
+        <div class="cc-section results-section" id="results-section">
+          <div class="cc-section-head">
+            <span class="step-num"><span class="n">C</span> Pick Your Favourite</span>
+          </div>
+          <div class="results-grid" id="results-grid">
+            <!-- populated by JS -->
+          </div>
+          <div class="gen-info">
+            Click any to preview. Generate more or pick your favourite.
+          </div>
+        </div>
+
+        <!-- STEP D: TEXT (OPTIONAL) -->
+        <div class="cc-section">
+          <div class="cc-section-head">
+            <span class="step-num"><span class="n">D</span> Add Text (Optional)</span>
+          </div>
+          <div class="text-input-wrap">
+            <input type="text" id="text-input" placeholder="e.g. Mum &amp; me, 2026" maxlength="32">
+            <div class="char-count" id="char-count">0 / 32</div>
+          </div>
+        </div>
+
+        <div class="admin-notice">
+          <b>Scaffold — AI generation simulated</b>
+          Replace the fake generate() in script with a real Replicate / Stability API call. Style prompts, regen counter limits, and final high-res vector output need admin wiring.
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT: PRODUCT OPTIONS -->
+    <div class="options-col">
+
+      <!-- 1. SIZE -->
+      <div class="step">
+        <div class="step-head">
+          <div class="step-title"><span class="num">1</span> Size</div>
+          <span class="step-current">Medium · 15 × 20cm</span>
+        </div>
+        <div class="pills">
+          <div class="pill">Small · 10×15cm <span class="delta">S$48</span></div>
+          <div class="pill active">Medium · 15×20cm <span class="delta">S$68</span></div>
+          <div class="pill">Large · 20×28cm <span class="delta">S$98</span></div>
+        </div>
+      </div>
+
+      <!-- 2. BASE MATERIAL -->
+      <div class="step">
+        <div class="step-head">
+          <div class="step-title"><span class="num">2</span> Base</div>
+          <span class="step-current">Walnut Wood</span>
+        </div>
+        <div class="pills">
+          <div class="pill active">Walnut Wood <span class="delta">Included</span></div>
+          <div class="pill">Oak Wood <span class="delta">+ S$6</span></div>
+          <div class="pill">Matte Black <span class="delta">+ S$8</span></div>
+        </div>
+      </div>
+
+      <!-- 3. LED COLOUR -->
+      <div class="step">
+        <div class="step-head">
+          <div class="step-title"><span class="num">3</span> LED Colour</div>
+          <span class="step-current">Warm White</span>
+        </div>
+        <div class="pills">
+          <div class="pill active">Warm White <span class="delta">Included</span></div>
+          <div class="pill">Cool White <span class="delta">Included</span></div>
+          <div class="pill">7-Colour Cycle <span class="delta">+ S$8</span></div>
+        </div>
+      </div>
+
+      <!-- 4. QUANTITY -->
+      <div class="step">
+        <div class="step-head">
+          <div class="step-title"><span class="num">4</span> Quantity</div>
+          <span class="step-current">1 base</span>
+        </div>
+        <div class="qty-stepper">
+          <button>−</button>
+          <span class="qty-val">1</span>
+          <button>+</button>
+        </div>
+      </div>
+
+      <!-- PRICE -->
+      <div class="price-box">
+        <div class="price-top">
+          <div>
+            <div class="label">Your Total · incl. 9% GST</div>
+            <div class="total">S$68<span class="cents">.00</span></div>
+          </div>
+        </div>
+        <button class="btn-add" id="btn-add" disabled>Upload Photo to Continue →</button>
+        <div class="delivery-note warn" id="delivery-note">
+          Upload a photo and generate art before ordering
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- OCCASION MATCHER -->
+<section class="band occasion-band">
+  <div class="band-inner">
+    <div class="band-kicker">Who's it for?</div>
+    <h2>Pick the <span class="hl">occasion</span>,<br>we'll help you nail it.</h2>
+    <p class="band-lede">Same LED base, different stories. Here's what customers actually order for each kind of gift.</p>
+
+    <div class="occasion-grid">
+
+      <div class="occasion-card">
+        <div class="occ-icon">♡</div>
+        <h3>Anniversary</h3>
+        <p class="occ-tip">Your <b>earliest photo together</b> works best. Line Art style keeps it timeless — hand-drawn feel.</p>
+        <div class="occ-style">Suggested: Line Art</div>
+      </div>
+
+      <div class="occasion-card">
+        <div class="occ-icon">♛</div>
+        <h3>Parents / Grandparents</h3>
+        <p class="occ-tip">Family portrait in <b>Silhouette style</b> — bold shapes read clearly from across the room, even for older eyes.</p>
+        <div class="occ-style">Suggested: Silhouette</div>
+      </div>
+
+      <div class="occasion-card">
+        <div class="occ-icon">✦</div>
+        <h3>Pet Memorial</h3>
+        <p class="occ-tip">A quiet tribute to a pet that's gone. <b>Sketch style</b> feels gentle and personal — not a photograph, a memory.</p>
+        <div class="occ-style">Suggested: Sketch</div>
+      </div>
+
+      <div class="occasion-card">
+        <div class="occ-icon">★</div>
+        <h3>Wedding Gift</h3>
+        <p class="occ-tip">The couple's <b>favourite photo together</b> with their wedding date engraved below. Large size looks best on mantelpieces.</p>
+        <div class="occ-style">Suggested: Line Art + Date</div>
+      </div>
+
+      <div class="occasion-card">
+        <div class="occ-icon">▲</div>
+        <h3>Corporate Award</h3>
+        <p class="occ-tip">Logo or building in <b>Geometric style</b>. Add "Employee of the Year 2026" below. Order 5+ for a team gift run.</p>
+        <div class="occ-style">Suggested: Geometric + Text</div>
+      </div>
+
+      <div class="occasion-card">
+        <div class="occ-icon">❋</div>
+        <h3>Just Because</h3>
+        <p class="occ-tip">No reason needed. <b>Random gifts hit different.</b> Any style works — pick what matches the photo's vibe.</p>
+        <div class="occ-style">Any style works</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="band process-band">
+  <div class="band-inner">
+    <div class="band-kicker">How it works</div>
+    <h2>From your <span class="hl">photo</span><br>to a glowing keepsake.</h2>
+    <p class="band-lede">AI transforms your photo into engrave-ready art. Our laser does the rest. Every step handled in Singapore.</p>
+
+    <div class="process-grid">
+      <div class="process-step">
+        <div class="step-num">01</div>
+        <h4>Upload &amp; Pick Style</h4>
+        <div class="time">2 minutes</div>
+        <p>Upload any clear photo. Choose from 4 engraving styles. Preview updates live as you pick.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">02</div>
+        <h4>AI Generates Art</h4>
+        <div class="time">10 seconds</div>
+        <p>Our AI converts your photo into laser-ready line art. 3 free regenerations included — pick your favourite.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">03</div>
+        <h4>Laser Engraving</h4>
+        <div class="time">3–4 days</div>
+        <p>We engrave on premium clear acrylic at our Paya Lebar shop. Every piece checked before shipping.</p>
+      </div>
+      <div class="process-step">
+        <div class="step-num">04</div>
+        <h4>Ship or Pickup</h4>
+        <div class="time">Next day · SG</div>
+        <p>Islandwide next-day delivery, free over S$80. Or collect at Paya Lebar Square day 5.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section class="band gallery-band">
+  <div class="band-inner">
+    <div class="band-kicker">Real LED bases, real reactions</div>
+    <h2>What <span class="hl">customers</span> have made.</h2>
+    <p class="band-lede">With permission. Photographed at night with lights on — the way they actually live in people's homes.</p>
+
+    <div class="gallery">
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 01</span></div></div>
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 02</span></div></div>
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 03</span></div></div>
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 04</span></div></div>
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 05</span></div></div>
+      <div class="gal-item"><div class="img-placeholder"><span class="ph-tag">LED Gift 06</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SEO MAGAZINE -->
+<section class="band seo-band">
+  <div class="band-inner">
+    <div class="seo-title-row">
+      <div class="seo-issue-mark">Issue №02 · The Gift Edit</div>
+      <h2>The <em>honest guide</em> to LED photo gifts.</h2>
+    </div>
+    <p class="seo-intro-p">
+      Custom LED photo bases have become one of Singapore's most popular personalised gifts — and for good reason. Unlike framed photos that fade or mugs that chip, a laser-engraved acrylic base with warm LED lighting becomes a permanent fixture in someone's home. Here's <b>everything worth knowing</b> before you order one.
+    </p>
+
+    <!-- ARTICLE 1 -->
+    <article class="seo-article">
+      <div class="seo-article-num">01<div class="slash"></div></div>
+      <div class="seo-article-body">
+        <h3>Why acrylic beats glass and wood.</h3>
+        <p>We get asked this a lot. <b>Glass engravings</b> look premium but break easily, weigh too much for LED bases, and the laser marks go cloudy over time. <b>Wood engravings</b> absorb the LED glow poorly — the light gets eaten by the grain, so the design barely shows at night.</p>
+        <p>Premium <b>clear cast acrylic</b> (what we use) is the sweet spot. It's light, durable, and the laser creates frosted marks that catch LED light beautifully. By day, it's a clean etched display. By night, the engraving glows like it's internally lit — because optically, it basically is.</p>
+      </div>
+      <div class="seo-side">
+        <div class="seo-side-label">Material Comparison</div>
+        <ul class="seo-side-list">
+          <li><span>Clear Acrylic</span><span class="val">★★★★★</span></li>
+          <li><span>Frosted Glass</span><span class="val">★★★</span></li>
+          <li><span>Walnut Wood</span><span class="val">★★</span></li>
+          <li><span>Metal Plate</span><span class="val">★★</span></li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- ARTICLE 2 -->
+    <article class="seo-article">
+      <div class="seo-article-num">02<div class="slash"></div></div>
+      <div class="seo-article-body">
+        <h3>What photos work best (and which don't).</h3>
+        <p>Laser engraving converts photos to <b>high-contrast line art</b>. That means photos with clear subject-background separation work brilliantly — a face against a plain wall, a pet against grass, a couple against sky. Messy backgrounds, very dark photos, or group shots where faces are small? They come out muddy.</p>
+        <p>Our AI does a decent job of cleaning up so-so photos, but it can't invent detail that isn't there. The <b>3 free regenerations</b> are there for a reason — try different styles if the first one doesn't feel right. If it still looks off, our team will email you before engraving rather than print something you won't love.</p>
+      </div>
+      <div class="seo-side">
+        <div class="seo-side-stat">
+          <div class="big">87<sup>%</sup></div>
+          <div class="small">customers accept their first generated result</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ARTICLE 3 -->
+    <article class="seo-article">
+      <div class="seo-article-num">03<div class="slash"></div></div>
+      <div class="seo-article-body">
+        <h3>Warm white vs cool white vs colour-cycling LED.</h3>
+        <p><b>Warm white</b> (what most of our customers pick) gives a candle-like amber glow — cozy, bedside-table vibes, flattering for skin tones and family photos. <b>Cool white</b> feels more modern and clinical, better for architectural subjects, logos, or geometric art styles. The 7-colour cycling option sounds fun but honestly reads as gimmicky for most gift contexts — skip unless it's for a kid's room.</p>
+        <p>All our LED bases run on USB-C or battery. No permanent wall installation, no electrician needed. Plug-and-play from the box.</p>
+      </div>
+      <div class="seo-side">
+        <div class="seo-side-label">Popularity by occasion</div>
+        <div class="seo-side-pills">
+          <span class="pop">Warm White 68%</span>
+          <span>Cool White 24%</span>
+          <span>Colour Cycle 8%</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ARTICLE 4 -->
+    <article class="seo-article">
+      <div class="seo-article-num">04<div class="slash"></div></div>
+      <div class="seo-article-body">
+        <h3>Getting it in time for the occasion.</h3>
+        <p>Standard turnaround is <b>5 working days from order to shipping</b>. That's: 1 day for us to review the AI-generated art, 3 days for laser engraving and base assembly, 1 day for ship preparation. Same-day courier across SG adds another 24 hours, so plan for a week from click to doorstep.</p>
+        <p>Need it faster for a birthday you forgot? <b>Order before 10am weekday</b>, pay the S$20 rush fee, collect at Paya Lebar in 48 hours. We've saved a lot of anniversaries this way — no judgement.</p>
+      </div>
+      <div class="seo-side">
+        <div class="seo-side-stat">
+          <div class="big">5<sup>days</sup></div>
+          <div class="small">Standard turnaround · Rush 48hr available</div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="band faq-band">
+  <div class="band-inner">
+    <div class="band-kicker">Before you order</div>
+    <h2>Good <span class="hl">questions.</span></h2>
+
+    <div class="faq">
+      <details class="faq-item">
+        <summary>What if I don't like any of the AI-generated results?</summary>
+        <div class="answer">You get 3 free regenerations per order. If you've used all 3 and still aren't happy, our design team will manually review your photo and adjust the art before engraving — at no extra cost. We'd rather slow down than engrave something you won't love.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Is the LED light bright enough to see during the day?</summary>
+        <div class="answer">The engraving is clearly visible during the day on its own — the LED adds night-time magic but isn't required to see the art. Warm white LED is subtle (candle-like glow), cool white is brighter. Both are designed to look good at night, not to light up a room.</div>
+      </details>
+      <details class="faq-item">
+        <summary>How is it powered?</summary>
+        <div class="answer">USB-C cable included (works with any phone charger or laptop port). Battery option available at +S$4 — lasts about 8 hours on a single AA charge. No wall installation, no electrician needed.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Can I use a photo with multiple people?</summary>
+        <div class="answer">Yes, but the engraving will be more abstract — individual facial features get simplified in laser art. Works great for couple shots or family groups of 3–4. For groups of 5+, we recommend sending us a photo where everyone's face is clearly visible and close together.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Do you do bulk orders for corporate gifts?</summary>
+        <div class="answer">Yes — bulk discount kicks in at 5 units. For 20+, we'll assign you an account manager who can handle direct shipping to each recipient with personalised engraving on each. <a href="/contact" style="color: var(--pv-magenta); font-weight: 700;">Get in touch</a> for a corporate quote.</div>
+      </details>
+      <details class="faq-item">
+        <summary>What's the difference in size options?</summary>
+        <div class="answer">Small (10×15cm) fits a bedside table or desk nicely. Medium (15×20cm, our most popular) works for living room shelves and mantelpieces. Large (20×28cm) is a statement piece — looks best in entryways or as a focal gift. All sizes use the same engraving detail.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- MORE GIFTS -->
+<section class="band more-band">
+  <div class="band-inner">
+    <div class="band-kicker">Also personalised</div>
+    <h2>More ways to <span class="hl">make it theirs.</span></h2>
+
+    <div class="more-grid">
+      <a href="/gifts/mugs" class="more-card">
+        <div class="m-img"><div class="img-placeholder"><span class="ph-tag">Custom Mugs</span></div></div>
+        <div class="m-body">
+          <h4>Custom Mugs</h4>
+          <div class="m-from">From <span class="amt">S$12</span></div>
+        </div>
+      </a>
+      <a href="/gifts/keychains" class="more-card">
+        <div class="m-img"><div class="img-placeholder"><span class="ph-tag">Photo Keychains</span></div></div>
+        <div class="m-body">
+          <h4>Photo Keychains</h4>
+          <div class="m-from">From <span class="amt">S$8</span></div>
+        </div>
+      </a>
+      <a href="/gifts/canvas" class="more-card">
+        <div class="m-img"><div class="img-placeholder"><span class="ph-tag">Canvas Prints</span></div></div>
+        <div class="m-body">
+          <h4>Canvas Prints</h4>
+          <div class="m-from">From <span class="amt">S$55</span></div>
+        </div>
+      </a>
+      <a href="/gifts/wood-plaques" class="more-card">
+        <div class="m-img"><div class="img-placeholder"><span class="ph-tag">Wood Plaques</span></div></div>
+        <div class="m-body">
+          <h4>Wood Plaques</h4>
+          <div class="m-from">From <span class="amt">S$38</span></div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="assets/logo-full.png" alt="PrintVolution" class="logo-img" onerror="this.style.display='none'">
+      <p>Singapore's friendliest print house. Printing services and personalised gifts, under one roof. Est. 2014.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="/about">About us</a></li>
+        <li><a href="/corporate">Corporate accounts</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="/contact">Contact us</a></li>
+        <li><a href="/faq">FAQs</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Visit the shop</h4>
+      <ul>
+        <li class="value"><b>Paya Lebar Square</b><br>#07-XX, Singapore 409051</li>
+        <li class="value">Mon–Fri <b>9am–7pm</b><br>Sat–Sun <b>10am–4pm</b></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 PrintVolution Pte Ltd</span>
+    <div class="legal-links">
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ==========================================
+  // LED BASE — AI GENERATION + LIVE PREVIEW
+  // ==========================================
+  (function() {
+    const state = {
+      photoDataUrl: null,
+      selectedStyle: 'line',
+      generations: [],       // array of { url, style }
+      selectedGenId: null,
+      regensLeft: 3,
+      totalGens: 0,
+    };
+
+    // DOM refs
+    const photoInput = document.getElementById('photo-input');
+    const photoUpload = document.getElementById('photo-upload');
+    const photoUploaded = document.getElementById('photo-uploaded');
+    const photoThumb = document.getElementById('photo-thumb');
+    const photoName = document.getElementById('photo-name');
+    const removePhoto = document.getElementById('remove-photo');
+
+    const engravedArt = document.getElementById('engraved-art');
+    const engravedText = document.getElementById('engraved-text');
+    const previewStage = document.getElementById('preview-stage');
+    const genLoading = document.getElementById('gen-loading');
+
+    const genBtn = document.getElementById('gen-btn');
+    const genCount = document.getElementById('gen-count');
+    const resultsSection = document.getElementById('results-section');
+    const resultsGrid = document.getElementById('results-grid');
+
+    const textInput = document.getElementById('text-input');
+    const charCount = document.getElementById('char-count');
+
+    const resetBtn = document.getElementById('reset-btn');
+    const btnAdd = document.getElementById('btn-add');
+    const deliveryNote = document.getElementById('delivery-note');
+
+    // ---- PHOTO UPLOAD ----
+    photoInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        state.photoDataUrl = ev.target.result;
+        photoThumb.style.backgroundImage = 'url(' + state.photoDataUrl + ')';
+        photoName.textContent = file.name;
+        photoUpload.style.display = 'none';
+        photoUploaded.style.display = 'flex';
+        genBtn.disabled = false;
+        // Show ghost of raw photo before gen
+        showRawPhotoGhost();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    removePhoto.addEventListener('click', function() {
+      resetAll();
+    });
+
+    function showRawPhotoGhost() {
+      engravedArt.innerHTML = '<img src="' + state.photoDataUrl + '" alt="" />';
+      engravedArt.classList.add('ghost');
+    }
+
+    // ---- STYLE SELECTION ----
+    document.querySelectorAll('.style-opt').forEach(opt => {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.style-opt').forEach(o => o.classList.toggle('active', o === this));
+        state.selectedStyle = this.dataset.style;
+      });
+    });
+
+    // ---- GENERATE (FAKE AI) ----
+    genBtn.addEventListener('click', function() {
+      if (!state.photoDataUrl || state.regensLeft <= 0) return;
+      generateFake();
+    });
+
+    function generateFake() {
+      // Show loading state
+      genLoading.classList.add('active');
+      genBtn.disabled = true;
+
+      // Simulate API latency (8-12 sec in real world, 1.5 sec for demo)
+      setTimeout(() => {
+        // TODO: REAL API CALL GOES HERE
+        // fetch('/api/generate', { method: 'POST', body: JSON.stringify({ photo: state.photoDataUrl, style: state.selectedStyle }) })
+        //   .then(res => res.json())
+        //   .then(data => applyGenerated(data.url))
+
+        // For demo: use the raw photo with a stylized CSS filter as fake "generated" output
+        const fakeResult = {
+          id: 'gen-' + Date.now(),
+          style: state.selectedStyle,
+          url: state.photoDataUrl,  // in production, this would be the AI-transformed image URL
+        };
+        state.generations.push(fakeResult);
+        state.totalGens++;
+        state.regensLeft = Math.max(0, 3 - (state.totalGens - 1));
+
+        // Auto-select the latest result
+        state.selectedGenId = fakeResult.id;
+
+        renderResults();
+        applySelectedGeneration();
+        updateGenCounter();
+
+        genLoading.classList.remove('active');
+        if (state.regensLeft > 0) {
+          genBtn.disabled = false;
+        } else {
+          genBtn.disabled = true;
+          genBtn.innerHTML = '<span class="spark">✓</span> Pick a favourite above';
+        }
+
+        // Enable add to cart
+        btnAdd.disabled = false;
+        btnAdd.textContent = 'Add to Cart →';
+        deliveryNote.classList.remove('warn');
+        deliveryNote.innerHTML = 'Ready by <b>Thu 24 Apr</b> · Ships or collect at Paya Lebar';
+
+      }, 1500);
+    }
+
+    function updateGenCounter() {
+      if (state.regensLeft === 0) {
+        genCount.textContent = 'No regens left';
+        genCount.style.color = 'var(--pv-muted)';
+      } else {
+        genCount.textContent = state.regensLeft + ' free regen' + (state.regensLeft === 1 ? '' : 's') + ' left';
+      }
+    }
+
+    function renderResults() {
+      resultsSection.classList.add('has-results');
+      resultsGrid.innerHTML = '';
+      state.generations.forEach(gen => {
+        const div = document.createElement('div');
+        div.className = 'result-thumb' + (gen.id === state.selectedGenId ? ' selected' : '');
+        div.dataset.genId = gen.id;
+        // Fake generated art: use the photo with CSS filter applied
+        const img = document.createElement('img');
+        img.src = gen.url;
+        img.style.filter = getFakeFilter(gen.style);
+        div.appendChild(img);
+        div.addEventListener('click', function() {
+          state.selectedGenId = gen.id;
+          document.querySelectorAll('.result-thumb').forEach(t => t.classList.toggle('selected', t.dataset.genId === gen.id));
+          applySelectedGeneration();
+        });
+        resultsGrid.appendChild(div);
+      });
+    }
+
+    function getFakeFilter(style) {
+      // Fake "AI art style" via CSS filters for demo purposes
+      const filters = {
+        line: 'grayscale(1) contrast(2.5) brightness(1.1)',
+        silhouette: 'grayscale(1) contrast(4) brightness(0.7)',
+        sketch: 'grayscale(1) contrast(1.8) brightness(1.2) sepia(0.2)',
+        geometric: 'grayscale(1) contrast(2.2) saturate(0.5) hue-rotate(20deg)',
+      };
+      return filters[style] || filters.line;
+    }
+
+    function applySelectedGeneration() {
+      const gen = state.generations.find(g => g.id === state.selectedGenId);
+      if (!gen) return;
+      engravedArt.classList.remove('ghost');
+      engravedArt.innerHTML = '<img src="' + gen.url + '" alt="" style="filter: ' + getFakeFilter(gen.style) + '" />';
+    }
+
+    // ---- TEXT ----
+    textInput.addEventListener('input', function() {
+      engravedText.textContent = this.value;
+      charCount.textContent = this.value.length + ' / 32';
+      charCount.classList.toggle('limit', this.value.length >= 28);
+    });
+
+    // ---- LIGHT TOGGLE ----
+    document.querySelectorAll('.light-toggle button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const light = this.dataset.light;
+        document.querySelectorAll('.light-toggle button').forEach(b => b.classList.toggle('active', b === this));
+        previewStage.classList.toggle('lights-on', light === 'on');
+      });
+    });
+
+    // ---- RESET ----
+    resetBtn.addEventListener('click', resetAll);
+
+    function resetAll() {
+      state.photoDataUrl = null;
+      state.generations = [];
+      state.selectedGenId = null;
+      state.regensLeft = 3;
+      state.totalGens = 0;
+      state.selectedStyle = 'line';
+
+      photoInput.value = '';
+      photoUpload.style.display = 'block';
+      photoUploaded.style.display = 'none';
+      engravedArt.innerHTML = '<div class="empty-state"><span>✦</span>Upload a photo<br>&amp; pick a style</div>';
+      engravedArt.classList.remove('ghost');
+      engravedText.textContent = '';
+      textInput.value = '';
+      charCount.textContent = '0 / 32';
+      charCount.classList.remove('limit');
+
+      resultsSection.classList.remove('has-results');
+      resultsGrid.innerHTML = '';
+
+      genBtn.disabled = true;
+      genBtn.innerHTML = '<span class="spark">✦</span> Generate Art';
+      updateGenCounter();
+
+      btnAdd.disabled = true;
+      btnAdd.textContent = 'Upload Photo to Continue →';
+      deliveryNote.classList.add('warn');
+      deliveryNote.innerHTML = 'Upload a photo and generate art before ordering';
+
+      // Reset style to line
+      document.querySelectorAll('.style-opt').forEach(o => o.classList.toggle('active', o.dataset.style === 'line'));
+    }
+  })();
+</script>
+
+</body>
+</html>

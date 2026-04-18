@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { GiftProductPage } from '@/components/gift/gift-product-page';
-import { getGiftProductBySlug, listTemplatesForProduct } from '@/lib/gifts/data';
+import { getGiftProductBySlug, listActiveGiftProducts, listTemplatesForProduct } from '@/lib/gifts/data';
 import { listPromptsForMode } from '@/lib/gifts/prompts';
 
 export const dynamic = 'force-dynamic';
@@ -21,9 +21,21 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function GiftPage({ params }: { params: { slug: string } }) {
   const product = await getGiftProductBySlug(params.slug);
   if (!product) notFound();
-  const [templates, prompts] = await Promise.all([
+  const [templates, prompts, allGifts] = await Promise.all([
     product.template_mode === 'none' ? Promise.resolve([]) : listTemplatesForProduct(product.id),
     product.mode === 'photo-resize' ? Promise.resolve([]) : listPromptsForMode(product.mode),
+    listActiveGiftProducts(),
   ]);
-  return <GiftProductPage product={product} templates={templates} prompts={prompts} />;
+  // Related: prefer same mode, exclude current, cap at 4.
+  const sameMode = allGifts.filter((g) => g.slug !== product.slug && g.mode === product.mode);
+  const otherMode = allGifts.filter((g) => g.slug !== product.slug && g.mode !== product.mode);
+  const relatedGifts = [...sameMode, ...otherMode].slice(0, 4);
+  return (
+    <GiftProductPage
+      product={product}
+      templates={templates}
+      prompts={prompts}
+      relatedGifts={relatedGifts}
+    />
+  );
 }
