@@ -16,7 +16,7 @@ async function queueGiftProduction(
   giftLines: Array<{ id: string; gift_product_id: string; source_asset_id: string | null; mode: string }>
 ) {
   for (const line of giftLines) {
-    runOne(line).catch((e) => console.error('[gift production] line failed', line.id, e));
+    runOne(line).catch(() => console.error('[gift production] line failed', line.id));
   }
 }
 
@@ -385,7 +385,7 @@ async function sendOrderEmails(payload: import('@/lib/email').OrderEmailPayload)
       const a = adminNewOrderEmail(payload);
       await sendEmail({ to: admin, subject: a.subject, html: a.html, replyTo: payload.customer_email });
     }
-  } catch (e) {
-    console.error('[order email] failed', e);
+  } catch {
+    console.error('[order email] failed');
   }
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/auth/admin-audit';
 
 const CouponSchema = z.object({
   id: z.string().uuid().optional(),
@@ -44,10 +45,12 @@ export async function saveCoupon(input: z.infer<typeof CouponSchema>) {
 }
 
 export async function deleteCoupon(id: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('coupons').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'coupon.delete', targetType: 'coupon', targetId: id });
   revalidatePath('/admin/promos');
   return { ok: true };
 }
@@ -88,10 +91,12 @@ export async function saveRule(input: z.infer<typeof RuleSchema>) {
 }
 
 export async function deleteRule(id: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('discount_rules').delete().eq('id', id);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'rule.delete', targetType: 'discount_rule', targetId: id });
   revalidatePath('/admin/promos');
   return { ok: true };
 }

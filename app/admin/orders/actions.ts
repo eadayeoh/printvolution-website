@@ -2,11 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/auth/admin-audit';
 
 const ALLOWED_STATUSES = ['pending', 'processing', 'ready', 'completed', 'cancelled'] as const;
 
 export async function updateOrderStatus(orderId: string, status: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   if (!ALLOWED_STATUSES.includes(status as any)) return { ok: false, error: 'Invalid status' };
 
   const supabase = createServiceClient();
@@ -21,6 +23,13 @@ export async function updateOrderStatus(orderId: string, status: string) {
     .update({ status })
     .eq('id', orderId);
   if (error) return { ok: false, error: error.message };
+
+  await logAdminAction(actor, {
+    action: 'order.status_update',
+    targetType: 'order',
+    targetId: orderId,
+    metadata: { from: before?.status, to: status },
+  });
 
   if (before && before.status !== status && ['processing', 'ready', 'completed', 'cancelled'].includes(status)) {
     void (async () => {
@@ -41,10 +50,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 export async function deleteOrder(orderId: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const supabase = createServiceClient();
   const { error } = await supabase.from('orders').delete().eq('id', orderId);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'order.delete', targetType: 'order', targetId: orderId });
   revalidatePath('/admin/orders');
   revalidatePath('/admin');
   return { ok: true };

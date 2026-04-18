@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/auth/admin-audit';
 
 const BundleSchema = z.object({
   name: z.string().min(2),
@@ -119,10 +120,12 @@ export async function createBundle(input: BundleUpdateInput) {
 }
 
 export async function deleteBundle(slug: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('bundles').delete().eq('slug', slug);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'bundle.delete', targetType: 'bundle', targetId: slug });
   revalidatePath('/admin/bundles');
   revalidatePath('/bundles');
   revalidatePath('/');

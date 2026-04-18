@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/auth/admin-audit';
 
 // Backwards-compat alias so existing call sites inside this file keep
 // working without a mass rename. Every exported action below calls
@@ -210,20 +211,24 @@ export async function createProduct(input: z.infer<typeof ProductCreateSchema>) 
 }
 
 export async function deleteProduct(slug: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('products').delete().eq('slug', slug);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'product.delete', targetType: 'product', targetId: slug });
   revalidatePath('/admin/products');
   revalidatePath('/shop');
   return { ok: true };
 }
 
 export async function toggleProductActive(slug: string, is_active: boolean) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   const sb = adminClient();
   const { error } = await sb.from('products').update({ is_active }).eq('slug', slug);
   if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, { action: 'product.toggle_active', targetType: 'product', targetId: slug, metadata: { is_active } });
   revalidatePath('/admin/products');
   revalidatePath('/shop');
   return { ok: true };

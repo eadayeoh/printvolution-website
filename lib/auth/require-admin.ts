@@ -27,7 +27,14 @@ export async function requireAdmin() {
   if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
     throw new Error('Admin only');
   }
-  return { sb, user, role: profile.role as 'admin' | 'staff' };
+  const role = profile.role as 'admin' | 'staff';
+  return {
+    sb,
+    user,
+    role,
+    // Ready-to-use actor object for admin_audit.
+    actor: { id: user.id, email: user.email ?? null, role },
+  };
 }
 
 /**

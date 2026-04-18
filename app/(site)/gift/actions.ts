@@ -43,8 +43,9 @@ export async function uploadAndPreviewGift(formData: FormData): Promise<
   try {
     return await uploadAndPreviewGiftInner(formData);
   } catch (e: any) {
-    console.error('[gift upload] uncaught error', e);
-    return { ok: false, error: e?.message || 'Server error during upload' };
+    // Log tag only — e may embed the product slug or storage path.
+    console.error('[gift upload] uncaught error');
+    return { ok: false, error: 'Server error during upload' };
   }
 }
 

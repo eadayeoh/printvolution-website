@@ -53,12 +53,14 @@ export async function sendEmail(input: SendInput): Promise<{ ok: boolean; id?: s
       bcc: input.bcc as any,
     });
     if (error) {
-      console.error('[email] send failed', error);
+      // Log tag + code only — provider error bodies can contain the
+      // recipient email address or raw SMTP replies.
+      console.error('[email] send failed', (error as any)?.statusCode ?? 'unknown');
       return { ok: false, error: error.message };
     }
     return { ok: true, id: data?.id };
   } catch (e: any) {
-    console.error('[email] threw', e);
+    console.error('[email] threw');
     return { ok: false, error: e?.message ?? 'unknown' };
   }
 }
