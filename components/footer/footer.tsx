@@ -1,176 +1,231 @@
 import Link from 'next/link';
-import { MessageCircle, MapPin, Phone, Clock, ArrowUpRight } from 'lucide-react';
+import { getGlobalSection } from '@/lib/data/page_content';
 
-export function Footer() {
+type BrandItem = { tagline?: string };
+type LinkItem = { label?: string; href?: string };
+type VisitItem = { kind?: string; label?: string; detail?: string; href?: string };
+type SocialItem = { label?: string; href?: string; aria?: string };
+
+export async function Footer() {
+  const [brandItems, companyItems, supportItems, visitItems, socialItems] = await Promise.all([
+    getGlobalSection('footer.brand') as Promise<BrandItem[]>,
+    getGlobalSection('footer.company') as Promise<LinkItem[]>,
+    getGlobalSection('footer.support') as Promise<LinkItem[]>,
+    getGlobalSection('footer.visit') as Promise<VisitItem[]>,
+    getGlobalSection('footer.social') as Promise<SocialItem[]>,
+  ]);
+
+  const tagline = brandItems[0]?.tagline ?? '';
+
   return (
-    <footer className="relative mt-24 overflow-hidden bg-ink text-white">
-      {/* CMYK stripe at top */}
-      <div className="grid h-1.5 grid-cols-4">
-        <div className="bg-cyan-400" />
-        <div className="bg-pink" />
-        <div className="bg-yellow-300" />
-        <div className="bg-black" />
-      </div>
-
-      {/* Big lockup + CTA */}
-      <div className="relative">
-        {/* Watermark */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-6 top-8 select-none text-[min(22vw,300px)] font-black leading-none tracking-[-0.06em] text-white/[0.04]"
-        >
-          Printvolution
-        </div>
-
-        <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-10 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
-            {/* Brand */}
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <div className="text-[26px] font-black leading-none">
-                  Print<span className="text-pink">volution</span>
-                </div>
-                <span className="rounded-full border border-white/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">
-                  SG
-                </span>
-              </div>
-              <p className="mb-5 max-w-sm text-sm leading-relaxed text-white/60">
-                Printing services and personalised gifts at Paya Lebar Square.
-                Honest pricing, sharp quality, people who pick up the phone.
-              </p>
-
-              <div className="space-y-2 text-[13px] text-white/70">
-                <div className="flex items-start gap-2">
-                  <MapPin size={14} className="mt-0.5 shrink-0 text-pink" />
-                  <a
-                    href="https://maps.google.com/?q=60+Paya+Lebar+Road+B1-35"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white"
-                  >
-                    60 Paya Lebar Road, #B1-35, S409051
-                  </a>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Phone size={14} className="mt-0.5 shrink-0 text-pink" />
-                  <a href="https://wa.me/6585533497" className="hover:text-white">+65 8553 3497</a>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock size={14} className="mt-0.5 shrink-0 text-pink" />
-                  <span>Mon–Sat · 10am – 7.30pm</span>
-                </div>
-              </div>
-
-              <div className="mt-5 flex gap-2">
-                <a
-                  href="https://www.instagram.com/printvolution/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition-colors hover:border-pink hover:bg-pink"
-                  aria-label="Instagram"
-                >
-                  <span className="text-[11px] font-black">IG</span>
-                </a>
-                <a
-                  href="https://wa.me/6585533497"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition-colors hover:border-pink hover:bg-pink"
-                  aria-label="WhatsApp"
-                >
-                  <MessageCircle size={16} />
-                </a>
-              </div>
-            </div>
-
-            {/* Print column */}
-            <FooterColumn title="Print">
-              <FooterLink href="/shop?category=advertising">Banners & Displays</FooterLink>
-              <FooterLink href="/shop?category=cards">Cards & Stationery</FooterLink>
-              <FooterLink href="/shop?category=books">Brochures</FooterLink>
-              <FooterLink href="/shop?category=stickers">Stickers</FooterLink>
-              <FooterLink href="/shop?category=wearables">Apparel</FooterLink>
-              <FooterLink href="/shop?category=packaging">Packaging</FooterLink>
-            </FooterColumn>
-
-            {/* Gifts column */}
-            <FooterColumn title="Gifts">
-              <FooterLink href="/gift/led-photo-frame">Photo Frames</FooterLink>
-              <FooterLink href="/gift/bar-necklace">Jewellery</FooterLink>
-              <FooterLink href="/gift/3d-bar-keychain">Keychains</FooterLink>
-              <FooterLink href="/gift/line-art-embroidery-shirt">Embroidery</FooterLink>
-              <FooterLink href="/gift/yeti-mug">Drinkware</FooterLink>
-              <FooterLink href="/gift/custom-cake-topper">Wedding</FooterLink>
-            </FooterColumn>
-
-            {/* Company column */}
-            <FooterColumn title="Company">
-              <FooterLink href="/about">About</FooterLink>
-              <FooterLink href="/bundles">Bundles</FooterLink>
-              <FooterLink href="/blog">Blog</FooterLink>
-              <FooterLink href="/membership">Membership</FooterLink>
-              <FooterLink href="/faq">FAQ</FooterLink>
-              <FooterLink href="/contact">Contact</FooterLink>
-            </FooterColumn>
-          </div>
-
-          {/* Giant call-to-action word */}
-          <Link
-            href="/contact"
-            className="group relative mt-16 block border-t border-white/10 pt-10"
+    <footer
+      style={{
+        background: 'var(--pv-ink)',
+        color: '#fff',
+        padding: '80px 24px 28px',
+        borderTop: '3px solid var(--pv-magenta)',
+      }}
+    >
+      <div
+        className="pv-footer-grid"
+        style={{
+          maxWidth: 1560,
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
+          gap: 48,
+        }}
+      >
+        {/* Brand */}
+        <div>
+          <div
+            style={{
+              fontFamily: 'var(--pv-f-display)',
+              fontSize: 28,
+              letterSpacing: '-0.02em',
+              marginBottom: 16,
+              color: '#fff',
+            }}
           >
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="text-[clamp(40px,7vw,96px)] font-black leading-[0.9] tracking-[-0.04em] transition-colors group-hover:text-pink">
-                Let&apos;s make something{' '}
-                <span className="italic font-serif font-normal text-pink group-hover:text-white">loud.</span>
-              </div>
-              <ArrowUpRight
-                size={60}
-                className="shrink-0 text-white transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-pink"
-                strokeWidth={1.5}
-              />
-            </div>
-            <div className="mt-2 text-sm text-white/50">
-              Walk in, WhatsApp us, or order online — we&apos;ll sort it out.
-            </div>
-          </Link>
-
-          {/* Bottom strip */}
-          <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-[11px] text-white/40">
-            <div>© {new Date().getFullYear()} Printvolution Pte Ltd. All rights reserved.</div>
-            <div className="flex items-center gap-5">
-              <span>Made in Singapore</span>
-              <span>·</span>
-              <span>SGD pricing</span>
-              <span>·</span>
-              <a href="https://wa.me/6585533497" target="_blank" rel="noopener noreferrer" className="hover:text-pink">WhatsApp 30-min reply</a>
-            </div>
+            <span style={{ color: 'var(--pv-magenta)' }}>Print</span>volution
           </div>
+          {tagline && (
+            <p
+              style={{
+                fontSize: 14,
+                lineHeight: 1.55,
+                color: 'rgba(255,255,255,0.72)',
+                maxWidth: 340,
+                margin: 0,
+                marginBottom: 20,
+              }}
+            >
+              {tagline}
+            </p>
+          )}
+          {socialItems.length > 0 && (
+            <div style={{ display: 'flex', gap: 10 }}>
+              {socialItems.map((s, i) =>
+                s.href ? (
+                  <a
+                    key={i}
+                    href={s.href}
+                    aria-label={s.aria ?? s.label ?? 'Social link'}
+                    target={s.href.startsWith('http') ? '_blank' : undefined}
+                    rel={s.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    className="pv-social-btn"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 13,
+                    }}
+                  >
+                    {s.label ?? ''}
+                  </a>
+                ) : null
+              )}
+            </div>
+          )}
+        </div>
+
+        <FooterColumn title="Company" items={companyItems} />
+        <FooterColumn title="Support" items={supportItems} />
+
+        {/* Visit column */}
+        <div>
+          <h4
+            style={{
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 11,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--pv-yellow)',
+              marginTop: 0,
+              marginBottom: 18,
+              fontWeight: 700,
+            }}
+          >
+            Visit the shop
+          </h4>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
+            {visitItems.map((v, i) => (
+              <li
+                key={i}
+                style={{
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 12,
+                  color: 'rgba(255,255,255,0.65)',
+                  letterSpacing: '0.02em',
+                  lineHeight: 1.5,
+                }}
+              >
+                {v.href ? (
+                  <a
+                    href={v.href}
+                    target={v.href.startsWith('http') ? '_blank' : undefined}
+                    rel={v.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    style={{ color: '#fff', fontWeight: 600 }}
+                  >
+                    {v.label}
+                  </a>
+                ) : (
+                  <b style={{ color: '#fff', fontWeight: 600 }}>{v.label}</b>
+                )}
+                {v.detail && (
+                  <>
+                    <br />
+                    {v.detail}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
+
+      <div
+        style={{
+          maxWidth: 1560,
+          margin: '56px auto 0',
+          paddingTop: 24,
+          borderTop: '1px solid rgba(255,255,255,0.12)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 16,
+          fontFamily: 'var(--pv-f-mono)',
+          fontSize: 11,
+          color: 'rgba(255,255,255,0.4)',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }}
+      >
+        <span>© {new Date().getFullYear()} Printvolution Pte Ltd</span>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <Link href="/faq">FAQ</Link>
+          <Link href="/contact">Contact</Link>
+        </div>
+      </div>
+
+      <style>{`
+        .pv-social-btn { transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+        .pv-social-btn:hover {
+          background: var(--pv-magenta);
+          border-color: var(--pv-magenta);
+          transform: translateY(-2px);
+        }
+        @media (max-width: 900px) {
+          .pv-footer-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 28px !important;
+          }
+        }
+        @media (max-width: 560px) {
+          .pv-footer-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </footer>
   );
 }
 
-function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+function FooterColumn({ title, items }: { title: string; items: { label?: string; href?: string }[] }) {
+  if (!items.length) return null;
   return (
     <div>
-      <h4 className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-pink">{title}</h4>
-      <ul className="space-y-2">{children}</ul>
-    </div>
-  );
-}
-
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className="group inline-flex items-center gap-1 text-sm text-white/65 transition-colors hover:text-white"
+      <h4
+        style={{
+          fontFamily: 'var(--pv-f-mono)',
+          fontSize: 11,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--pv-yellow)',
+          marginTop: 0,
+          marginBottom: 18,
+          fontWeight: 700,
+        }}
       >
-        <span className="h-1 w-1 rounded-full bg-pink/0 transition-colors group-hover:bg-pink" />
-        {children}
-      </Link>
-    </li>
+        {title}
+      </h4>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
+        {items.map((it, i) =>
+          it.href && it.label ? (
+            <li key={i} style={{ fontSize: 14 }}>
+              <Link href={it.href} style={{ color: 'rgba(255,255,255,0.85)' }}>
+                {it.label}
+              </Link>
+            </li>
+          ) : null
+        )}
+      </ul>
+    </div>
   );
 }
