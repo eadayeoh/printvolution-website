@@ -604,11 +604,7 @@ export function PaperChooser({
             className="pv-chooser-combos"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}
           >
-            {combos.map((c, ci) => {
-              const resolvedPicks = resolvePicksForPricing(c, configurator, ci);
-              const computedPrice = priceForPicks ? priceForPicks(resolvedPicks) : null;
-              const displayPrice = computedPrice ?? c.price ?? '';
-              return (
+            {combos.map((c, ci) => (
               <div
                 key={ci}
                 className="pv-chooser-combo-card"
@@ -689,7 +685,7 @@ export function PaperChooser({
                       Total incl. GST
                     </span>
                     <span style={{ fontFamily: 'var(--pv-f-display)', fontSize: 26, color: 'var(--pv-magenta)', letterSpacing: '-0.02em' }}>
-                      {displayPrice}
+                      {(priceForPicks && priceForPicks(resolvePicksForPricing(c, configurator, ci))) || c.price || ''}
                     </span>
                   </div>
                   <button
@@ -718,8 +714,7 @@ export function PaperChooser({
                   </button>
                 </div>
               </div>
-              );
-            })}
+            ))}
           </div>
         </div>
       </div>
