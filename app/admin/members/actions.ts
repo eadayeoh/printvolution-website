@@ -5,6 +5,29 @@ import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/auth/admin-audit';
 
 /**
+ * Save the admin-only notes field on a profile. Admin or staff may
+ * write. Audit every change.
+ */
+export async function updateMemberAdminNotes(profileId: string, notes: string) {
+  let actor;
+  try { actor = (await requireAdmin()).actor; } catch (e: any) { return { ok: false as const, error: e?.message ?? 'Forbidden' }; }
+  const clean = (notes ?? '').slice(0, 2000);
+
+  const sb = createServiceClient();
+  const { error } = await sb.from('profiles').update({ admin_notes: clean || null }).eq('id', profileId);
+  if (error) return { ok: false as const, error: error.message };
+
+  await logAdminAction(actor, {
+    action: 'profile.update_admin_notes',
+    targetType: 'profile',
+    targetId: profileId,
+    metadata: { length: clean.length },
+  });
+  revalidatePath(`/admin/members`);
+  return { ok: true as const };
+}
+
+/**
  * Delete one member (loyalty record). Does NOT delete the Supabase
  * auth user — the person can still sign in with that email, they
  * just lose their points history. If the customer asks for a full

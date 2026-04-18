@@ -87,39 +87,90 @@ export async function signUpWithPassword(input: { email: string; password: strin
  * (auth-linked) and mirrors name/phone onto public.members (email-keyed
  * loyalty record) so the two stay in sync.
  *
- * RLS on public.profiles allows `auth.uid() = id` updates for non-
- * sensitive fields (name, phone). Role is never updated through this
- * action — it's locked down server-side.
+ * RLS + the profiles_block_privileged_update trigger together enforce
+ * that role and admin_notes can never be touched through this action.
  */
-export async function updateMyProfile(input: { name: string; phone: string }) {
+export type ProfileInput = {
+  name: string;
+  phone?: string;
+  address_line1?: string;
+  address_line2?: string;
+  postal_code?: string;
+  country?: string;
+  company?: string;
+  telegram?: string;
+  line_id?: string;
+  wechat?: string;
+  date_of_birth?: string | null;   // ISO yyyy-mm-dd or null
+  marketing_opt_in?: boolean;
+  referral_source?: string;
+};
+
+const trimOrNull = (v: string | undefined, max: number) => {
+  const s = (v ?? '').trim();
+  if (!s) return null;
+  return s.slice(0, max);
+};
+
+export async function updateMyProfile(input: ProfileInput) {
   const name = (input.name ?? '').trim().slice(0, 100);
-  const phone = (input.phone ?? '').trim().slice(0, 30);
   if (!name) return { ok: false as const, error: 'Name is required' };
+
+  // Light validation: postal code is digits, DOB is sane, telegram
+  // handle doesn't include spaces. Everything else is free text.
+  const postal = trimOrNull(input.postal_code, 12);
+  if (postal && !/^[A-Za-z0-9\s-]{3,12}$/.test(postal)) {
+    return { ok: false as const, error: 'Postal code looks invalid' };
+  }
+  const dob = input.date_of_birth ? input.date_of_birth.trim() : null;
+  if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+    return { ok: false as const, error: 'Date of birth must be YYYY-MM-DD' };
+  }
+  if (dob) {
+    const t = Date.parse(dob);
+    if (Number.isNaN(t) || t > Date.now()) {
+      return { ok: false as const, error: 'Date of birth cannot be in the future' };
+    }
+  }
 
   const sb = createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { ok: false as const, error: 'Not signed in' };
 
-  // Update profile under user's own session (RLS-enforced).
-  const { error: profErr } = await sb
-    .from('profiles')
-    .update({ name: name || null, phone: phone || null })
-    .eq('id', user.id);
+  const patch = {
+    name,
+    phone: trimOrNull(input.phone, 30),
+    address_line1: trimOrNull(input.address_line1, 200),
+    address_line2: trimOrNull(input.address_line2, 200),
+    postal_code: postal,
+    country: trimOrNull(input.country, 60) ?? 'SG',
+    company: trimOrNull(input.company, 120),
+    telegram: trimOrNull(input.telegram, 80),
+    line_id: trimOrNull(input.line_id, 80),
+    wechat: trimOrNull(input.wechat, 80),
+    date_of_birth: dob || null,
+    marketing_opt_in: !!input.marketing_opt_in,
+    referral_source: trimOrNull(input.referral_source, 120),
+  };
+
+  // Update profile under user's own session (RLS + trigger enforced).
+  const { error: profErr } = await sb.from('profiles').update(patch).eq('id', user.id);
   if (profErr) return { ok: false as const, error: 'Could not save profile' };
 
-  // Mirror name/phone onto members (email match). Service role because
-  // members has no user_id column tying it to auth. Points/tier are
-  // guarded by the DB trigger.
+  // Mirror name/phone onto members (email match) so shipping labels
+  // stay correct if the customer updates their details. Points/tier
+  // are guarded by the DB trigger.
   if (user.email) {
     const svc = createServiceClient();
     await svc
       .from('members')
-      .update({ name: name || null, phone: phone || null })
+      .update({ name, phone: patch.phone })
       .eq('email', user.email);
   }
 
   revalidatePath('/account');
   revalidatePath('/account/profile');
+  revalidatePath('/admin/account');
   return { ok: true as const };
 }
 
