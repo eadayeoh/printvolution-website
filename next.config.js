@@ -28,7 +28,7 @@ const nextConfig = {
       `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://*.hit-pay.com`,
       "font-src 'self' data: https://fonts.gstatic.com",
       `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.hit-pay.com https://api.sandbox.hit-pay.com`,
-      "frame-src 'self' https://hit-pay.com https://*.hit-pay.com",
+      "frame-src 'self' https://hit-pay.com https://*.hit-pay.com https://www.google.com",
       "form-action 'self' https://hit-pay.com https://*.hit-pay.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
