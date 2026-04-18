@@ -82,9 +82,11 @@ export function HowWePrintEditor({
                 }}>Remove card</button>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[140px_1fr]">
+              <div className="grid gap-3">
+                {/* Image upload runs full-width so its internal preview +
+                    info-text flex layout has room to breathe. */}
                 <div>
-                  <span className={label}>Image (optional)</span>
+                  <span className={label}>Image (optional) — square. Leave empty to use the emoji below.</span>
                   <ImageUpload
                     value={c.icon_url ?? ''}
                     onChange={(url) => {
@@ -97,16 +99,23 @@ export function HowWePrintEditor({
                     size="sm"
                     label="Icon"
                   />
-                  <p className="mt-1 text-[10px] text-neutral-500">Square. Leave empty to use the emoji below.</p>
                 </div>
-                <div className="grid gap-2">
+
+                <div className="grid gap-3 md:grid-cols-[120px_1fr]">
                   <div>
-                    <span className={label}>Emoji / glyph (used when no image)</span>
-                    <input className={input} style={{ maxWidth: 120 }} value={c.emoji ?? ''} onChange={(e) => {
-                      const next = [...cards];
-                      next[i] = { ...next[i], emoji: e.target.value };
-                      commit(next);
-                    }} placeholder="✓" />
+                    <span className={label}>Emoji</span>
+                    <input
+                      className={input}
+                      value={c.emoji ?? ''}
+                      onChange={(e) => {
+                        const next = [...cards];
+                        next[i] = { ...next[i], emoji: e.target.value };
+                        commit(next);
+                      }}
+                      placeholder="✓"
+                      style={{ textAlign: 'center', fontSize: 18 }}
+                    />
+                    <p className="mt-1 text-[10px] text-neutral-500">Fallback when no image is set.</p>
                   </div>
                   <div>
                     <span className={label}>Title</span>
@@ -116,14 +125,15 @@ export function HowWePrintEditor({
                       commit(next);
                     }} placeholder="Pre-press file check" />
                   </div>
-                  <div>
-                    <span className={label}>Description</span>
-                    <textarea rows={2} className={input} value={c.desc ?? ''} onChange={(e) => {
-                      const next = [...cards];
-                      next[i] = { ...next[i], desc: e.target.value };
-                      commit(next);
-                    }} placeholder="We inspect every file before it hits the printer." />
-                  </div>
+                </div>
+
+                <div>
+                  <span className={label}>Description</span>
+                  <textarea rows={2} className={input} value={c.desc ?? ''} onChange={(e) => {
+                    const next = [...cards];
+                    next[i] = { ...next[i], desc: e.target.value };
+                    commit(next);
+                  }} placeholder="We inspect every file before it hits the printer." />
                 </div>
               </div>
             </div>
