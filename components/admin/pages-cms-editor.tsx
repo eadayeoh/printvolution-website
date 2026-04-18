@@ -55,42 +55,6 @@ export function PagesCmsEditor({
         <div className="space-y-6">
           <SectionEditor
             pageKey="home"
-            sectionKey="pain"
-            title="Pain points"
-            hint="Customer quotes on the homepage (dark section)."
-            initial={sections['home:pain'] ?? []}
-            fields={[
-              { key: 'q', label: 'Quote', type: 'text' },
-              { key: 'a', label: 'Answer', type: 'text' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="home"
-            sectionKey="steps"
-            title="How it works steps"
-            hint="The 4-step process grid."
-            initial={sections['home:steps'] ?? []}
-            fields={[
-              { key: 'title', label: 'Title', type: 'text' },
-              { key: 'desc', label: 'Description', type: 'textarea' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="home"
-            sectionKey="why"
-            title="Why us bullets (legacy)"
-            hint="Legacy section for the old homepage. Not shown on v4."
-            initial={sections['home:why'] ?? []}
-            fields={[
-              { key: 'title', label: 'Title', type: 'text' },
-              { key: 'desc', label: 'Description', type: 'textarea' },
-            ]}
-          />
-
-          <SectionHeader label="v4 sections" />
-
-          <SectionEditor
-            pageKey="home"
             sectionKey="hero.split"
             title="Split hero (Print | Gifts)"
             hint="Two items — one per side. side=print or side=gifts."
@@ -105,15 +69,6 @@ export function PagesCmsEditor({
               { key: 'cta_href', label: 'CTA URL', type: 'text' },
               { key: 'image_url', label: 'Image (URL or upload)', type: 'image' },
             ]}
-          />
-
-          <SectionEditor
-            pageKey="home"
-            sectionKey="ticker"
-            title="Ticker marquee"
-            hint="Horizontal scrolling labels (magenta bar)."
-            initial={sections['home:ticker'] ?? []}
-            fields={[{ key: 'text', label: 'Text', type: 'text' }]}
           />
 
           <SectionEditor
@@ -298,82 +253,6 @@ export function PagesCmsEditor({
 
       {tab === 'about' && (
         <div className="space-y-6">
-          <SectionEditor
-            pageKey="about"
-            sectionKey="hero"
-            title="Hero"
-            hint="The big banner at the top of /about — tag, headline, subtitle, and 4 stats."
-            initial={sections['about:hero'] ?? []}
-            fields={[
-              { key: 'tag', label: 'Tag (small uppercase above h1)', type: 'text' },
-              { key: 'h1', label: 'Headline', type: 'textarea' },
-              { key: 'sub', label: 'Subtitle', type: 'textarea' },
-              { key: 'stat1_n', label: 'Stat 1 — Number', type: 'text' },
-              { key: 'stat1_l', label: 'Stat 1 — Label', type: 'text' },
-              { key: 'stat2_n', label: 'Stat 2 — Number', type: 'text' },
-              { key: 'stat2_l', label: 'Stat 2 — Label', type: 'text' },
-              { key: 'stat3_n', label: 'Stat 3 — Number', type: 'text' },
-              { key: 'stat3_l', label: 'Stat 3 — Label', type: 'text' },
-              { key: 'stat4_n', label: 'Stat 4 — Number', type: 'text' },
-              { key: 'stat4_l', label: 'Stat 4 — Label', type: 'text' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="about"
-            sectionKey="story"
-            title="Our Story"
-            hint="Tag, headline, and story paragraphs."
-            initial={sections['about:story'] ?? []}
-            fields={[
-              { key: 'tag', label: 'Tag', type: 'text' },
-              { key: 'h2', label: 'Headline', type: 'textarea' },
-              { key: 'para1', label: 'Paragraph 1', type: 'textarea' },
-              { key: 'para2', label: 'Paragraph 2', type: 'textarea' },
-              { key: 'para3', label: 'Paragraph 3', type: 'textarea' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="about"
-            sectionKey="values"
-            title="Company values"
-            hint="About page 'What we value' cards."
-            initial={sections['about:values'] ?? []}
-            fields={[
-              { key: 'image_url', label: 'Icon image', type: 'image' },
-              { key: 'title', label: 'Title', type: 'text' },
-              { key: 'desc', label: 'Description', type: 'textarea' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="about"
-            sectionKey="clients"
-            title="Client types"
-            hint="About page 'Who we serve' cards."
-            initial={sections['about:clients'] ?? []}
-            fields={[
-              { key: 'image_url', label: 'Icon image', type: 'image' },
-              { key: 'title', label: 'Title', type: 'text' },
-              { key: 'desc', label: 'Description', type: 'textarea' },
-            ]}
-          />
-          <SectionEditor
-            pageKey="about"
-            sectionKey="cta"
-            title="Bottom CTA strip (legacy)"
-            hint="Legacy — not shown on the v6 /about page."
-            initial={sections['about:cta'] ?? []}
-            fields={[
-              { key: 'h2', label: 'Headline', type: 'text' },
-              { key: 'p', label: 'Paragraph', type: 'textarea' },
-              { key: 'btn1_label', label: 'Button 1 label', type: 'text' },
-              { key: 'btn1_href', label: 'Button 1 URL', type: 'text' },
-              { key: 'btn2_label', label: 'Button 2 label', type: 'text' },
-              { key: 'btn2_href', label: 'Button 2 URL', type: 'text' },
-            ]}
-          />
-
-          <SectionHeader label="v6 sections (live)" />
-
           <SectionEditor
             pageKey="about"
             sectionKey="hero.v6"

@@ -61,6 +61,11 @@ const ProductUpdateSchema = z.object({
   why_headline: z.string().nullable(),
   why_us: z.array(z.string()),
   image_url: z.string().nullable(),
+  // Admin-authored jsonb overrides for the per-product Paper Chooser and
+  // SEO Magazine sections. Null = component uses the generated default
+  // tailored to the product.
+  chooser: z.any().nullable(),
+  seo_magazine: z.any().nullable(),
   // nested
   pricing: PricingSchema.nullable(),
   configurator: z.array(ConfiguratorStepSchema),
@@ -106,6 +111,8 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
     h1: d.h1, h1em: d.h1em,
     intro: d.intro, why_headline: d.why_headline,
     why_us: d.why_us, image_url: d.image_url,
+    chooser: d.chooser ?? null,
+    seo_magazine: d.seo_magazine ?? null,
   }, { onConflict: 'product_id' });
 
   // 3. Pricing

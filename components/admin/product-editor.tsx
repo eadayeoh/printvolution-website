@@ -55,6 +55,17 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   const [whyHeadline, setWhyHeadline] = useState(product.extras?.why_headline ?? '');
   const [whyUs, setWhyUs] = useState((product.extras?.why_us ?? []).join('\n'));
   const [imageUrl, setImageUrl] = useState(product.extras?.image_url ?? '');
+  // Paper Chooser + SEO Magazine overrides — stored as JSON strings in the
+  // editor so admins can paste full structures. Empty = use the generated
+  // default tailored to this product's name + configurator.
+  const [chooserJson, setChooserJson] = useState(
+    product.extras?.chooser ? JSON.stringify(product.extras.chooser, null, 2) : '',
+  );
+  const [seoMagazineJson, setSeoMagazineJson] = useState(
+    product.extras?.seo_magazine ? JSON.stringify(product.extras.seo_magazine, null, 2) : '',
+  );
+  const [chooserErr, setChooserErr] = useState<string | null>(null);
+  const [seoMagazineErr, setSeoMagazineErr] = useState<string | null>(null);
 
   // Pricing (cents in backend, dollars in UI)
   const [pricingLabel, setPricingLabel] = useState(product.pricing?.label ?? 'Size');
@@ -74,6 +85,22 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
 
   async function handleSave() {
     setErr(null);
+    setChooserErr(null);
+    setSeoMagazineErr(null);
+
+    // Parse the JSON override fields — empty string is a null override
+    // (use generated default), invalid JSON blocks the save.
+    let chooserValue: any = null;
+    if (chooserJson.trim()) {
+      try { chooserValue = JSON.parse(chooserJson); }
+      catch (e: any) { setChooserErr('Invalid JSON: ' + e.message); return; }
+    }
+    let seoMagazineValue: any = null;
+    if (seoMagazineJson.trim()) {
+      try { seoMagazineValue = JSON.parse(seoMagazineJson); }
+      catch (e: any) { setSeoMagazineErr('Invalid JSON: ' + e.message); return; }
+    }
+
     startTransition(async () => {
       const input = {
         name, icon: icon || null, tagline: tagline || null,
@@ -90,6 +117,8 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         intro: intro || null, why_headline: whyHeadline || null,
         why_us: whyUs.split('\n').map((s) => s.trim()).filter(Boolean),
         image_url: imageUrl || null,
+        chooser: chooserValue,
+        seo_magazine: seoMagazineValue,
         pricing: {
           label: pricingLabel,
           configs: pricingConfigs,
@@ -300,6 +329,70 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             <p className="mt-1 text-[10px] text-neutral-500">
               Prefilled with the live default generated from the product name and lowest price. Edit freely — it&apos;s rendered as-is at the bottom of the product page and indexed by Google for long-tail keywords. Clear the field to revert to the auto-generated version.
             </p>
+          </div>
+
+          {/* Paper Chooser override ------------------------------------- */}
+          <div className="rounded border border-neutral-200 bg-neutral-50 p-4">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold text-ink">Paper Chooser — custom JSON</div>
+                <p className="text-[10px] text-neutral-500">
+                  Overrides the &quot;Find your perfect X&quot; widget. Leave empty to use the generated default.
+                  <br />
+                  Schema: <code>{`{ kicker, title, title_em, intro, questions: [...], combos: [...] }`}</code>
+                </p>
+              </div>
+              {chooserJson && (
+                <button
+                  type="button"
+                  onClick={() => { setChooserJson(''); setChooserErr(null); }}
+                  className="text-[10px] font-bold text-pink hover:underline"
+                >
+                  Clear (use default)
+                </button>
+              )}
+            </div>
+            <textarea
+              value={chooserJson}
+              onChange={(e) => { setChooserJson(e.target.value); setChooserErr(null); }}
+              rows={8}
+              placeholder='Leave empty to use the generated default.'
+              className={`${inputCls} font-mono text-[11px]`}
+              style={{ whiteSpace: 'pre' }}
+            />
+            {chooserErr && <p className="mt-1 text-[10px] font-bold text-red-600">{chooserErr}</p>}
+          </div>
+
+          {/* SEO Magazine override -------------------------------------- */}
+          <div className="rounded border border-neutral-200 bg-neutral-50 p-4">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold text-ink">SEO Magazine — custom JSON</div>
+                <p className="text-[10px] text-neutral-500">
+                  Overrides the long-form magazine-style block. Leave empty to use the generated default.
+                  <br />
+                  Schema: <code>{`{ issue_label, title, title_em, lede, articles: [{ num, title, body: [...], side: {...} }] }`}</code>
+                </p>
+              </div>
+              {seoMagazineJson && (
+                <button
+                  type="button"
+                  onClick={() => { setSeoMagazineJson(''); setSeoMagazineErr(null); }}
+                  className="text-[10px] font-bold text-pink hover:underline"
+                >
+                  Clear (use default)
+                </button>
+              )}
+            </div>
+            <textarea
+              value={seoMagazineJson}
+              onChange={(e) => { setSeoMagazineJson(e.target.value); setSeoMagazineErr(null); }}
+              rows={10}
+              placeholder='Leave empty to use the generated default.'
+              className={`${inputCls} font-mono text-[11px]`}
+              style={{ whiteSpace: 'pre' }}
+            />
+            {seoMagazineErr && <p className="mt-1 text-[10px] font-bold text-red-600">{seoMagazineErr}</p>}
           </div>
         </div>
       )}
