@@ -1767,7 +1767,6 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 html{background:var(--paper)}
 body{
   background:var(--paper)!important;
-  color:var(--ink)!important;
   font-family:var(--sans)!important;
   letter-spacing:-.01em;
   font-feature-settings:"ss01","ss02";
@@ -2432,7 +2431,6 @@ footer{background:var(--paper)!important;border-top:2.5px solid var(--ink)!impor
 html{background:var(--paper)}
 body{
   background:var(--paper)!important;
-  color:var(--ink)!important;
   font-family:var(--sans)!important;
   font-feature-settings:"ss01","cv11","zero";
   letter-spacing:-.005em;
@@ -2981,7 +2979,7 @@ footer{
   --y:#FFD100;
   --k:#0A0A0A;
 }
-html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
+html,body{background:#FFFFFF!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
 body::before{
   content:""!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:9998!important;
   background-image:radial-gradient(circle at center, rgba(10,10,10,.05) 1px, transparent 1.6px)!important;
@@ -8558,7 +8556,6 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 html{background:var(--paper)}
 body{
   background:var(--paper)!important;
-  color:var(--ink)!important;
   font-family:var(--sans)!important;
   letter-spacing:-.01em;
   font-feature-settings:"ss01","ss02";
@@ -9223,7 +9220,6 @@ footer{background:var(--paper)!important;border-top:2.5px solid var(--ink)!impor
 html{background:var(--paper)}
 body{
   background:var(--paper)!important;
-  color:var(--ink)!important;
   font-family:var(--sans)!important;
   font-feature-settings:"ss01","cv11","zero";
   letter-spacing:-.005em;
@@ -9772,7 +9768,7 @@ footer{
   --y:#FFD100;
   --k:#0A0A0A;
 }
-html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
+html,body{background:#FFFFFF!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
 body::before{
   content:""!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:9998!important;
   background-image:radial-gradient(circle at center, rgba(10,10,10,.05) 1px, transparent 1.6px)!important;
