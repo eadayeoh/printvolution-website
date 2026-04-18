@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPostBySlug, listPublishedPosts } from '@/lib/data/blog';
+import { sanitizeHtml } from '@/lib/security/sanitize';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,11 @@ export default async function BlogPostPage({ params }: Props) {
         <div
           className="blog-content"
           style={{ fontSize: 17, lineHeight: 1.75, color: '#222' }}
-          dangerouslySetInnerHTML={{ __html: post.content_html }}
+          // Blog HTML comes from WordPress XML imports + admin-pasted
+          // content. Sanitise at render so stored XSS (script tags,
+          // onerror attrs, javascript: URIs) can't fire in viewers'
+          // browsers even if the DB row was injected upstream.
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content_html) }}
         />
 
         {post.tags && post.tags.length > 0 && (
