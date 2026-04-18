@@ -1,63 +1,72 @@
 'use server';
 
-import { createClient as admClient } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/server';
+import { fileTypeFromBuffer } from 'file-type';
+import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 
 const BUCKET = 'product-images';
 
-function serviceClient() {
-  return admClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+// Magic-byte allow list. We accept SVG only via the explicit header
+// sniff below because file-type doesn't detect XML-based formats.
+const ALLOWED_IMAGE_MIMES = new Set<string>([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+]);
+
+function looksLikeSvg(bytes: Uint8Array): boolean {
+  // Accept first 1 KB as ASCII and check for the SVG root tag. SVGs
+  // often have an XML prolog / DOCTYPE / BOM, so we search anywhere in
+  // the prefix rather than requiring it at byte 0.
+  const head = new TextDecoder('utf-8', { fatal: false }).decode(bytes.subarray(0, 1024)).toLowerCase();
+  return /<svg[\s>]/.test(head);
 }
 
 /**
- * Upload a file to Supabase Storage and return its public URL.
- * Called from admin-only forms. Requires the current user to have admin role.
+ * Upload an image to Supabase Storage and return its public URL.
+ *
+ * Security posture:
+ *   1. requireAdmin() before touching the service client.
+ *   2. Reject by size (20 MB) and by *magic bytes* — the browser's
+ *      file.type header is advisory. Detecting the real MIME from the
+ *      bytes blocks HTML / JS disguised as `image/jpeg` that a CDN
+ *      could later serve with the wrong Content-Type.
+ *   3. Generate the object key server-side from a timestamp + random
+ *      suffix. We never concatenate the client's filename into the
+ *      bucket path, so no path-traversal.
  */
-export async function uploadProductImage(formData: FormData): Promise<{ ok: boolean; url?: string; error?: string }> {
-  // Auth check — only admin can upload
-  const userSb = createClient();
-  const { data: { user } } = await userSb.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in' };
-
-  const { data: profile } = await userSb
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
-    return { ok: false, error: 'Admin/staff only' };
-  }
+export async function uploadProductImage(
+  formData: FormData
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
 
   const file = formData.get('file');
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
   if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'File too large (max 20MB)' };
 
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-  if (!allowed.includes(file.type)) {
-    return { ok: false, error: `File type ${file.type} not allowed` };
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  // Magic-byte sniff. Falls back to SVG XML detection.
+  const detected = await fileTypeFromBuffer(bytes);
+  const actualMime = detected?.mime ?? (looksLikeSvg(bytes) ? 'image/svg+xml' : null);
+  const actualExt = detected?.ext ?? (actualMime === 'image/svg+xml' ? 'svg' : null);
+
+  if (!actualMime || (!ALLOWED_IMAGE_MIMES.has(actualMime) && actualMime !== 'image/svg+xml')) {
+    return { ok: false, error: `File content is not an image we accept` };
   }
 
-  // Generate a unique filename
-  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const prefix = (formData.get('prefix') || 'img').toString().replace(/[^a-zA-Z0-9_-]/g, '');
-  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const prefix = (formData.get('prefix') || 'img').toString().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${actualExt}`;
 
-  const sb = serviceClient();
-  const arrayBuffer = await file.arrayBuffer();
+  const sb = createServiceClient();
   const { error: upErr } = await sb.storage
     .from(BUCKET)
-    .upload(filename, new Uint8Array(arrayBuffer), {
-      contentType: file.type,
+    .upload(filename, bytes, {
+      contentType: actualMime,
       cacheControl: '3600',
       upsert: false,
     });
 
-  if (upErr) return { ok: false, error: upErr.message };
+  if (upErr) return { ok: false, error: 'Upload failed' };
 
   const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(filename);
   return { ok: true, url: urlData.publicUrl };

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient as admClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { sanitizeHtml } from '@/lib/security/sanitize';
 
 const BLOG_BUCKET = 'blog-images';
 
@@ -240,7 +241,7 @@ export async function importFromWordPress(
           slug,
           title,
           excerpt: excerpt || null,
-          content_html: contentHtml,
+          content_html: sanitizeHtml(contentHtml),
           featured_image_url: featuredUrl,
           author,
           tags,
