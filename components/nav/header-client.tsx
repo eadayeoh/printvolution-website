@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import { Menu, ShoppingCart, X } from 'lucide-react';
+import { Menu, Settings, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
 import type { NavItem, MegaMenuSection, ProductLookup } from '@/lib/data/navigation-types';
 import { productHref } from '@/lib/data/navigation-types';
@@ -13,9 +13,10 @@ type Props = {
   mega: Record<string, MegaMenuSection[]>;
   productRoutes: ProductLookup;
   settings?: SiteSettings;
+  isAdmin?: boolean;
 };
 
-export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
+export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = false }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMega, setOpenMega] = useState<string | null>(null);
   const count = useCart((s) => s.count());
@@ -138,6 +139,31 @@ export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
 
           {/* Right CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="pv-header-admin"
+                aria-label="Admin dashboard"
+                title="Admin dashboard"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'var(--pv-yellow)',
+                  color: 'var(--pv-ink)',
+                  border: '2px solid var(--pv-ink)',
+                  padding: '6px 10px',
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                <Settings size={12} />
+                Admin
+              </Link>
+            )}
             <Link
               href="/account"
               className="pv-header-account"
@@ -350,13 +376,20 @@ export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
             >
               Sign in
             </Link>
-            <Link
-              href="/admin"
-              onClick={() => setMobileOpen(false)}
-              style={{ padding: '10px 0', fontSize: 13, color: 'var(--pv-muted)' }}
-            >
-              Admin
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  padding: '10px 0',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: 'var(--pv-magenta)',
+                }}
+              >
+                Admin dashboard →
+              </Link>
+            )}
           </div>
         </div>
       )}
