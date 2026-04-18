@@ -1,0 +1,53 @@
+# Dependabot — weekly dependency + security updates.
+#
+# Opens PRs against main for:
+#   - npm packages (grouped — we don't want 40 PRs a week)
+#   - GitHub Actions versions
+#
+# Security updates (GHSA advisories) are always opened immediately
+# regardless of schedule, per GitHub defaults. No config needed.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:00'
+      timezone: Asia/Singapore
+    open-pull-requests-limit: 5
+    labels: [deps]
+    groups:
+      next-core:
+        patterns:
+          - 'next'
+          - 'react'
+          - 'react-dom'
+      supabase:
+        patterns:
+          - '@supabase/*'
+      types:
+        patterns:
+          - '@types/*'
+          - 'typescript'
+      ui:
+        patterns:
+          - '@dnd-kit/*'
+          - 'lucide-react'
+          - 'react-easy-crop'
+          - 'react-hook-form'
+    ignore:
+      # Pin major versions — we upgrade those manually.
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:00'
+      timezone: Asia/Singapore
+    labels: [deps, ci]

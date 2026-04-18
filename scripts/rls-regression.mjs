@@ -13,9 +13,20 @@
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
-for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
-  const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
-  if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+// Local dev: hydrate env from .env.local if it exists.
+// CI: NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY come from GitHub secrets.
+try {
+  for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
+} catch {
+  // no .env.local — rely on process.env (CI path)
+}
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  process.exit(2);
 }
 
 const anon = createClient(
