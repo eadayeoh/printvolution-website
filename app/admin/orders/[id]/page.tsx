@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getOrderById } from '@/lib/data/admin';
-import { formatSGD } from '@/lib/utils';
+import { formatSGD, isImageUrl } from '@/lib/utils';
 import { OrderStatusUpdater } from '@/components/admin/order-status-updater';
 import { GiftOrderLine } from '@/components/admin/gift-order-line';
 
@@ -48,7 +48,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               {(order.order_items ?? []).map((item: any) => (
                 <div key={item.id} className="flex gap-4 p-4">
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-neutral-50 text-3xl">
-                    {item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/')) ? (
+                    {isImageUrl(item.icon) ? (
                       <img src={item.icon} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <span>{item.icon ?? '📦'}</span>

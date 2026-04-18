@@ -1,5 +1,6 @@
 import 'server-only';
 import { Resend } from 'resend';
+import { formatSGD } from '@/lib/utils';
 
 /**
  * Thin wrapper around Resend.
@@ -109,9 +110,6 @@ function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
-function fmtSGD(cents: number): string {
-  return 'S$' + (cents / 100).toFixed(2);
-}
 
 export type OrderEmailItem = {
   product_name: string;
@@ -144,7 +142,7 @@ function itemsTable(items: OrderEmailItem[]): string {
           <div style="font-size:11px;color:#888;margin-top:2px;">Qty ${it.qty}</div>
         </td>
         <td align="right" style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;font-weight:700;color:${BRAND_PINK};white-space:nowrap;">
-          ${fmtSGD(it.line_total_cents)}
+          ${formatSGD(it.line_total_cents)}
         </td>
       </tr>
     `).join('')}
@@ -164,9 +162,9 @@ export function customerOrderConfirmationEmail(p: OrderEmailPayload): { subject:
     <div style="background:#fafaf7;border-radius:10px;padding:16px;margin:18px 0;">
       ${itemsTable(p.items)}
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td style="font-size:12px;color:#666;padding:4px 0;">Subtotal</td><td align="right" style="font-size:12px;color:#666;padding:4px 0;">${fmtSGD(p.subtotal_cents)}</td></tr>
-        <tr><td style="font-size:12px;color:#666;padding:4px 0;">${p.delivery_method === 'pickup' ? 'Pickup' : 'Delivery'}</td><td align="right" style="font-size:12px;color:#666;padding:4px 0;">${p.delivery_cents > 0 ? fmtSGD(p.delivery_cents) : 'Free'}</td></tr>
-        <tr><td style="font-size:15px;font-weight:900;color:${BRAND_INK};padding:8px 0 0;border-top:1px solid #ddd;">Total</td><td align="right" style="font-size:15px;font-weight:900;color:${BRAND_PINK};padding:8px 0 0;border-top:1px solid #ddd;">${fmtSGD(p.total_cents)}</td></tr>
+        <tr><td style="font-size:12px;color:#666;padding:4px 0;">Subtotal</td><td align="right" style="font-size:12px;color:#666;padding:4px 0;">${formatSGD(p.subtotal_cents)}</td></tr>
+        <tr><td style="font-size:12px;color:#666;padding:4px 0;">${p.delivery_method === 'pickup' ? 'Pickup' : 'Delivery'}</td><td align="right" style="font-size:12px;color:#666;padding:4px 0;">${p.delivery_cents > 0 ? formatSGD(p.delivery_cents) : 'Free'}</td></tr>
+        <tr><td style="font-size:15px;font-weight:900;color:${BRAND_INK};padding:8px 0 0;border-top:1px solid #ddd;">Total</td><td align="right" style="font-size:15px;font-weight:900;color:${BRAND_PINK};padding:8px 0 0;border-top:1px solid #ddd;">${formatSGD(p.total_cents)}</td></tr>
       </table>
     </div>
 
@@ -190,7 +188,7 @@ export function customerOrderConfirmationEmail(p: OrderEmailPayload): { subject:
 }
 
 export function adminNewOrderEmail(p: OrderEmailPayload): { subject: string; html: string } {
-  const subject = `🔔 New order ${p.order_number} — ${fmtSGD(p.total_cents)}`;
+  const subject = `🔔 New order ${p.order_number} — ${formatSGD(p.total_cents)}`;
   const body = `
     <h1 style="font-size:20px;font-weight:900;margin:0 0 8px;color:${BRAND_INK};">New order: ${escapeHtml(p.order_number)}</h1>
     <p style="font-size:13px;color:#555;margin:0 0 4px;">
@@ -204,7 +202,7 @@ export function adminNewOrderEmail(p: OrderEmailPayload): { subject: string; htm
     <div style="background:#fafaf7;border-radius:10px;padding:16px;margin:18px 0;">
       ${itemsTable(p.items)}
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td style="font-size:15px;font-weight:900;color:${BRAND_INK};padding:8px 0 0;">Total</td><td align="right" style="font-size:15px;font-weight:900;color:${BRAND_PINK};padding:8px 0 0;">${fmtSGD(p.total_cents)}</td></tr>
+        <tr><td style="font-size:15px;font-weight:900;color:${BRAND_INK};padding:8px 0 0;">Total</td><td align="right" style="font-size:15px;font-weight:900;color:${BRAND_PINK};padding:8px 0 0;">${formatSGD(p.total_cents)}</td></tr>
       </table>
     </div>
 

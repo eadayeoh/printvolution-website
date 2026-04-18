@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { formatSGD } from '@/lib/utils';
+import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
 import type { ProductDetail } from '@/lib/data/products';
@@ -221,7 +221,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.pricing, product.configurator, colIdx, cfgState, visibleSteps]);
 
-  const iconIsUrl = !!product.icon && (product.icon.startsWith('http') || product.icon.startsWith('/'));
+  const iconIsUrl = isImageUrl(product.icon);
   // Hero banner is driven by product_extras.image_url only. The thumbnail
   // (product.icon) is kept out of the hero so every product gets the same
   // pink gradient + big-word treatment unless an explicit banner is set.
@@ -314,7 +314,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
           transition: 'transform .25s ease',
         }}
       >
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ maxWidth: 1320, margin: '0 auto', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             {heroImg ? (
               <img src={heroImg} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />

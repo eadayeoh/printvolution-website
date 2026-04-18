@@ -17,3 +17,14 @@ export function slugify(str: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'item';
 }
+
+/**
+ * True if `s` is a URL we should render as an <img> (vs. treating it as
+ * an emoji / short label). Historical: the `products.icon` column has
+ * held either "🎪" or a full https URL; this helper replaces the
+ * `s.startsWith('http') || s.startsWith('/')` check scattered across
+ * a few callers.
+ */
+export function isImageUrl(s: string | null | undefined): s is string {
+  return !!s && (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/'));
+}

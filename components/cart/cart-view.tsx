@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
-import { formatSGD } from '@/lib/utils';
+import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
 export function CartView() {
@@ -49,7 +49,7 @@ export function CartView() {
                 {item.gift_image_url ? (
                   // Gift: show the customer's configured/transformed preview
                   <img src={item.gift_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : item.icon && (item.icon.startsWith('http') || item.icon.startsWith('/')) ? (
+                ) : isImageUrl(item.icon) ? (
                   // Print product with uploaded thumbnail
                   <img src={item.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
