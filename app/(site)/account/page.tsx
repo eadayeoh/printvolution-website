@@ -42,7 +42,20 @@ export default async function AccountPage() {
             Hi, {profile?.name || email.split('@')[0]}.
           </h1>
         </div>
-        <SignOutButton />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Link
+            href="/account/profile"
+            style={{
+              fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
+              padding: '10px 18px', borderRadius: 999,
+              border: '1.5px solid rgba(233,30,140,0.3)',
+              color: '#E91E8C', textDecoration: 'none',
+            }}
+          >
+            Edit profile
+          </Link>
+          <SignOutButton />
+        </div>
       </div>
 
       {/* Summary cards */}
