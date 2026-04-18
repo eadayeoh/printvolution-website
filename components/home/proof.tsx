@@ -82,6 +82,7 @@ export function Proof({
                 lineHeight: 1,
                 letterSpacing: '-0.03em',
                 margin: '24px 0',
+                color: '#fff',
               }}
             >
               &ldquo;{renderHighlight(quote.text, { underlineHeight: 18 })}&rdquo;

@@ -28,6 +28,7 @@ export function FinalCta({ item }: { item: FinalCtaItem | null }) {
           letterSpacing: '-0.04em',
           margin: '0 auto 20px',
           maxWidth: 1100,
+          color: '#fff',
         }}
       >
         {item.headline}{' '}

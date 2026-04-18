@@ -1116,6 +1116,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   margin: 0,
                   marginBottom: 40,
                   lineHeight: 1.1,
+                  color: '#fff',
                 }}
                 dangerouslySetInnerHTML={{ __html: whyHeadlineHtml }}
               />
@@ -1128,6 +1129,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   margin: 0,
                   marginBottom: 40,
                   lineHeight: 1.1,
+                  color: '#fff',
                 }}
               >
                 Why buyers <span style={{ color: 'var(--pv-magenta)' }}>come back.</span>

@@ -5,7 +5,7 @@
 
 :root{
   --serif:'Fraunces',Georgia,serif;
-  --sans:'DM Sans','Helvetica Neue',Arial,sans-serif;
+  --sans:Archivo,'Helvetica Neue',Arial,sans-serif;
   --pink:#E91E8C;
   --pink-dark:#C4157A;
   --ink:#0D0D0D;
@@ -1746,9 +1746,9 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 
 
 :root,html,body{
-  --serif:'Unbounded',-apple-system,system-ui,sans-serif;
-  --sans:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif;
-  --mono:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif;
+  --serif:"Archivo Black",-apple-system,system-ui,sans-serif;
+  --sans:Archivo,-apple-system,system-ui,sans-serif;
+  --mono:Archivo,-apple-system,system-ui,sans-serif;
   --c:#00B8D9;
   --m:#EC1C7D;
   --m-dark:#C4155A;
@@ -2415,7 +2415,7 @@ footer{background:var(--paper)!important;border-top:2.5px solid var(--ink)!impor
 
 :root,html,body{
   --serif:'Instrument Serif',ui-serif,Georgia,serif;
-  --sans:'Inter Tight',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --sans:Archivo,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
   --pink:#E6185E;
   --pink-dark:#B4124A;
@@ -2966,9 +2966,9 @@ footer{
 
 
 :root,html,body{
-  --serif:'Unbounded',-apple-system,system-ui,sans-serif!important;
-  --sans:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
-  --mono:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
+  --serif:"Archivo Black",-apple-system,system-ui,sans-serif!important;
+  --sans:Archivo,-apple-system,system-ui,sans-serif!important;
+  --mono:Archivo,-apple-system,system-ui,sans-serif!important;
   --pink:#EC1C7D!important;
   --pink-dark:#C4155A!important;
   --paper:#FFFFFF!important;
@@ -2981,7 +2981,7 @@ footer{
   --y:#FFD100;
   --k:#0A0A0A;
 }
-html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
+html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
 body::before{
   content:""!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:9998!important;
   background-image:radial-gradient(circle at center, rgba(10,10,10,.05) 1px, transparent 1.6px)!important;
@@ -2990,7 +2990,7 @@ body::before{
 }
 /* Force Unbounded on every serif-family usage */
 .nav-logo,.hero-h,.hsg-num,.marquee-bar span,.hs-h,.cc-name,.pv-spread-h,.pain-q,.step-n,.step-title,.why-home-num,.why-home-title,.pv-gh-h,.ski-label,.cta-strip h2,.cta-strip::before,.ft-logo,.proof-num{
-  font-family:'Unbounded',-apple-system,system-ui,sans-serif!important;
+  font-family:"Archivo Black",-apple-system,system-ui,sans-serif!important;
   font-style:normal!important;
 }
 /* Kill all italics from previous editorial pass */
@@ -3004,7 +3004,7 @@ body::before{
 .pv-gh-h em{color:#FFD100!important}
 /* Body copy font */
 .hero-sub,.hs-sub,.cc-desc,.pain-a,.step-desc,.why-home-desc,.ft-desc,.ftl,.cta-strip p,.pv-spread-p,.pv-gh-side,.seo-fine,.hero-trust span,.hero-eyebrow,.hs-tag,.cc-cat,.cc-from,.cc-tags span,.hsg-lbl,.hib-row,.btn-primary,.btn-sec,.btn-outline,.btn-wh,.btn-wh-o,.nav-btn-o,.nav-clinks,.nav-clinks *,.ski-loc,.proof-lbl,.pv-spread-eyebrow,.pv-spread-meta span,.pv-gh-tag,.pv-gal-item figcaption,.pain-card::before,.hero::before,.hero::after,.hero-r::before,.pv-spread::before,.pv-gallery::before,.ft-grid h4,.ft-copy,.ft-leg a{
-  font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
+  font-family:Archivo,-apple-system,system-ui,sans-serif!important;
   text-transform:none!important;
 }
 /* Hero title defaults */
@@ -3158,7 +3158,7 @@ body::before{
 }
 /* Section number badge */
 .hero-side-num{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.16em!important;
@@ -3242,7 +3242,7 @@ body::before{
   border-top-color:rgba(255,255,255,.2)!important;
 }
 .hero-side .hero-trust span{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:600!important;
   color:#0A0A0A!important;
@@ -3305,7 +3305,7 @@ body::before{
 
 /* ═══ GLOBAL ═══ */
 h1,h2,h3,h4,h5{
-  font-family:'Unbounded',-apple-system,sans-serif!important;
+  font-family:"Archivo Black",-apple-system,sans-serif!important;
   font-style:normal!important;
   letter-spacing:-.035em!important;
   color:#0A0A0A;
@@ -3314,7 +3314,7 @@ h1{font-weight:800!important;letter-spacing:-.045em!important}
 h2{font-weight:800!important;letter-spacing:-.04em!important}
 h3{font-weight:700!important}
 h4{font-weight:700!important;letter-spacing:-.025em!important}
-p,span,div,li,label,small,b,strong,em{font-family:'Plus Jakarta Sans',-apple-system,sans-serif}
+p,span,div,li,label,small,b,strong,em{font-family:Archivo,-apple-system,sans-serif}
 em{font-style:normal!important}
 
 /* ═══ UNIVERSAL FORM CONTROLS ═══ */
@@ -3328,7 +3328,7 @@ textarea,select,
 .gf-ov-input,.gf-prompt-ta,.gf-font-sel,
 .sf-search,
 .pp2-sel,.pp3-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:12px!important;
   padding:14px 18px!important;
@@ -3349,7 +3349,7 @@ input:focus,textarea:focus,select:focus,
 .pts-redeem-label,.pts-sub,.pts-bal-sub,
 .gf-ov-label,.gf-prompt-label,
 .sf-ds-label,.sf-key{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -3369,7 +3369,7 @@ button,.btn,
 .sf-refresh,.sf-logout,.sf-status-btn,.sf-tab,.sf-wa-btn,
 .bun-cta,.bun-cta-sec,.bun-cta-old,.bun-cs-btn,
 .cart-btn,.cart-checkout-btn,.cart-browse-btn,.cart-back-btn,.cart-upload-btn,.cart-remove-btn,.cart-wa-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   letter-spacing:-.005em!important;
   text-transform:none!important;
@@ -3381,10 +3381,10 @@ button,.btn,
   border-bottom:2.5px solid #0A0A0A!important;
   padding-top:94px;
 }
-.pp2-bc{font-family:'Plus Jakarta Sans',sans-serif!important;color:rgba(255,255,255,.5)!important}
+.pp2-bc{font-family:Archivo,sans-serif!important;color:rgba(255,255,255,.5)!important}
 .pp2-bc span:hover{color:#FFD100!important}
 .pp2-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:7px 14px!important;
@@ -3396,7 +3396,7 @@ button,.btn,
   display:inline-block!important;
 }
 .pp2-h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(40px,5.5vw,84px)!important;
   letter-spacing:-.045em!important;
@@ -3405,7 +3405,7 @@ button,.btn,
 }
 .pp2-h1 em{color:#FFD100!important;font-style:normal!important}
 .pp2-tagline{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.7)!important;
   font-size:16px!important;
 }
@@ -3422,15 +3422,15 @@ button,.btn,
 .pp2-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .pp2-section:nth-child(even){background:#F7F5F2!important}
 .pp2-sh{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.04em!important;
   font-size:clamp(32px,4vw,56px)!important;
   color:#0A0A0A!important;
 }
 .pp2-sh em{color:#EC1C7D!important;font-style:normal!important}
-.pp2-desc{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:16px!important;line-height:1.75!important;color:#0A0A0A!important;opacity:.7}
-.pp2-hl{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:14px!important;color:#0A0A0A!important}
+.pp2-desc{font-family:Archivo,sans-serif!important;font-size:16px!important;line-height:1.75!important;color:#0A0A0A!important;opacity:.7}
+.pp2-hl{font-family:Archivo,sans-serif!important;font-size:14px!important;color:#0A0A0A!important}
 .pp2-hl-dot{background:#EC1C7D!important;border-radius:50%!important;width:8px!important;height:8px!important}
 .pp2-specs-box{
   background:#FFFFFF!important;
@@ -3440,18 +3440,18 @@ button,.btn,
   padding:32px!important;
 }
 .pp2-specs-title{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   letter-spacing:.08em!important;
 }
-.pp2-spec{font-family:'Plus Jakarta Sans',sans-serif!important;border-bottom-color:rgba(10,10,10,.1)!important}
+.pp2-spec{font-family:Archivo,sans-serif!important;border-bottom-color:rgba(10,10,10,.1)!important}
 .pp2-spec-k{color:#0A0A0A!important;font-weight:700!important;letter-spacing:-.005em!important;text-transform:none!important;font-size:13px!important}
 .pp2-spec-v{color:#0A0A0A!important;opacity:.75}
 
 .pp2-cfg-row{gap:8px!important}
 .pp2-cfg{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -3475,7 +3475,7 @@ button,.btn,
   overflow:hidden!important;
   box-shadow:4px 4px 0 #EC1C7D!important;
 }
-.pp2-tbl{font-family:'Plus Jakarta Sans',sans-serif!important}
+.pp2-tbl{font-family:Archivo,sans-serif!important}
 .pp2-tbl th{
   background:#0A0A0A!important;color:#FFFFFF!important;
   font-weight:800!important;text-transform:none!important;
@@ -3494,10 +3494,10 @@ button,.btn,
 .pp2-why-item:nth-child(2) .pp2-why-n{color:#00B8D9!important}
 .pp2-why-item:nth-child(3) .pp2-why-n{color:#FFD100!important}
 .pp2-why-item:nth-child(4) .pp2-why-n{color:#FFFFFF!important}
-.pp2-why-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:32px!important;letter-spacing:-.04em!important}
+.pp2-why-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:32px!important;letter-spacing:-.04em!important}
 
 .pp2-uc{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:1.5px solid #EC1C7D!important;
   border-radius:999px!important;
@@ -3505,7 +3505,7 @@ button,.btn,
   color:#EC1C7D!important;
   padding:7px 14px!important;
 }
-.pp2-uc-title{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:800!important;color:#0A0A0A!important}
+.pp2-uc-title{font-family:Archivo,sans-serif!important;font-weight:800!important;color:#0A0A0A!important}
 
 .pp2-order-bar{
   background:#FFFFFF!important;
@@ -3514,9 +3514,9 @@ button,.btn,
   box-shadow:5px 5px 0 #EC1C7D!important;
   padding:14px 22px!important;
 }
-.pp2-ob-lbl{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.pp2-ob-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:24px!important}
-.pp2-ob-unit{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.6}
+.pp2-ob-lbl{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.pp2-ob-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:24px!important}
+.pp2-ob-unit{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.6}
 
 .pp2-faq-item{
   background:#FFFFFF!important;
@@ -3526,14 +3526,14 @@ button,.btn,
   padding:0!important;
 }
 .pp2-faq-q{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:16px!important;
   color:#0A0A0A!important;
   padding:20px 24px!important;
 }
 .pp2-faq-a{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;opacity:.75;
   padding:0 24px 22px!important;
 }
@@ -3542,8 +3542,8 @@ button,.btn,
   border-radius:16px!important;
   background:rgba(236,28,125,.04)!important;
 }
-.pp2-uzone-title{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
-.pp2-uzone-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.pp2-uzone-title{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
+.pp2-uzone-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 
 .pp2-rel-grid{gap:16px!important}
 .pp2-rel{
@@ -3558,13 +3558,13 @@ button,.btn,
 .pp2-rel:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .pp2-rel:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .pp2-rel:hover{transform:translate(-2px,-2px)}
-.pp2-rel-nm{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
+.pp2-rel-nm{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
 
 /* ═══ PRODUCT PAGE v3 (pp3-*) ═══ */
 .pp3-hero{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding-top:94px}
 .pp3-hero-inner{max-width:1280px;margin:0 auto}
 .pp3-cat-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:7px 14px!important;
@@ -3575,7 +3575,7 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .pp3-h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(40px,5.5vw,84px)!important;
   letter-spacing:-.045em!important;
@@ -3583,9 +3583,9 @@ button,.btn,
   color:#0A0A0A!important;
 }
 .pp3-h1 em{color:#EC1C7D!important;font-style:normal!important}
-.pp3-tagline{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7;font-size:16px!important}
+.pp3-tagline{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7;font-size:16px!important}
 .pp3-from-pill{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   background:#EC1C7D!important;color:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -3593,10 +3593,10 @@ button,.btn,
   box-shadow:4px 4px 0 #0A0A0A!important;
   padding:10px 20px!important;
 }
-.pp3-hl,.pp3-hl-list{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important}
+.pp3-hl,.pp3-hl-list{font-family:Archivo,sans-serif!important;color:#0A0A0A!important}
 .pp3-hl-dot{background:#EC1C7D!important;border-radius:50%!important}
 .pp3-trust-badge,.pp3-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border-radius:999px!important;
   padding:6px 12px!important;
@@ -3623,7 +3623,7 @@ button,.btn,
 .pp3-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .pp3-section:nth-of-type(even){background:#F7F5F2!important}
 .pp3-sh{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.04em!important;
   font-size:clamp(32px,4.2vw,60px)!important;
@@ -3631,7 +3631,7 @@ button,.btn,
 }
 .pp3-sh em{color:#EC1C7D!important;font-style:normal!important}
 .pp3-section-tag{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border:1.5px solid #EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
@@ -3642,7 +3642,7 @@ button,.btn,
   text-transform:uppercase!important;
   display:inline-block!important;
 }
-.pp3-intro-text,.pp3-body-p,.pp3-body-callout{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;line-height:1.75!important;font-size:16px!important}
+.pp3-intro-text,.pp3-body-p,.pp3-body-callout{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;line-height:1.75!important;font-size:16px!important}
 .pp3-body-callout{
   background:rgba(0,184,217,.06)!important;
   border:2px solid #00B8D9!important;
@@ -3658,7 +3658,7 @@ button,.btn,
   padding:28px!important;
 }
 .pp3-info-title,.pp3-specs-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#0A0A0A!important;
   font-size:16px!important;
@@ -3668,7 +3668,7 @@ button,.btn,
 .pp3-info-highlight{color:#EC1C7D!important;font-weight:800!important}
 
 .pp3-cfg-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -3692,10 +3692,10 @@ button,.btn,
   overflow:hidden!important;
   box-shadow:6px 6px 0 #EC1C7D!important;
 }
-.pp3-tbl{font-family:'Plus Jakarta Sans',sans-serif!important}
+.pp3-tbl{font-family:Archivo,sans-serif!important}
 .pp3-tbl th,.pp3-ladder-title{
   background:#0A0A0A!important;color:#FFFFFF!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   padding:14px 18px!important;
 }
@@ -3708,7 +3708,7 @@ button,.btn,
   font-weight:800!important;
   font-size:11px!important;
 }
-.pp3-price-cell,.pp3-tier-ppu,.pp3-tier-total{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pp3-price-cell,.pp3-tier-ppu,.pp3-tier-total{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 
 .pp3-why-grid{
   background:#0A0A0A!important;
@@ -3717,7 +3717,7 @@ button,.btn,
   overflow:hidden!important;
 }
 .pp3-why-item{background:#0A0A0A!important}
-.pp3-why-num{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:48px!important;letter-spacing:-.04em!important}
+.pp3-why-num{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:48px!important;letter-spacing:-.04em!important}
 .pp3-why-item:nth-child(1) .pp3-why-num{color:#EC1C7D!important}
 .pp3-why-item:nth-child(2) .pp3-why-num{color:#00B8D9!important}
 .pp3-why-item:nth-child(3) .pp3-why-num{color:#FFD100!important}
@@ -3729,8 +3729,8 @@ button,.btn,
   border-radius:14px!important;
   margin-bottom:12px!important;
 }
-.pp3-faq-q{font-family:'Unbounded',sans-serif!important;font-weight:700!important;font-size:16px!important;color:#0A0A0A!important;padding:20px 24px!important}
-.pp3-faq-a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.75;padding:0 24px 22px!important}
+.pp3-faq-q{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;font-size:16px!important;color:#0A0A0A!important;padding:20px 24px!important}
+.pp3-faq-a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.75;padding:0 24px 22px!important}
 
 .pp3-order-card,.pp3-sticky-bar{
   background:#FFFFFF!important;
@@ -3740,8 +3740,8 @@ button,.btn,
   padding:28px!important;
 }
 .pp3-sticky{background:#FFFFFF!important;border-top:2.5px solid #0A0A0A!important}
-.pp3-sticky-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.pp3-sticky-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.pp3-sticky-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.pp3-sticky-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 
 .pp3-btn-cart,.pp3-btn-order,.pp3-btn-full{
   background:#EC1C7D!important;
@@ -3749,7 +3749,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:16px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:4px 4px 0 #0A0A0A!important;
   transition:all .18s!important;
@@ -3777,7 +3777,7 @@ button,.btn,
   border-radius:50%!important;
   width:32px!important;height:32px!important;
 }
-.pp3-qty-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pp3-qty-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 
 .pp3-rel-card,.pp3-use-card,.pp3-uc-card{
   background:#FFFFFF!important;
@@ -3799,8 +3799,8 @@ button,.btn,
 .pp3-use-grid > .pp3-use-card:nth-child(4n+4),
 .pp3-uc-grid > .pp3-uc-card:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .pp3-rel-card:hover,.pp3-use-card:hover,.pp3-uc-card:hover{transform:translate(-2px,-2px)}
-.pp3-rel-name,.pp3-use-title{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.pp3-rel-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.pp3-rel-name,.pp3-use-title{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.pp3-rel-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 
 .pp3-cta-strip{
   background:#0A0A0A!important;
@@ -3811,9 +3811,9 @@ button,.btn,
 .pp3-cta-strip h2 em{color:#FFD100!important}
 
 /* ═══ CART ═══ */
-.cart-page,.cart-body,.cart-layout{background:#FFFFFF!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.cart-page,.cart-body,.cart-layout{background:#FFFFFF!important;font-family:Archivo,sans-serif!important}
 .cart-topbar,.cart-topbar-inner{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important}
-.cart-heading,.cart-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
+.cart-heading,.cart-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
 .cart-item{
   background:#FFFFFF!important;
   border:2.5px solid #0A0A0A!important;
@@ -3825,9 +3825,9 @@ button,.btn,
 .cart-item:nth-child(4n+2){box-shadow:5px 5px 0 #00B8D9!important}
 .cart-item:nth-child(4n+3){box-shadow:5px 5px 0 #FFD100!important}
 .cart-item:nth-child(4n+4){box-shadow:5px 5px 0 #0A0A0A!important}
-.cart-item-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important;font-size:18px!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
-.cart-item-price,.cart-item-unit{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
-.cart-item-config,.cart-item-notes,.cart-item-file{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.cart-item-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;font-size:18px!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.cart-item-price,.cart-item-unit{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.cart-item-config,.cart-item-notes,.cart-item-file{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 
 .cart-rail,.cart-sidebar,.cart-summary{
   background:#FFFFFF!important;
@@ -3837,9 +3837,9 @@ button,.btn,
   padding:28px!important;
   position:sticky;top:80px;
 }
-.cart-summary-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
-.cart-sum-line,.cart-sum-totals,.cart-summary-row{font-family:'Plus Jakarta Sans',sans-serif!important}
-.cart-summary-total,.cart-summary-total-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:28px!important}
+.cart-summary-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
+.cart-sum-line,.cart-sum-totals,.cart-summary-row{font-family:Archivo,sans-serif!important}
+.cart-summary-total,.cart-summary-total-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:28px!important}
 .cart-checkout-btn,.cart-btn{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
@@ -3873,25 +3873,25 @@ button,.btn,
 .cart-count-badge,.cart-cnt{
   background:#EC1C7D!important;color:#FFFFFF!important;
   border-radius:999px!important;padding:2px 8px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;font-weight:800!important;
 }
-.cart-guarantee,.cart-guarantees{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.cart-guarantee,.cart-guarantees{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 .cart-empty{text-align:center;padding:80px 40px}
 .cart-empty-icon{font-size:64px;opacity:.3}
-.cart-empty-msg{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:28px!important}
+.cart-empty-msg{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:28px!important}
 
 /* ═══ CHECKOUT ═══ */
-#screen-checkout{background:#F7F5F2!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+#screen-checkout{background:#F7F5F2!important;font-family:Archivo,sans-serif!important}
 .flow-nav{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:20px 32px!important}
-.co-progress,.co-progress-inner{font-family:'Plus Jakarta Sans',sans-serif!important}
+.co-progress,.co-progress-inner{font-family:Archivo,sans-serif!important}
 .co-prog-step{font-weight:700!important}
 .co-prog-num{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:50%!important;
   width:32px;height:32px;
-  font-family:'Unbounded',sans-serif!important;font-weight:800!important;
+  font-family:"Archivo Black",sans-serif!important;font-weight:800!important;
 }
 .co-prog-step.active .co-prog-num{background:#EC1C7D!important;color:#FFFFFF!important}
 .co-prog-line{background:rgba(10,10,10,.15)!important;height:2px!important}
@@ -3914,10 +3914,10 @@ button,.btn,
   background:#EC1C7D!important;color:#FFFFFF!important;
   border-radius:50%!important;
   width:32px;height:32px;
-  font-family:'Unbounded',sans-serif!important;font-weight:800!important;
+  font-family:"Archivo Black",sans-serif!important;font-weight:800!important;
   display:inline-flex;align-items:center;justify-content:center;
 }
-.co-card-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:20px!important;letter-spacing:-.025em!important;color:#0A0A0A!important}
+.co-card-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:20px!important;letter-spacing:-.025em!important;color:#0A0A0A!important}
 .co-card-body{padding:24px 28px!important}
 
 .co-sum-card,.co-summary-card,.co-rail,.co-sidebar-sticky{
@@ -3927,18 +3927,18 @@ button,.btn,
   box-shadow:6px 6px 0 #0A0A0A!important;
   padding:24px!important;
 }
-.co-sum-head,.co-sum-head-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:18px!important}
-.co-sum-item-name{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.co-sum-item-price,.co-sum-total,.co-sum-total-price,.co-sum-total-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.co-sum-head,.co-sum-head-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:18px!important}
+.co-sum-item-name{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.co-sum-item-price,.co-sum-total,.co-sum-total-price,.co-sum-total-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 .co-sum-total-row{border-top:2px solid #0A0A0A!important;padding-top:16px!important;margin-top:16px!important}
-.co-sum-total-lbl,.co-sum-total-label{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.co-sum-total-lbl,.co-sum-total-label{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .co-sum-cta{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:18px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
   width:100%;
@@ -3947,7 +3947,7 @@ button,.btn,
 .co-sum-cta:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 #0A0A0A!important;background:#C4155A!important}
 
 .dtog-opt{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
@@ -3964,11 +3964,11 @@ button,.btn,
   box-shadow:4px 4px 0 #EC1C7D!important;
 }
 
-.co-guarantees,.co-guarantees-list,.co-guar,.co-guarantee{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
-.co-earn-row,.co-earn-note,.co-pts-row,.co-pts-disc-row{font-family:'Plus Jakarta Sans',sans-serif!important}
+.co-guarantees,.co-guarantees-list,.co-guar,.co-guarantee{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.co-earn-row,.co-earn-note,.co-pts-row,.co-pts-disc-row{font-family:Archivo,sans-serif!important}
 
 /* ═══ ORDER CONFIRMATION (oc-*) ═══ */
-.oc-wrap,.oc-hd{font-family:'Plus Jakarta Sans',sans-serif!important}
+.oc-wrap,.oc-hd{font-family:Archivo,sans-serif!important}
 .oc-hd{
   background:#0A0A0A!important;
   color:#FFFFFF!important;
@@ -3977,7 +3977,7 @@ button,.btn,
 }
 .oc-hd h1,.oc-hd h2{color:#FFFFFF!important}
 .oc-num{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#FFD100!important;
   letter-spacing:-.04em!important;
@@ -3990,9 +3990,9 @@ button,.btn,
   padding:28px!important;
   margin-bottom:20px!important;
 }
-.oc-item-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
+.oc-item-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
 .oc-tot{box-shadow:6px 6px 0 #0A0A0A!important}
-.oc-method,.oc-dt{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.75}
+.oc-method,.oc-dt{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.75}
 
 /* ═══ BUNDLES (bun-*) ═══ */
 .bun-card,.bun-cs-wrap{
@@ -4009,12 +4009,12 @@ button,.btn,
 .bun-card:nth-child(3n+2):hover,.bun-cs-wrap:nth-child(3n+2):hover{box-shadow:9px 9px 0 #00B8D9!important}
 .bun-card:nth-child(3n+3):hover,.bun-cs-wrap:nth-child(3n+3):hover{box-shadow:9px 9px 0 #FFD100!important}
 .bun-card:nth-child(3n+1):hover{box-shadow:9px 9px 0 #EC1C7D!important}
-.bun-name,.bun-cs-name{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:22px!important;color:#0A0A0A!important;letter-spacing:-.025em!important}
-.bun-desc,.bun-cs-body{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72}
-.bun-price,.bun-cs-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:32px!important;letter-spacing:-.03em!important}
-.bun-orig,.bun-cs-orig{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.4;text-decoration:line-through}
+.bun-name,.bun-cs-name{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:22px!important;color:#0A0A0A!important;letter-spacing:-.025em!important}
+.bun-desc,.bun-cs-body{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72}
+.bun-price,.bun-cs-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:32px!important;letter-spacing:-.03em!important}
+.bun-orig,.bun-cs-orig{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.4;text-decoration:line-through}
 .bun-badge,.bun-cs-eyebrow,.bun-cs-pct{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   background:#FFD100!important;
   color:#0A0A0A!important;
@@ -4026,7 +4026,7 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .bun-prod-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   background:rgba(10,10,10,.05)!important;
   border:1px solid rgba(10,10,10,.15)!important;
@@ -4071,15 +4071,15 @@ button,.btn,
   padding:28px!important;
 }
 #mem-calc-pts,#mem-calc-val,.pts-balance-big{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:48px!important;
   color:#EC1C7D!important;
   letter-spacing:-.04em!important;
 }
-.pts-sub,.pts-bal-sub,.pts-earn-note,.pts-next-note{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.pts-sub,.pts-bal-sub,.pts-earn-note,.pts-next-note{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .pts-badge,.pts-applied-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   background:#FFD100!important;
   color:#0A0A0A!important;
@@ -4109,11 +4109,11 @@ button,.btn,
   box-shadow:8px 8px 0 #EC1C7D!important;
   padding:40px!important;
 }
-.sf-login-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:32px!important;color:#0A0A0A!important;letter-spacing:-.04em!important}
-.sf-login-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.sf-login-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:32px!important;color:#0A0A0A!important;letter-spacing:-.04em!important}
+.sf-login-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .sf-numpad{display:grid;gap:12px}
 .sf-key{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:24px!important;
   background:#FFFFFF!important;
@@ -4145,8 +4145,8 @@ button,.btn,
 .sf-stat:nth-child(3n+1){box-shadow:3px 3px 0 #EC1C7D!important}
 .sf-stat:nth-child(3n+2){box-shadow:3px 3px 0 #00B8D9!important}
 .sf-stat:nth-child(3n+3){box-shadow:3px 3px 0 #FFD100!important}
-.sf-stat-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:28px!important;color:#0A0A0A!important;letter-spacing:-.035em!important}
-.sf-stat-l{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;text-transform:uppercase;letter-spacing:.06em!important}
+.sf-stat-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:28px!important;color:#0A0A0A!important;letter-spacing:-.035em!important}
+.sf-stat-l{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;text-transform:uppercase;letter-spacing:.06em!important}
 .sf-card{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -4156,7 +4156,7 @@ button,.btn,
 }
 .sf-card:hover{box-shadow:4px 4px 0 #EC1C7D!important}
 .sf-tab,.sf-status-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -4167,7 +4167,7 @@ button,.btn,
 }
 .sf-tab.active,.sf-status-btn.active{background:#EC1C7D!important;color:#FFFFFF!important}
 .sf-status-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:4px 12px!important;
@@ -4178,15 +4178,15 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .sf-stat-ready{background:rgba(0,184,217,.08)!important;color:#00B8D9!important;border-color:#00B8D9!important}
-.sf-oid,.sf-item-name,.sf-cname{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.sf-ctotal,.sf-item-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
-.sf-cemail,.sf-ctime,.sf-item-spec{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.sf-oid,.sf-item-name,.sf-cname{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.sf-ctotal,.sf-item-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.sf-cemail,.sf-ctime,.sf-item-spec{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .sf-refresh,.sf-logout,.sf-wa-btn{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:8px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
 }
@@ -4204,10 +4204,10 @@ button,.btn,
   background:rgba(236,28,125,.04)!important;
   padding:48px 32px!important;
 }
-.gf-upload-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:22px!important}
-.gf-upload-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.gf-upload-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:22px!important}
+.gf-upload-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .gf-chip,.gf-style-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -4222,7 +4222,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
 .gf-accept-btn{background:#EC1C7D!important;color:#FFFFFF!important;box-shadow:4px 4px 0 #0A0A0A!important}
@@ -4234,14 +4234,14 @@ button,.btn,
   border-radius:18px!important;
   padding:24px!important;
 }
-.gf-accepted-title,.gf-processing-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.gf-accepted-title,.gf-processing-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .gf-err{
   color:#EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
   border:1.5px solid #EC1C7D!important;
   border-radius:12px!important;
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
 
@@ -4249,20 +4249,20 @@ button,.btn,
 #screen-admin,.adm-wrap,.adm-shell,.adm-body{
   background:#F7F5F2!important;
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
 }
 .adm-nav-row,.adm-menu-sec-hd,.adm-menu-sec-col,.adm-nav-mega{
   background:#FFFFFF!important;
   border-bottom:2px solid #0A0A0A!important;
 }
 .adm-page-title,.adm-card-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.035em!important;
   color:#0A0A0A!important;
 }
 .adm-page-title{font-size:32px!important;letter-spacing:-.04em!important}
-.adm-page-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.adm-page-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .adm-card,.adm-pane,.adm-prod-card,.adm-bundle-card,.adm-order-row,.adm-member-row,.adm-add-row{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -4273,7 +4273,7 @@ button,.btn,
 }
 .adm-card:hover{box-shadow:5px 5px 0 #EC1C7D!important}
 .adm-btn,.adm-nav-btn,.adm-nav-action,.adm-cancel-btn,.adm-font-del-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -4298,7 +4298,7 @@ button,.btn,
 .adm-cancel-btn:hover{background:#EC1C7D!important;color:#FFFFFF!important}
 
 .adm-inp,.adm-input,.adm-field-input,.adm-field-textarea,.adm-cfg-inp,.adm-chip-inp,.adm-hl-inp,.adm-price-input,.adm-gc-inp-label,.adm-gc-inp-ph,.adm-opt-label,.adm-opt-formula,.adm-pers-lbl,.adm-pers-ph,.adm-method-name,.adm-method-prompt{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:10px!important;
   padding:10px 14px!important;
@@ -4309,7 +4309,7 @@ button,.btn,
 }
 .adm-inp:focus,.adm-input:focus{outline:none!important;box-shadow:3px 3px 0 #EC1C7D!important}
 .adm-lbl,.adm-fl,.adm-field-label,.adm-ct-lbl,.adm-opt-label,.adm-menu-item-label,.adm-gc-style-label,.adm-pers-lbl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -4323,7 +4323,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   overflow:hidden!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
 }
 .adm-price-table th{
   background:#0A0A0A!important;color:#FFFFFF!important;
@@ -4345,43 +4345,43 @@ button,.btn,
   border:1.5px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:3px 10px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:10px!important;
   letter-spacing:.05em!important;
   text-transform:uppercase!important;
 }
 .adm-bundle-name,.adm-prod-card h3,.adm-prod-card h4{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   letter-spacing:-.025em!important;
 }
 .adm-bundle-price,.adm-bundle-save{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
 }
-.adm-ct-val,.adm-ct-note{font-family:'Plus Jakarta Sans',sans-serif!important}
-.adm-ct-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:24px!important;color:#0A0A0A!important}
+.adm-ct-val,.adm-ct-note{font-family:Archivo,sans-serif!important}
+.adm-ct-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:24px!important;color:#0A0A0A!important}
 
-.adm-faq-q{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.adm-faq-a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.adm-faq-q{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.adm-faq-a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 
 .adm-formula-preview{
   background:rgba(0,184,217,.08)!important;
   border:1.5px solid #00B8D9!important;
   border-radius:10px!important;
   padding:10px 14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:600!important;
   color:#0A0A0A!important;
   font-size:12px!important;
 }
 
-.adm-nav-label{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.adm-menu-item-label{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.adm-menu-item-slug{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.55;font-size:11px!important}
+.adm-nav-label{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.adm-menu-item-label{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.adm-menu-item-slug{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.55;font-size:11px!important}
 
 .adm-order-row,.adm-member-row{
   display:grid;
@@ -4397,14 +4397,14 @@ button,.btn,
   border-radius:0 0 24px 24px!important;
   box-shadow:0 10px 0 rgba(10,10,10,.08)!important;
 }
-.mega-inner{font-family:'Plus Jakarta Sans',sans-serif!important}
-.mega-inner h3,.mega-inner h4{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
-.mega-inner a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;font-weight:600!important}
+.mega-inner{font-family:Archivo,sans-serif!important}
+.mega-inner h3,.mega-inner h4{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.mega-inner a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;font-weight:600!important}
 .mega-inner a:hover{color:#EC1C7D!important}
 
 /* ═══ TOAST ═══ */
 .toast{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   background:#0A0A0A!important;
   color:#FFFFFF!important;
@@ -4416,15 +4416,15 @@ button,.btn,
 
 /* ═══ ABOUT PAGE (ab-*) extras ═══ */
 .ab-hero{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding-top:94px!important}
-.ab-h1{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:clamp(44px,6vw,88px)!important;letter-spacing:-.045em!important;line-height:1!important;color:#0A0A0A!important}
+.ab-h1{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:clamp(44px,6vw,88px)!important;letter-spacing:-.045em!important;line-height:1!important;color:#0A0A0A!important}
 .ab-h1 em{color:#EC1C7D!important;font-style:normal!important;font-weight:800!important}
-.ab-sub,.ab-p{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72;line-height:1.75!important;font-size:16px!important}
+.ab-sub,.ab-p{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72;line-height:1.75!important;font-size:16px!important}
 .ab-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .ab-section:nth-of-type(even){background:#F7F5F2!important}
 .ab-dark-sec{background:#0A0A0A!important;color:#FFFFFF!important;padding:80px 40px!important;border-bottom:2.5px solid #0A0A0A!important}
 .ab-dark-sec h2,.ab-dark-sec h3{color:#FFFFFF!important}
 .ab-dark-sec .ab-sub,.ab-dark-sec .ab-p{color:rgba(255,255,255,.7)!important}
-.ab-sh{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:clamp(32px,4.5vw,60px)!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
+.ab-sh{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:clamp(32px,4.5vw,60px)!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
 .ab-sh em{color:#EC1C7D!important;font-style:normal!important}
 .ab-dark-sec .ab-sh{color:#FFFFFF!important}
 .ab-dark-sec .ab-sh em{color:#FFD100!important}
@@ -4437,11 +4437,11 @@ button,.btn,
 .ab-stat:nth-child(1){box-shadow:4px 4px 0 #EC1C7D!important}
 .ab-stat:nth-child(2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-stat:nth-child(3){box-shadow:4px 4px 0 #FFD100!important}
-.ab-stat-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:44px!important;letter-spacing:-.04em!important}
+.ab-stat-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:44px!important;letter-spacing:-.04em!important}
 .ab-stat:nth-child(1) .ab-stat-n{color:#EC1C7D!important}
 .ab-stat:nth-child(2) .ab-stat-n{color:#00B8D9!important}
 .ab-stat:nth-child(3) .ab-stat-n{color:#D4A800!important}
-.ab-stat-l{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;letter-spacing:.06em!important;text-transform:uppercase!important}
+.ab-stat-l{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;letter-spacing:.06em!important;text-transform:uppercase!important}
 .ab-val{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -4452,24 +4452,24 @@ button,.btn,
 .ab-val:nth-child(4n+2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-val:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .ab-val:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
-.ab-val-t{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;font-size:18px!important;letter-spacing:-.02em!important}
-.ab-val-d{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72}
+.ab-val-t{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;font-size:18px!important;letter-spacing:-.02em!important}
+.ab-val-d{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72}
 .ab-client{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   padding:20px!important;
 }
-.ab-cl-t{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.ab-cl-d{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
-.ab-vi-row{font-family:'Plus Jakarta Sans',sans-serif!important;border-bottom:1.5px solid rgba(10,10,10,.1)!important;padding:14px 0!important}
-.ab-vi-label{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.7;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
-.ab-vi-val{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.ab-cl-t{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.ab-cl-d{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.ab-vi-row{font-family:Archivo,sans-serif!important;border-bottom:1.5px solid rgba(10,10,10,.1)!important;padding:14px 0!important}
+.ab-vi-label{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.7;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.ab-vi-val{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
 
 /* ═══ CONTACT PAGE extras ═══ */
 #screen-contact{background:#FFFFFF!important}
 .ct-input,.ct-textarea{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:12px!important;
   padding:14px 18px!important;
@@ -4480,7 +4480,7 @@ button,.btn,
 }
 .ct-input:focus,.ct-textarea:focus{outline:none!important;box-shadow:3px 3px 0 #EC1C7D!important}
 #ct-ok{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
@@ -4499,7 +4499,7 @@ button,.btn,
   overflow:hidden!important;
 }
 .faq-q{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:16px!important;
   color:#0A0A0A!important;
@@ -4507,7 +4507,7 @@ button,.btn,
   letter-spacing:-.02em!important;
 }
 .faq-a{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
   opacity:.75;
   padding:0 24px 22px!important;
@@ -4535,7 +4535,7 @@ button,.btn,
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   padding:18px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:11px!important;
   letter-spacing:.14em!important;
@@ -4552,7 +4552,7 @@ button,.btn,
   color:#0A0A0A!important;
 }
 .pp3-oc-product *{color:#0A0A0A!important}
-.pp3-oc-product strong,.pp3-oc-product b{font-family:'Unbounded',sans-serif!important;font-weight:700!important;letter-spacing:-.015em!important}
+.pp3-oc-product strong,.pp3-oc-product b{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;letter-spacing:-.015em!important}
 .pp3-oc-row{
   background:transparent!important;
   padding:14px 22px!important;
@@ -4564,7 +4564,7 @@ button,.btn,
 }
 .pp3-oc-row span:first-child{
   color:rgba(10,10,10,.55)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   font-size:10px!important;
   letter-spacing:.1em!important;
@@ -4573,7 +4573,7 @@ button,.btn,
 }
 .pp3-oc-row span:last-child{
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   font-size:13px!important;
   text-align:right!important;
@@ -4597,7 +4597,7 @@ button,.btn,
 }
 .pp3-oc-total-row span:first-child{
   color:rgba(10,10,10,.7)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:12px!important;
   letter-spacing:.08em!important;
@@ -4605,7 +4605,7 @@ button,.btn,
 }
 .pp3-oc-total{
   color:#EC1C7D!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:32px!important;
   letter-spacing:-.035em!important;
@@ -4692,7 +4692,7 @@ button,.btn,
 .pp3-faq-item:nth-child(3n+3):hover{box-shadow:6px 6px 0 #FFD100!important}
 .pp3-faq-q{
   padding:22px 26px!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:15px!important;
   color:#0A0A0A!important;
@@ -4711,7 +4711,7 @@ button,.btn,
 .pp2-faq-item.open .pp2-faq-arr{transform:rotate(45deg)}
 .pp3-faq-a{
   padding:0 26px 24px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   line-height:1.75!important;
   color:rgba(10,10,10,.72)!important;
@@ -4738,7 +4738,7 @@ button,.btn,
 .pp2-faq-item:nth-child(3n+3){box-shadow:4px 4px 0 #FFD100!important}
 .pp2-faq-q{
   padding:22px 26px!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:15px!important;
   color:#0A0A0A!important;
@@ -4767,7 +4767,7 @@ footer::before{
   content:"PRINTVOLUTION"!important;
   position:absolute!important;
   left:-20px;right:-20px;bottom:-80px;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(120px,20vw,300px)!important;
   font-weight:900!important;
   color:rgba(236,28,125,.07)!important;
@@ -4798,7 +4798,7 @@ footer > *{position:relative;z-index:2}
   max-width:none!important;
 }
 .ft-logo{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:38px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -4809,7 +4809,7 @@ footer > *{position:relative;z-index:2}
 .ft-logo span{color:#EC1C7D!important;font-style:normal!important}
 .ft-desc{
   color:rgba(255,255,255,.62)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   line-height:1.75!important;
   max-width:340px!important;
@@ -4819,7 +4819,7 @@ footer > *{position:relative;z-index:2}
   display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;
 }
 .ft-contact-chip{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;font-weight:700;
   color:#FFFFFF;
   padding:6px 12px;
@@ -4829,7 +4829,7 @@ footer > *{position:relative;z-index:2}
   text-transform:uppercase;
 }
 .ft-grid h4{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   letter-spacing:.14em!important;
@@ -4840,7 +4840,7 @@ footer > *{position:relative;z-index:2}
   border-bottom:1px solid rgba(255,255,255,.15)!important;
 }
 .ftl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.72)!important;
   font-size:13px!important;
   font-weight:500!important;
@@ -4862,14 +4862,14 @@ footer > *{position:relative;z-index:2}
 }
 .ft-copy{
   color:rgba(255,255,255,.5)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   letter-spacing:.04em!important;
 }
 .ft-leg{display:flex!important;gap:24px!important}
 .ft-leg a{
   color:rgba(255,255,255,.5)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   letter-spacing:.04em!important;
   text-transform:none!important;
@@ -4902,7 +4902,7 @@ footer > *{position:relative;z-index:2}
   padding:120px 48px 80px!important;
 }
 #screen-contact h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(44px,6vw,88px)!important;
   letter-spacing:-.045em!important;
@@ -4926,7 +4926,7 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   padding:16px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   background:#FFFFFF!important;
   color:#0A0A0A!important;
@@ -4936,7 +4936,7 @@ footer > *{position:relative;z-index:2}
 .ct-input:focus,.ct-textarea:focus{outline:none!important;box-shadow:4px 4px 0 #EC1C7D!important}
 #screen-contact label,
 #screen-contact .ct-label{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -4951,7 +4951,7 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:18px 36px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:14px!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
@@ -4972,7 +4972,7 @@ footer > *{position:relative;z-index:2}
   color:#15803D!important;
   border-radius:14px!important;
   padding:16px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   margin-bottom:20px!important;
 }
@@ -4983,7 +4983,7 @@ footer > *{position:relative;z-index:2}
 #screen-admin,.adm-wrap,.adm-shell,.adm-body{
   background:#F7F5F2!important;
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   min-height:100vh!important;
 }
 .adm-nav-row,.adm-nav{
@@ -5016,7 +5016,7 @@ footer > *{position:relative;z-index:2}
 }
 .adm-card:hover{box-shadow:6px 6px 0 #EC1C7D!important}
 .adm-card-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:20px!important;
   color:#0A0A0A!important;
@@ -5026,7 +5026,7 @@ footer > *{position:relative;z-index:2}
   border-bottom:2px solid rgba(10,10,10,.1)!important;
 }
 .adm-page-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(32px,4vw,48px)!important;
   font-weight:800!important;
   letter-spacing:-.045em!important;
@@ -5034,7 +5034,7 @@ footer > *{position:relative;z-index:2}
   margin-bottom:10px!important;
 }
 .adm-page-sub{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:15px!important;
   color:rgba(10,10,10,.65)!important;
   margin-bottom:32px!important;
@@ -5058,7 +5058,7 @@ footer > *{position:relative;z-index:2}
 .sf-body,.sf-brand,#screen-sf,#screen-staff{
   background:#F7F5F2!important;
   min-height:100vh!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
 }
 .sf-topbar,.sf-toolbar{
@@ -5083,7 +5083,7 @@ footer > *{position:relative;z-index:2}
   text-align:center!important;
 }
 .sf-login-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:32px!important;
   color:#0A0A0A!important;
@@ -5092,7 +5092,7 @@ footer > *{position:relative;z-index:2}
   text-align:center!important;
 }
 .sf-login-sub{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.65)!important;
   margin-bottom:36px!important;
   font-size:14px!important;
@@ -5118,7 +5118,7 @@ footer > *{position:relative;z-index:2}
   margin-bottom:20px!important;
 }
 .sf-key{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:26px!important;
   background:#FFFFFF!important;
@@ -5156,7 +5156,7 @@ footer > *{position:relative;z-index:2}
 .sf-stat:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .sf-stat:hover{transform:translate(-2px,-2px)}
 .sf-stat-n{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:36px!important;
   color:#0A0A0A!important;
@@ -5168,7 +5168,7 @@ footer > *{position:relative;z-index:2}
 .sf-stat:nth-child(4n+2) .sf-stat-n{color:#00B8D9!important}
 .sf-stat:nth-child(4n+3) .sf-stat-n{color:#D4A800!important}
 .sf-stat-l{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:rgba(10,10,10,.6)!important;
   font-size:11px!important;
@@ -5177,7 +5177,7 @@ footer > *{position:relative;z-index:2}
 }
 .sf-orders{padding:0 32px 32px!important}
 .sf-orders .sf-sec-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#0A0A0A!important;
@@ -5209,27 +5209,27 @@ footer > *{position:relative;z-index:2}
   border-bottom:1.5px solid rgba(10,10,10,.08)!important;
 }
 .sf-oid{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:18px!important;
   color:#0A0A0A!important;
   letter-spacing:-.025em!important;
 }
 .sf-ctotal{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#EC1C7D!important;
   letter-spacing:-.03em!important;
 }
 .sf-cname{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   font-size:14px!important;
 }
 .sf-cemail,.sf-ctime,.sf-item-spec{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.6)!important;
   font-size:12px!important;
 }
@@ -5240,7 +5240,7 @@ footer > *{position:relative;z-index:2}
   padding:18px 32px 0!important;
 }
 .sf-status-btn,.sf-tab{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -5259,7 +5259,7 @@ footer > *{position:relative;z-index:2}
   box-shadow:3px 3px 0 #EC1C7D!important;
 }
 .sf-status-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:5px 14px!important;
@@ -5280,12 +5280,12 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   min-width:260px;
 }
 .sf-refresh,.sf-logout,.sf-wa-btn,.sf-shift{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -5428,7 +5428,7 @@ footer > *{position:relative;z-index:2}
   overflow:hidden!important;
 }
 .pp3-rel-name,.pp2-rel-nm{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:14px!important;
   color:#0A0A0A!important;
@@ -5444,7 +5444,7 @@ footer > *{position:relative;z-index:2}
   margin:0!important;
 }
 .pp3-rel-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   font-size:13px!important;
@@ -5495,7 +5495,7 @@ footer::before{display:none!important;content:none!important}
   max-width:none!important;
 }
 .ft-logo{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:26px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -5506,14 +5506,14 @@ footer::before{display:none!important;content:none!important}
 .ft-logo span{color:#EC1C7D!important;font-style:normal!important}
 .ft-desc{
   color:rgba(255,255,255,.6)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   line-height:1.65!important;
   max-width:280px!important;
   margin-bottom:14px!important;
 }
 .ft-grid h4{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.14em!important;
@@ -5524,7 +5524,7 @@ footer::before{display:none!important;content:none!important}
   border-bottom:1px solid rgba(255,255,255,.12)!important;
 }
 .ftl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.68)!important;
   font-size:12px!important;
   font-weight:500!important;
@@ -5548,14 +5548,14 @@ footer::before{display:none!important;content:none!important}
 }
 .ft-copy{
   color:rgba(255,255,255,.45)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.03em!important;
 }
 .ft-leg{display:flex!important;gap:18px!important}
 .ft-leg a{
   color:rgba(255,255,255,.45)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.03em!important;
   text-transform:none!important;
@@ -5588,7 +5588,7 @@ footer::before{display:none!important;content:none!important}
 .pp3-hero .pp3-bc,
 .pp3-hero .pp3-bc *{
   color:rgba(10,10,10,.55)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:600!important;
 }
 .pp3-hero .pp3-bc span{cursor:pointer;transition:color .15s}
@@ -5613,13 +5613,13 @@ footer::before{display:none!important;content:none!important}
 .pp3-sticky,.pp3-sticky-bar,.pp3-sticky-inner{background:#FFFFFF!important;border-top:2.5px solid #0A0A0A!important}
 .pp3-sticky-name{
   color:#0A0A0A!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   letter-spacing:-.02em!important;
 }
 .pp3-sticky-price{
   color:#EC1C7D!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.025em!important;
 }
@@ -5666,13 +5666,13 @@ footer::before{display:none!important;content:none!important}
 .shop-item:hover .si-name{color:#0A0A0A!important}
 .shop-item:hover .si-price{color:#EC1C7D!important}
 .si-name{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   letter-spacing:-.02em!important;
 }
 .si-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   letter-spacing:-.02em!important;
@@ -5695,8 +5695,8 @@ footer::before{display:none!important;content:none!important}
 .ab-client:nth-child(4n+2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-client:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .ab-client:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
-.ab-client .ab-cl-t,.ab-cl-t{color:#0A0A0A!important;font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.ab-client .ab-cl-d,.ab-cl-d{color:rgba(10,10,10,.7)!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.ab-client .ab-cl-t,.ab-cl-t{color:#0A0A0A!important;font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.ab-client .ab-cl-d,.ab-cl-d{color:rgba(10,10,10,.7)!important;font-family:Archivo,sans-serif!important}
 /* Dark about section override */
 .ab-dark-sec{background:#0A0A0A!important;color:#FFFFFF!important}
 .ab-dark-sec .ab-client{background:rgba(255,255,255,.04)!important;border-color:#FFFFFF!important}
@@ -5709,14 +5709,14 @@ footer::before{display:none!important;content:none!important}
 .bdp-hero{background:#FFFFFF!important;color:#0A0A0A!important;border-bottom:2.5px solid #0A0A0A!important}
 .bdp-h1,.bdp-hero h1{color:#0A0A0A!important}
 .bdp-h1 em{color:#EC1C7D!important;font-style:normal!important}
-.bdp-tagline{color:rgba(10,10,10,.72)!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.bdp-tagline{color:rgba(10,10,10,.72)!important;font-family:Archivo,sans-serif!important}
 .bdp-price-badge{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   border:1.5px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:5px 14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   letter-spacing:.08em!important;
 }
@@ -5726,7 +5726,7 @@ footer::before{display:none!important;content:none!important}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:16px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
   cursor:pointer!important;
@@ -5736,10 +5736,10 @@ footer::before{display:none!important;content:none!important}
 /* ─── Points / Membership balance ─── */
 .pts-balance{
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
-.pts-balance span{color:#EC1C7D!important;font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pts-balance span{color:#EC1C7D!important;font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .pts-bar,.pts-bar-left{background:#FFFFFF!important;color:#0A0A0A!important;border:2px solid #0A0A0A!important;border-radius:14px!important;padding:14px 18px!important}
 .pts-info-row,.pts-info-row *{color:#0A0A0A!important}
 .pts-applied{background:rgba(34,197,94,.1)!important;border:2px solid #22C55E!important;color:#15803D!important;border-radius:14px!important;padding:14px 18px!important}
@@ -6069,7 +6069,7 @@ button.pv-wa-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:13px!important;
   letter-spacing:-.005em!important;
@@ -6093,7 +6093,7 @@ button.pv-wa-btn{
 
 /* ─── CLOUD LINK INPUT (replaces upload boxes) ─── */
 .pv-link-wrap{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px dashed #0A0A0A!important;
   border-radius:16px!important;
   padding:22px 24px!important;
@@ -6101,7 +6101,7 @@ button.pv-wa-btn{
   margin:12px 0!important;
 }
 .pv-link-label{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:11px!important;
   text-transform:uppercase!important;
@@ -6118,7 +6118,7 @@ button.pv-wa-btn{
   border:2px solid #0A0A0A!important;
   border-radius:10px!important;
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:500!important;
   background:#FFFFFF!important;
@@ -6130,7 +6130,7 @@ button.pv-wa-btn{
   box-shadow:3px 3px 0 #EC1C7D!important;
 }
 .pv-link-hint{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   color:rgba(10,10,10,.62)!important;
   margin-top:10px!important;
@@ -6143,7 +6143,7 @@ button.pv-wa-btn{
   margin-top:10px;
 }
 .pv-link-chip{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;
   font-weight:700;
   padding:4px 10px;
@@ -6851,7 +6851,7 @@ textarea.finp{resize:vertical;min-height:72px;line-height:1.5}
 
 :root{
   --serif:'Fraunces',Georgia,serif;
-  --sans:'DM Sans','Helvetica Neue',Arial,sans-serif;
+  --sans:Archivo,'Helvetica Neue',Arial,sans-serif;
   --pink:#E91E8C;
   --pink-dark:#C4157A;
   --ink:#0D0D0D;
@@ -8537,9 +8537,9 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 
 
 :root,html,body{
-  --serif:'Unbounded',-apple-system,system-ui,sans-serif;
-  --sans:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif;
-  --mono:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif;
+  --serif:"Archivo Black",-apple-system,system-ui,sans-serif;
+  --sans:Archivo,-apple-system,system-ui,sans-serif;
+  --mono:Archivo,-apple-system,system-ui,sans-serif;
   --c:#00B8D9;
   --m:#EC1C7D;
   --m-dark:#C4155A;
@@ -9206,7 +9206,7 @@ footer{background:var(--paper)!important;border-top:2.5px solid var(--ink)!impor
 
 :root,html,body{
   --serif:'Instrument Serif',ui-serif,Georgia,serif;
-  --sans:'Inter Tight',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --sans:Archivo,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
   --pink:#E6185E;
   --pink-dark:#B4124A;
@@ -9757,9 +9757,9 @@ footer{
 
 
 :root,html,body{
-  --serif:'Unbounded',-apple-system,system-ui,sans-serif!important;
-  --sans:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
-  --mono:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
+  --serif:"Archivo Black",-apple-system,system-ui,sans-serif!important;
+  --sans:Archivo,-apple-system,system-ui,sans-serif!important;
+  --mono:Archivo,-apple-system,system-ui,sans-serif!important;
   --pink:#EC1C7D!important;
   --pink-dark:#C4155A!important;
   --paper:#FFFFFF!important;
@@ -9772,7 +9772,7 @@ footer{
   --y:#FFD100;
   --k:#0A0A0A;
 }
-html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
+html,body{background:#FFFFFF!important;color:#0A0A0A!important;font-family:Archivo,-apple-system,system-ui,sans-serif!important;letter-spacing:-.01em!important}
 body::before{
   content:""!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:9998!important;
   background-image:radial-gradient(circle at center, rgba(10,10,10,.05) 1px, transparent 1.6px)!important;
@@ -9781,7 +9781,7 @@ body::before{
 }
 /* Force Unbounded on every serif-family usage */
 .nav-logo,.hero-h,.hsg-num,.marquee-bar span,.hs-h,.cc-name,.pv-spread-h,.pain-q,.step-n,.step-title,.why-home-num,.why-home-title,.pv-gh-h,.ski-label,.cta-strip h2,.cta-strip::before,.ft-logo,.proof-num{
-  font-family:'Unbounded',-apple-system,system-ui,sans-serif!important;
+  font-family:"Archivo Black",-apple-system,system-ui,sans-serif!important;
   font-style:normal!important;
 }
 /* Kill all italics from previous editorial pass */
@@ -9795,7 +9795,7 @@ body::before{
 .pv-gh-h em{color:#FFD100!important}
 /* Body copy font */
 .hero-sub,.hs-sub,.cc-desc,.pain-a,.step-desc,.why-home-desc,.ft-desc,.ftl,.cta-strip p,.pv-spread-p,.pv-gh-side,.seo-fine,.hero-trust span,.hero-eyebrow,.hs-tag,.cc-cat,.cc-from,.cc-tags span,.hsg-lbl,.hib-row,.btn-primary,.btn-sec,.btn-outline,.btn-wh,.btn-wh-o,.nav-btn-o,.nav-clinks,.nav-clinks *,.ski-loc,.proof-lbl,.pv-spread-eyebrow,.pv-spread-meta span,.pv-gh-tag,.pv-gal-item figcaption,.pain-card::before,.hero::before,.hero::after,.hero-r::before,.pv-spread::before,.pv-gallery::before,.ft-grid h4,.ft-copy,.ft-leg a{
-  font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif!important;
+  font-family:Archivo,-apple-system,system-ui,sans-serif!important;
   text-transform:none!important;
 }
 /* Hero title defaults */
@@ -9949,7 +9949,7 @@ body::before{
 }
 /* Section number badge */
 .hero-side-num{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.16em!important;
@@ -10033,7 +10033,7 @@ body::before{
   border-top-color:rgba(255,255,255,.2)!important;
 }
 .hero-side .hero-trust span{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:600!important;
   color:#0A0A0A!important;
@@ -10096,7 +10096,7 @@ body::before{
 
 /* ═══ GLOBAL ═══ */
 h1,h2,h3,h4,h5{
-  font-family:'Unbounded',-apple-system,sans-serif!important;
+  font-family:"Archivo Black",-apple-system,sans-serif!important;
   font-style:normal!important;
   letter-spacing:-.035em!important;
   color:#0A0A0A;
@@ -10105,7 +10105,7 @@ h1{font-weight:800!important;letter-spacing:-.045em!important}
 h2{font-weight:800!important;letter-spacing:-.04em!important}
 h3{font-weight:700!important}
 h4{font-weight:700!important;letter-spacing:-.025em!important}
-p,span,div,li,label,small,b,strong,em{font-family:'Plus Jakarta Sans',-apple-system,sans-serif}
+p,span,div,li,label,small,b,strong,em{font-family:Archivo,-apple-system,sans-serif}
 em{font-style:normal!important}
 
 /* ═══ UNIVERSAL FORM CONTROLS ═══ */
@@ -10119,7 +10119,7 @@ textarea,select,
 .gf-ov-input,.gf-prompt-ta,.gf-font-sel,
 .sf-search,
 .pp2-sel,.pp3-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:12px!important;
   padding:14px 18px!important;
@@ -10140,7 +10140,7 @@ input:focus,textarea:focus,select:focus,
 .pts-redeem-label,.pts-sub,.pts-bal-sub,
 .gf-ov-label,.gf-prompt-label,
 .sf-ds-label,.sf-key{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -10160,7 +10160,7 @@ button,.btn,
 .sf-refresh,.sf-logout,.sf-status-btn,.sf-tab,.sf-wa-btn,
 .bun-cta,.bun-cta-sec,.bun-cta-old,.bun-cs-btn,
 .cart-btn,.cart-checkout-btn,.cart-browse-btn,.cart-back-btn,.cart-upload-btn,.cart-remove-btn,.cart-wa-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   letter-spacing:-.005em!important;
   text-transform:none!important;
@@ -10172,10 +10172,10 @@ button,.btn,
   border-bottom:2.5px solid #0A0A0A!important;
   padding-top:94px;
 }
-.pp2-bc{font-family:'Plus Jakarta Sans',sans-serif!important;color:rgba(255,255,255,.5)!important}
+.pp2-bc{font-family:Archivo,sans-serif!important;color:rgba(255,255,255,.5)!important}
 .pp2-bc span:hover{color:#FFD100!important}
 .pp2-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:7px 14px!important;
@@ -10187,7 +10187,7 @@ button,.btn,
   display:inline-block!important;
 }
 .pp2-h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(40px,5.5vw,84px)!important;
   letter-spacing:-.045em!important;
@@ -10196,7 +10196,7 @@ button,.btn,
 }
 .pp2-h1 em{color:#FFD100!important;font-style:normal!important}
 .pp2-tagline{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.7)!important;
   font-size:16px!important;
 }
@@ -10213,15 +10213,15 @@ button,.btn,
 .pp2-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .pp2-section:nth-child(even){background:#F7F5F2!important}
 .pp2-sh{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.04em!important;
   font-size:clamp(32px,4vw,56px)!important;
   color:#0A0A0A!important;
 }
 .pp2-sh em{color:#EC1C7D!important;font-style:normal!important}
-.pp2-desc{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:16px!important;line-height:1.75!important;color:#0A0A0A!important;opacity:.7}
-.pp2-hl{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:14px!important;color:#0A0A0A!important}
+.pp2-desc{font-family:Archivo,sans-serif!important;font-size:16px!important;line-height:1.75!important;color:#0A0A0A!important;opacity:.7}
+.pp2-hl{font-family:Archivo,sans-serif!important;font-size:14px!important;color:#0A0A0A!important}
 .pp2-hl-dot{background:#EC1C7D!important;border-radius:50%!important;width:8px!important;height:8px!important}
 .pp2-specs-box{
   background:#FFFFFF!important;
@@ -10231,18 +10231,18 @@ button,.btn,
   padding:32px!important;
 }
 .pp2-specs-title{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   letter-spacing:.08em!important;
 }
-.pp2-spec{font-family:'Plus Jakarta Sans',sans-serif!important;border-bottom-color:rgba(10,10,10,.1)!important}
+.pp2-spec{font-family:Archivo,sans-serif!important;border-bottom-color:rgba(10,10,10,.1)!important}
 .pp2-spec-k{color:#0A0A0A!important;font-weight:700!important;letter-spacing:-.005em!important;text-transform:none!important;font-size:13px!important}
 .pp2-spec-v{color:#0A0A0A!important;opacity:.75}
 
 .pp2-cfg-row{gap:8px!important}
 .pp2-cfg{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -10266,7 +10266,7 @@ button,.btn,
   overflow:hidden!important;
   box-shadow:4px 4px 0 #EC1C7D!important;
 }
-.pp2-tbl{font-family:'Plus Jakarta Sans',sans-serif!important}
+.pp2-tbl{font-family:Archivo,sans-serif!important}
 .pp2-tbl th{
   background:#0A0A0A!important;color:#FFFFFF!important;
   font-weight:800!important;text-transform:none!important;
@@ -10285,10 +10285,10 @@ button,.btn,
 .pp2-why-item:nth-child(2) .pp2-why-n{color:#00B8D9!important}
 .pp2-why-item:nth-child(3) .pp2-why-n{color:#FFD100!important}
 .pp2-why-item:nth-child(4) .pp2-why-n{color:#FFFFFF!important}
-.pp2-why-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:32px!important;letter-spacing:-.04em!important}
+.pp2-why-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:32px!important;letter-spacing:-.04em!important}
 
 .pp2-uc{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:1.5px solid #EC1C7D!important;
   border-radius:999px!important;
@@ -10296,7 +10296,7 @@ button,.btn,
   color:#EC1C7D!important;
   padding:7px 14px!important;
 }
-.pp2-uc-title{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:800!important;color:#0A0A0A!important}
+.pp2-uc-title{font-family:Archivo,sans-serif!important;font-weight:800!important;color:#0A0A0A!important}
 
 .pp2-order-bar{
   background:#FFFFFF!important;
@@ -10305,9 +10305,9 @@ button,.btn,
   box-shadow:5px 5px 0 #EC1C7D!important;
   padding:14px 22px!important;
 }
-.pp2-ob-lbl{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.pp2-ob-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:24px!important}
-.pp2-ob-unit{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.6}
+.pp2-ob-lbl{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.pp2-ob-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:24px!important}
+.pp2-ob-unit{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.6}
 
 .pp2-faq-item{
   background:#FFFFFF!important;
@@ -10317,14 +10317,14 @@ button,.btn,
   padding:0!important;
 }
 .pp2-faq-q{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:16px!important;
   color:#0A0A0A!important;
   padding:20px 24px!important;
 }
 .pp2-faq-a{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;opacity:.75;
   padding:0 24px 22px!important;
 }
@@ -10333,8 +10333,8 @@ button,.btn,
   border-radius:16px!important;
   background:rgba(236,28,125,.04)!important;
 }
-.pp2-uzone-title{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
-.pp2-uzone-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.pp2-uzone-title{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
+.pp2-uzone-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 
 .pp2-rel-grid{gap:16px!important}
 .pp2-rel{
@@ -10349,13 +10349,13 @@ button,.btn,
 .pp2-rel:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .pp2-rel:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .pp2-rel:hover{transform:translate(-2px,-2px)}
-.pp2-rel-nm{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
+.pp2-rel-nm{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important}
 
 /* ═══ PRODUCT PAGE v3 (pp3-*) ═══ */
 .pp3-hero{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding-top:94px}
 .pp3-hero-inner{max-width:1280px;margin:0 auto}
 .pp3-cat-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:7px 14px!important;
@@ -10366,7 +10366,7 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .pp3-h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(40px,5.5vw,84px)!important;
   letter-spacing:-.045em!important;
@@ -10374,9 +10374,9 @@ button,.btn,
   color:#0A0A0A!important;
 }
 .pp3-h1 em{color:#EC1C7D!important;font-style:normal!important}
-.pp3-tagline{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7;font-size:16px!important}
+.pp3-tagline{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7;font-size:16px!important}
 .pp3-from-pill{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   background:#EC1C7D!important;color:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -10384,10 +10384,10 @@ button,.btn,
   box-shadow:4px 4px 0 #0A0A0A!important;
   padding:10px 20px!important;
 }
-.pp3-hl,.pp3-hl-list{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important}
+.pp3-hl,.pp3-hl-list{font-family:Archivo,sans-serif!important;color:#0A0A0A!important}
 .pp3-hl-dot{background:#EC1C7D!important;border-radius:50%!important}
 .pp3-trust-badge,.pp3-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border-radius:999px!important;
   padding:6px 12px!important;
@@ -10414,7 +10414,7 @@ button,.btn,
 .pp3-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .pp3-section:nth-of-type(even){background:#F7F5F2!important}
 .pp3-sh{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.04em!important;
   font-size:clamp(32px,4.2vw,60px)!important;
@@ -10422,7 +10422,7 @@ button,.btn,
 }
 .pp3-sh em{color:#EC1C7D!important;font-style:normal!important}
 .pp3-section-tag{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border:1.5px solid #EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
@@ -10433,7 +10433,7 @@ button,.btn,
   text-transform:uppercase!important;
   display:inline-block!important;
 }
-.pp3-intro-text,.pp3-body-p,.pp3-body-callout{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;line-height:1.75!important;font-size:16px!important}
+.pp3-intro-text,.pp3-body-p,.pp3-body-callout{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;line-height:1.75!important;font-size:16px!important}
 .pp3-body-callout{
   background:rgba(0,184,217,.06)!important;
   border:2px solid #00B8D9!important;
@@ -10449,7 +10449,7 @@ button,.btn,
   padding:28px!important;
 }
 .pp3-info-title,.pp3-specs-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#0A0A0A!important;
   font-size:16px!important;
@@ -10459,7 +10459,7 @@ button,.btn,
 .pp3-info-highlight{color:#EC1C7D!important;font-weight:800!important}
 
 .pp3-cfg-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -10483,10 +10483,10 @@ button,.btn,
   overflow:hidden!important;
   box-shadow:6px 6px 0 #EC1C7D!important;
 }
-.pp3-tbl{font-family:'Plus Jakarta Sans',sans-serif!important}
+.pp3-tbl{font-family:Archivo,sans-serif!important}
 .pp3-tbl th,.pp3-ladder-title{
   background:#0A0A0A!important;color:#FFFFFF!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   padding:14px 18px!important;
 }
@@ -10499,7 +10499,7 @@ button,.btn,
   font-weight:800!important;
   font-size:11px!important;
 }
-.pp3-price-cell,.pp3-tier-ppu,.pp3-tier-total{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pp3-price-cell,.pp3-tier-ppu,.pp3-tier-total{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 
 .pp3-why-grid{
   background:#0A0A0A!important;
@@ -10508,7 +10508,7 @@ button,.btn,
   overflow:hidden!important;
 }
 .pp3-why-item{background:#0A0A0A!important}
-.pp3-why-num{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:48px!important;letter-spacing:-.04em!important}
+.pp3-why-num{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:48px!important;letter-spacing:-.04em!important}
 .pp3-why-item:nth-child(1) .pp3-why-num{color:#EC1C7D!important}
 .pp3-why-item:nth-child(2) .pp3-why-num{color:#00B8D9!important}
 .pp3-why-item:nth-child(3) .pp3-why-num{color:#FFD100!important}
@@ -10520,8 +10520,8 @@ button,.btn,
   border-radius:14px!important;
   margin-bottom:12px!important;
 }
-.pp3-faq-q{font-family:'Unbounded',sans-serif!important;font-weight:700!important;font-size:16px!important;color:#0A0A0A!important;padding:20px 24px!important}
-.pp3-faq-a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.75;padding:0 24px 22px!important}
+.pp3-faq-q{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;font-size:16px!important;color:#0A0A0A!important;padding:20px 24px!important}
+.pp3-faq-a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.75;padding:0 24px 22px!important}
 
 .pp3-order-card,.pp3-sticky-bar{
   background:#FFFFFF!important;
@@ -10531,8 +10531,8 @@ button,.btn,
   padding:28px!important;
 }
 .pp3-sticky{background:#FFFFFF!important;border-top:2.5px solid #0A0A0A!important}
-.pp3-sticky-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.pp3-sticky-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.pp3-sticky-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.pp3-sticky-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 
 .pp3-btn-cart,.pp3-btn-order,.pp3-btn-full{
   background:#EC1C7D!important;
@@ -10540,7 +10540,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:16px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:4px 4px 0 #0A0A0A!important;
   transition:all .18s!important;
@@ -10568,7 +10568,7 @@ button,.btn,
   border-radius:50%!important;
   width:32px!important;height:32px!important;
 }
-.pp3-qty-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pp3-qty-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 
 .pp3-rel-card,.pp3-use-card,.pp3-uc-card{
   background:#FFFFFF!important;
@@ -10590,8 +10590,8 @@ button,.btn,
 .pp3-use-grid > .pp3-use-card:nth-child(4n+4),
 .pp3-uc-grid > .pp3-uc-card:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .pp3-rel-card:hover,.pp3-use-card:hover,.pp3-uc-card:hover{transform:translate(-2px,-2px)}
-.pp3-rel-name,.pp3-use-title{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.pp3-rel-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.pp3-rel-name,.pp3-use-title{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.pp3-rel-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 
 .pp3-cta-strip{
   background:#0A0A0A!important;
@@ -10602,9 +10602,9 @@ button,.btn,
 .pp3-cta-strip h2 em{color:#FFD100!important}
 
 /* ═══ CART ═══ */
-.cart-page,.cart-body,.cart-layout{background:#FFFFFF!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.cart-page,.cart-body,.cart-layout{background:#FFFFFF!important;font-family:Archivo,sans-serif!important}
 .cart-topbar,.cart-topbar-inner{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important}
-.cart-heading,.cart-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
+.cart-heading,.cart-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
 .cart-item{
   background:#FFFFFF!important;
   border:2.5px solid #0A0A0A!important;
@@ -10616,9 +10616,9 @@ button,.btn,
 .cart-item:nth-child(4n+2){box-shadow:5px 5px 0 #00B8D9!important}
 .cart-item:nth-child(4n+3){box-shadow:5px 5px 0 #FFD100!important}
 .cart-item:nth-child(4n+4){box-shadow:5px 5px 0 #0A0A0A!important}
-.cart-item-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important;font-size:18px!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
-.cart-item-price,.cart-item-unit{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
-.cart-item-config,.cart-item-notes,.cart-item-file{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.cart-item-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;font-size:18px!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.cart-item-price,.cart-item-unit{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.cart-item-config,.cart-item-notes,.cart-item-file{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 
 .cart-rail,.cart-sidebar,.cart-summary{
   background:#FFFFFF!important;
@@ -10628,9 +10628,9 @@ button,.btn,
   padding:28px!important;
   position:sticky;top:80px;
 }
-.cart-summary-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
-.cart-sum-line,.cart-sum-totals,.cart-summary-row{font-family:'Plus Jakarta Sans',sans-serif!important}
-.cart-summary-total,.cart-summary-total-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:28px!important}
+.cart-summary-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
+.cart-sum-line,.cart-sum-totals,.cart-summary-row{font-family:Archivo,sans-serif!important}
+.cart-summary-total,.cart-summary-total-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:28px!important}
 .cart-checkout-btn,.cart-btn{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
@@ -10664,25 +10664,25 @@ button,.btn,
 .cart-count-badge,.cart-cnt{
   background:#EC1C7D!important;color:#FFFFFF!important;
   border-radius:999px!important;padding:2px 8px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;font-weight:800!important;
 }
-.cart-guarantee,.cart-guarantees{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.cart-guarantee,.cart-guarantees{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 .cart-empty{text-align:center;padding:80px 40px}
 .cart-empty-icon{font-size:64px;opacity:.3}
-.cart-empty-msg{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:28px!important}
+.cart-empty-msg{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:28px!important}
 
 /* ═══ CHECKOUT ═══ */
-#screen-checkout{background:#F7F5F2!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+#screen-checkout{background:#F7F5F2!important;font-family:Archivo,sans-serif!important}
 .flow-nav{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:20px 32px!important}
-.co-progress,.co-progress-inner{font-family:'Plus Jakarta Sans',sans-serif!important}
+.co-progress,.co-progress-inner{font-family:Archivo,sans-serif!important}
 .co-prog-step{font-weight:700!important}
 .co-prog-num{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:50%!important;
   width:32px;height:32px;
-  font-family:'Unbounded',sans-serif!important;font-weight:800!important;
+  font-family:"Archivo Black",sans-serif!important;font-weight:800!important;
 }
 .co-prog-step.active .co-prog-num{background:#EC1C7D!important;color:#FFFFFF!important}
 .co-prog-line{background:rgba(10,10,10,.15)!important;height:2px!important}
@@ -10705,10 +10705,10 @@ button,.btn,
   background:#EC1C7D!important;color:#FFFFFF!important;
   border-radius:50%!important;
   width:32px;height:32px;
-  font-family:'Unbounded',sans-serif!important;font-weight:800!important;
+  font-family:"Archivo Black",sans-serif!important;font-weight:800!important;
   display:inline-flex;align-items:center;justify-content:center;
 }
-.co-card-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:20px!important;letter-spacing:-.025em!important;color:#0A0A0A!important}
+.co-card-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:20px!important;letter-spacing:-.025em!important;color:#0A0A0A!important}
 .co-card-body{padding:24px 28px!important}
 
 .co-sum-card,.co-summary-card,.co-rail,.co-sidebar-sticky{
@@ -10718,18 +10718,18 @@ button,.btn,
   box-shadow:6px 6px 0 #0A0A0A!important;
   padding:24px!important;
 }
-.co-sum-head,.co-sum-head-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:18px!important}
-.co-sum-item-name{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.co-sum-item-price,.co-sum-total,.co-sum-total-price,.co-sum-total-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.co-sum-head,.co-sum-head-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:18px!important}
+.co-sum-item-name{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.co-sum-item-price,.co-sum-total,.co-sum-total-price,.co-sum-total-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
 .co-sum-total-row{border-top:2px solid #0A0A0A!important;padding-top:16px!important;margin-top:16px!important}
-.co-sum-total-lbl,.co-sum-total-label{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.co-sum-total-lbl,.co-sum-total-label{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .co-sum-cta{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:18px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
   width:100%;
@@ -10738,7 +10738,7 @@ button,.btn,
 .co-sum-cta:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 #0A0A0A!important;background:#C4155A!important}
 
 .dtog-opt{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
@@ -10755,11 +10755,11 @@ button,.btn,
   box-shadow:4px 4px 0 #EC1C7D!important;
 }
 
-.co-guarantees,.co-guarantees-list,.co-guar,.co-guarantee{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
-.co-earn-row,.co-earn-note,.co-pts-row,.co-pts-disc-row{font-family:'Plus Jakarta Sans',sans-serif!important}
+.co-guarantees,.co-guarantees-list,.co-guar,.co-guarantee{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.co-earn-row,.co-earn-note,.co-pts-row,.co-pts-disc-row{font-family:Archivo,sans-serif!important}
 
 /* ═══ ORDER CONFIRMATION (oc-*) ═══ */
-.oc-wrap,.oc-hd{font-family:'Plus Jakarta Sans',sans-serif!important}
+.oc-wrap,.oc-hd{font-family:Archivo,sans-serif!important}
 .oc-hd{
   background:#0A0A0A!important;
   color:#FFFFFF!important;
@@ -10768,7 +10768,7 @@ button,.btn,
 }
 .oc-hd h1,.oc-hd h2{color:#FFFFFF!important}
 .oc-num{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#FFD100!important;
   letter-spacing:-.04em!important;
@@ -10781,9 +10781,9 @@ button,.btn,
   padding:28px!important;
   margin-bottom:20px!important;
 }
-.oc-item-name{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
+.oc-item-name{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
 .oc-tot{box-shadow:6px 6px 0 #0A0A0A!important}
-.oc-method,.oc-dt{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.75}
+.oc-method,.oc-dt{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.75}
 
 /* ═══ BUNDLES (bun-*) ═══ */
 .bun-card,.bun-cs-wrap{
@@ -10800,12 +10800,12 @@ button,.btn,
 .bun-card:nth-child(3n+2):hover,.bun-cs-wrap:nth-child(3n+2):hover{box-shadow:9px 9px 0 #00B8D9!important}
 .bun-card:nth-child(3n+3):hover,.bun-cs-wrap:nth-child(3n+3):hover{box-shadow:9px 9px 0 #FFD100!important}
 .bun-card:nth-child(3n+1):hover{box-shadow:9px 9px 0 #EC1C7D!important}
-.bun-name,.bun-cs-name{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:22px!important;color:#0A0A0A!important;letter-spacing:-.025em!important}
-.bun-desc,.bun-cs-body{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72}
-.bun-price,.bun-cs-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:32px!important;letter-spacing:-.03em!important}
-.bun-orig,.bun-cs-orig{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.4;text-decoration:line-through}
+.bun-name,.bun-cs-name{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:22px!important;color:#0A0A0A!important;letter-spacing:-.025em!important}
+.bun-desc,.bun-cs-body{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72}
+.bun-price,.bun-cs-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important;font-size:32px!important;letter-spacing:-.03em!important}
+.bun-orig,.bun-cs-orig{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.4;text-decoration:line-through}
 .bun-badge,.bun-cs-eyebrow,.bun-cs-pct{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   background:#FFD100!important;
   color:#0A0A0A!important;
@@ -10817,7 +10817,7 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .bun-prod-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   background:rgba(10,10,10,.05)!important;
   border:1px solid rgba(10,10,10,.15)!important;
@@ -10862,15 +10862,15 @@ button,.btn,
   padding:28px!important;
 }
 #mem-calc-pts,#mem-calc-val,.pts-balance-big{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:48px!important;
   color:#EC1C7D!important;
   letter-spacing:-.04em!important;
 }
-.pts-sub,.pts-bal-sub,.pts-earn-note,.pts-next-note{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.pts-sub,.pts-bal-sub,.pts-earn-note,.pts-next-note{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .pts-badge,.pts-applied-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   background:#FFD100!important;
   color:#0A0A0A!important;
@@ -10900,11 +10900,11 @@ button,.btn,
   box-shadow:8px 8px 0 #EC1C7D!important;
   padding:40px!important;
 }
-.sf-login-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:32px!important;color:#0A0A0A!important;letter-spacing:-.04em!important}
-.sf-login-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.sf-login-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:32px!important;color:#0A0A0A!important;letter-spacing:-.04em!important}
+.sf-login-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .sf-numpad{display:grid;gap:12px}
 .sf-key{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:24px!important;
   background:#FFFFFF!important;
@@ -10936,8 +10936,8 @@ button,.btn,
 .sf-stat:nth-child(3n+1){box-shadow:3px 3px 0 #EC1C7D!important}
 .sf-stat:nth-child(3n+2){box-shadow:3px 3px 0 #00B8D9!important}
 .sf-stat:nth-child(3n+3){box-shadow:3px 3px 0 #FFD100!important}
-.sf-stat-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:28px!important;color:#0A0A0A!important;letter-spacing:-.035em!important}
-.sf-stat-l{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;text-transform:uppercase;letter-spacing:.06em!important}
+.sf-stat-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:28px!important;color:#0A0A0A!important;letter-spacing:-.035em!important}
+.sf-stat-l{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;text-transform:uppercase;letter-spacing:.06em!important}
 .sf-card{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -10947,7 +10947,7 @@ button,.btn,
 }
 .sf-card:hover{box-shadow:4px 4px 0 #EC1C7D!important}
 .sf-tab,.sf-status-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -10958,7 +10958,7 @@ button,.btn,
 }
 .sf-tab.active,.sf-status-btn.active{background:#EC1C7D!important;color:#FFFFFF!important}
 .sf-status-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:4px 12px!important;
@@ -10969,15 +10969,15 @@ button,.btn,
   text-transform:uppercase!important;
 }
 .sf-stat-ready{background:rgba(0,184,217,.08)!important;color:#00B8D9!important;border-color:#00B8D9!important}
-.sf-oid,.sf-item-name,.sf-cname{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.sf-ctotal,.sf-item-price{font-family:'Unbounded',sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
-.sf-cemail,.sf-ctime,.sf-item-spec{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.sf-oid,.sf-item-name,.sf-cname{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.sf-ctotal,.sf-item-price{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;color:#EC1C7D!important}
+.sf-cemail,.sf-ctime,.sf-item-spec{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .sf-refresh,.sf-logout,.sf-wa-btn{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:8px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
 }
@@ -10995,10 +10995,10 @@ button,.btn,
   background:rgba(236,28,125,.04)!important;
   padding:48px 32px!important;
 }
-.gf-upload-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:22px!important}
-.gf-upload-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.gf-upload-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:22px!important}
+.gf-upload-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .gf-chip,.gf-style-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -11013,7 +11013,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
 .gf-accept-btn{background:#EC1C7D!important;color:#FFFFFF!important;box-shadow:4px 4px 0 #0A0A0A!important}
@@ -11025,14 +11025,14 @@ button,.btn,
   border-radius:18px!important;
   padding:24px!important;
 }
-.gf-accepted-title,.gf-processing-title{font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.gf-accepted-title,.gf-processing-title{font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .gf-err{
   color:#EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
   border:1.5px solid #EC1C7D!important;
   border-radius:12px!important;
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
 
@@ -11040,20 +11040,20 @@ button,.btn,
 #screen-admin,.adm-wrap,.adm-shell,.adm-body{
   background:#F7F5F2!important;
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
 }
 .adm-nav-row,.adm-menu-sec-hd,.adm-menu-sec-col,.adm-nav-mega{
   background:#FFFFFF!important;
   border-bottom:2px solid #0A0A0A!important;
 }
 .adm-page-title,.adm-card-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.035em!important;
   color:#0A0A0A!important;
 }
 .adm-page-title{font-size:32px!important;letter-spacing:-.04em!important}
-.adm-page-sub{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.65}
+.adm-page-sub{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.65}
 .adm-card,.adm-pane,.adm-prod-card,.adm-bundle-card,.adm-order-row,.adm-member-row,.adm-add-row{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -11064,7 +11064,7 @@ button,.btn,
 }
 .adm-card:hover{box-shadow:5px 5px 0 #EC1C7D!important}
 .adm-btn,.adm-nav-btn,.adm-nav-action,.adm-cancel-btn,.adm-font-del-btn{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -11089,7 +11089,7 @@ button,.btn,
 .adm-cancel-btn:hover{background:#EC1C7D!important;color:#FFFFFF!important}
 
 .adm-inp,.adm-input,.adm-field-input,.adm-field-textarea,.adm-cfg-inp,.adm-chip-inp,.adm-hl-inp,.adm-price-input,.adm-gc-inp-label,.adm-gc-inp-ph,.adm-opt-label,.adm-opt-formula,.adm-pers-lbl,.adm-pers-ph,.adm-method-name,.adm-method-prompt{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:10px!important;
   padding:10px 14px!important;
@@ -11100,7 +11100,7 @@ button,.btn,
 }
 .adm-inp:focus,.adm-input:focus{outline:none!important;box-shadow:3px 3px 0 #EC1C7D!important}
 .adm-lbl,.adm-fl,.adm-field-label,.adm-ct-lbl,.adm-opt-label,.adm-menu-item-label,.adm-gc-style-label,.adm-pers-lbl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -11114,7 +11114,7 @@ button,.btn,
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   overflow:hidden!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
 }
 .adm-price-table th{
   background:#0A0A0A!important;color:#FFFFFF!important;
@@ -11136,43 +11136,43 @@ button,.btn,
   border:1.5px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:3px 10px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:10px!important;
   letter-spacing:.05em!important;
   text-transform:uppercase!important;
 }
 .adm-bundle-name,.adm-prod-card h3,.adm-prod-card h4{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   letter-spacing:-.025em!important;
 }
 .adm-bundle-price,.adm-bundle-save{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
 }
-.adm-ct-val,.adm-ct-note{font-family:'Plus Jakarta Sans',sans-serif!important}
-.adm-ct-val{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:24px!important;color:#0A0A0A!important}
+.adm-ct-val,.adm-ct-note{font-family:Archivo,sans-serif!important}
+.adm-ct-val{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:24px!important;color:#0A0A0A!important}
 
-.adm-faq-q{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.adm-faq-a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.adm-faq-q{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.adm-faq-a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
 
 .adm-formula-preview{
   background:rgba(0,184,217,.08)!important;
   border:1.5px solid #00B8D9!important;
   border-radius:10px!important;
   padding:10px 14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:600!important;
   color:#0A0A0A!important;
   font-size:12px!important;
 }
 
-.adm-nav-label{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important}
-.adm-menu-item-label{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.adm-menu-item-slug{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.55;font-size:11px!important}
+.adm-nav-label{font-family:Archivo,sans-serif!important;font-weight:700!important}
+.adm-menu-item-label{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.adm-menu-item-slug{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.55;font-size:11px!important}
 
 .adm-order-row,.adm-member-row{
   display:grid;
@@ -11188,14 +11188,14 @@ button,.btn,
   border-radius:0 0 24px 24px!important;
   box-shadow:0 10px 0 rgba(10,10,10,.08)!important;
 }
-.mega-inner{font-family:'Plus Jakarta Sans',sans-serif!important}
-.mega-inner h3,.mega-inner h4{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
-.mega-inner a{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;font-weight:600!important}
+.mega-inner{font-family:Archivo,sans-serif!important}
+.mega-inner h3,.mega-inner h4{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.mega-inner a{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;font-weight:600!important}
 .mega-inner a:hover{color:#EC1C7D!important}
 
 /* ═══ TOAST ═══ */
 .toast{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   background:#0A0A0A!important;
   color:#FFFFFF!important;
@@ -11207,15 +11207,15 @@ button,.btn,
 
 /* ═══ ABOUT PAGE (ab-*) extras ═══ */
 .ab-hero{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding-top:94px!important}
-.ab-h1{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:clamp(44px,6vw,88px)!important;letter-spacing:-.045em!important;line-height:1!important;color:#0A0A0A!important}
+.ab-h1{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:clamp(44px,6vw,88px)!important;letter-spacing:-.045em!important;line-height:1!important;color:#0A0A0A!important}
 .ab-h1 em{color:#EC1C7D!important;font-style:normal!important;font-weight:800!important}
-.ab-sub,.ab-p{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72;line-height:1.75!important;font-size:16px!important}
+.ab-sub,.ab-p{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72;line-height:1.75!important;font-size:16px!important}
 .ab-section{background:#FFFFFF!important;border-bottom:2.5px solid #0A0A0A!important;padding:80px 40px!important}
 .ab-section:nth-of-type(even){background:#F7F5F2!important}
 .ab-dark-sec{background:#0A0A0A!important;color:#FFFFFF!important;padding:80px 40px!important;border-bottom:2.5px solid #0A0A0A!important}
 .ab-dark-sec h2,.ab-dark-sec h3{color:#FFFFFF!important}
 .ab-dark-sec .ab-sub,.ab-dark-sec .ab-p{color:rgba(255,255,255,.7)!important}
-.ab-sh{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:clamp(32px,4.5vw,60px)!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
+.ab-sh{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:clamp(32px,4.5vw,60px)!important;letter-spacing:-.04em!important;color:#0A0A0A!important}
 .ab-sh em{color:#EC1C7D!important;font-style:normal!important}
 .ab-dark-sec .ab-sh{color:#FFFFFF!important}
 .ab-dark-sec .ab-sh em{color:#FFD100!important}
@@ -11228,11 +11228,11 @@ button,.btn,
 .ab-stat:nth-child(1){box-shadow:4px 4px 0 #EC1C7D!important}
 .ab-stat:nth-child(2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-stat:nth-child(3){box-shadow:4px 4px 0 #FFD100!important}
-.ab-stat-n{font-family:'Unbounded',sans-serif!important;font-weight:800!important;font-size:44px!important;letter-spacing:-.04em!important}
+.ab-stat-n{font-family:"Archivo Black",sans-serif!important;font-weight:800!important;font-size:44px!important;letter-spacing:-.04em!important}
 .ab-stat:nth-child(1) .ab-stat-n{color:#EC1C7D!important}
 .ab-stat:nth-child(2) .ab-stat-n{color:#00B8D9!important}
 .ab-stat:nth-child(3) .ab-stat-n{color:#D4A800!important}
-.ab-stat-l{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;letter-spacing:.06em!important;text-transform:uppercase!important}
+.ab-stat-l{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.6;font-size:11px!important;letter-spacing:.06em!important;text-transform:uppercase!important}
 .ab-val{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
@@ -11243,24 +11243,24 @@ button,.btn,
 .ab-val:nth-child(4n+2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-val:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .ab-val:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
-.ab-val-t{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;font-size:18px!important;letter-spacing:-.02em!important}
-.ab-val-d{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.72}
+.ab-val-t{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;font-size:18px!important;letter-spacing:-.02em!important}
+.ab-val-d{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.72}
 .ab-client{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   padding:20px!important;
 }
-.ab-cl-t{font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.ab-cl-d{font-family:'Plus Jakarta Sans',sans-serif!important;color:#0A0A0A!important;opacity:.7}
-.ab-vi-row{font-family:'Plus Jakarta Sans',sans-serif!important;border-bottom:1.5px solid rgba(10,10,10,.1)!important;padding:14px 0!important}
-.ab-vi-label{font-family:'Plus Jakarta Sans',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.7;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
-.ab-vi-val{font-family:'Unbounded',sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
+.ab-cl-t{font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.ab-cl-d{font-family:Archivo,sans-serif!important;color:#0A0A0A!important;opacity:.7}
+.ab-vi-row{font-family:Archivo,sans-serif!important;border-bottom:1.5px solid rgba(10,10,10,.1)!important;padding:14px 0!important}
+.ab-vi-label{font-family:Archivo,sans-serif!important;font-weight:700!important;color:#0A0A0A!important;opacity:.7;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.ab-vi-val{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;color:#0A0A0A!important;letter-spacing:-.02em!important}
 
 /* ═══ CONTACT PAGE extras ═══ */
 #screen-contact{background:#FFFFFF!important}
 .ct-input,.ct-textarea{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px solid #0A0A0A!important;
   border-radius:12px!important;
   padding:14px 18px!important;
@@ -11271,7 +11271,7 @@ button,.btn,
 }
 .ct-input:focus,.ct-textarea:focus{outline:none!important;box-shadow:3px 3px 0 #EC1C7D!important}
 #ct-ok{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   background:rgba(236,28,125,.08)!important;
@@ -11290,7 +11290,7 @@ button,.btn,
   overflow:hidden!important;
 }
 .faq-q{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:16px!important;
   color:#0A0A0A!important;
@@ -11298,7 +11298,7 @@ button,.btn,
   letter-spacing:-.02em!important;
 }
 .faq-a{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
   opacity:.75;
   padding:0 24px 22px!important;
@@ -11326,7 +11326,7 @@ button,.btn,
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   padding:18px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:11px!important;
   letter-spacing:.14em!important;
@@ -11343,7 +11343,7 @@ button,.btn,
   color:#0A0A0A!important;
 }
 .pp3-oc-product *{color:#0A0A0A!important}
-.pp3-oc-product strong,.pp3-oc-product b{font-family:'Unbounded',sans-serif!important;font-weight:700!important;letter-spacing:-.015em!important}
+.pp3-oc-product strong,.pp3-oc-product b{font-family:"Archivo Black",sans-serif!important;font-weight:700!important;letter-spacing:-.015em!important}
 .pp3-oc-row{
   background:transparent!important;
   padding:14px 22px!important;
@@ -11355,7 +11355,7 @@ button,.btn,
 }
 .pp3-oc-row span:first-child{
   color:rgba(10,10,10,.55)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   font-size:10px!important;
   letter-spacing:.1em!important;
@@ -11364,7 +11364,7 @@ button,.btn,
 }
 .pp3-oc-row span:last-child{
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   font-size:13px!important;
   text-align:right!important;
@@ -11388,7 +11388,7 @@ button,.btn,
 }
 .pp3-oc-total-row span:first-child{
   color:rgba(10,10,10,.7)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:12px!important;
   letter-spacing:.08em!important;
@@ -11396,7 +11396,7 @@ button,.btn,
 }
 .pp3-oc-total{
   color:#EC1C7D!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:32px!important;
   letter-spacing:-.035em!important;
@@ -11483,7 +11483,7 @@ button,.btn,
 .pp3-faq-item:nth-child(3n+3):hover{box-shadow:6px 6px 0 #FFD100!important}
 .pp3-faq-q{
   padding:22px 26px!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:15px!important;
   color:#0A0A0A!important;
@@ -11502,7 +11502,7 @@ button,.btn,
 .pp2-faq-item.open .pp2-faq-arr{transform:rotate(45deg)}
 .pp3-faq-a{
   padding:0 26px 24px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   line-height:1.75!important;
   color:rgba(10,10,10,.72)!important;
@@ -11529,7 +11529,7 @@ button,.btn,
 .pp2-faq-item:nth-child(3n+3){box-shadow:4px 4px 0 #FFD100!important}
 .pp2-faq-q{
   padding:22px 26px!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:15px!important;
   color:#0A0A0A!important;
@@ -11558,7 +11558,7 @@ footer::before{
   content:"PRINTVOLUTION"!important;
   position:absolute!important;
   left:-20px;right:-20px;bottom:-80px;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(120px,20vw,300px)!important;
   font-weight:900!important;
   color:rgba(236,28,125,.07)!important;
@@ -11589,7 +11589,7 @@ footer > *{position:relative;z-index:2}
   max-width:none!important;
 }
 .ft-logo{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:38px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -11600,7 +11600,7 @@ footer > *{position:relative;z-index:2}
 .ft-logo span{color:#EC1C7D!important;font-style:normal!important}
 .ft-desc{
   color:rgba(255,255,255,.62)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   line-height:1.75!important;
   max-width:340px!important;
@@ -11610,7 +11610,7 @@ footer > *{position:relative;z-index:2}
   display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;
 }
 .ft-contact-chip{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;font-weight:700;
   color:#FFFFFF;
   padding:6px 12px;
@@ -11620,7 +11620,7 @@ footer > *{position:relative;z-index:2}
   text-transform:uppercase;
 }
 .ft-grid h4{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   letter-spacing:.14em!important;
@@ -11631,7 +11631,7 @@ footer > *{position:relative;z-index:2}
   border-bottom:1px solid rgba(255,255,255,.15)!important;
 }
 .ftl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.72)!important;
   font-size:13px!important;
   font-weight:500!important;
@@ -11653,14 +11653,14 @@ footer > *{position:relative;z-index:2}
 }
 .ft-copy{
   color:rgba(255,255,255,.5)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   letter-spacing:.04em!important;
 }
 .ft-leg{display:flex!important;gap:24px!important}
 .ft-leg a{
   color:rgba(255,255,255,.5)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   letter-spacing:.04em!important;
   text-transform:none!important;
@@ -11693,7 +11693,7 @@ footer > *{position:relative;z-index:2}
   padding:120px 48px 80px!important;
 }
 #screen-contact h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(44px,6vw,88px)!important;
   letter-spacing:-.045em!important;
@@ -11717,7 +11717,7 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   padding:16px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   background:#FFFFFF!important;
   color:#0A0A0A!important;
@@ -11727,7 +11727,7 @@ footer > *{position:relative;z-index:2}
 .ct-input:focus,.ct-textarea:focus{outline:none!important;box-shadow:4px 4px 0 #EC1C7D!important}
 #screen-contact label,
 #screen-contact .ct-label{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -11742,7 +11742,7 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:18px 36px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:14px!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
@@ -11763,7 +11763,7 @@ footer > *{position:relative;z-index:2}
   color:#15803D!important;
   border-radius:14px!important;
   padding:16px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   margin-bottom:20px!important;
 }
@@ -11774,7 +11774,7 @@ footer > *{position:relative;z-index:2}
 #screen-admin,.adm-wrap,.adm-shell,.adm-body{
   background:#F7F5F2!important;
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   min-height:100vh!important;
 }
 .adm-nav-row,.adm-nav{
@@ -11807,7 +11807,7 @@ footer > *{position:relative;z-index:2}
 }
 .adm-card:hover{box-shadow:6px 6px 0 #EC1C7D!important}
 .adm-card-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:20px!important;
   color:#0A0A0A!important;
@@ -11817,7 +11817,7 @@ footer > *{position:relative;z-index:2}
   border-bottom:2px solid rgba(10,10,10,.1)!important;
 }
 .adm-page-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(32px,4vw,48px)!important;
   font-weight:800!important;
   letter-spacing:-.045em!important;
@@ -11825,7 +11825,7 @@ footer > *{position:relative;z-index:2}
   margin-bottom:10px!important;
 }
 .adm-page-sub{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:15px!important;
   color:rgba(10,10,10,.65)!important;
   margin-bottom:32px!important;
@@ -11849,7 +11849,7 @@ footer > *{position:relative;z-index:2}
 .sf-body,.sf-brand,#screen-sf,#screen-staff{
   background:#F7F5F2!important;
   min-height:100vh!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
 }
 .sf-topbar,.sf-toolbar{
@@ -11874,7 +11874,7 @@ footer > *{position:relative;z-index:2}
   text-align:center!important;
 }
 .sf-login-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:32px!important;
   color:#0A0A0A!important;
@@ -11883,7 +11883,7 @@ footer > *{position:relative;z-index:2}
   text-align:center!important;
 }
 .sf-login-sub{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.65)!important;
   margin-bottom:36px!important;
   font-size:14px!important;
@@ -11909,7 +11909,7 @@ footer > *{position:relative;z-index:2}
   margin-bottom:20px!important;
 }
 .sf-key{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:26px!important;
   background:#FFFFFF!important;
@@ -11947,7 +11947,7 @@ footer > *{position:relative;z-index:2}
 .sf-stat:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
 .sf-stat:hover{transform:translate(-2px,-2px)}
 .sf-stat-n{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:36px!important;
   color:#0A0A0A!important;
@@ -11959,7 +11959,7 @@ footer > *{position:relative;z-index:2}
 .sf-stat:nth-child(4n+2) .sf-stat-n{color:#00B8D9!important}
 .sf-stat:nth-child(4n+3) .sf-stat-n{color:#D4A800!important}
 .sf-stat-l{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:rgba(10,10,10,.6)!important;
   font-size:11px!important;
@@ -11968,7 +11968,7 @@ footer > *{position:relative;z-index:2}
 }
 .sf-orders{padding:0 32px 32px!important}
 .sf-orders .sf-sec-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#0A0A0A!important;
@@ -12000,27 +12000,27 @@ footer > *{position:relative;z-index:2}
   border-bottom:1.5px solid rgba(10,10,10,.08)!important;
 }
 .sf-oid{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:18px!important;
   color:#0A0A0A!important;
   letter-spacing:-.025em!important;
 }
 .sf-ctotal{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#EC1C7D!important;
   letter-spacing:-.03em!important;
 }
 .sf-cname{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   font-size:14px!important;
 }
 .sf-cemail,.sf-ctime,.sf-item-spec{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.6)!important;
   font-size:12px!important;
 }
@@ -12031,7 +12031,7 @@ footer > *{position:relative;z-index:2}
   padding:18px 32px 0!important;
 }
 .sf-status-btn,.sf-tab{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -12050,7 +12050,7 @@ footer > *{position:relative;z-index:2}
   box-shadow:3px 3px 0 #EC1C7D!important;
 }
 .sf-status-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   border-radius:999px!important;
   padding:5px 14px!important;
@@ -12071,12 +12071,12 @@ footer > *{position:relative;z-index:2}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   min-width:260px;
 }
 .sf-refresh,.sf-logout,.sf-wa-btn,.sf-shift{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
@@ -12219,7 +12219,7 @@ footer > *{position:relative;z-index:2}
   overflow:hidden!important;
 }
 .pp3-rel-name,.pp2-rel-nm{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   font-size:14px!important;
   color:#0A0A0A!important;
@@ -12235,7 +12235,7 @@ footer > *{position:relative;z-index:2}
   margin:0!important;
 }
 .pp3-rel-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   font-size:13px!important;
@@ -12286,7 +12286,7 @@ footer::before{display:none!important;content:none!important}
   max-width:none!important;
 }
 .ft-logo{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:26px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -12297,14 +12297,14 @@ footer::before{display:none!important;content:none!important}
 .ft-logo span{color:#EC1C7D!important;font-style:normal!important}
 .ft-desc{
   color:rgba(255,255,255,.6)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   line-height:1.65!important;
   max-width:280px!important;
   margin-bottom:14px!important;
 }
 .ft-grid h4{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.14em!important;
@@ -12315,7 +12315,7 @@ footer::before{display:none!important;content:none!important}
   border-bottom:1px solid rgba(255,255,255,.12)!important;
 }
 .ftl{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(255,255,255,.68)!important;
   font-size:12px!important;
   font-weight:500!important;
@@ -12339,14 +12339,14 @@ footer::before{display:none!important;content:none!important}
 }
 .ft-copy{
   color:rgba(255,255,255,.45)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.03em!important;
 }
 .ft-leg{display:flex!important;gap:18px!important}
 .ft-leg a{
   color:rgba(255,255,255,.45)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.03em!important;
   text-transform:none!important;
@@ -12379,7 +12379,7 @@ footer::before{display:none!important;content:none!important}
 .pp3-hero .pp3-bc,
 .pp3-hero .pp3-bc *{
   color:rgba(10,10,10,.55)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:600!important;
 }
 .pp3-hero .pp3-bc span{cursor:pointer;transition:color .15s}
@@ -12404,13 +12404,13 @@ footer::before{display:none!important;content:none!important}
 .pp3-sticky,.pp3-sticky-bar,.pp3-sticky-inner{background:#FFFFFF!important;border-top:2.5px solid #0A0A0A!important}
 .pp3-sticky-name{
   color:#0A0A0A!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   letter-spacing:-.02em!important;
 }
 .pp3-sticky-price{
   color:#EC1C7D!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   letter-spacing:-.025em!important;
 }
@@ -12457,13 +12457,13 @@ footer::before{display:none!important;content:none!important}
 .shop-item:hover .si-name{color:#0A0A0A!important}
 .shop-item:hover .si-price{color:#EC1C7D!important}
 .si-name{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   letter-spacing:-.02em!important;
 }
 .si-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   letter-spacing:-.02em!important;
@@ -12486,8 +12486,8 @@ footer::before{display:none!important;content:none!important}
 .ab-client:nth-child(4n+2){box-shadow:4px 4px 0 #00B8D9!important}
 .ab-client:nth-child(4n+3){box-shadow:4px 4px 0 #FFD100!important}
 .ab-client:nth-child(4n+4){box-shadow:4px 4px 0 #0A0A0A!important}
-.ab-client .ab-cl-t,.ab-cl-t{color:#0A0A0A!important;font-family:'Unbounded',sans-serif!important;font-weight:700!important}
-.ab-client .ab-cl-d,.ab-cl-d{color:rgba(10,10,10,.7)!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.ab-client .ab-cl-t,.ab-cl-t{color:#0A0A0A!important;font-family:"Archivo Black",sans-serif!important;font-weight:700!important}
+.ab-client .ab-cl-d,.ab-cl-d{color:rgba(10,10,10,.7)!important;font-family:Archivo,sans-serif!important}
 /* Dark about section override */
 .ab-dark-sec{background:#0A0A0A!important;color:#FFFFFF!important}
 .ab-dark-sec .ab-client{background:rgba(255,255,255,.04)!important;border-color:#FFFFFF!important}
@@ -12500,14 +12500,14 @@ footer::before{display:none!important;content:none!important}
 .bdp-hero{background:#FFFFFF!important;color:#0A0A0A!important;border-bottom:2.5px solid #0A0A0A!important}
 .bdp-h1,.bdp-hero h1{color:#0A0A0A!important}
 .bdp-h1 em{color:#EC1C7D!important;font-style:normal!important}
-.bdp-tagline{color:rgba(10,10,10,.72)!important;font-family:'Plus Jakarta Sans',sans-serif!important}
+.bdp-tagline{color:rgba(10,10,10,.72)!important;font-family:Archivo,sans-serif!important}
 .bdp-price-badge{
   background:#EC1C7D!important;
   color:#FFFFFF!important;
   border:1.5px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:5px 14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   letter-spacing:.08em!important;
 }
@@ -12517,7 +12517,7 @@ footer::before{display:none!important;content:none!important}
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:16px 28px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   box-shadow:5px 5px 0 #0A0A0A!important;
   cursor:pointer!important;
@@ -12527,10 +12527,10 @@ footer::before{display:none!important;content:none!important}
 /* ─── Points / Membership balance ─── */
 .pts-balance{
   color:#0A0A0A!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
 }
-.pts-balance span{color:#EC1C7D!important;font-family:'Unbounded',sans-serif!important;font-weight:800!important}
+.pts-balance span{color:#EC1C7D!important;font-family:"Archivo Black",sans-serif!important;font-weight:800!important}
 .pts-bar,.pts-bar-left{background:#FFFFFF!important;color:#0A0A0A!important;border:2px solid #0A0A0A!important;border-radius:14px!important;padding:14px 18px!important}
 .pts-info-row,.pts-info-row *{color:#0A0A0A!important}
 .pts-applied{background:rgba(34,197,94,.1)!important;border:2px solid #22C55E!important;color:#15803D!important;border-radius:14px!important;padding:14px 18px!important}
@@ -12860,7 +12860,7 @@ button.pv-wa-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 22px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:13px!important;
   letter-spacing:-.005em!important;
@@ -12884,7 +12884,7 @@ button.pv-wa-btn{
 
 /* ─── CLOUD LINK INPUT (replaces upload boxes) ─── */
 .pv-link-wrap{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   border:2px dashed #0A0A0A!important;
   border-radius:16px!important;
   padding:22px 24px!important;
@@ -12892,7 +12892,7 @@ button.pv-wa-btn{
   margin:12px 0!important;
 }
 .pv-link-label{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:11px!important;
   text-transform:uppercase!important;
@@ -12909,7 +12909,7 @@ button.pv-wa-btn{
   border:2px solid #0A0A0A!important;
   border-radius:10px!important;
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:500!important;
   background:#FFFFFF!important;
@@ -12921,7 +12921,7 @@ button.pv-wa-btn{
   box-shadow:3px 3px 0 #EC1C7D!important;
 }
 .pv-link-hint{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   color:rgba(10,10,10,.62)!important;
   margin-top:10px!important;
@@ -12934,7 +12934,7 @@ button.pv-wa-btn{
   margin-top:10px;
 }
 .pv-link-chip{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;
   font-weight:700;
   padding:4px 10px;
@@ -13406,7 +13406,7 @@ body #screen-admin.adm-wrap{
   background:#F3EEE2!important;
   min-height:100vh!important;
   padding-top:178px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
 }
 body #screen-admin .adm-topbar{
@@ -13430,7 +13430,7 @@ body #screen-admin .adm-topbar::after{
   background:linear-gradient(90deg,#EC1C7D 0%,#EC1C7D 25%,#00B8D9 25%,#00B8D9 50%,#FFD100 50%,#FFD100 75%,#FFFFFF 75%,#FFFFFF 100%)!important;
 }
 body #screen-admin .adm-topbar-brand{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:20px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -13441,7 +13441,7 @@ body #screen-admin .adm-topbar-brand{
 }
 body #screen-admin .adm-topbar-brand::before{
   content:"● ADMIN STUDIO ●"!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   letter-spacing:.16em!important;
@@ -13470,7 +13470,7 @@ body #screen-admin .adm-tabs-bar{
 body #screen-admin .adm-tabs-bar::-webkit-scrollbar{height:0}
 body #screen-admin .adm-tab-btn{
   padding:8px 18px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -13502,7 +13502,7 @@ body #screen-admin .adm-pane.on{display:block!important}
 
 /* ═══ PAGE TITLE (every pane) ═══ */
 body #screen-admin .adm-page-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(36px,4vw,56px)!important;
   font-weight:800!important;
   color:#0A0A0A!important;
@@ -13511,7 +13511,7 @@ body #screen-admin .adm-page-title{
   margin:0 0 12px!important;
 }
 body #screen-admin .adm-page-sub{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:15px!important;
   color:rgba(10,10,10,.65)!important;
   margin:0 0 36px!important;
@@ -13555,7 +13555,7 @@ body #screen-admin .adm-stat:nth-child(4n+3):hover{box-shadow:9px 9px 0 #FFD100!
 body #screen-admin .adm-stat:nth-child(4n+4):hover{box-shadow:9px 9px 0 #0A0A0A!important}
 body #screen-admin .adm-stat::before{display:none!important;content:none!important}
 body #screen-admin .adm-stat-n{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:48px!important;
   font-weight:800!important;
   color:#0A0A0A!important;
@@ -13568,7 +13568,7 @@ body #screen-admin .adm-stat:nth-child(4n+2) .adm-stat-n{color:#00B8D9!important
 body #screen-admin .adm-stat:nth-child(4n+3) .adm-stat-n{color:#D4A800!important}
 body #screen-admin .adm-stat:nth-child(4n+4) .adm-stat-n{color:#0A0A0A!important}
 body #screen-admin .adm-stat-l{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -13577,7 +13577,7 @@ body #screen-admin .adm-stat-l{
   margin-top:6px!important;
 }
 body #screen-admin .adm-stat-delta{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   color:#22C55E!important;
@@ -13601,7 +13601,7 @@ body #screen-admin .adm-card{
 }
 body #screen-admin .adm-card:hover{box-shadow:8px 8px 0 #EC1C7D!important}
 body #screen-admin .adm-card-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#0A0A0A!important;
@@ -13622,7 +13622,7 @@ body #screen-admin .adm-card-title::before{
   border-radius:50%!important;
 }
 body #screen-admin .adm-section-title{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -13641,13 +13641,13 @@ body #screen-admin .adm-tbl{
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   overflow:hidden!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
 }
 body #screen-admin .adm-tbl th{
   background:#0A0A0A!important;
   color:#FFFFFF!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:10px!important;
   text-transform:uppercase!important;
@@ -13686,7 +13686,7 @@ body #screen-admin select{
   border:2px solid #0A0A0A!important;
   border-radius:12px!important;
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:500!important;
   background:#FFFFFF!important;
@@ -13706,7 +13706,7 @@ body #screen-admin select:focus{
 body #screen-admin .adm-lbl,
 body #screen-admin .adm-fl label,
 body #screen-admin .adm-field-label{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -13727,7 +13727,7 @@ body #screen-admin button[onclick*="save"]{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:12px 24px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:13px!important;
   letter-spacing:-.005em!important;
@@ -13749,7 +13749,7 @@ body #screen-admin .adm-cancel-btn{
   border:2px solid #EC1C7D!important;
   border-radius:999px!important;
   padding:12px 24px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:13px!important;
   box-shadow:4px 4px 0 #EC1C7D!important;
@@ -13762,7 +13762,7 @@ body #screen-admin .adm-quick-btn{
   background:#FFFFFF!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -13782,7 +13782,7 @@ body #screen-admin .adm-quick-btn:hover{
 /* ═══ NAVIGATION BUTTONS IN TOPBAR ═══ */
 body #screen-admin .adm-nav-btn{
   padding:10px 18px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:700!important;
   color:rgba(255,255,255,.75)!important;
@@ -13829,14 +13829,14 @@ body #screen-admin .adm-order-row:hover{
 body #screen-admin .adm-order-row:nth-child(4n+2):hover{box-shadow:5px 5px 0 #00B8D9!important}
 body #screen-admin .adm-order-row:nth-child(4n+3):hover{box-shadow:5px 5px 0 #FFD100!important}
 body #screen-admin .adm-ord-id{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:16px!important;
   color:#0A0A0A!important;
   letter-spacing:-.025em!important;
 }
 body #screen-admin .adm-ord-name{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   font-size:14px!important;
@@ -13844,20 +13844,20 @@ body #screen-admin .adm-ord-name{
 }
 body #screen-admin .adm-ord-sub,
 body #screen-admin .adm-ord-items{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   color:rgba(10,10,10,.6)!important;
   margin-top:4px!important;
 }
 body #screen-admin .adm-ord-total{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   color:#EC1C7D!important;
   letter-spacing:-.03em!important;
 }
 body #screen-admin .adm-badge{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:10px!important;
   text-transform:uppercase!important;
@@ -13879,7 +13879,7 @@ body #screen-admin .adm-member-row{
   border-radius:14px!important;
   padding:16px 20px!important;
   margin-bottom:10px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   box-shadow:3px 3px 0 rgba(10,10,10,.08)!important;
 }
 body #screen-admin .adm-member-row.hd{
@@ -13897,7 +13897,7 @@ body #screen-admin .adm-pts-badge{
   border:1.5px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:4px 12px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:11px!important;
 }
@@ -13915,7 +13915,7 @@ body #screen-admin .adm-bundle-card:nth-child(3n+2){box-shadow:4px 4px 0 #00B8D9
 body #screen-admin .adm-bundle-card:nth-child(3n+3){box-shadow:4px 4px 0 #FFD100!important}
 body #screen-admin .adm-bundle-card:hover{transform:translate(-2px,-2px)!important}
 body #screen-admin .adm-bundle-name{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:18px!important;
   color:#0A0A0A!important;
@@ -13923,20 +13923,20 @@ body #screen-admin .adm-bundle-name{
   margin-bottom:8px!important;
 }
 body #screen-admin .adm-bundle-items{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.65)!important;
   font-size:12px!important;
   line-height:1.6!important;
 }
 body #screen-admin .adm-bundle-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   font-size:22px!important;
   letter-spacing:-.025em!important;
 }
 body #screen-admin .adm-bundle-save{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#22C55E!important;
   font-weight:800!important;
   font-size:11px!important;
@@ -13950,7 +13950,7 @@ body #screen-admin .adm-bundle-save{
 /* ═══ SEO section ═══ */
 body #screen-admin .adm-seo-item{
   padding:12px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:600!important;
   color:#0A0A0A!important;
@@ -13981,7 +13981,7 @@ body #screen-admin .adm-tabs{
 }
 body #screen-admin .adm-tab{
   padding:10px 18px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -14010,7 +14010,7 @@ body #screen-admin .adm-rule-row{
   border:1.5px solid rgba(10,10,10,.12)!important;
   border-radius:12px!important;
   margin-bottom:8px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
 }
 body #screen-admin .adm-rule-label{
   flex:1!important;
@@ -14037,14 +14037,14 @@ body #screen-admin .adm-rule-status{
 body #screen-admin .adm-saved{
   color:#22C55E!important;
   font-weight:800!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   display:none;
 }
 body #screen-admin .adm-saved.show{display:inline-block!important}
 
 /* ═══ CHAR COUNT ═══ */
 body #screen-admin .adm-char-count{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   color:rgba(10,10,10,.55)!important;
   font-weight:700!important;
@@ -14061,20 +14061,20 @@ body #screen-admin .adm-seo-preview{
   margin-top:20px!important;
 }
 body #screen-admin .adm-seo-preview .seo-title{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   font-size:18px!important;
   margin-bottom:4px!important;
 }
 body #screen-admin .adm-seo-preview .seo-url{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#22C55E!important;
   font-size:12px!important;
   margin-bottom:8px!important;
 }
 body #screen-admin .adm-seo-preview .seo-desc{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.7)!important;
   font-size:13px!important;
   line-height:1.5!important;
@@ -14085,7 +14085,7 @@ body #screen-admin .adm-search-input{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:10px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   background:#FFFFFF!important;
   color:#0A0A0A!important;
@@ -14106,7 +14106,7 @@ body #screen-admin #adm-prod-list{
   background:transparent!important;
 }
 body #screen-admin #adm-prod-list .adm-section-hd{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -14122,7 +14122,7 @@ body #screen-admin .adm-prod-item{
   border:2px solid rgba(10,10,10,.12)!important;
   border-radius:12px!important;
   margin:0 2px 8px 2px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:700!important;
   color:#0A0A0A!important;
   cursor:pointer!important;
@@ -14184,7 +14184,7 @@ body #screen-admin #adm-prod-layout > div:first-child{
 body #screen-staff,body #screen-sf{
   background:#F3EEE2!important;
   min-height:100vh!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:#0A0A0A!important;
 }
 body #screen-staff .sf-topbar,body #screen-sf .sf-topbar{
@@ -14205,7 +14205,7 @@ body #screen-staff .sf-topbar::after,body #screen-sf .sf-topbar::after{
   background:linear-gradient(90deg,#EC1C7D 0%,#EC1C7D 25%,#00B8D9 25%,#00B8D9 50%,#FFD100 50%,#FFD100 75%,#FFFFFF 75%,#FFFFFF 100%)!important;
 }
 body #screen-staff .sf-brand,body #screen-sf .sf-brand{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:20px!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -14230,7 +14230,7 @@ body .pv-prod-bundle-inner{
 }
 body .pv-prod-bundle-tag{
   display:inline-block!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   color:#EC1C7D!important;
@@ -14243,7 +14243,7 @@ body .pv-prod-bundle-tag{
   margin-bottom:18px!important;
 }
 body .pv-prod-bundle-h{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(32px,4vw,56px)!important;
   color:#0A0A0A!important;
@@ -14302,7 +14302,7 @@ body .pv-prod-bundle-box .bun-cs-body{
 }
 body .pv-prod-bundle-box .bun-cs-eyebrow{
   position:static!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   color:#EC1C7D!important;
@@ -14318,7 +14318,7 @@ body .pv-prod-bundle-box .bun-cs-eyebrow{
   margin-bottom:4px!important;
 }
 body .pv-prod-bundle-box .bun-cs-name{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:24px!important;
   color:#0A0A0A!important;
@@ -14327,7 +14327,7 @@ body .pv-prod-bundle-box .bun-cs-name{
   margin:0!important;
 }
 body .pv-prod-bundle-box .bun-cs-includes{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.62)!important;
   font-size:12px!important;
   line-height:1.55!important;
@@ -14341,20 +14341,20 @@ body .pv-prod-bundle-box .bun-cs-price-row{
   margin-bottom:14px!important;
 }
 body .pv-prod-bundle-box .bun-cs-price{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   color:#EC1C7D!important;
   font-size:32px!important;
   letter-spacing:-.035em!important;
 }
 body .pv-prod-bundle-box .bun-cs-orig{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   color:rgba(10,10,10,.4)!important;
   text-decoration:line-through!important;
   font-weight:600!important;
 }
 body .pv-prod-bundle-box .bun-cs-pct{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   background:#FFD100!important;
@@ -14371,7 +14371,7 @@ body .pv-prod-bundle-box .bun-cs-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:14px 26px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:13px!important;
   box-shadow:4px 4px 0 #0A0A0A!important;
@@ -14480,7 +14480,7 @@ body footer .ft-grid > div{display:none!important}
 body footer .ft-grid::before{
   content:"● NEED PRINTING?"!important;
   display:block!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   letter-spacing:.18em!important;
@@ -14491,7 +14491,7 @@ body footer .ft-grid::before{
 body footer .ft-grid::after{
   content:"WhatsApp us for an instant quote."!important;
   display:block!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:clamp(32px,4.5vw,56px)!important;
   font-weight:800!important;
   color:#FFFFFF!important;
@@ -14518,7 +14518,7 @@ body footer .pv-ft-wa{
   border:2.5px solid #FFFFFF!important;
   border-radius:999px!important;
   padding:18px 36px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:15px!important;
   text-decoration:none!important;
@@ -14544,7 +14544,7 @@ body footer .pv-ft-info{
   margin-bottom:24px!important;
 }
 body footer .pv-ft-info-chip{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:700!important;
   color:#FFFFFF!important;
@@ -14577,7 +14577,7 @@ body footer .ft-bot::before{
 }
 body footer .ft-copy{
   color:rgba(255,255,255,.4)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.08em!important;
   text-transform:uppercase!important;
@@ -14586,7 +14586,7 @@ body footer .ft-leg{display:flex!important;gap:18px!important;justify-content:ce
 body footer .ft-leg a,
 body footer .ft-bot-links span{
   color:rgba(255,255,255,.45)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   letter-spacing:.08em!important;
   text-transform:uppercase!important;
@@ -14615,7 +14615,7 @@ body #screen-contact > div:first-child{
   position:relative!important;
 }
 body #screen-contact h1{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(52px,7vw,108px)!important;
   letter-spacing:-.05em!important;
@@ -14628,7 +14628,7 @@ body #screen-contact h1 em{color:#EC1C7D!important;font-style:normal!important;f
 body #screen-contact h1::before{
   content:"● GET IN TOUCH ●"!important;
   display:block!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:800!important;
   color:#EC1C7D!important;
@@ -14656,7 +14656,7 @@ body #screen-contact form{
 body #screen-contact form::before{
   content:"✎ SEND US A MESSAGE"!important;
   display:block!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   color:#EC1C7D!important;
@@ -14673,7 +14673,7 @@ body #screen-contact .ct-textarea{
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
   padding:16px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:14px!important;
   background:#FFFFFF!important;
   color:#0A0A0A!important;
@@ -14694,7 +14694,7 @@ body #screen-contact button{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:18px 36px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   font-size:14px!important;
   width:100%!important;
@@ -14731,7 +14731,7 @@ body #screen-contact .ct-info-card:nth-child(2){box-shadow:5px 5px 0 #00B8D9}
 body #screen-contact .ct-info-card:nth-child(3){box-shadow:5px 5px 0 #FFD100}
 body #screen-contact .ct-info-card:hover{transform:translate(-2px,-2px)}
 body #screen-contact .ct-info-label{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;font-weight:800;
   color:#EC1C7D;
   letter-spacing:.14em;
@@ -14739,7 +14739,7 @@ body #screen-contact .ct-info-label{
   margin-bottom:10px;
 }
 body #screen-contact .ct-info-val{
-  font-family:'Unbounded',sans-serif;
+  font-family:"Archivo Black",sans-serif;
   font-weight:800;
   color:#0A0A0A;
   font-size:18px;
@@ -14747,7 +14747,7 @@ body #screen-contact .ct-info-val{
   line-height:1.25;
 }
 body #screen-contact .ct-info-sub{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   color:rgba(10,10,10,.62);
   font-size:13px;
   margin-top:6px;
@@ -14766,7 +14766,7 @@ body #screen-contact .ct-wa-hero{
 body #screen-contact .ct-wa-hero::before{
   content:"● FASTEST WAY TO REACH US ●";
   display:block;
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:10px;font-weight:800;
   color:#25D366;
   letter-spacing:.2em;
@@ -14775,7 +14775,7 @@ body #screen-contact .ct-wa-hero::before{
 }
 body #screen-contact .ct-wa-hero h2{
   color:#FFFFFF!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:clamp(32px,4vw,56px)!important;
   letter-spacing:-.04em!important;
@@ -14784,7 +14784,7 @@ body #screen-contact .ct-wa-hero h2{
 }
 body #screen-contact .ct-wa-hero p{
   color:rgba(255,255,255,.7)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:15px!important;
   max-width:520px;
   margin:0 auto 28px!important;
@@ -14799,7 +14799,7 @@ body #screen-contact .ct-wa-hero a{
   border:2.5px solid #FFFFFF;
   border-radius:999px;
   padding:18px 40px;
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-weight:800;
   font-size:15px;
   text-decoration:none;
@@ -14821,7 +14821,7 @@ body .nav-admin-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:8px 16px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   font-weight:800!important;
   text-transform:none!important;
@@ -14835,7 +14835,7 @@ body .nav-admin-btn{
 }
 body .nav-admin-btn::after{
   content:"ADMIN"!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-weight:800!important;
   letter-spacing:.06em!important;
 }
@@ -14847,7 +14847,7 @@ body .nav-admin-btn:hover{
 }
 body .ft-admin-lnk{
   color:#FFD100!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   font-weight:800!important;
   text-transform:uppercase!important;
@@ -14868,7 +14868,7 @@ body .mm-admin-link{
   color:#0A0A0A!important;
   border:2px solid #0A0A0A!important;
   border-radius:14px!important;
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:700!important;
   box-shadow:3px 3px 0 #0A0A0A!important;
   margin-top:12px!important;
@@ -15040,7 +15040,7 @@ body .pv-seo-inner{
   body .pv-seo-inner{grid-template-columns:1fr;gap:32px}
 }
 body .pv-seo-tag{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:11px;
   font-weight:800;
   color:#EC1C7D;
@@ -15054,7 +15054,7 @@ body .pv-seo-tag{
   display:inline-block;
 }
 body .pv-seo-h{
-  font-family:'Unbounded',sans-serif;
+  font-family:"Archivo Black",sans-serif;
   font-weight:800;
   font-size:clamp(32px,3.8vw,56px);
   letter-spacing:-.045em;
@@ -15064,7 +15064,7 @@ body .pv-seo-h{
 }
 body .pv-seo-h em{color:#EC1C7D;font-style:normal;font-weight:800}
 body .pv-seo-copy h2.pv-seo-h2{
-  font-family:'Unbounded',sans-serif;
+  font-family:"Archivo Black",sans-serif;
   font-weight:800;
   font-size:clamp(22px,2.4vw,30px);
   letter-spacing:-.025em;
@@ -15085,14 +15085,14 @@ body .pv-seo-copy p.pv-seo-cta{
   font-size:16px;
 }
 body .pv-seo-lead{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:15px;
   line-height:1.65;
   color:#374151;
   margin-bottom:18px;
 }
 body .pv-seo-copy p{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:15px;
   line-height:1.72;
   color:#1F2937;
@@ -15100,7 +15100,7 @@ body .pv-seo-copy p{
 }
 body .pv-seo-copy p strong{color:#0A0A0A;font-weight:800}
 body .pv-seo-copy h3{
-  font-family:'Unbounded',sans-serif;
+  font-family:"Archivo Black",sans-serif;
   font-weight:800;
   font-size:20px;
   letter-spacing:-.02em;
@@ -15116,7 +15116,7 @@ body .pv-seo-copy ul{
   gap:10px;
 }
 body .pv-seo-copy li{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:13px;
   line-height:1.5;
   color:#0A0A0A;
@@ -15142,7 +15142,7 @@ body .pv-seo-kw{
   margin-top:20px;
 }
 body .pv-seo-kw span{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:Archivo,sans-serif;
   font-size:11px;
   font-weight:700;
   color:#0A0A0A;
@@ -15204,7 +15204,7 @@ body #nav::after{
   z-index:501!important;
 }
 body #nav .nav-logo{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-size:22px!important;
   font-weight:800!important;
   letter-spacing:-.04em!important;
@@ -15239,7 +15239,7 @@ body #nav .nav-clinks{
   gap:4px!important;
 }
 body #nav .nav-lnk{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -15285,7 +15285,7 @@ body #nav .nav-btn-p{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:10px 20px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:800!important;
   cursor:pointer!important;
@@ -15325,7 +15325,7 @@ body #nav .pv-nav-wa{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:10px 18px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:800!important;
   cursor:pointer!important;
@@ -15345,7 +15345,7 @@ body #nav .nav-admin-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:10px 14px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:800!important;
   cursor:pointer!important;
@@ -15371,7 +15371,7 @@ body .mega-menu{
   margin-top:6px!important;
 }
 body .mega-menu .mega-hd{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   color:#EC1C7D!important;
@@ -15382,7 +15382,7 @@ body .mega-menu .mega-hd{
   margin-bottom:10px!important;
 }
 body .mega-menu .mega-item{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:700!important;
   color:#0A0A0A!important;
@@ -15412,7 +15412,7 @@ body #screen-admin .pv-ord-del-btn{
   border:2px solid #EC1C7D!important;
   border-radius:999px!important;
   padding:5px 12px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:10px!important;
   font-weight:800!important;
   cursor:pointer!important;
@@ -15437,7 +15437,7 @@ body #screen-admin .pv-logo-card{
   margin:24px 0!important;
 }
 body #screen-admin .pv-logo-card h3{
-  font-family:'Unbounded',sans-serif!important;
+  font-family:"Archivo Black",sans-serif!important;
   font-weight:800!important;
   font-size:22px!important;
   letter-spacing:-.03em!important;
@@ -15445,7 +15445,7 @@ body #screen-admin .pv-logo-card h3{
   color:#0A0A0A!important;
 }
 body #screen-admin .pv-logo-card p{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   color:rgba(10,10,10,.65)!important;
   margin:0 0 20px!important;
@@ -15473,7 +15473,7 @@ body #screen-admin .pv-logo-preview img{
   max-height:90px!important;max-width:100%!important;object-fit:contain!important;
 }
 body #screen-admin .pv-logo-preview .pv-logo-empty{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:12px!important;
   color:rgba(10,10,10,.45)!important;
   font-weight:700!important;
@@ -15492,7 +15492,7 @@ body #screen-admin .pv-logo-btn{
   border:2px solid #0A0A0A!important;
   border-radius:999px!important;
   padding:14px 24px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:13px!important;
   font-weight:800!important;
   box-shadow:4px 4px 0 #0A0A0A!important;
@@ -15520,7 +15520,7 @@ body #screen-admin .pv-logo-btn.danger{
   box-shadow:4px 4px 0 #EC1C7D!important;
 }
 body #screen-admin .pv-logo-hint{
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:Archivo,sans-serif!important;
   font-size:11px!important;
   color:rgba(10,10,10,.55)!important;
   margin-top:8px!important;
