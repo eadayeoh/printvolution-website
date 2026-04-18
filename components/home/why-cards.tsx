@@ -1,4 +1,5 @@
 import { SectionLabel } from './section-label';
+import { renderHighlight } from './highlight';
 
 export type WhyItem = { num?: string; title?: string; body?: string };
 
@@ -8,7 +9,7 @@ export function WhyCards({
   items,
   label = '01 Why Printvolution',
   title = 'Three reasons',
-  title_accent = "we don't suck.",
+  title_accent = "we *don't suck.*",
   intro = "Most printing companies in Singapore treat your file like a transaction — upload, pay, hope for the best. We treat it like a job with your name on it.",
 }: {
   items: WhyItem[];
@@ -44,7 +45,7 @@ export function WhyCards({
         >
           {title}
           <br />
-          <span style={{ color: 'var(--pv-ink)' }}>{title_accent}</span>
+          <span style={{ color: 'var(--pv-ink)' }}>{renderHighlight(title_accent, { underlineHeight: 16 })}</span>
         </h2>
         <p
           style={{

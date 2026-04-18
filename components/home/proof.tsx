@@ -1,12 +1,26 @@
+import { renderHighlight } from './highlight';
+
 export type ProofItem =
   | { kind: 'quote'; text?: string; cite?: string }
   | { kind: 'stat'; num?: string; suffix?: string; label?: string };
 
-export function Proof({ items }: { items: ProofItem[] }) {
+export function Proof({
+  items,
+  label = '03 Trusted since 2014',
+}: {
+  items: ProofItem[];
+  label?: string;
+}) {
   if (!items.length) return null;
   const quote = items.find((i) => i.kind === 'quote') as Extract<ProofItem, { kind: 'quote' }> | undefined;
   const stats = items.filter((i): i is Extract<ProofItem, { kind: 'stat' }> => i.kind === 'stat');
   const statColors = ['var(--pv-magenta)', 'var(--pv-cyan)', 'var(--pv-yellow)', 'var(--pv-green)'];
+
+  // Split the leading number off the label so it renders inside a dark chip
+  // on the magenta pill (matches v4: label bg magenta, n bg ink with yellow number).
+  const labelMatch = label.match(/^(\d+)\s+(.+)$/);
+  const labelNum = labelMatch?.[1];
+  const labelText = labelMatch?.[2] ?? label;
 
   return (
     <section
@@ -25,10 +39,40 @@ export function Proof({ items }: { items: ProofItem[] }) {
           inset: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'radial-gradient(circle at 20% 30%, rgba(236,0,140,0.15) 0, transparent 40%), radial-gradient(circle at 80% 70%, rgba(0,174,239,0.12) 0, transparent 40%)',
+            'radial-gradient(circle at 20% 30%, rgba(236,0,140,0.08) 0, transparent 40%), radial-gradient(circle at 80% 70%, rgba(0,174,239,0.06) 0, transparent 40%)',
         }}
       />
       <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', textAlign: 'center' }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'var(--pv-magenta)',
+            color: '#fff',
+            padding: '6px 14px',
+            fontFamily: 'var(--pv-f-mono)',
+            fontSize: 12,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginBottom: 8,
+          }}
+        >
+          {labelNum && (
+            <span
+              style={{
+                background: 'var(--pv-ink)',
+                color: 'var(--pv-yellow)',
+                padding: '2px 6px',
+                fontWeight: 900,
+              }}
+            >
+              {labelNum}
+            </span>
+          )}
+          {labelText}
+        </div>
         {quote?.text && (
           <>
             <h2
@@ -40,7 +84,7 @@ export function Proof({ items }: { items: ProofItem[] }) {
                 margin: '24px 0',
               }}
             >
-              &ldquo;{quote.text}&rdquo;
+              &ldquo;{renderHighlight(quote.text, { underlineHeight: 18 })}&rdquo;
             </h2>
             {quote.cite && (
               <div
