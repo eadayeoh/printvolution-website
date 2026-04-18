@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import { Menu, ShoppingCart, Settings, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Menu, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
 import type { NavItem, MegaMenuSection, ProductLookup } from '@/lib/data/navigation-types';
 import { productHref } from '@/lib/data/navigation-types';
@@ -36,190 +35,287 @@ export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
     if (closeTimer.current) clearTimeout(closeTimer.current);
   }
 
-  const extraLinks = [{ label: 'Blog', href: '/blog' }];
-
   return (
     <>
-      <nav className="fixed left-0 right-0 top-0 z-50 h-[62px] border-b border-neutral-200 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link href="/" className="flex items-center text-[20px] font-black tracking-tight text-ink">
-          {settings?.logo_url ? (
-            // Logo auto-scales to a max height of 38px so headers stay
-            // consistent regardless of the source image dimensions.
-            <img
-              src={settings.logo_url}
-              alt={settings.brand_text || 'Printvolution'}
-              style={{
-                height: 38,
-                width: 'auto',
-                maxWidth: settings.logo_width_px ? `${settings.logo_width_px}px` : 220,
-                objectFit: 'contain',
-              }}
-            />
-          ) : (
-            <>Print<span className="text-pink">volution</span></>
-          )}
-        </Link>
-
-        {/* Desktop nav */}
-        <div
-          className="relative hidden items-center gap-1 lg:flex"
-          onMouseLeave={scheduleClose}
-          onMouseEnter={cancelClose}
+      <header
+        style={{
+          background: '#fff',
+          borderBottom: '2px solid var(--pv-ink)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <nav
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr auto',
+            alignItems: 'center',
+            padding: '16px 24px',
+            gap: 32,
+            maxWidth: 1560,
+            margin: '0 auto',
+          }}
+          aria-label="Main"
         >
-          {nav.map((item, i) => {
-            if (item.type === 'sep') {
-              return <span key={i} className="mx-2 h-4 w-px bg-neutral-300" />;
-            }
-            if (item.type === 'dropdown' && item.mega_key) {
-              const key = item.mega_key;
-              return (
-                <button
-                  key={i}
-                  className={cn(
-                    'rounded-full px-4 py-2 text-[13px] font-semibold text-neutral-700 transition-colors hover:text-pink',
-                    openMega === key && 'text-pink'
-                  )}
-                  onMouseEnter={() => openKey(key)}
-                  onClick={() => setOpenMega(openMega === key ? null : key)}
-                >
-                  {item.label} ▾
-                </button>
-              );
-            }
-            return (
-              <Link
-                key={i}
-                href={mapAction(item.action) ?? '/shop'}
-                className="rounded-full px-4 py-2 text-[13px] font-semibold text-neutral-700 transition-colors hover:text-pink"
+          <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
+            {settings?.logo_url ? (
+              <img
+                src={settings.logo_url}
+                alt={settings.brand_text || 'Printvolution'}
+                style={{
+                  height: 38,
+                  width: 'auto',
+                  maxWidth: settings.logo_width_px ? `${settings.logo_width_px}px` : 220,
+                  objectFit: 'contain',
+                }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontFamily: 'var(--pv-f-display)',
+                  fontSize: 26,
+                  letterSpacing: '-0.02em',
+                  color: 'var(--pv-ink)',
+                }}
               >
-                {item.label}
-              </Link>
-            );
-          })}
-          {extraLinks.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="rounded-full px-4 py-2 text-[13px] font-semibold text-neutral-700 transition-colors hover:text-pink"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/account"
-            className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-ink transition-colors hover:border-ink lg:inline-flex"
-            title="My account"
-          >
-            Account
-          </Link>
-          <Link
-            href="/cart"
-            className="relative flex items-center gap-2 rounded-full bg-pink px-4 py-2 text-[12px] font-bold text-white transition-colors hover:bg-pink-dark"
-          >
-            <ShoppingCart size={14} />
-            Cart
-            {mounted && count > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-pink">
-                {count}
+                <span style={{ color: 'var(--pv-magenta)' }}>Print</span>volution
               </span>
             )}
           </Link>
-          <Link
-            href="/admin"
-            className="hidden h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-colors hover:bg-neutral-200 lg:flex"
-            aria-label="Admin"
-          >
-            <Settings size={14} />
-          </Link>
-          <button
-            className="flex h-9 w-9 items-center justify-center text-ink lg:hidden"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-        </div>
-      </nav>
 
-      {/* Mega menu (desktop) — compact, balanced columns */}
-      {openMega && mega[openMega] && (
-        <div
-          className="fixed left-0 right-0 top-[60px] z-40 hidden border-b border-neutral-200 bg-white shadow-xl lg:block"
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-          style={{ paddingTop: 2 }}
-        >
-          <div className="mx-auto max-w-7xl px-8 py-8">
-            <div className="grid grid-cols-3 gap-x-10 gap-y-8">
-              {mega[openMega].map((section) => (
-                <div key={section.id} className="min-w-0">
-                  <h4 className="mb-3 border-b border-pink/15 pb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-pink">
-                    {section.section_heading}
-                  </h4>
-                  <ul className="space-y-1.5">
-                    {section.items.map((it) => (
-                      <li key={it.product_slug}>
-                        <Link
-                          href={productHref(it.product_slug, productRoutes)}
-                          onClick={() => setOpenMega(null)}
-                          className="group flex items-center gap-1.5 truncate text-[13px] text-neutral-700 transition-colors hover:text-pink"
-                        >
-                          <span className="h-1 w-1 rounded-full bg-neutral-300 transition-colors group-hover:bg-pink" />
-                          <span className="truncate">{it.label}</span>
-                        </Link>
-                      </li>
-                    ))}
-                    {section.items.length === 0 && (
-                      <li className="text-[11px] italic text-neutral-300">Coming soon</li>
-                    )}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            {/* Footer callout */}
-            <div className="mt-8 flex items-center justify-between border-t border-neutral-100 pt-5">
-              <div className="text-[11px] text-neutral-500">
-                Need something custom? <Link href="/contact" onClick={() => setOpenMega(null)} className="font-bold text-pink hover:underline">Ask us →</Link>
-              </div>
-              <Link
-                href={openMega === 'gifts' ? '/shop?category=gifts' : '/shop'}
-                onClick={() => setOpenMega(null)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 text-[11px] font-bold text-white hover:bg-pink"
+          {/* Desktop nav */}
+          <div
+            className="pv-header-links"
+            style={{
+              display: 'flex',
+              gap: 24,
+              justifyContent: 'center',
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+            onMouseLeave={scheduleClose}
+            onMouseEnter={cancelClose}
+          >
+            {nav.map((item, i) => {
+              if (item.type === 'sep') {
+                return <span key={i} style={{ alignSelf: 'center', height: 14, width: 1, background: 'var(--pv-rule)' }} />;
+              }
+              if (item.type === 'dropdown' && item.mega_key) {
+                const key = item.mega_key;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseEnter={() => openKey(key)}
+                    onClick={() => setOpenMega(openMega === key ? null : key)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      padding: '6px 0',
+                      fontFamily: 'var(--pv-f-body)',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: openMega === key ? 'var(--pv-magenta)' : 'var(--pv-ink)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item.label} ▾
+                  </button>
+                );
+              }
+              return (
+                <Link
+                  key={i}
+                  href={mapAction(item.action) ?? '/shop'}
+                  style={{ padding: '6px 0', color: 'var(--pv-ink)' }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Right CTAs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Link
+              href="/account"
+              className="pv-header-account"
+              style={{
+                color: 'var(--pv-muted)',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/cart"
+              className="pv-btn pv-btn-primary"
+              style={{ padding: '10px 18px', fontSize: 13 }}
+              aria-label="Cart"
+            >
+              <ShoppingCart size={14} />
+              Cart
+              {mounted && count > 0 && (
+                <span
+                  style={{
+                    marginLeft: 4,
+                    background: 'var(--pv-yellow)',
+                    color: 'var(--pv-ink)',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    padding: '2px 6px',
+                    letterSpacing: 0,
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="pv-header-hamburger"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                padding: 6,
+                cursor: 'pointer',
+                color: 'var(--pv-ink)',
+              }}
+              aria-label="Menu"
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
+        </nav>
+
+        {/* Mega menu (desktop) */}
+        {openMega && mega[openMega] && (
+          <div
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: '100%',
+              background: '#fff',
+              borderTop: '1px solid var(--pv-rule)',
+              borderBottom: '2px solid var(--pv-ink)',
+              boxShadow: '0 12px 30px rgba(10,10,10,0.08)',
+            }}
+          >
+            <div style={{ maxWidth: 1560, margin: '0 auto', padding: '32px 24px' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 40,
+                }}
               >
-                Browse all {openMega === 'gifts' ? 'gifts' : 'products'} →
-              </Link>
+                {mega[openMega].map((section) => (
+                  <div key={section.id}>
+                    <h4
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--pv-magenta)',
+                        marginBottom: 12,
+                        paddingBottom: 6,
+                        borderBottom: '1px solid var(--pv-rule)',
+                      }}
+                    >
+                      {section.section_heading}
+                    </h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                      {section.items.map((it) => (
+                        <li key={it.product_slug}>
+                          <Link
+                            href={productHref(it.product_slug, productRoutes)}
+                            onClick={() => setOpenMega(null)}
+                            style={{ fontSize: 13, color: 'var(--pv-ink)' }}
+                          >
+                            {it.label}
+                          </Link>
+                        </li>
+                      ))}
+                      {section.items.length === 0 && (
+                        <li style={{ fontSize: 11, color: 'var(--pv-muted)' }}>Coming soon</li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </header>
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-[62px] z-40 max-h-[calc(100vh-62px)] overflow-y-auto border-b border-neutral-200 bg-white shadow-lg lg:hidden">
-          <div className="flex flex-col py-2">
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            background: '#fff',
+            zIndex: 60,
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: 16,
+              borderBottom: '2px solid var(--pv-ink)',
+            }}
+          >
+            <span style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22 }}>Menu</span>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close"
+              style={{ border: 'none', background: 'transparent', padding: 6, cursor: 'pointer' }}
+            >
+              <X size={22} />
+            </button>
+          </div>
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {nav.map((item, i) => {
-              if (item.type === 'sep') return <div key={i} className="my-1 mx-6 border-t border-neutral-100" />;
+              if (item.type === 'sep') return <div key={i} style={{ borderTop: '1px solid var(--pv-rule)', margin: '6px 0' }} />;
               if (item.type === 'dropdown' && item.mega_key) {
                 return (
-                  <div key={i} className="px-6 py-2">
-                    <div className="mb-2 text-sm font-bold text-ink">{item.label}</div>
+                  <div key={i} style={{ padding: '8px 0' }}>
+                    <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 18, marginBottom: 8 }}>{item.label}</div>
                     {mega[item.mega_key]?.map((section) => (
-                      <div key={section.id} className="mb-3 pl-3">
-                        <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-pink">
+                      <div key={section.id} style={{ paddingLeft: 8, marginBottom: 10 }}>
+                        <div
+                          style={{
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 11,
+                            color: 'var(--pv-magenta)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            marginBottom: 4,
+                          }}
+                        >
                           {section.section_heading}
                         </div>
-                        <ul className="space-y-1">
-                          {section.items.slice(0, 6).map((it) => (
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 4 }}>
+                          {section.items.slice(0, 8).map((it) => (
                             <li key={it.product_slug}>
                               <Link
                                 href={productHref(it.product_slug, productRoutes)}
                                 onClick={() => setMobileOpen(false)}
-                                className="block py-1 text-xs text-neutral-600 hover:text-pink"
+                                style={{ fontSize: 14, color: 'var(--pv-ink)' }}
                               >
                                 {it.label}
                               </Link>
@@ -235,29 +331,46 @@ export function HeaderClient({ nav, mega, productRoutes, settings }: Props) {
                 <Link
                   key={i}
                   href={mapAction(item.action) ?? '/shop'}
-                  className="px-6 py-3 text-sm font-semibold text-ink hover:bg-neutral-50"
                   onClick={() => setMobileOpen(false)}
+                  style={{
+                    padding: '10px 0',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: 'var(--pv-ink)',
+                  }}
                 >
                   {item.label}
                 </Link>
               );
             })}
-            {extraLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="px-6 py-3 text-sm font-semibold text-ink hover:bg-neutral-50"
-                onClick={() => setMobileOpen(false)}
-              >
-                {l.label}
-              </Link>
-            ))}
+            <Link
+              href="/account"
+              onClick={() => setMobileOpen(false)}
+              style={{ padding: '10px 0', fontSize: 16, fontWeight: 700, color: 'var(--pv-ink)' }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/admin"
+              onClick={() => setMobileOpen(false)}
+              style={{ padding: '10px 0', fontSize: 13, color: 'var(--pv-muted)' }}
+            >
+              Admin
+            </Link>
           </div>
         </div>
       )}
 
-      {/* Spacer so content doesn't sit under fixed nav */}
-      <div className="h-[62px]" aria-hidden />
+      {/* Responsive tweaks */}
+      <style jsx global>{`
+        @media (min-width: 900px) {
+          .pv-header-hamburger { display: none; }
+        }
+        @media (max-width: 899px) {
+          .pv-header-links { display: none !important; }
+          .pv-header-account { display: none; }
+        }
+      `}</style>
     </>
   );
 }
