@@ -53,6 +53,10 @@ export type GiftProduct = {
   // Mockup — product shot that the transformed design is composited onto
   mockup_url?: string | null;
   mockup_area?: { x: number; y: number; width: number; height: number } | null;
+  // Admin-authored content overrides. NULL = use mode-based default.
+  seo_body?: string | null;
+  seo_magazine?: unknown;
+  faqs?: Array<{ question: string; answer: string }> | null;
 };
 
 export type GiftTemplateZoneBase = {

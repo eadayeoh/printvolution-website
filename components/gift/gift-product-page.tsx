@@ -112,8 +112,15 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
   }
 
   const modeLabel = GIFT_MODE_LABEL[product.mode];
-  const seoMagazineData = buildGiftMagazine(product);
-  const faqs = buildGiftFaqs(product);
+  // Admin-authored content wins over the mode-based default. Null / empty
+  // in the DB → fall back to built-ins so fresh products aren't blank.
+  const adminMagazine = product.seo_magazine as SeoMagazineData | null | undefined;
+  const seoMagazineData = adminMagazine && adminMagazine.articles && adminMagazine.articles.length > 0
+    ? adminMagazine
+    : buildGiftMagazine(product);
+  const faqs = Array.isArray(product.faqs) && product.faqs.length > 0
+    ? product.faqs.map((f) => ({ q: f.question, a: f.answer }))
+    : buildGiftFaqs(product);
   const occasions = DEFAULT_OCCASION_MATCHER;
   const processSteps = buildProcessSteps(product);
 
@@ -1339,6 +1346,24 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                 </Link>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- SEO BODY (admin-authored crawler footer) ---------- */}
+      {(product.seo_body ?? '').trim() && (
+        <section style={{ background: '#fff', padding: '40px 24px 64px' }}>
+          <div
+            style={{
+              maxWidth: 900,
+              margin: '0 auto',
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 12,
+              color: 'var(--pv-muted)',
+              lineHeight: 1.75,
+            }}
+          >
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{product.seo_body}</p>
           </div>
         </section>
       )}

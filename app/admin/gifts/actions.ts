@@ -47,6 +47,14 @@ const GiftProductSchema = z.object({
   mockup_area: z.object({
     x: z.number(), y: z.number(), width: z.number(), height: z.number(),
   }).nullable().optional(),
+  // Admin-authored content overrides. NULL / empty = component falls
+  // back to mode-based defaults.
+  seo_body: z.string().nullable().optional(),
+  seo_magazine: z.any().nullable().optional(),
+  faqs: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).nullable().optional(),
 });
 
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {

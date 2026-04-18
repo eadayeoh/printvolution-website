@@ -39,3 +39,4 @@ supabase/.temp
 
 # Extracted legacy data — regenerate with `node scripts/extract-legacy-data.mjs`
 /data/
+.claude/
