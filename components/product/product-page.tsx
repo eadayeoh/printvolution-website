@@ -9,6 +9,8 @@ import type { ProductDetail } from '@/lib/data/products';
 import { defaultProductSeoBody } from '@/lib/data/product-seo';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
 import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
+import { PaperChooser, DEFAULT_NAME_CARD_CHOOSER, type ChooserData } from './paper-chooser';
+import { SeoMagazine, DEFAULT_NAME_CARD_MAGAZINE, type SeoMagazineData } from './seo-magazine';
 
 type Props = {
   product: ProductDetail;
@@ -958,6 +960,24 @@ export function ProductPage({ product, productRoutes, features }: Props) {
           </div>
         </div>
       </section>
+
+      {/* PAPER CHOOSER — per-product widget (opt-in via product.extras.chooser) */}
+      {(() => {
+        const extras = product.extras as (typeof product.extras & { chooser?: ChooserData }) | null;
+        const data =
+          (extras?.chooser as ChooserData | undefined) ??
+          (product.slug === 'name-card' ? DEFAULT_NAME_CARD_CHOOSER : null);
+        return data ? <PaperChooser data={data} /> : null;
+      })()}
+
+      {/* SEO MAGAZINE — long-form per-product content (opt-in via product.extras.seo_magazine) */}
+      {(() => {
+        const extras = product.extras as (typeof product.extras & { seo_magazine?: SeoMagazineData }) | null;
+        const data =
+          (extras?.seo_magazine as SeoMagazineData | undefined) ??
+          (product.slug === 'name-card' ? DEFAULT_NAME_CARD_MAGAZINE : null);
+        return data ? <SeoMagazine data={data} /> : null;
+      })()}
 
       {/* ABOUT / INTRO + HIGHLIGHTS + SPECS */}
       {(intro || product.highlights.length > 0 || product.specs.length > 0) && (

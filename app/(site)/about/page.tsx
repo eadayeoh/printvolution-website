@@ -292,7 +292,7 @@ export default async function AboutPage() {
                     marginBottom: 14,
                   }}
                 >
-                  {statsHeader.label}
+                  § {statsHeader.label}
                 </div>
                 <h2
                   style={{
@@ -302,10 +302,16 @@ export default async function AboutPage() {
                     letterSpacing: '-0.03em',
                     marginBottom: 40,
                     maxWidth: 700,
+                    color: '#fff',
                   }}
                 >
-                  {statsHeader.title}{' '}
-                  {statsHeader.title_yellow && <span style={{ color: 'var(--pv-yellow)' }}>{statsHeader.title_yellow}</span>}
+                  {statsHeader.title}
+                  {statsHeader.title_yellow && (
+                    <>
+                      <br />
+                      <span style={{ color: 'var(--pv-yellow)' }}>{statsHeader.title_yellow}</span>
+                    </>
+                  )}
                 </h2>
               </>
             )}

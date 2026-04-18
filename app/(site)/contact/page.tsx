@@ -520,6 +520,7 @@ export default async function ContactPage() {
                     lineHeight: 0.95,
                     letterSpacing: '-0.03em',
                     margin: 0,
+                    color: '#fff',
                   }}
                 >
                   {hoursHeader.title}{' '}
@@ -527,7 +528,7 @@ export default async function ContactPage() {
                   {hoursHeader.title_suffix && (
                     <>
                       <br />
-                      {hoursHeader.title_suffix}
+                      <span style={{ color: '#fff' }}>{hoursHeader.title_suffix}</span>
                     </>
                   )}
                 </h2>
