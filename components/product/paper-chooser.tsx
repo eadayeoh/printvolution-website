@@ -117,6 +117,123 @@ export const DEFAULT_NAME_CARD_CHOOSER: ChooserData = {
   ],
 };
 
+/** Pull the first swatch/select option group from a product's configurator
+ *  — if there is one, we use those option labels to flavour the "combos"
+ *  recommended below, so each product's chooser surfaces real choices
+ *  instead of a placeholder. Returns the first 3 labels (or fewer). */
+function extractOptionLabels(
+  configurator: Array<{ type?: string; options?: Array<{ label?: string }> }> | undefined,
+): string[] {
+  for (const step of configurator ?? []) {
+    if (step.type !== 'swatch' && step.type !== 'select') continue;
+    const opts = (step.options ?? []).map((o) => o.label ?? '').filter(Boolean);
+    if (opts.length >= 2) return opts.slice(0, 3);
+  }
+  return [];
+}
+
+/** Generate a chooser tailored to a given product. Uses the product name for
+ *  headings and (where possible) the first configurator option group for the
+ *  combo specs so the widget feels bespoke per product without per-product
+ *  authoring. Admin can always override by setting product.extras.chooser. */
+export function buildDefaultChooser(input: {
+  name: string;
+  category_name?: string | null;
+  configurator?: Array<{ type?: string; options?: Array<{ label?: string }> }>;
+}): ChooserData {
+  const name = input.name;
+  const lower = name.toLowerCase();
+  // Crude plural — works for the vast majority of print products. Admin
+  // can override with custom chooser text when needed.
+  const plural = /s$/i.test(lower) ? lower : `${lower}s`;
+  const optLabels = extractOptionLabels(input.configurator);
+  const defaultOpt = optLabels[0] ?? 'Standard';
+  const premiumOpt = optLabels[1] ?? 'Premium';
+  const topOpt = optLabels[2] ?? premiumOpt;
+  return {
+    kicker: 'Not sure which option?',
+    title: `Find your perfect ${lower}`,
+    title_em: 'in 30 seconds.',
+    intro: "Answer three quick questions — we'll recommend three combos that fit.",
+    summary_prefix: 'For',
+    results_title: 'Here are your three best matches.',
+    questions: [
+      {
+        num: 'Q 01',
+        title: `How many ${plural} do you need?`,
+        choices: [
+          { val: 'small', primary: 'Small run', sub: 'Testing / personal' },
+          { val: 'medium', primary: 'Medium run', sub: 'Most popular' },
+          { val: 'large', primary: 'Large run', sub: 'Volume / launch' },
+        ],
+      },
+      {
+        num: 'Q 02',
+        title: "What's the use case?",
+        choices: [
+          { val: 'corporate', primary: 'Corporate & clean', sub: 'Finance, legal, B2B' },
+          { val: 'creative', primary: 'Creative & bold', sub: 'Design, agency, media' },
+          { val: 'warm', primary: 'Warm & personal', sub: 'F&B, wellness, retail' },
+        ],
+      },
+      {
+        num: 'Q 03',
+        title: "What's your budget?",
+        choices: [
+          { val: 'tight', primary: 'Budget-conscious', sub: 'Get it done' },
+          { val: 'mid', primary: 'Sweet spot', sub: 'Most orders' },
+          { val: 'premium', primary: 'No expense spared', sub: 'Statement piece' },
+        ],
+      },
+    ],
+    combos: [
+      {
+        tag: 'Safe Bet',
+        match: '88% match',
+        title: 'The Classic.',
+        specs: [
+          { k: 'Option', v: defaultOpt },
+          { k: 'Finish', v: 'As default' },
+          { k: 'Turnaround', v: '3 working days' },
+          { k: 'Best for', v: 'Everyday use' },
+        ],
+        why: `The *safe default*. Standard ${lower}, standard turnaround — reliable, no surprises.`,
+        price: 'Live pricing',
+        cta_label: 'Use this combo',
+      },
+      {
+        tag: '★ Recommended',
+        match: '96% match',
+        title: 'The Sweet Spot.',
+        specs: [
+          { k: 'Option', v: premiumOpt },
+          { k: 'Finish', v: 'Premium option' },
+          { k: 'Turnaround', v: '3 working days' },
+          { k: 'Best for', v: 'Most corporate orders' },
+        ],
+        why: `What *most of our corporate clients order*. Better ${lower} without breaking the bank. This is the one.`,
+        price: 'Live pricing',
+        cta_label: 'Use this combo',
+        recommended: true,
+      },
+      {
+        tag: 'Step Up',
+        match: '82% match',
+        title: 'The Statement.',
+        specs: [
+          { k: 'Option', v: topOpt },
+          { k: 'Finish', v: 'Top-tier finish' },
+          { k: 'Turnaround', v: '4–5 working days' },
+          { k: 'Best for', v: 'First impressions' },
+        ],
+        why: `For when *first impressions matter most*. Top-tier ${lower}. Costs more, a little longer — lands different.`,
+        price: 'Live pricing',
+        cta_label: 'Use this combo',
+      },
+    ],
+  };
+}
+
 function inlineStars(text: string) {
   // **bold** -> yellow highlight
   const parts = text.split(/(\*[^*]+\*)/g);

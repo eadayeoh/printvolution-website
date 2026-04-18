@@ -9,8 +9,8 @@ import type { ProductDetail } from '@/lib/data/products';
 import { defaultProductSeoBody } from '@/lib/data/product-seo';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
 import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
-import { PaperChooser, DEFAULT_NAME_CARD_CHOOSER, type ChooserData } from './paper-chooser';
-import { SeoMagazine, DEFAULT_NAME_CARD_MAGAZINE, type SeoMagazineData } from './seo-magazine';
+import { PaperChooser, DEFAULT_NAME_CARD_CHOOSER, buildDefaultChooser, type ChooserData } from './paper-chooser';
+import { SeoMagazine, DEFAULT_NAME_CARD_MAGAZINE, buildDefaultMagazine, type SeoMagazineData } from './seo-magazine';
 
 type Props = {
   product: ProductDetail;
@@ -961,22 +961,42 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         </div>
       </section>
 
-      {/* PAPER CHOOSER — per-product widget (opt-in via product.extras.chooser) */}
+      {/* PAPER CHOOSER — rendered on every product page.
+         Content precedence:
+           1. Admin-authored override on product.extras.chooser (jsonb)
+           2. Curated name-card default for /product/cards/name-card
+           3. Generated default tailored to the product name + configurator */}
       {(() => {
         const extras = product.extras as (typeof product.extras & { chooser?: ChooserData }) | null;
+        const override = extras?.chooser as ChooserData | undefined;
         const data =
-          (extras?.chooser as ChooserData | undefined) ??
-          (product.slug === 'name-card' ? DEFAULT_NAME_CARD_CHOOSER : null);
-        return data ? <PaperChooser data={data} /> : null;
+          override ??
+          (product.slug === 'name-card'
+            ? DEFAULT_NAME_CARD_CHOOSER
+            : buildDefaultChooser({
+                name: product.name,
+                category_name: product.category?.name ?? null,
+                configurator: product.configurator,
+              }));
+        return <PaperChooser data={data} />;
       })()}
 
-      {/* SEO MAGAZINE — long-form per-product content (opt-in via product.extras.seo_magazine) */}
+      {/* SEO MAGAZINE — rendered on every product page, same precedence order. */}
       {(() => {
         const extras = product.extras as (typeof product.extras & { seo_magazine?: SeoMagazineData }) | null;
+        const override = extras?.seo_magazine as SeoMagazineData | undefined;
         const data =
-          (extras?.seo_magazine as SeoMagazineData | undefined) ??
-          (product.slug === 'name-card' ? DEFAULT_NAME_CARD_MAGAZINE : null);
-        return data ? <SeoMagazine data={data} /> : null;
+          override ??
+          (product.slug === 'name-card'
+            ? DEFAULT_NAME_CARD_MAGAZINE
+            : buildDefaultMagazine({
+                name: product.name,
+                category_name: product.category?.name ?? null,
+                tagline: product.tagline,
+                description: product.description,
+                configurator: product.configurator,
+              }));
+        return <SeoMagazine data={data} />;
       })()}
 
 

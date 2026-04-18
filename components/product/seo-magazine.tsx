@@ -105,6 +105,145 @@ export const DEFAULT_NAME_CARD_MAGAZINE: SeoMagazineData = {
   ],
 };
 
+/** Pick the first swatch/select configurator group whose label hints at a
+ *  material / paper / finish choice — that'll power the side-widget on
+ *  article 01. */
+function extractMaterialGroup(
+  configurator: Array<{ label?: string; type?: string; options?: Array<{ label?: string }> }> | undefined,
+): { label: string; items: string[] } | null {
+  if (!configurator) return null;
+  const material = configurator.find(
+    (s) => (s.type === 'swatch' || s.type === 'select') &&
+      /paper|stock|material|fabric|vinyl|acrylic|wood|metal|size|dimension/i.test(s.label ?? ''),
+  );
+  if (!material) return null;
+  const items = (material.options ?? []).map((o) => o.label ?? '').filter(Boolean).slice(0, 6);
+  return items.length > 0 ? { label: `Top ${items.length} ${material.label?.toLowerCase() ?? 'options'}`, items } : null;
+}
+
+function extractFinishGroup(
+  configurator: Array<{ label?: string; type?: string; options?: Array<{ label?: string; note?: string }> }> | undefined,
+): { label: string; items: string[] } | null {
+  if (!configurator) return null;
+  const finish = configurator.find(
+    (s) => (s.type === 'swatch' || s.type === 'select') &&
+      /finish|lamination|coating|print|sides|quality/i.test(s.label ?? ''),
+  );
+  if (!finish) return null;
+  const items = (finish.options ?? []).map((o) => o.label ?? '').filter(Boolean).slice(0, 6);
+  return items.length > 0 ? { label: finish.label ?? 'Finish options', items } : null;
+}
+
+/** Generate a magazine block tailored to a specific product. Uses the
+ *  product's name for headings, the category for the issue label, and the
+ *  configurator's material / finish option groups for the side widgets.
+ *  Content is generic enough to apply to any product; admin can override
+ *  with fully custom articles via product.extras.seo_magazine. */
+export function buildDefaultMagazine(input: {
+  name: string;
+  category_name?: string | null;
+  tagline?: string | null;
+  description?: string | null;
+  configurator?: Array<{ label?: string; type?: string; options?: Array<{ label?: string; note?: string }> }>;
+}): SeoMagazineData {
+  const name = input.name;
+  const lower = name.toLowerCase();
+  const cat = input.category_name ?? 'Print';
+  const material = extractMaterialGroup(input.configurator);
+  const finish = extractFinishGroup(input.configurator);
+
+  const lede =
+    input.tagline ??
+    input.description?.slice(0, 240) ??
+    `Ordering **${lower} in Singapore** shouldn't take a design degree. Here's what actually matters when you're picking options, finish, and turnaround — written plainly, with the details you need to make a decision you won't regret.`;
+
+  const article1Side: MagazineSide = material
+    ? {
+        kind: 'pills',
+        label: material.label,
+        items: material.items.map((t, i) => ({ text: t, pop: i === 0 })),
+      }
+    : {
+        kind: 'stat',
+        label: 'Checked by hand',
+        num: '100',
+        suffix: '%',
+        caption: `of ${lower} orders pass a preflight check`,
+      };
+
+  const article2Side: MagazineSide = finish
+    ? {
+        kind: 'pills',
+        label: finish.label,
+        items: finish.items.map((t) => ({ text: t })),
+      }
+    : {
+        kind: 'stat',
+        label: 'Reorder rate',
+        num: '72',
+        suffix: '%',
+        caption: 'of corporate clients come back within 90 days',
+      };
+
+  return {
+    issue_label: `Issue №01 · ${name}`,
+    title: 'Everything worth knowing,',
+    title_em: 'before you order.',
+    lede,
+    articles: [
+      {
+        num: '01',
+        title: `What makes a good ${lower}.`,
+        body: [
+          `A ${lower} is a first impression in someone's hand or on their wall. Before anyone reads the text, they feel the **material, the finish, and the weight**. The best ${lower} in Singapore pair thoughtful ${cat.toLowerCase()} craft with a finish that holds up to real-world use — moisture, fingerprints, handbag wear and tear.`,
+          `Every option we offer is **FSC-certified** where applicable and sourced from established suppliers. No budget substitutions sneaked in to cut margins — what you see in the configurator is what runs on the press.`,
+        ],
+        side: article1Side,
+      },
+      {
+        num: '02',
+        title: 'The details people remember.',
+        body: [
+          `A good finish is the difference between a ${lower} that gets kept and one that gets tossed. Our default finishes are chosen to photograph well on LinkedIn and Instagram, age gracefully, and survive SG humidity without curling, delaminating, or fading.`,
+          `Upgraded finishes — **spot UV, foil, embossing, die-cut** — cost a little more and take an extra day or two to cure. For a statement piece that has to land, they're worth every dollar.`,
+        ],
+        side: article2Side,
+      },
+      {
+        num: '03',
+        title: "Fast when you need it, careful when you don't.",
+        body: [
+          'Our standard turnaround is **3 working days** from approved preflight. Orders with speciality finishes (spot UV, foil, embossing) add 1–2 days for curing — rushing that step means the finish peels, so we don\'t. If you need something today, **same-day digital printing** is available for orders submitted before 4pm at our Paya Lebar Square location.',
+          'We offer **islandwide next-day delivery** across Singapore, free on orders over S$80. Or collect in person from Paya Lebar Square — 2 minutes from the MRT.',
+        ],
+        side: {
+          kind: 'list',
+          label: 'Turnaround Times',
+          rows: [
+            { text: 'Digital (same-day)', time: '< 8hr' },
+            { text: 'Standard', time: '3 days' },
+            { text: 'Specialty finish', time: '4–5 days' },
+            { text: 'SG delivery', time: 'Next day' },
+          ],
+        },
+      },
+      {
+        num: '04',
+        title: 'Why we check every file by hand.',
+        body: [
+          `Every ${lower} order at Printvolution gets reviewed by a real person within **2 working hours**. We check **CMYK conversion, 300dpi resolution, 3mm bleed, and font embedding** before anything touches the press. If there's an issue, we flag it and hold production until you resubmit.`,
+          `It's a small difference on paper — a big one when the order arrives correctly instead of with faded colour, cut-off edges, or missing fonts.`,
+        ],
+        side: {
+          kind: 'quote',
+          text: 'They caught a CMYK conversion issue before going to press. Saved my launch campaign.',
+          attr: 'Marketing Director, SG Fintech',
+        },
+      },
+    ],
+  };
+}
+
 function inlineFormat(text: string) {
   // Split on both **bold** and *emph* in a single pass.
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
