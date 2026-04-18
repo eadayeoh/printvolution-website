@@ -194,20 +194,30 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
               <span>From {formatSGD(product.base_price_cents)}</span>
             </div>
           </div>
-          {product.description && (
-            <p
-              style={{
-                fontSize: 17,
-                lineHeight: 1.5,
-                maxWidth: 760,
-                color: 'var(--pv-ink-soft)',
-                fontWeight: 500,
-                margin: 0,
-              }}
-            >
-              {product.description}
-            </p>
-          )}
+          {(() => {
+            // Hero lede: prefer a short first sentence from the description.
+            // The raw `description` in the DB is often a multi-paragraph WP
+            // import that shouldn't land in the hero verbatim. If tagline is
+            // empty (no H1 em treatment) fall back to the first clause.
+            const raw = (product.description ?? '').trim();
+            if (!raw || product.tagline) return null;
+            const firstPara = raw.split(/\n\n|(?<=[.!?])\s+(?=[A-Z])/)[0];
+            const trimmed = firstPara.length > 220 ? firstPara.slice(0, 217) + '…' : firstPara;
+            return (
+              <p
+                style={{
+                  fontSize: 17,
+                  lineHeight: 1.5,
+                  maxWidth: 760,
+                  color: 'var(--pv-ink-soft)',
+                  fontWeight: 500,
+                  margin: 0,
+                }}
+              >
+                {trimmed}
+              </p>
+            );
+          })()}
         </div>
       </section>
 
