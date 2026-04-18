@@ -3308,10 +3308,10 @@ h1,h2,h3,h4,h5{
   letter-spacing:-.035em!important;
   color:#0A0A0A;
 }
-h1{font-weight:800!important;letter-spacing:-.045em!important}
-h2{font-weight:800!important;letter-spacing:-.04em!important}
-h3{font-weight:700!important}
-h4{font-weight:700!important;letter-spacing:-.025em!important}
+h1{font-weight:400!important;letter-spacing:-.045em!important}
+h2{font-weight:400!important;letter-spacing:-.04em!important}
+h3{font-weight:400!important}
+h4{font-weight:400!important;letter-spacing:-.025em!important}
 p,span,div,li,label,small,b,strong,em{font-family:Archivo,-apple-system,sans-serif}
 em{font-style:normal!important}
 
@@ -10097,10 +10097,10 @@ h1,h2,h3,h4,h5{
   letter-spacing:-.035em!important;
   color:#0A0A0A;
 }
-h1{font-weight:800!important;letter-spacing:-.045em!important}
-h2{font-weight:800!important;letter-spacing:-.04em!important}
-h3{font-weight:700!important}
-h4{font-weight:700!important;letter-spacing:-.025em!important}
+h1{font-weight:400!important;letter-spacing:-.045em!important}
+h2{font-weight:400!important;letter-spacing:-.04em!important}
+h3{font-weight:400!important}
+h4{font-weight:400!important;letter-spacing:-.025em!important}
 p,span,div,li,label,small,b,strong,em{font-family:Archivo,-apple-system,sans-serif}
 em{font-style:normal!important}
 

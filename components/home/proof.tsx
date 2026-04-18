@@ -85,7 +85,7 @@ export function Proof({
                 color: '#fff',
               }}
             >
-              &ldquo;{renderHighlight(quote.text, { underlineHeight: 18 })}&rdquo;
+              &ldquo;{renderHighlight(quote.text, { mode: 'yellow-text' })}&rdquo;
             </h2>
             {quote.cite && (
               <div
