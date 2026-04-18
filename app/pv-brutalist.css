@@ -107,6 +107,22 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Archivo Black', 'Archivo', sans-serif !important;
 }
 
+/* Inline children of a heading must inherit the heading's font so an
+   accent span like <span>every day,</span> doesn't render in Archivo
+   regular. Legacy-design.css has a generic
+     p, span, div, li, label, small, b, strong, em { font-family: Archivo }
+   rule without !important but with specificity that beats inheritance,
+   which splits the heading into two fonts on a single line.
+   Restore inheritance explicitly. */
+h1 span, h1 em, h1 b, h1 strong, h1 i,
+h2 span, h2 em, h2 b, h2 strong, h2 i,
+h3 span, h3 em, h3 b, h3 strong, h3 i,
+h4 span, h4 em, h4 b, h4 strong, h4 i,
+h5 span, h5 em, h5 b, h5 strong, h5 i,
+h6 span, h6 em, h6 b, h6 strong, h6 i {
+  font-family: inherit !important;
+}
+
 /* Mono chips / labels / kickers / timestamps use JetBrains Mono.
    Match any element that names the mono family via our CSS var or
    the literal family name. */
