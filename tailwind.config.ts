@@ -62,9 +62,13 @@ const config: Config = {
         ring: 'hsl(var(--ring))',
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '"DM Sans"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        // Default body font is now Archivo to match the v4/v6 brutalist
+        // redesign (about, contact, homepage, product page). Plus Jakarta
+        // Sans is still loaded in app/layout.tsx as a fallback for any
+        // legacy screens that rely on it.
+        sans: ['Archivo', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         serif: ['Fraunces', 'Georgia', 'serif'],
-        display: ['Unbounded', '"Plus Jakarta Sans"', 'sans-serif'],
+        display: ['"Archivo Black"', 'Archivo', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '6px',
