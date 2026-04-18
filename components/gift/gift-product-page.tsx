@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { uploadAndPreviewGift } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
@@ -10,30 +11,33 @@ import type { GiftProduct, GiftTemplate, GiftCropRect } from '@/lib/gifts/types'
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
+import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
 
 type Props = {
   product: GiftProduct;
   templates: GiftTemplate[];
   prompts: GiftPrompt[];
+  relatedGifts?: Array<Pick<GiftProduct, 'slug' | 'name' | 'thumbnail_url' | 'base_price_cents' | 'price_tiers'>>;
 };
 
-export function GiftProductPage({ product, templates, prompts }: Props) {
+export function GiftProductPage({ product, templates, prompts, relatedGifts = [] }: Props) {
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  // If there's exactly one active prompt, pre-select it so the picker can be hidden.
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(
-    prompts.length === 1 ? prompts[0].id : null
+    prompts.length === 1 ? prompts[0].id : null,
   );
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
-  // Photo-resize: after file pick, show crop tool. Store pending file +
-  // its blob URL until user confirms the crop rect.
   const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
+  const [engravedText, setEngravedText] = useState('');
+  // Day / Night toggle for laser products where the "lights on" state is meaningful.
+  const [nightMode, setNightMode] = useState(false);
+  const showNightToggle = product.mode === 'laser';
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
@@ -43,8 +47,6 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
   async function onFile(file: File) {
     setErr(null);
     if (file.size > 20 * 1024 * 1024) { setErr('File too large (max 20 MB)'); return; }
-    // Photo-resize mode: open the crop tool first. For AI modes we send
-    // the whole image directly (the pipeline handles positioning).
     if (product.mode === 'photo-resize') {
       const src = URL.createObjectURL(file);
       setCropPending({ file, src });
@@ -64,8 +66,6 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
     if (cropRect) fd.append('crop_rect', JSON.stringify(cropRect));
     try {
       const r = await uploadAndPreviewGift(fd);
-      // Defensive: server action could reject/return undefined in flaky
-      // situations (mid-deploy, runtime boot error). Treat as error.
       if (!r || typeof r !== 'object') {
         setErr('Server returned no response. Please try again in a moment.');
       } else if (r.ok === true) {
@@ -74,8 +74,7 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
         setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
       }
     } catch (e: any) {
-      const msg = e?.message || e?.toString?.() || 'Upload failed';
-      setErr(String(msg));
+      setErr(e?.message || e?.toString?.() || 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -83,400 +82,1256 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
 
   function handleAddToCart() {
     if (!preview) return;
-    // Unit price: base price (we're not doing variants yet for gifts)
     const unit = product.base_price_cents;
     const lineTotal = unit * qty;
+    const config: Record<string, string> = {
+      Mode: GIFT_MODE_LABEL[product.mode],
+    };
+    if (selectedTemplateId) {
+      config.Template = templates.find((t) => t.id === selectedTemplateId)?.name ?? '';
+    }
+    if (selectedPromptId && prompts.length > 1) {
+      config.Style = prompts.find((p) => p.id === selectedPromptId)?.name ?? '';
+    }
+    if (engravedText.trim()) {
+      config.Text = engravedText.trim();
+    }
     addToCart({
       product_slug: product.slug,
       product_name: product.name,
       icon: product.thumbnail_url ?? null,
-      config: {
-        Mode: GIFT_MODE_LABEL[product.mode],
-        ...(selectedTemplateId ? { Template: templates.find((t) => t.id === selectedTemplateId)?.name ?? '' } : {}),
-      },
+      config,
       qty,
       unit_price_cents: unit,
       line_total_cents: lineTotal,
       gift_image_url: preview.previewUrl,
-      personalisation_notes: `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}`,
+      personalisation_notes: `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}${engravedText.trim() ? `;text:${engravedText.trim()}` : ''}`,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
   }
 
-  const thumb = product.thumbnail_url;
+  const modeLabel = GIFT_MODE_LABEL[product.mode];
+  const seoMagazineData = buildGiftMagazine(product);
+  const faqs = buildGiftFaqs(product);
+  const occasions = DEFAULT_OCCASION_MATCHER;
+  const processSteps = buildProcessSteps(product);
 
   return (
     <article>
-      {/* Light hero — matches homepage / print-product feel */}
-      <section style={{ background: '#FAF7F0', color: '#0a0a0a', position: 'relative', overflow: 'hidden' }}>
-        {/* Dotted pattern */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', inset: 0, opacity: 0.5, pointerEvents: 'none',
-            backgroundImage: 'radial-gradient(rgba(10,10,10,0.12) 1px, transparent 1px)',
-            backgroundSize: '18px 18px',
-          }}
-        />
-        {/* Pink blob top-right */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: '-180px', right: '-180px',
-            width: 420, height: 420, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(233,30,140,0.32) 0%, rgba(233,30,140,0) 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-        {/* Yellow rotated square bottom-left */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', bottom: '-60px', left: '-60px',
-            width: 200, height: 200, background: '#FFD100', opacity: 0.35,
-            transform: 'rotate(18deg)', pointerEvents: 'none',
-          }}
-        />
-        {/* CMYK dot trio */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', top: 30, left: '42%',
-            display: 'flex', gap: 8, pointerEvents: 'none',
-          }}
-        >
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#E91E8C' }} />
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#00B8D9' }} />
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FFD100' }} />
-        </div>
-
-        <div className="gift-hero-inner" style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 24px 72px', display: 'grid', gap: 48, gridTemplateColumns: '1.15fr 1fr', alignItems: 'center' }}>
-          <div>
-            {/* Mode pill — outlined black on cream, pink dot */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#fff', border: '2px solid #0a0a0a', color: '#0a0a0a', fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 24 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E91E8C' }} />
-              Personalised Gift · {GIFT_MODE_LABEL[product.mode]}
-            </div>
-
-            <h1 style={{ fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, letterSpacing: '-0.025em', lineHeight: 1.02, margin: '0 0 18px', color: '#0a0a0a' }}>
-              {product.name}
-            </h1>
-
-            {product.tagline && (
-              <p style={{ fontSize: 18, color: '#555', margin: '0 0 26px', lineHeight: 1.55, maxWidth: 520 }}>
-                {product.tagline}
-              </p>
-            )}
-
-            <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10, padding: '12px 22px', borderRadius: 999, background: '#E91E8C', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 0.3, boxShadow: '0 6px 20px rgba(233,30,140,0.4)' }}>
-              From <strong style={{ fontSize: 17 }}>{formatSGD(product.base_price_cents)}</strong>
-            </div>
-          </div>
-
-          {/* Right: product image in white card with 2px ink border + offset pink block + ink shadow */}
-          <div style={{ position: 'relative', height: 'min(520px, 60vh)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Offset pink block behind */}
-            <div
-              aria-hidden
+      {/* ---------- HERO ---------- */}
+      <section
+        style={{
+          padding: '48px 24px 32px',
+          background: 'var(--pv-cream)',
+          borderBottom: '2px solid var(--pv-ink)',
+        }}
+      >
+        <div style={{ maxWidth: 1560, margin: '0 auto' }}>
+          <div
+            className="gift-hero-title-row"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
+              gap: 32,
+              alignItems: 'end',
+              marginBottom: 12,
+            }}
+          >
+            <h1
               style={{
-                position: 'absolute', width: '78%', maxWidth: 400, aspectRatio: '1/1',
-                background: '#E91E8C', borderRadius: 18,
-                transform: 'translate(22px, 22px)', pointerEvents: 'none',
-              }}
-            />
-            <div
-              style={{
-                position: 'relative', width: '78%', maxWidth: 400, aspectRatio: '1 / 1',
-                background: '#fff', border: '2px solid #0a0a0a',
-                borderRadius: 18, overflow: 'hidden', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                boxShadow: '8px 8px 0 #0a0a0a',
+                fontFamily: 'var(--pv-f-display)',
+                fontSize: 'clamp(44px, 5.5vw, 80px)',
+                lineHeight: 0.92,
+                letterSpacing: '-0.03em',
+                margin: 0,
               }}
             >
-              {thumb ? (
-                <img src={thumb} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ fontSize: 140, lineHeight: 1 }}>🎁</div>
+              {product.name}
+              {product.tagline && (
+                <>
+                  ,<br />
+                  <em
+                    style={{
+                      fontStyle: 'normal',
+                      position: 'relative',
+                      display: 'inline-block',
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        left: '-2%',
+                        width: '104%',
+                        height: 16,
+                        background: 'var(--pv-yellow)',
+                        zIndex: -1,
+                        transform: 'skew(-6deg)',
+                      }}
+                    />
+                    {product.tagline}
+                  </em>
+                </>
               )}
+            </h1>
+            <div
+              style={{
+                display: 'flex',
+                gap: 14,
+                alignItems: 'center',
+                fontFamily: 'var(--pv-f-mono)',
+                fontSize: 12,
+                color: 'var(--pv-muted)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              <span>★ Personalised · {modeLabel}</span>
+              <span style={{ color: 'var(--pv-rule)' }}>•</span>
+              <span>Ships in 5 days</span>
+              <span style={{ color: 'var(--pv-rule)' }}>•</span>
+              <span>From {formatSGD(product.base_price_cents)}</span>
             </div>
           </div>
+          {product.description && (
+            <p
+              style={{
+                fontSize: 17,
+                lineHeight: 1.5,
+                maxWidth: 760,
+                color: 'var(--pv-ink-soft)',
+                fontWeight: 500,
+                margin: 0,
+              }}
+            >
+              {product.description}
+            </p>
+          )}
         </div>
       </section>
 
-      {/* Main configurator */}
-      <section style={{ background: '#fff', padding: '48px 24px' }}>
-        <div className="gift-config-layout" style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 36, gridTemplateColumns: '1.4fr 1fr', alignItems: 'start' }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.8, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 8 }}>
-              Personalise
-            </div>
-            <h2 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.02em', margin: '0 0 24px', color: '#0a0a0a' }}>
-              Make it yours.
-            </h2>
-
-            {/* Step 1: template picker (if applicable) */}
-            {hasTemplates && (
-              <div style={{ marginBottom: 32 }}>
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>1</span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>
-                    Pick a template {product.template_mode === 'optional' && <span style={{ color: '#888', fontWeight: 500 }}>(or upload your own below)</span>}
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-                  {templates.map((t) => {
-                    const active = selectedTemplateId === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setSelectedTemplateId(active ? null : t.id)}
-                        style={{
-                          border: active ? '3px solid #E91E8C' : '3px solid transparent',
-                          borderRadius: 12, background: '#fff', cursor: 'pointer', padding: 0,
-                          overflow: 'hidden', transition: 'border-color .15s',
-                        }}
-                      >
-                        <div style={{ aspectRatio: '1/1', background: '#fafaf7', overflow: 'hidden' }}>
-                          {t.thumbnail_url ? (
-                            <img src={t.thumbnail_url} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🎨</div>
-                          )}
-                        </div>
-                        <div style={{ padding: 10, textAlign: 'left' }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#0a0a0a' }}>{t.name}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Prompt picker (if 2+ active prompts for this mode) */}
-            {showPromptPicker && (
-              <div style={{ marginBottom: 32 }}>
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
-                    {hasTemplates ? '2' : '1'}
-                  </span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Pick a style</span>
-                </div>
-                <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
-                  {prompts.map((p) => {
-                    const active = selectedPromptId === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setSelectedPromptId(p.id)}
-                        style={{
-                          border: active ? '3px solid #E91E8C' : '3px solid transparent',
-                          borderRadius: 12, background: '#fff', cursor: 'pointer', padding: 0,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <div style={{ aspectRatio: '1/1', background: '#fafaf7', overflow: 'hidden' }}>
-                          {p.thumbnail_url ? (
-                            <img src={p.thumbnail_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>✨</div>
-                          )}
-                        </div>
-                        <div style={{ padding: 10, textAlign: 'left' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0a0a0a' }}>{p.name}</div>
-                          {p.description && <div style={{ marginTop: 2, fontSize: 11, color: '#666' }}>{p.description}</div>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Upload step */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ marginBottom: 12 }}>
-                <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
-                  {[hasTemplates, showPromptPicker].filter(Boolean).length + 1}
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Upload your photo</span>
-              </div>
-
-              {needTemplate && (
-                <div style={{ padding: 12, background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 10 }}>
-                  ⚠️ Pick a template above first.
-                </div>
-              )}
-              {needPrompt && !needTemplate && (
-                <div style={{ padding: 12, background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 10 }}>
-                  ⚠️ Pick a style above first.
-                </div>
-              )}
-
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) onFile(f);
-                  e.target.value = '';
-                }}
-              />
-
-              <button
-                type="button"
-                disabled={uploading || needTemplate || needPrompt}
-                onClick={() => fileRef.current?.click()}
+      {/* ---------- CONFIGURATOR ---------- */}
+      <section
+        style={{
+          background: 'var(--pv-cream-warm, #FFF4E5)',
+          padding: '48px 24px',
+          borderBottom: '2px solid var(--pv-ink)',
+        }}
+      >
+        <div
+          className="gift-config-inner"
+          style={{
+            maxWidth: 1560,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1.1fr 1fr',
+            gap: 40,
+            alignItems: 'start',
+          }}
+        >
+          {/* LEFT: Live Preview + Compose Controls */}
+          <div className="gift-preview-col" style={{ position: 'sticky', top: 100 }}>
+            {/* Preview shell */}
+            <div
+              style={{
+                background: '#fff',
+                border: '2px solid var(--pv-ink)',
+                boxShadow: '8px 8px 0 var(--pv-ink)',
+                overflow: 'hidden',
+                marginBottom: 16,
+              }}
+            >
+              {/* Preview head */}
+              <div
                 style={{
-                  width: '100%', padding: '24px', background: '#fafaf7',
-                  border: '2px dashed #d4d4d4', borderRadius: 12,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-                  cursor: uploading || needTemplate || needPrompt ? 'not-allowed' : 'pointer',
-                  opacity: uploading || needTemplate || needPrompt ? 0.6 : 1,
+                  background: 'var(--pv-ink)',
+                  color: '#fff',
+                  padding: '12px 20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
                 }}
               >
-                {uploading ? (
-                  <><Loader2 size={22} className="animate-spin" /> <span style={{ fontWeight: 700, color: '#666' }}>Processing…</span></>
-                ) : (
-                  <>
-                    <Upload size={22} style={{ color: '#E91E8C' }} />
-                    <span style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: 800, color: '#0a0a0a', fontSize: 14 }}>Choose photo</div>
-                      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>JPG · PNG · HEIC · Max 20 MB</div>
-                    </span>
-                  </>
+                <span style={{ color: 'var(--pv-yellow)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
+                    aria-hidden
+                    style={{ width: 8, height: 8, background: 'var(--pv-magenta)', borderRadius: '50%' }}
+                  />
+                  Live Preview
+                </span>
+                {showNightToggle && (
+                  <div style={{ display: 'flex', border: '1px solid #fff' }}>
+                    <button
+                      type="button"
+                      onClick={() => setNightMode(false)}
+                      style={{
+                        background: nightMode ? 'transparent' : 'var(--pv-yellow)',
+                        color: nightMode ? '#fff' : 'var(--pv-ink)',
+                        padding: '4px 10px',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Day
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNightMode(true)}
+                      style={{
+                        background: nightMode ? 'var(--pv-yellow)' : 'transparent',
+                        color: nightMode ? 'var(--pv-ink)' : '#fff',
+                        padding: '4px 10px',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        border: 'none',
+                        borderLeft: '1px solid #fff',
+                        cursor: 'pointer',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      ✦ Night
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
+              {/* Preview stage */}
+              <div
+                style={{
+                  padding: '40px 32px',
+                  background: nightMode ? '#1a1410' : 'var(--pv-cream-warm, #FFF4E5)',
+                  backgroundImage: nightMode
+                    ? 'radial-gradient(circle at center bottom, rgba(255,221,0,0.15), transparent 70%)'
+                    : 'radial-gradient(circle at 1px 1px, rgba(10,10,10,0.06) 1px, transparent 0)',
+                  backgroundSize: nightMode ? undefined : '6px 6px',
+                  minHeight: 460,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  transition: 'all 0.4s',
+                }}
+              >
+                {uploading && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: nightMode ? 'rgba(26,20,16,0.92)' : 'rgba(255,244,229,0.92)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      gap: 16,
+                      zIndex: 10,
+                    }}
+                  >
+                    <Loader2 size={40} className="animate-spin" style={{ color: nightMode ? 'var(--pv-yellow)' : 'var(--pv-magenta)' }} />
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        color: nightMode ? 'var(--pv-yellow)' : 'var(--pv-ink)',
+                      }}
+                    >
+                      {product.mode === 'photo-resize' ? 'Cropping and adding bleed…' : 'Stylising your photo…'}
+                    </div>
+                  </div>
+                )}
 
-              {err && (
-                <div style={{ marginTop: 10, padding: 12, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 13, color: '#991b1b', display: 'flex', gap: 8 }}>
-                  <AlertCircle size={16} /> {err}
-                </div>
-              )}
-
-              {uploading && (
-                <div style={{ marginTop: 10, padding: 12, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12, color: '#1e40af' }}>
-                  {product.mode === 'photo-resize'
-                    ? 'Cropping and adding bleed…'
-                    : `Stylising your photo for ${GIFT_MODE_LABEL[product.mode].toLowerCase()}…`}
-                  <div style={{ marginTop: 4, fontSize: 11, opacity: 0.7 }}>This can take up to 20 seconds. Don&apos;t close the page.</div>
-                </div>
-              )}
-            </div>
-
-            {/* Step 3: preview */}
-            {preview && (
-              <div>
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ display: 'inline-block', padding: '3px 10px', background: '#0a0a0a', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 800, marginRight: 8 }}>
-                    {[hasTemplates, showPromptPicker].filter(Boolean).length + 2}
-                  </span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0a0a0a' }}>Preview</span>
-                </div>
-                {product.mockup_url && product.mockup_area ? (
-                  <div style={{ display: 'grid', gap: 12 }}>
-                    {/* Main: design composited on the product mockup */}
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#666', marginBottom: 6 }}>
-                        On the product
-                      </div>
+                {preview ? (
+                  product.mockup_url && product.mockup_area ? (
+                    <div style={{ width: '100%', maxWidth: 420 }}>
                       <GiftMockupPreview
                         mockupUrl={product.mockup_url}
                         previewUrl={preview.previewUrl}
                         area={product.mockup_area as any}
                       />
                     </div>
-                    {/* Secondary: the transformed design on its own */}
-                    <details>
-                      <summary style={{ cursor: 'pointer', fontSize: 11, color: '#666', fontWeight: 700 }}>
-                        See the design by itself
-                      </summary>
-                      <div style={{ marginTop: 8, border: '1px solid #e5e5e5', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>
-                        <img src={preview.previewUrl} alt="Design" style={{ width: '100%', display: 'block' }} />
-                      </div>
-                    </details>
-                  </div>
+                  ) : (
+                    <img
+                      src={preview.previewUrl}
+                      alt="Preview"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 420,
+                        objectFit: 'contain',
+                        filter: nightMode ? 'brightness(1.1) contrast(1.2)' : undefined,
+                      }}
+                    />
+                  )
                 ) : (
-                  <div style={{ border: '2px solid #0a0a0a', borderRadius: 12, overflow: 'hidden', background: '#fafaf7' }}>
-                    <img src={preview.previewUrl} alt="Preview" style={{ width: '100%', display: 'block' }} />
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: nightMode ? 'rgba(255,221,0,0.5)' : 'rgba(10,10,10,0.4)',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 24,
+                        marginBottom: 6,
+                        color: 'var(--pv-magenta)',
+                      }}
+                    >
+                      ✦
+                    </div>
+                    Upload a photo<br />
+                    {hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}
                   </div>
                 )}
-                <p style={{ marginTop: 10, fontSize: 12, color: '#666', lineHeight: 1.55 }}>
-                  This is a <strong>low-resolution preview</strong>. The final printed piece is produced at 300 DPI with professional colour correction — quality is much higher than what you see here.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => { setPreview(null); fileRef.current?.click(); }}
-                  style={{ marginTop: 6, fontSize: 12, color: '#E91E8C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
-                >
-                  ↻ Try a different photo
-                </button>
+
+                {engravedText.trim() && preview && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 28,
+                      left: 0,
+                      right: 0,
+                      textAlign: 'center',
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 14,
+                      letterSpacing: '0.05em',
+                      color: nightMode ? 'rgba(255,221,0,0.9)' : 'rgba(10,10,10,0.55)',
+                      textShadow: nightMode ? '0 0 8px rgba(255,221,0,0.5)' : 'none',
+                      padding: '0 16px',
+                    }}
+                  >
+                    {engravedText.trim()}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Compose controls */}
+            <div
+              style={{
+                background: '#fff',
+                border: '2px solid var(--pv-ink)',
+                boxShadow: '5px 5px 0 var(--pv-ink)',
+              }}
+            >
+              {/* Step A: Upload */}
+              <ComposeSection letter="A" title="Upload your photo">
+                {!preview && !uploading && (
+                  <div
+                    onClick={() => !needTemplate && !needPrompt && fileRef.current?.click()}
+                    style={{
+                      background: 'var(--pv-cream)',
+                      border: '3px dashed var(--pv-magenta)',
+                      padding: 24,
+                      textAlign: 'center',
+                      cursor: needTemplate || needPrompt ? 'not-allowed' : 'pointer',
+                      opacity: needTemplate || needPrompt ? 0.6 : 1,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        border: '2px solid var(--pv-ink)',
+                        background: 'var(--pv-magenta)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 22,
+                        margin: '0 auto 10px',
+                        transform: 'rotate(-4deg)',
+                        boxShadow: '2px 2px 0 var(--pv-ink)',
+                      }}
+                    >
+                      ↑
+                    </div>
+                    <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 18, letterSpacing: '-0.02em', marginBottom: 4 }}>
+                      Click to upload
+                    </div>
+                    <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
+                      JPG · PNG · HEIC · Max 20 MB
+                    </div>
+                  </div>
+                )}
+                {preview && (
+                  <div
+                    style={{
+                      background: 'var(--pv-cream)',
+                      border: '2px solid var(--pv-ink)',
+                      padding: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        border: '2px solid var(--pv-ink)',
+                        backgroundImage: `url(${preview.previewUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>Photo uploaded</div>
+                      <div
+                        style={{
+                          fontFamily: 'var(--pv-f-mono)',
+                          fontSize: 10,
+                          color: 'var(--pv-green)',
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✓ Ready to order
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setPreview(null); fileRef.current?.click(); }}
+                      style={{
+                        background: 'var(--pv-ink)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '6px 10px',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Replace
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onFile(f);
+                    e.target.value = '';
+                  }}
+                />
+                {err && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: 12,
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      fontSize: 13,
+                      color: '#991b1b',
+                      display: 'flex',
+                      gap: 8,
+                    }}
+                  >
+                    <AlertCircle size={16} /> {err}
+                  </div>
+                )}
+              </ComposeSection>
+
+              {/* Step B: Template picker (if applicable) */}
+              {hasTemplates && (
+                <ComposeSection letter="B" title="Pick a template">
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 8,
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    }}
+                  >
+                    {templates.map((t) => {
+                      const active = selectedTemplateId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSelectedTemplateId(active ? null : t.id)}
+                          style={{
+                            background: '#fff',
+                            border: active ? '2px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            overflow: 'hidden',
+                            boxShadow: active ? '3px 3px 0 var(--pv-magenta)' : 'none',
+                            transition: 'all 0.12s',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <div style={{ aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
+                            {t.thumbnail_url ? (
+                              <img src={t.thumbnail_url} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
+                            )}
+                          </div>
+                          <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
+                            {t.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {product.template_mode === 'optional' && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        color: 'var(--pv-muted)',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      Optional — or just upload your own.
+                    </div>
+                  )}
+                </ComposeSection>
+              )}
+
+              {/* Step C: Style picker (AI prompts) */}
+              {showPromptPicker && (
+                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title="Pick art style">
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                      gap: 8,
+                    }}
+                  >
+                    {prompts.map((p) => {
+                      const active = selectedPromptId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setSelectedPromptId(p.id)}
+                          style={{
+                            background: active ? 'var(--pv-cream)' : '#fff',
+                            border: active ? '2px solid var(--pv-ink)' : '2px solid var(--pv-rule)',
+                            padding: 10,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            position: 'relative',
+                          }}
+                        >
+                          <div
+                            style={{
+                              aspectRatio: 1,
+                              border: '1.5px solid var(--pv-ink)',
+                              background: 'var(--pv-cream)',
+                              marginBottom: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontFamily: 'var(--pv-f-display)',
+                              fontSize: 20,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {p.thumbnail_url ? (
+                              <img src={p.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <span>✦</span>
+                            )}
+                          </div>
+                          <div style={{ fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 800, lineHeight: 1.2 }}>
+                            {p.name}
+                          </div>
+                          {p.description && (
+                            <div
+                              style={{
+                                fontFamily: 'var(--pv-f-mono)',
+                                fontSize: 9,
+                                color: 'var(--pv-muted)',
+                                letterSpacing: '0.04em',
+                                marginTop: 2,
+                              }}
+                            >
+                              {p.description}
+                            </div>
+                          )}
+                          {active && (
+                            <span
+                              aria-hidden
+                              style={{
+                                position: 'absolute',
+                                top: 4,
+                                right: 4,
+                                width: 18,
+                                height: 18,
+                                background: 'var(--pv-magenta)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 11,
+                                fontWeight: 900,
+                              }}
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ComposeSection>
+              )}
+
+              {/* Step D: Optional text */}
+              {(product.mode === 'laser' || product.mode === 'uv') && (
+                <ComposeSection
+                  letter={hasTemplates && showPromptPicker ? 'D' : hasTemplates || showPromptPicker ? 'C' : 'B'}
+                  title="Add text (optional)"
+                >
+                  <input
+                    type="text"
+                    value={engravedText}
+                    onChange={(e) => setEngravedText(e.target.value.slice(0, 32))}
+                    placeholder="e.g. Mum & me, 2026"
+                    maxLength={32}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      background: '#fff',
+                      border: '2px solid var(--pv-ink)',
+                      fontFamily: 'var(--pv-f-body)',
+                      fontSize: 15,
+                      fontWeight: 500,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 10,
+                      color: engravedText.length >= 28 ? 'var(--pv-magenta)' : 'var(--pv-muted)',
+                      letterSpacing: '0.04em',
+                      marginTop: 6,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {engravedText.length} / 32
+                  </div>
+                </ComposeSection>
+              )}
+            </div>
           </div>
 
-          {/* Sticky buy box */}
-          <aside style={{ position: 'sticky', top: 80 }}>
-            <div style={{ background: '#0a0a0a', color: '#fff', borderRadius: 14, padding: 26 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 14 }}>Your order</div>
-              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 18 }}>{product.name}</div>
+          {/* RIGHT: Options + Price */}
+          <div>
+            {/* Quantity step */}
+            <div
+              style={{
+                background: '#fff',
+                border: '2px solid var(--pv-ink)',
+                boxShadow: '6px 6px 0 var(--pv-ink)',
+                padding: 24,
+                marginBottom: 14,
+              }}
+            >
+              <StepHead num={1} label="Quantity" current={`${qty} ${qty === 1 ? 'pc' : 'pcs'}`} />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  border: '2px solid var(--pv-ink)',
+                  maxWidth: 200,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  style={{
+                    background: '#fff',
+                    border: 'none',
+                    width: 48,
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 20,
+                    cursor: 'pointer',
+                  }}
+                >
+                  −
+                </button>
+                <div
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    padding: 14,
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 22,
+                    letterSpacing: '-0.02em',
+                    background: 'var(--pv-cream)',
+                    borderLeft: '2px solid var(--pv-ink)',
+                    borderRight: '2px solid var(--pv-ink)',
+                  }}
+                >
+                  {qty}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQty(qty + 1)}
+                  style={{
+                    background: '#fff',
+                    border: 'none',
+                    width: 48,
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 20,
+                    cursor: 'pointer',
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 14, marginBottom: 14, display: 'grid', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Mode</span><span style={{ fontWeight: 700 }}>{GIFT_MODE_LABEL[product.mode]}</span></div>
-                {selectedTemplateId && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Template</span>
-                    <span style={{ fontWeight: 700 }}>{templates.find((t) => t.id === selectedTemplateId)?.name}</span>
+            {/* Price box */}
+            <div
+              style={{
+                background: 'var(--pv-ink)',
+                color: '#fff',
+                border: '2px solid var(--pv-ink)',
+                boxShadow: '6px 6px 0 var(--pv-magenta)',
+                padding: '24px 28px',
+                marginTop: 8,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-end',
+                  marginBottom: 14,
+                  paddingBottom: 14,
+                  borderBottom: '1px dashed rgba(255,255,255,0.2)',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11,
+                      color: 'rgba(255,255,255,0.5)',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Your total · incl. 9% GST
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Photo</span>
-                  <span style={{ fontWeight: 700 }}>{preview ? '✓ Uploaded' : '—'}</span>
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 48,
+                      lineHeight: 0.9,
+                      letterSpacing: '-0.04em',
+                      color: 'var(--pv-yellow)',
+                    }}
+                  >
+                    {formatSGD(product.base_price_cents * qty)}
+                  </div>
                 </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>
-                  Quantity
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 36, height: 36, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', borderRadius: 6, cursor: 'pointer' }}>−</button>
-                  <input value={qty} onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))} style={{ width: 60, padding: '6px 10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: 6 }} />
-                  <button type="button" onClick={() => setQty(qty + 1)} style={{ width: 36, height: 36, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', borderRadius: 6, cursor: 'pointer' }}>+</button>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
-                <span style={{ fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Total</span>
-                <span style={{ fontSize: 28, fontWeight: 900 }}>{formatSGD(product.base_price_cents * qty)}</span>
               </div>
 
               <button
+                type="button"
                 onClick={handleAddToCart}
-                disabled={!preview}
+                disabled={!preview || uploading}
                 style={{
-                  width: '100%', padding: '14px', background: addedFlash ? '#16a34a' : (!preview ? 'rgba(255,255,255,0.1)' : '#FF6B1A'),
-                  color: '#fff', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 800,
-                  cursor: preview ? 'pointer' : 'not-allowed', letterSpacing: 0.3,
+                  background: addedFlash ? 'var(--pv-green)' : !preview ? 'rgba(255,255,255,0.15)' : 'var(--pv-magenta)',
+                  color: !preview ? 'rgba(255,255,255,0.4)' : '#fff',
+                  width: '100%',
+                  padding: '16px 24px',
+                  fontWeight: 800,
+                  border: '2px solid #fff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  fontSize: 14,
+                  cursor: !preview ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--pv-f-body)',
                 }}
               >
-                {addedFlash ? <><CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} />Added to Cart</> : 'Add to Cart'}
+                {addedFlash ? (
+                  <><CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} />Added to Cart</>
+                ) : !preview ? (
+                  'Upload photo to continue →'
+                ) : (
+                  'Add to Cart →'
+                )}
               </button>
 
-              {!preview && (
-                <p style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-                  Upload your photo above to continue.
-                </p>
-              )}
+              <div
+                style={{
+                  marginTop: 14,
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 11,
+                  color: 'rgba(255,255,255,0.6)',
+                  letterSpacing: '0.04em',
+                  textAlign: 'center',
+                  padding: 8,
+                  border: '1px dashed rgba(255,255,255,0.2)',
+                }}
+              >
+                5-day turnaround · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$80</b>
+              </div>
             </div>
-          </aside>
+          </div>
         </div>
       </section>
+
+      {/* ---------- OCCASION MATCHER ---------- */}
+      <section
+        style={{
+          padding: '72px 24px',
+          background: 'var(--pv-cream-warm, #FFF4E5)',
+          borderBottom: '2px solid var(--pv-ink)',
+        }}
+      >
+        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+          <BandKicker color="var(--pv-magenta)">Who's it for?</BandKicker>
+          <BandHeading
+            text="Pick the"
+            highlight="occasion"
+            rest=", we'll help you nail it."
+          />
+          <p
+            style={{
+              fontSize: 16,
+              color: 'var(--pv-muted)',
+              maxWidth: 640,
+              marginBottom: 40,
+              fontWeight: 500,
+              lineHeight: 1.55,
+            }}
+          >
+            Same gift, different stories. Here's what customers actually order for each kind of occasion.
+          </p>
+          <div
+            className="gift-occasion-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 20,
+            }}
+          >
+            {occasions.map((o, i) => (
+              <div
+                key={i}
+                className={`gift-occ-card gift-occ-card-${i}`}
+                style={{
+                  background: '#fff',
+                  border: '2px solid var(--pv-ink)',
+                  boxShadow: '5px 5px 0 var(--pv-ink)',
+                  padding: 24,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 28,
+                    width: 52,
+                    height: 52,
+                    border: '2px solid var(--pv-ink)',
+                    background: OCCASION_COLORS[i % OCCASION_COLORS.length].bg,
+                    color: OCCASION_COLORS[i % OCCASION_COLORS.length].fg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  {o.icon}
+                </div>
+                <h3
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 20,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.1,
+                    marginBottom: 8,
+                    margin: '0 0 8px',
+                  }}
+                >
+                  {o.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    color: 'var(--pv-ink-soft)',
+                    fontWeight: 500,
+                    marginBottom: 14,
+                    margin: '0 0 14px',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: o.tip }}
+                />
+                {o.suggested && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 10,
+                      paddingTop: 12,
+                      borderTop: '1px dashed var(--pv-rule)',
+                      color: 'var(--pv-magenta)',
+                      letterSpacing: '0.04em',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Suggested: {o.suggested}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- HOW IT WORKS ---------- */}
+      <section
+        style={{
+          padding: '72px 24px',
+          background: 'var(--pv-ink)',
+          color: '#fff',
+          borderBottom: '2px solid var(--pv-ink)',
+        }}
+      >
+        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+          <BandKicker color="var(--pv-yellow)">How it works</BandKicker>
+          <BandHeading
+            text="From your"
+            highlight="photo"
+            rest=" to a finished piece."
+            inverted
+          />
+          <p
+            style={{
+              fontSize: 16,
+              color: 'rgba(255,255,255,0.7)',
+              maxWidth: 640,
+              marginBottom: 40,
+              fontWeight: 500,
+              lineHeight: 1.55,
+            }}
+          >
+            Every step handled in Singapore. Upload, preview, approve, ship. No surprises.
+          </p>
+          <div
+            className="gift-process-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 20,
+              marginTop: 32,
+            }}
+          >
+            {processSteps.map((s, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '24px 20px',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '2px solid rgba(255,255,255,0.15)',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 40,
+                    lineHeight: 1,
+                    letterSpacing: '-0.04em',
+                    marginBottom: 16,
+                    color: i % 2 === 0 ? 'var(--pv-yellow)' : 'var(--pv-magenta)',
+                  }}
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </div>
+                <h4
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 18,
+                    letterSpacing: '-0.02em',
+                    marginBottom: 6,
+                    margin: '0 0 6px',
+                  }}
+                >
+                  {s.title}
+                </h4>
+                <div
+                  style={{
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 11,
+                    color: 'var(--pv-yellow)',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    marginBottom: 10,
+                  }}
+                >
+                  {s.time}
+                </div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: 'rgba(255,255,255,0.75)',
+                    fontWeight: 500,
+                    margin: 0,
+                  }}
+                >
+                  {s.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- GALLERY (if any) ---------- */}
+      {product.gallery_images && product.gallery_images.length > 0 && (
+        <section
+          style={{
+            padding: '72px 24px',
+            background: 'var(--pv-cream)',
+            borderBottom: '2px solid var(--pv-ink)',
+          }}
+        >
+          <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+            <BandKicker color="var(--pv-magenta)">Real ones, real reactions</BandKicker>
+            <BandHeading
+              text="What"
+              highlight="customers"
+              rest=" have made."
+            />
+            <p
+              style={{
+                fontSize: 16,
+                color: 'var(--pv-muted)',
+                maxWidth: 640,
+                marginBottom: 40,
+                fontWeight: 500,
+                lineHeight: 1.55,
+              }}
+            >
+              Shared with permission, photographed as they actually live in people's homes.
+            </p>
+            <div
+              className="gift-gallery-grid"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 20,
+              }}
+            >
+              {product.gallery_images.slice(0, 6).map((img, i) => (
+                <div
+                  key={i}
+                  style={{
+                    aspectRatio: 1,
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '5px 5px 0 var(--pv-ink)',
+                    overflow: 'hidden',
+                    background: 'var(--pv-cream)',
+                  }}
+                >
+                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- SEO MAGAZINE ---------- */}
+      <SeoMagazine data={seoMagazineData} />
+
+      {/* ---------- FAQ ---------- */}
+      <section
+        style={{
+          padding: '72px 24px',
+          background: 'var(--pv-cream)',
+          borderTop: '2px solid var(--pv-ink)',
+          borderBottom: '2px solid var(--pv-ink)',
+        }}
+      >
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <BandKicker color="var(--pv-magenta)">Before you order</BandKicker>
+          <BandHeading text="Good" highlight="questions." />
+          <div style={{ display: 'grid', gap: 12, marginTop: 32 }}>
+            {faqs.map((f, i) => (
+              <details
+                key={i}
+                style={{
+                  background: '#fff',
+                  border: '2px solid var(--pv-ink)',
+                  boxShadow: '4px 4px 0 var(--pv-ink)',
+                }}
+              >
+                <summary
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 18,
+                    letterSpacing: '-0.01em',
+                    padding: '18px 22px',
+                    cursor: 'pointer',
+                    listStyle: 'none',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 16,
+                  }}
+                >
+                  <span>{f.q}</span>
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 32,
+                      height: 32,
+                      background: 'var(--pv-magenta)',
+                      color: '#fff',
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    +
+                  </span>
+                </summary>
+                <div
+                  style={{
+                    padding: '0 22px 22px',
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: 'var(--pv-ink-soft)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {f.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- MORE GIFTS ---------- */}
+      {relatedGifts.length > 0 && (
+        <section
+          style={{
+            padding: '72px 24px',
+            background: 'var(--pv-cream-warm, #FFF4E5)',
+            borderBottom: '2px solid var(--pv-ink)',
+          }}
+        >
+          <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+            <BandKicker color="var(--pv-magenta)">Also personalised</BandKicker>
+            <BandHeading text="More ways to" highlight="make it theirs." />
+            <div
+              className="gift-more-grid"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 20,
+                marginTop: 32,
+              }}
+            >
+              {relatedGifts.slice(0, 4).map((g) => (
+                <Link
+                  key={g.slug}
+                  href={`/gift/${g.slug}`}
+                  style={{
+                    background: '#fff',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '6px 6px 0 var(--pv-ink)',
+                    overflow: 'hidden',
+                    textDecoration: 'none',
+                    color: 'var(--pv-ink)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div
+                    style={{
+                      aspectRatio: 1,
+                      borderBottom: '2px solid var(--pv-ink)',
+                      background: 'var(--pv-cream)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {g.thumbnail_url ? (
+                      <img src={g.thumbnail_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🎁</div>
+                    )}
+                  </div>
+                  <div style={{ padding: '16px 18px' }}>
+                    <h4
+                      style={{
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 18,
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1,
+                        marginBottom: 4,
+                        margin: '0 0 4px',
+                      }}
+                    >
+                      {g.name}
+                    </h4>
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11,
+                        color: 'var(--pv-muted)',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      From{' '}
+                      <span style={{ fontFamily: 'var(--pv-f-display)', color: 'var(--pv-magenta)', fontSize: 16, marginLeft: 6 }}>
+                        {formatSGD(g.base_price_cents)}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {cropPending && (
         <GiftCropTool
@@ -492,13 +1347,540 @@ export function GiftProductPage({ product, templates, prompts }: Props) {
           }}
         />
       )}
+
       <style jsx>{`
+        .gift-occ-card-0 { transform: rotate(-0.5deg); }
+        .gift-occ-card-1 { transform: rotate(0.4deg); margin-top: 12px; }
+        .gift-occ-card-2 { transform: rotate(-0.3deg); }
+        .gift-occ-card-3 { transform: rotate(0.6deg); }
+        .gift-occ-card-4 { transform: rotate(-0.4deg); margin-top: 12px; }
+        .gift-occ-card-5 { transform: rotate(0.5deg); }
+        .gift-occ-card:hover {
+          transform: rotate(0deg) translate(-3px, -3px);
+          box-shadow: 8px 8px 0 var(--pv-ink);
+        }
         @media (max-width: 900px) {
-          .gift-hero-inner { grid-template-columns: 1fr !important; gap: 32px !important; padding: 40px 20px 48px !important; }
-          .gift-config-layout { grid-template-columns: 1fr !important; gap: 28px !important; }
-          .gift-config-layout aside { position: static !important; }
+          .gift-hero-title-row { grid-template-columns: 1fr !important; align-items: start !important; }
+          .gift-config-inner { grid-template-columns: 1fr !important; }
+          .gift-preview-col { position: static !important; }
+          .gift-occasion-grid { grid-template-columns: 1fr !important; }
+          .gift-occ-card { transform: none !important; margin-top: 0 !important; }
+          .gift-process-grid { grid-template-columns: 1fr 1fr !important; }
+          .gift-gallery-grid { grid-template-columns: 1fr 1fr !important; }
+          .gift-more-grid { grid-template-columns: 1fr 1fr !important; }
         }
       `}</style>
     </article>
   );
+}
+
+/* ---------- Helper subcomponents ---------- */
+
+function ComposeSection({ letter, title, children }: { letter: string; title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ padding: 20, borderBottom: '1px solid var(--pv-rule)' }}>
+      <div
+        style={{
+          fontFamily: 'var(--pv-f-mono)',
+          fontSize: 11,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          marginBottom: 14,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            width: 22,
+            height: 22,
+            background: 'var(--pv-ink)',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--pv-f-display)',
+            fontSize: 11,
+          }}
+        >
+          {letter}
+        </span>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function StepHead({ num, label, current }: { num: number; label: string; current: string }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 14,
+        paddingBottom: 10,
+        borderBottom: '1px solid var(--pv-rule)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            background: 'var(--pv-ink)',
+            color: '#fff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--pv-f-display)',
+            fontSize: 12,
+          }}
+        >
+          {num}
+        </span>
+        <span style={{ fontFamily: 'var(--pv-f-display)', fontSize: 18, letterSpacing: '-0.02em' }}>{label}</span>
+      </div>
+      {current && (
+        <span
+          style={{
+            fontFamily: 'var(--pv-f-mono)',
+            fontSize: 11,
+            color: 'var(--pv-magenta)',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+          }}
+        >
+          {current}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function BandKicker({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <div
+      style={{
+        fontFamily: 'var(--pv-f-mono)',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        color,
+        marginBottom: 14,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <span aria-hidden style={{ width: 24, height: 2, background: color, display: 'inline-block' }} />
+      {children}
+    </div>
+  );
+}
+
+function BandHeading({
+  text,
+  highlight,
+  rest,
+  inverted,
+}: {
+  text: string;
+  highlight: string;
+  rest?: string;
+  inverted?: boolean;
+}) {
+  return (
+    <h2
+      style={{
+        fontFamily: 'var(--pv-f-display)',
+        fontSize: 'clamp(40px, 5vw, 64px)',
+        lineHeight: 0.92,
+        letterSpacing: '-0.03em',
+        marginBottom: 16,
+        margin: '0 0 16px',
+        color: inverted ? '#fff' : 'var(--pv-ink)',
+      }}
+    >
+      {text}{' '}
+      <span style={{ position: 'relative', display: 'inline-block' }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            bottom: 2,
+            left: '-2%',
+            width: '104%',
+            height: 14,
+            background: inverted ? 'var(--pv-magenta)' : 'var(--pv-yellow)',
+            zIndex: -1,
+            transform: 'skew(-6deg)',
+          }}
+        />
+        {highlight}
+      </span>
+      {rest}
+    </h2>
+  );
+}
+
+/* ---------- Default content fallbacks ---------- */
+
+const OCCASION_COLORS = [
+  { bg: 'var(--pv-magenta)', fg: '#fff' },
+  { bg: 'var(--pv-yellow)', fg: 'var(--pv-ink)' },
+  { bg: 'var(--pv-cyan, #00AEEF)', fg: '#fff' },
+  { bg: 'var(--pv-green, #06D6A0)', fg: 'var(--pv-ink)' },
+  { bg: 'var(--pv-purple, #7B2CBF)', fg: '#fff' },
+  { bg: 'var(--pv-ink)', fg: 'var(--pv-yellow)' },
+];
+
+const DEFAULT_OCCASION_MATCHER: Array<{ icon: string; title: string; tip: string; suggested?: string }> = [
+  {
+    icon: '♡',
+    title: 'Anniversary',
+    tip: 'Your <b>earliest photo together</b> works best — the one that captures how it felt before routine took over.',
+    suggested: 'Keep it simple & timeless',
+  },
+  {
+    icon: '♛',
+    title: 'Parents / Grandparents',
+    tip: 'Family portrait with <b>strong contrast</b> — reads clearly from across a room, even for older eyes.',
+    suggested: 'Bold shapes, warm tones',
+  },
+  {
+    icon: '✦',
+    title: 'Pet Memorial',
+    tip: 'A quiet tribute to a pet that\'s gone. <b>Gentle tones</b>, not a photograph — a memory.',
+    suggested: 'Soft style, matte finish',
+  },
+  {
+    icon: '★',
+    title: 'Wedding Gift',
+    tip: 'The couple\'s <b>favourite photo together</b> with the wedding date engraved below. Large size looks best.',
+    suggested: 'Classic style + date',
+  },
+  {
+    icon: '▲',
+    title: 'Corporate / Team',
+    tip: 'Logo or building in <b>geometric style</b>. Add "Employee of the Year" below. Order 5+ for a team gift run.',
+    suggested: 'Minimal + text line',
+  },
+  {
+    icon: '❋',
+    title: 'Just Because',
+    tip: 'No reason needed. <b>Random gifts hit different.</b> Any style works — pick what matches the photo\'s vibe.',
+    suggested: 'Any style',
+  },
+];
+
+function buildProcessSteps(product: GiftProduct): Array<{ title: string; time: string; desc: string }> {
+  const modeDesc: Record<string, string> = {
+    'laser': 'Our laser engraves your design onto premium acrylic at our Paya Lebar shop. Every piece inspected before shipping.',
+    'uv': 'UV-printed directly onto the material with colour-accurate inks. Vibrant and scratch-resistant.',
+    'embroidery': 'Stitched on our digital embroidery machine with thread-matched colour conversion from your photo.',
+    'photo-resize': 'Printed at exact specs with bleed and colour calibration. No AI — just your photo, perfectly sized.',
+  };
+  const upload = product.mode === 'photo-resize'
+    ? 'Upload a photo. Crop to the exact product dimensions. Bleed added automatically.'
+    : 'Upload any clear photo. Pick a style. Live preview updates as you choose.';
+  const ai = product.mode === 'photo-resize'
+    ? { title: 'Approve the Crop', time: '1 minute', desc: 'Confirm the crop fits the product. We add bleed and safe-zone margins for you.' }
+    : { title: 'AI Stylises It', time: '15 seconds', desc: 'Our AI converts your photo into print-ready art tuned for the chosen production method. Review before paying.' };
+  return [
+    { title: 'Upload & Preview', time: '2 minutes', desc: upload },
+    ai,
+    { title: 'We Produce It', time: '3–4 days', desc: modeDesc[product.mode] ?? modeDesc['uv'] },
+    { title: 'Ship or Pickup', time: 'Next day · SG', desc: 'Islandwide next-day delivery, free over S$80. Or collect at Paya Lebar Square day 5.' },
+  ];
+}
+
+function buildGiftFaqs(product: GiftProduct): Array<{ q: string; a: string }> {
+  const base: Array<{ q: string; a: string }> = [
+    {
+      q: "What if the AI preview doesn't look right?",
+      a: "You'll see the preview before paying. If it's not what you want, try a different photo or style — we only produce what you approve. If you've tried a few and still aren't happy, email us before ordering and our design team will manually review your photo at no extra cost.",
+    },
+    {
+      q: 'How long does it take to arrive?',
+      a: 'Standard turnaround is 5 working days from order approval: 1 day review, 3 days production, 1 day ship prep. Islandwide delivery adds another 24 hours. Same-day collection at Paya Lebar Square is available for urgent orders — WhatsApp us first.',
+    },
+    {
+      q: 'What photos work best?',
+      a: 'Clear subject, simple background, good lighting. Faces against plain walls, pets against grass, couples against sky all work brilliantly. Messy backgrounds, very dark photos, or group shots with small faces usually come out muddy. Our AI cleans up so-so photos but cannot invent detail that isn\'t there.',
+    },
+    {
+      q: 'Do you do bulk or corporate orders?',
+      a: 'Yes — volume discount kicks in at 5 units. For 20+, we assign an account manager who can handle direct shipping to individual recipients with unique engraving on each piece. Contact us for a corporate quote.',
+    },
+    {
+      q: 'Can I change my mind after ordering?',
+      a: 'Before we begin production (typically within 24 hours of approval), yes — full refund. Once production has started, we can\'t reverse it because every piece is custom. We\'ll always check the preview with you before starting.',
+    },
+  ];
+  if (product.mode === 'laser') {
+    base.splice(1, 0, {
+      q: 'Is laser engraving permanent?',
+      a: "Yes — the engraving is physically etched into the acrylic surface, not printed. It won't fade, scratch off, or wash away. The laser creates micro-frosted marks that catch light — visible by day, glowing at night when lit from below.",
+    });
+  }
+  if (product.mode === 'photo-resize') {
+    base.splice(1, 0, {
+      q: 'How does photo-resize differ from AI products?',
+      a: 'No AI involved. You upload your photo, crop it to fit the exact product dimensions, and we print it as-is with bleed and safe-zone margins handled automatically. Good for when you want your photo reproduced faithfully, not stylised.',
+    });
+  }
+  return base;
+}
+
+function buildGiftMagazine(product: GiftProduct): SeoMagazineData {
+  const modeGuides: Record<string, {
+    title: string;
+    lede: string;
+    articles: Array<{ num: string; title: string; body: string[]; side: any }>;
+  }> = {
+    'laser': {
+      title: 'The honest guide to',
+      lede: 'Custom laser-engraved gifts have become one of Singapore\'s most-ordered personalised items. Here\'s what actually separates a good engraving from a cheap one — material, contrast, LED quality, and turnaround.',
+      articles: [
+        {
+          num: '01',
+          title: 'Why acrylic beats glass and wood.',
+          body: [
+            "Glass engravings look premium but break easily, weigh too much for bedside bases, and the laser marks go cloudy over time. **Wood engravings** absorb LED glow poorly — the light gets eaten by the grain, so the design barely shows at night.",
+            "Premium **clear cast acrylic** is the sweet spot. Light, durable, and the laser creates frosted marks that catch LED light beautifully. By day, a clean etched display. By night, the engraving appears internally lit — because optically, it is.",
+          ],
+          side: {
+            kind: 'list',
+            label: 'Material comparison',
+            rows: [
+              { text: 'Clear Acrylic', time: '★★★★★' },
+              { text: 'Frosted Glass', time: '★★★' },
+              { text: 'Walnut Wood', time: '★★' },
+              { text: 'Metal Plate', time: '★★' },
+            ],
+          },
+        },
+        {
+          num: '02',
+          title: 'What photos work best (and which don\'t).',
+          body: [
+            "Laser engraving converts photos to **high-contrast line art**. Clear subject-background separation wins — a face against a plain wall, a pet against grass, a couple against sky. Messy backgrounds, very dark photos, or group shots with small faces come out muddy.",
+            "Our AI cleans up so-so photos, but can't invent detail that isn't there. Try different styles if the first doesn't feel right. If it still looks off, we'll email you before engraving rather than print something you won't love.",
+          ],
+          side: { kind: 'stat', label: 'Accept rate', num: '87', suffix: '%', caption: 'customers accept their first result' },
+        },
+        {
+          num: '03',
+          title: 'Warm white vs cool white LED.',
+          body: [
+            "**Warm white** (most popular) gives a candle-like amber glow — bedside-table vibes, flattering for skin tones. **Cool white** feels more modern and clinical, better for architectural subjects or logos. Colour-cycling LED sounds fun but reads as gimmicky — skip unless it's for a kid's room.",
+            "All our LED bases run on USB-C or battery. No permanent wall installation, no electrician needed. Plug-and-play from the box.",
+          ],
+          side: {
+            kind: 'pills',
+            label: 'LED popularity',
+            items: [
+              { text: 'Warm 68%', pop: true },
+              { text: 'Cool 24%' },
+              { text: 'Cycling 8%' },
+            ],
+          },
+        },
+        {
+          num: '04',
+          title: 'Getting it in time.',
+          body: [
+            "Standard turnaround is **5 working days** from order to shipping. That breaks down into: 1 day for us to review the AI art, 3 days for engraving and assembly, 1 day for ship prep. Same-day courier across SG adds another 24 hours — plan for a week from click to doorstep.",
+            "Need it faster for a birthday you forgot? **Order before 10am weekday**, pay the S$20 rush fee, collect at Paya Lebar in 48 hours. We've saved a lot of anniversaries this way — no judgement.",
+          ],
+          side: { kind: 'stat', label: 'Turnaround', num: '5', suffix: 'days', caption: 'Standard · Rush 48hr available' },
+        },
+      ],
+    },
+    'uv': {
+      title: 'The honest guide to',
+      lede: 'UV-printed gifts give you photograph-grade colour directly on hard surfaces. Here\'s what separates a good UV print from a faded one — ink, substrate prep, and the contrast trick most shops skip.',
+      articles: [
+        {
+          num: '01',
+          title: 'Why UV ink beats regular print.',
+          body: [
+            "Standard inkjet prints fade, scratch, and smudge — especially on anything that gets touched or washed. **UV-cured ink** is polymerised onto the surface by ultraviolet light in a single pass. The result is a rigid, colour-stable layer that survives years of handling, humidity, and light without fading.",
+            "We UV-print directly onto acrylic, metal, PVC, wood — anything flat and stable. No laminate, no protective layer needed. The ink itself is the finish.",
+          ],
+          side: {
+            kind: 'pills',
+            label: 'Compatible surfaces',
+            items: [
+              { text: 'Acrylic', pop: true },
+              { text: 'Aluminium' },
+              { text: 'PVC' },
+              { text: 'Wood' },
+              { text: 'Glass' },
+              { text: 'Leather' },
+            ],
+          },
+        },
+        {
+          num: '02',
+          title: 'The white-underlay trick.',
+          body: [
+            "Colours printed on a dark or transparent surface look washed out without a white underlay. We print a **white ink layer first**, then the CMYK image on top. That's how your photo keeps skin tones on a dark acrylic and looks vibrant on a transparent phone case.",
+            "Most budget UV shops skip the white layer to save ink. You can tell — dark backgrounds come out muddy, whites turn grey. Ask for the white-underlay spec up front and you'll know who knows what they're doing.",
+          ],
+          side: { kind: 'stat', label: 'Colour accuracy', num: '95', suffix: '%', caption: 'Delta-E under 3 against target' },
+        },
+        {
+          num: '03',
+          title: 'Which photos reproduce well.',
+          body: [
+            "UV print reproduces **photographic detail** faithfully. Unlike laser (which simplifies) or embroidery (which posterises), UV prints what you send. That means crisp edges, saturated colour, fine detail all survive.",
+            "Flip side: your source photo has to be good. Blurry phone photos stay blurry. Low-contrast photos stay muddy. Upload the highest-resolution version you have — we scale it up as needed.",
+          ],
+          side: {
+            kind: 'list',
+            label: 'Source resolution',
+            rows: [
+              { text: 'Small gift', time: '≥ 1200px' },
+              { text: 'Medium', time: '≥ 2000px' },
+              { text: 'Wall art', time: '≥ 3000px' },
+            ],
+          },
+        },
+        {
+          num: '04',
+          title: 'Turnaround & SG delivery.',
+          body: [
+            "UV-printed gifts go from approved preview to shipped piece in **5 working days**. Same-day pickup at Paya Lebar Square is available for orders before 10am with the rush surcharge.",
+            "Islandwide next-day delivery is free on orders over S$80. Otherwise flat rate S$8 for SG-wide door-to-door. Corporate bulk orders (20+) ship direct to each recipient if you need — ask us for the per-piece flow.",
+          ],
+          side: { kind: 'stat', label: 'Standard', num: '5', suffix: 'days', caption: 'Rush: 48hr available' },
+        },
+      ],
+    },
+    'embroidery': {
+      title: 'The honest guide to',
+      lede: 'Photo-to-embroidery is the fussiest personalisation method we offer — and the most memorable when it works. Here\'s what to know about thread count, backing, colour limits, and why it pays to preview before stitching.',
+      articles: [
+        {
+          num: '01',
+          title: 'Embroidery has a colour budget.',
+          body: [
+            "Every colour change in an embroidery design means a thread-swap on the machine. More colours = more time, more thread, more money. Our AI **posterises your photo to 4-6 key colours** before stitching — the result reads like a graphic illustration, not a photo.",
+            "This is a feature, not a flaw. Photo-realistic embroidery exists but costs 4× more and still looks muddy up close. A well-posterised 5-colour embroidery looks intentional and premium — better than a photograph trying and failing to be stitched.",
+          ],
+          side: { kind: 'stat', label: 'Typical palette', num: '4–6', caption: 'Colours per embroidered piece' },
+        },
+        {
+          num: '02',
+          title: 'Stitch count and what you\'re paying for.',
+          body: [
+            "Embroidery pricing tracks **stitch count**, not image size. A 4×4 inch design might be 5,000 stitches (cheap) or 25,000 stitches (detail-heavy, expensive). More stitches means denser coverage, finer line detail, better definition on small type.",
+            "We auto-optimise the stitch density for your fabric — too dense on a light polo and the collar puckers; too sparse on a thick apron and the design reads weak. Your preview shows the final stitch path before production.",
+          ],
+          side: {
+            kind: 'pills',
+            label: 'Stitch density',
+            items: [
+              { text: 'Light (polo)' },
+              { text: 'Medium (tote)', pop: true },
+              { text: 'Heavy (apron)' },
+              { text: 'Extra (cap)' },
+            ],
+          },
+        },
+        {
+          num: '03',
+          title: 'Backing matters for wash durability.',
+          body: [
+            "Behind every good embroidery is a **stabiliser backing** you never see. Without it, fabric puckers after the first wash. We use **tear-away backing** for polos and tees (removes cleanly, no stiffness), **cut-away backing** for caps and aprons (stays in, protects against daily abuse).",
+            "If a shop tells you they use \"standard backing\" on everything, they're using the cheap option and cutting corners. Ask what backing they're using for *your* item specifically — good answer varies by fabric.",
+          ],
+          side: {
+            kind: 'list',
+            label: 'Backing by item',
+            rows: [
+              { text: 'Polo / tee', time: 'Tear-away' },
+              { text: 'Cap / apron', time: 'Cut-away' },
+              { text: 'Tote / bag', time: 'Cut-away' },
+              { text: 'Thin fabric', time: 'Water-soluble' },
+            ],
+          },
+        },
+        {
+          num: '04',
+          title: 'Why embroidery takes longer.',
+          body: [
+            "Digitising (converting your design to stitch instructions) alone takes 4-24 hours depending on complexity. Running the machine adds another 15-45 minutes per piece. Multiply by your quantity and schedule a **7-working-day** turnaround, not 5.",
+            "For corporate uniforms or event kits, we hold your digitised file — so reorders take half the time. Your second batch runs faster and cheaper than the first because the stitch path is already programmed.",
+          ],
+          side: { kind: 'stat', label: 'Turnaround', num: '7', suffix: 'days', caption: 'Reorders: 4 days' },
+        },
+      ],
+    },
+    'photo-resize': {
+      title: 'The honest guide to',
+      lede: 'Photo-resize products skip the AI entirely — just your photo, cropped to exact dimensions, with bleed added automatically. Here\'s what to know about resolution, crop decisions, and when this method beats AI-styled alternatives.',
+      articles: [
+        {
+          num: '01',
+          title: 'When you want the photo, not an interpretation.',
+          body: [
+            "Our AI-styled products (laser, UV, embroidery) reinterpret your photo into a new medium. Beautiful for some contexts, wrong for others. **Photo-resize** keeps your photo exactly as it is — same colours, same detail, same composition — just cropped and printed at the product's exact dimensions.",
+            "Best when your photo *is* the gift: wedding photos, family portraits, travel shots. Worst when your source photo has flaws — bad lighting, low resolution, busy background — because there's no AI cleanup to fall back on.",
+          ],
+          side: { kind: 'stat', label: 'No AI', num: '1:1', caption: 'Your photo, to scale' },
+        },
+        {
+          num: '02',
+          title: 'Resolution rules you can\'t break.',
+          body: [
+            "For print that doesn't look pixelated up close, your source photo needs to be **at least 300 DPI at the print dimensions**. A 10×15cm gift needs a source image of at least 1200×1800 pixels. A wall print needs 3000+ px on the long side.",
+            "Modern phones deliver this easily. Screenshots, WhatsApp-compressed photos, and social-media downloads usually don't. Send us the original file — airdropped, emailed, or from your camera roll — not a downloaded version.",
+          ],
+          side: {
+            kind: 'list',
+            label: 'Minimum source size',
+            rows: [
+              { text: 'Small 10×15cm', time: '1200px' },
+              { text: 'Medium 15×20cm', time: '2000px' },
+              { text: 'Large 20×28cm', time: '2800px' },
+              { text: 'Wall art', time: '3500px+' },
+            ],
+          },
+        },
+        {
+          num: '03',
+          title: 'Crop is where gifts succeed or fail.',
+          body: [
+            "The most common photo-resize mistake: crop too tight, lose headroom, heads feel squashed. Crop too loose, subject gets lost in background. Our crop tool shows you the **safe zone** (the printed area) and the **bleed margin** (the buffer that gets trimmed) — keep important detail inside the safe zone.",
+            "Rule of thumb: for portraits, leave roughly 10% headroom above the top of the head. For landscapes, keep the horizon on the upper or lower third, never dead-centre. For couple/family, centre the group horizontally but biased slightly below the vertical middle.",
+          ],
+          side: { kind: 'stat', label: 'Safe zone', num: '3mm', caption: 'Buffer from edge on every side' },
+        },
+        {
+          num: '04',
+          title: 'Bleed is why your gift doesn\'t have a white border.',
+          body: [
+            "Printed gifts get trimmed to final size after printing. If the image stops exactly at the edge, tiny misalignments during trimming leave a white stripe. **Bleed** is an extra 2-3mm of image that extends past the final edge — trimmed off, invisible, but it\'s the reason your gift arrives edge-to-edge.",
+            "We add bleed automatically. Just make sure the important detail (faces, text, borders you want visible) sits inside the safe zone. If your photo already has a white border as part of the design, mention it — we'll keep it deliberately.",
+          ],
+          side: { kind: 'stat', label: 'Auto bleed', num: '2mm', caption: 'Added to every side' },
+        },
+      ],
+    },
+  };
+  const g = modeGuides[product.mode] ?? modeGuides['uv'];
+  return {
+    issue_label: `Issue №02 · ${product.name}`,
+    title: g.title,
+    title_em: product.name.toLowerCase().includes('led') ? 'LED photo gifts.' : `${product.name.toLowerCase()}.`,
+    lede: g.lede,
+    articles: g.articles,
+  };
 }
