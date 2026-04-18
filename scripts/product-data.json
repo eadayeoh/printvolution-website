@@ -1,0 +1,5026 @@
+[
+  {
+    "slug": "acrylic-signage",
+    "name": "Personalized Acrylic Business Sign",
+    "category": "Advertising",
+    "tagline": "Signs that make your space credible before you speak",
+    "description": "Your reception wall, your shopfront, your counter — the first thing clients see. An acrylic sign built and installed properly signals that what\\",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a4",
+            "label": "A4 (210×297mm)",
+            "price_formula": "qty*45"
+          },
+          {
+            "slug": "a3",
+            "label": "A3 (297×420mm)",
+            "price_formula": "qty*85"
+          },
+          {
+            "slug": "a2",
+            "label": "A2 (420×594mm)",
+            "price_formula": "qty*150"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Size",
+            "price_formula": "0",
+            "note": "WhatsApp for quote"
+          }
+        ]
+      },
+      {
+        "step_id": "thickness",
+        "label": "Thickness",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "3mm",
+            "label": "3mm Acrylic",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "5mm",
+            "label": "5mm Acrylic",
+            "price_formula": "qty*10",
+            "note": "Premium"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "clear",
+            "label": "Clear",
+            "price_formula": "0"
+          },
+          {
+            "slug": "frosted",
+            "label": "Frosted",
+            "price_formula": "qty*5"
+          },
+          {
+            "slug": "white",
+            "label": "White",
+            "price_formula": "qty*5"
+          }
+        ]
+      },
+      {
+        "step_id": "mounting",
+        "label": "Mounting",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "standoff",
+            "label": "Standoff Bolts",
+            "price_formula": "0",
+            "note": "Recommended"
+          },
+          {
+            "slug": "tape",
+            "label": "Double-sided Tape",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Choose Your Shape",
+      "configs": [
+        "Rectangle",
+        "Circle",
+        "Arch",
+        "Hexagon"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            3400,
+            3400,
+            4400,
+            4900
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            16500,
+            16500,
+            21300,
+            23800
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            32000,
+            32000,
+            41400,
+            46100
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            59800,
+            59800,
+            77400,
+            86200
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "aprons",
+    "name": "Apron",
+    "category": "Wearables",
+    "tagline": "Uniforms that communicate care before a word is spoken",
+    "description": "Your team is seen up close, throughout every interaction. An apron with a clean logo and proper construction signals that the care they put into the food extends to everything else.",
+    "configurator": [
+      {
+        "step_id": "method",
+        "label": "Print / Decoration",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "emb",
+            "label": "Embroidery",
+            "price_formula": "qty*32"
+          },
+          {
+            "slug": "dtf",
+            "label": "DTF Print (full colour)",
+            "price_formula": "qty*22"
+          }
+        ]
+      },
+      {
+        "step_id": "material",
+        "label": "Apron Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "polycotton",
+            "label": "Poly-cotton ",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "canvas",
+            "label": "Canvas",
+            "price_formula": "qty*3"
+          }
+        ]
+      },
+      {
+        "step_id": "color",
+        "label": "Apron Colour",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "black",
+            "label": "Black",
+            "price_formula": "0"
+          },
+          {
+            "slug": "white",
+            "label": "White",
+            "price_formula": "0"
+          },
+          {
+            "slug": "navy",
+            "label": "Navy",
+            "price_formula": "0"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Printing Area",
+      "configs": [
+        "A5",
+        "A4",
+        "A3"
+      ],
+      "rows": [
+        {
+          "qty": "3pcs",
+          "prices": [
+            1300,
+            1500,
+            1800
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            5000,
+            5800,
+            7000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            6000,
+            7000,
+            8500
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            6900,
+            8100,
+            9900
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            7700,
+            9100,
+            11200
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            8400,
+            10000,
+            12400
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            9000,
+            10800,
+            13500
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            9500,
+            11500,
+            14500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "artist-canvas",
+    "name": "Artist Canvas",
+    "category": "Art & Signage",
+    "tagline": "Gallery-quality canvas that feels like art, not a print",
+    "description": "A canvas print has warmth and texture that any framed print behind glass lacks. For art reproductions, photography, and interior installations that need to feel like objects, not displays.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "8x10",
+            "label": "8×10 inch",
+            "price_formula": "qty*38"
+          },
+          {
+            "slug": "12x16",
+            "label": "12×16 inch",
+            "price_formula": "qty*58"
+          },
+          {
+            "slug": "16x20",
+            "label": "16×20 inch",
+            "price_formula": "qty*88"
+          },
+          {
+            "slug": "20x24",
+            "label": "20×24 inch",
+            "price_formula": "qty*125"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "gloss",
+            "label": "Gloss Varnish",
+            "price_formula": "0"
+          },
+          {
+            "slug": "satin",
+            "label": "Satin Varnish",
+            "price_formula": "0",
+            "note": "Popular"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Width",
+      "configs": [
+        "20cm",
+        "30cm",
+        "40cm",
+        "50cm",
+        "60cm",
+        "70cm"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            3000,
+            3500,
+            4000,
+            4500,
+            5000,
+            5500
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            14600,
+            17000,
+            19400,
+            21800,
+            24200,
+            26700
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            28200,
+            32900,
+            37600,
+            42300,
+            47000,
+            51700
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            52800,
+            61600,
+            70400,
+            79200,
+            88000,
+            96800
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "books",
+    "name": "Books",
+    "category": "Business Stationery",
+    "tagline": "Printed publications that get kept, not recycled",
+    "description": "A professionally printed booklet carries your content with a weight that PDFs never will. For catalogues, annual reports, and publications that need to make a physical impression.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a5",
+            "label": "A5 (148×210mm)",
+            "price_formula": "qty*0.35",
+            "note": "Most popular"
+          },
+          {
+            "slug": "a4",
+            "label": "A4 (210×297mm)",
+            "price_formula": "qty*0.50"
+          }
+        ]
+      },
+      {
+        "step_id": "binding",
+        "label": "Book Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "saddle",
+            "label": "Saddle Stitch",
+            "price_formula": "0",
+            "note": "Up to 64pp"
+          },
+          {
+            "slug": "perfect",
+            "label": "Perfect Binding",
+            "price_formula": "qty*1.20",
+            "note": "48pp+"
+          },
+          {
+            "slug": "wire",
+            "label": "Wire-O Binding",
+            "price_formula": "qty*0.80"
+          },
+          {
+            "slug": "hardcover",
+            "label": "Hardcover",
+            "price_formula": "qty*3.50"
+          }
+        ]
+      },
+      {
+        "step_id": "pages",
+        "label": "Number of Pages",
+        "type": "select",
+        "options": [
+          {
+            "slug": "8",
+            "label": "8 pages"
+          },
+          {
+            "slug": "16",
+            "label": "16 pages"
+          },
+          {
+            "slug": "32",
+            "label": "32 pages"
+          },
+          {
+            "slug": "48",
+            "label": "48 pages"
+          },
+          {
+            "slug": "64",
+            "label": "64 pages"
+          },
+          {
+            "slug": "80",
+            "label": "80 pages"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom (enter below)"
+          }
+        ]
+      },
+      {
+        "step_id": "cover_lam",
+        "label": "Cover Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lam",
+            "price_formula": "0",
+            "note": "Popular"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lam",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A4 (210×297mm)"
+      ],
+      "rows": [
+        {
+          "qty": "10000pcs",
+          "prices": [
+            5000
+          ]
+        },
+        {
+          "qty": "30000pcs",
+          "prices": [
+            15000
+          ]
+        },
+        {
+          "qty": "50000pcs",
+          "prices": [
+            25000
+          ]
+        },
+        {
+          "qty": "100000pcs",
+          "prices": [
+            50000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "car-decal",
+    "name": "Car Decal",
+    "category": "Advertising",
+    "tagline": "Turn every kilometre into a brand impression",
+    "description": "Your vehicle drives past thousands of people a week. A well-designed car decal turns every commute, every parking lot, every traffic jam into a brand impression that costs nothing to run.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a5",
+            "label": "Up to A5",
+            "price_formula": "qty*18"
+          },
+          {
+            "slug": "a4",
+            "label": "Up to A4",
+            "price_formula": "qty*28"
+          },
+          {
+            "slug": "a3",
+            "label": "Up to A3",
+            "price_formula": "qty*45"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom",
+            "price_formula": "0",
+            "note": "WhatsApp for quote"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Vinyl Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "gloss",
+            "label": "Gloss",
+            "price_formula": "0"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt",
+            "price_formula": "qty*2"
+          },
+          {
+            "slug": "chrome",
+            "label": "Chrome",
+            "price_formula": "qty*5"
+          }
+        ]
+      },
+      {
+        "step_id": "type",
+        "label": "Adhesive Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "removable",
+            "label": "Removable",
+            "price_formula": "0"
+          },
+          {
+            "slug": "permanent",
+            "label": "Permanent",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "90mm x 54mm",
+        "130mm x 170mm",
+        "115mm x 120mm",
+        "90mm x 420mm"
+      ],
+      "rows": [
+        {
+          "qty": "200pcs",
+          "prices": [
+            10000,
+            30000,
+            25000,
+            45000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            12000,
+            40000,
+            35000,
+            65000
+          ]
+        },
+        {
+          "qty": "400pcs",
+          "prices": [
+            15000,
+            50000,
+            45000,
+            85000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            18000,
+            60000,
+            55000,
+            105000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "door-hanger",
+    "name": "Door Hanger",
+    "category": "Advertising",
+    "tagline": "Your message on their door handle — impossible to ignore",
+    "description": "No inbox, no algorithm, no gatekeeper — your message lands directly on the door handle of exactly who you want to reach. For property launches, F&B promotions, and neighbourhood campaigns.",
+    "configurator": [
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "qty*0.45",
+            "note": "Popular"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "qty*0.42"
+          }
+        ]
+      },
+      {
+        "step_id": "sides",
+        "label": "Print Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "2",
+            "label": "Double Sided",
+            "price_formula": "0",
+            "note": "Recommended"
+          },
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "-qty*0.05"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "240mm x 89mm"
+      ],
+      "rows": [
+        {
+          "qty": "100pcs",
+          "prices": [
+            15000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            17000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            19000
+          ]
+        },
+        {
+          "qty": "400pcs",
+          "prices": [
+            21000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            23000
+          ]
+        },
+        {
+          "qty": "1000pcs",
+          "prices": [
+            25000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "easel-stand",
+    "name": "Easel Stand",
+    "category": "Advertising",
+    "tagline": "Instant professional displays — no tools, no damage",
+    "description": "Set it up in 30 seconds. Take it down in 20. Carry it in one hand. The easel stand solves every temporary display problem without drilling holes or asking permission.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Poster Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a2",
+            "label": "A2 (420×594mm)",
+            "price_formula": "qty * (75 - Math.min(10, 1 * (qty - 1)))"
+          },
+          {
+            "slug": "a1",
+            "label": "A1 (594×841mm)",
+            "price_formula": "qty * (75 - Math.min(10, 1 * (qty - 1)))"
+          },
+          {
+            "slug": "a0",
+            "label": "A0 (841×1189mm)",
+            "price_formula": "qty * (75 - Math.min(10, 1 * (qty - 1)))"
+          }
+        ]
+      },
+      {
+        "step_id": "media",
+        "label": "Print Media",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "sticker",
+            "label": "Poster Sticker",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "0"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "board",
+        "label": "Board Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "foam",
+            "label": "Compressed Foam Board",
+            "price_formula": "0",
+            "note": "Included"
+          },
+          {
+            "slug": "kapaline",
+            "label": "Black Kapaline Board",
+            "price_formula": "qty*5"
+          }
+        ]
+      },
+      {
+        "step_id": "stand",
+        "label": "Stand Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "black",
+            "label": "Black Easel Stand",
+            "price_formula": "0",
+            "note": "Included"
+          },
+          {
+            "slug": "wooden",
+            "label": "Wooden Easel Stand",
+            "price_formula": "qty*30"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A2",
+        "A1",
+        "A0"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            4800,
+            5800,
+            6800
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "embroidery",
+    "name": "Embroidery",
+    "category": "Wearables",
+    "tagline": "Your logo stitched in — not ironed on, not washed out",
+    "description": "Some logos are too important to just print. Embroidery adds texture, permanence, and a tactile quality that tells anyone who looks closely that the quality goes all the way through.",
+    "configurator": [
+      {
+        "step_id": "garment",
+        "label": "Garment Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "polo",
+            "label": "Polo Shirt",
+            "price_formula": "qty*22"
+          },
+          {
+            "slug": "tshirt",
+            "label": "T-Shirt (Round Neck)",
+            "price_formula": "qty*18"
+          },
+          {
+            "slug": "cap",
+            "label": "Cap / Hat",
+            "price_formula": "qty*15"
+          },
+          {
+            "slug": "jacket",
+            "label": "Jacket",
+            "price_formula": "qty*45"
+          },
+          {
+            "slug": "bag",
+            "label": "Bag / Tote",
+            "price_formula": "qty*12"
+          },
+          {
+            "slug": "supplied",
+            "label": "I supply garment",
+            "price_formula": "0",
+            "note": "Bring to us"
+          }
+        ]
+      },
+      {
+        "step_id": "placement",
+        "label": "Placement",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "left_chest",
+            "label": "Left Chest",
+            "price_formula": "0",
+            "note": "Most common"
+          },
+          {
+            "slug": "right_chest",
+            "label": "Right Chest",
+            "price_formula": "0"
+          },
+          {
+            "slug": "back",
+            "label": "Back",
+            "price_formula": "qty*5"
+          },
+          {
+            "slug": "sleeve",
+            "label": "Sleeve",
+            "price_formula": "qty*3"
+          }
+        ]
+      },
+      {
+        "step_id": "stitches",
+        "label": "Stitch Count",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "3k",
+            "label": "Up to 3,000 stitches",
+            "price_formula": "qty*5.50"
+          },
+          {
+            "slug": "6k",
+            "label": "Up to 6,000 stitches",
+            "price_formula": "qty*8.50"
+          },
+          {
+            "slug": "10k",
+            "label": "Up to 10,000 stitches",
+            "price_formula": "qty*12.00"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Garment Type",
+      "configs": [
+        "I supply garment"
+      ],
+      "rows": [
+        {
+          "qty": "10 pcs",
+          "prices": [
+            -8000
+          ]
+        },
+        {
+          "qty": "20 pcs",
+          "prices": [
+            -16000
+          ]
+        },
+        {
+          "qty": "50 pcs",
+          "prices": [
+            -40000
+          ]
+        },
+        {
+          "qty": "100 pcs",
+          "prices": [
+            -80000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "envelopes",
+    "name": "Envelope",
+    "category": "Business Stationery",
+    "tagline": "Brand your correspondence before it is even opened",
+    "description": "Your letter is judged before it is opened. A well-printed branded envelope signals that what is inside is worth reading — for correspondence that needs to arrive with authority.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "dl",
+            "label": "DL (110×220mm)",
+            "price_formula": "qty*0.08",
+            "note": "Most common"
+          },
+          {
+            "slug": "dl_win",
+            "label": "DL Window",
+            "price_formula": "qty*0.12"
+          },
+          {
+            "slug": "c5",
+            "label": "C5 (162×229mm)",
+            "price_formula": "qty*0.18"
+          },
+          {
+            "slug": "c4",
+            "label": "C4 (229×324mm)",
+            "price_formula": "qty*0.35"
+          }
+        ]
+      },
+      {
+        "step_id": "paper",
+        "label": "Paper",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "white",
+            "label": "White 80gsm",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "kraft",
+            "label": "Kraft Brown",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "closure",
+        "label": "Closure",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "peel",
+            "label": "Peel & Seal",
+            "price_formula": "0",
+            "note": "Recommended"
+          },
+          {
+            "slug": "gummed",
+            "label": "Gummed",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "C6",
+        "C5"
+      ],
+      "rows": [
+        {
+          "qty": "500pcs",
+          "prices": [
+            3000,
+            6000
+          ]
+        },
+        {
+          "qty": "1000pcs",
+          "prices": [
+            4000,
+            5000
+          ]
+        },
+        {
+          "qty": "2000pcs",
+          "prices": [
+            5000,
+            6000
+          ]
+        },
+        {
+          "qty": "3000pcs",
+          "prices": [
+            6000,
+            7000
+          ]
+        },
+        {
+          "qty": "4000pcs",
+          "prices": [
+            7000,
+            8000
+          ]
+        },
+        {
+          "qty": "5000pcs",
+          "prices": [
+            8000,
+            9000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "flyers",
+    "name": "Flyers",
+    "category": "Advertising",
+    "tagline": "Physical reach that algorithms cannot replicate",
+    "description": "A flyer in someone\\",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a4",
+            "label": "A4 (210×297mm)",
+            "price_formula": "(qty/500)*(110-Math.min(10,(qty/500)-1))",
+            "note": "Most common"
+          },
+          {
+            "slug": "a5",
+            "label": "A5 (148×210mm)",
+            "price_formula": "(qty/500)*(75-Math.min(10,(qty/500)-1))"
+          },
+          {
+            "slug": "dl",
+            "label": "DL (99×210mm)",
+            "price_formula": "(qty/500)*(65-Math.min(10,(qty/500)-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "sides",
+        "label": "Printing Sides",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "2",
+            "label": "Double Sided",
+            "price_formula": "(qty/500)*(25-Math.min(5,(qty/500)-1))",
+            "note": "Recommended"
+          },
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "paper",
+        "label": "Paper",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "115art",
+            "label": "115gsm Art Paper",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "128art",
+            "label": "128gsm Art Paper",
+            "price_formula": "(qty/500)*10"
+          },
+          {
+            "slug": "157art",
+            "label": "157gsm Art Paper",
+            "price_formula": "(qty/500)*20"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Lamination",
+            "price_formula": "0"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "(qty/500)*20"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "(qty/500)*15"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "Standard"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            0
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "hand-fan",
+    "name": "Hand Fan",
+    "category": "Advertising",
+    "tagline": "The promotional item everyone actually wants to keep",
+    "description": "At any outdoor event in Singapore, a branded hand fan is the most wanted item on the table. You\\",
+    "configurator": [
+      {
+        "step_id": "shape",
+        "label": "Shape",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "round",
+            "label": "Round",
+            "price_formula": "qty*0.65",
+            "note": "Standard"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Shape",
+            "price_formula": "qty*0.20",
+            "note": "Any die-cut"
+          }
+        ]
+      },
+      {
+        "step_id": "handle",
+        "label": "Handle",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "wood",
+            "label": "Wooden Stick",
+            "price_formula": "0"
+          },
+          {
+            "slug": "plastic",
+            "label": "Plastic Stick",
+            "price_formula": "-qty*0.05"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "310GSM Art Card",
+        "500GSM Synthetic Card"
+      ],
+      "rows": [
+        {
+          "qty": "100pcs",
+          "prices": [
+            29000,
+            38000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            32000,
+            45000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            35000,
+            52000
+          ]
+        },
+        {
+          "qty": "400pcs",
+          "prices": [
+            38000,
+            59000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            41000,
+            66000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "hang-tag",
+    "name": "Hang Tag",
+    "category": "Business Stationery",
+    "tagline": "The tag that justifies the price before they buy",
+    "description": "The last thing a customer sees before they decide to buy — or put it back. A well-made hang tag communicates quality before they have opened the product.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "55x90",
+            "label": "55×90mm",
+            "price_formula": "qty*0.10",
+            "note": "Standard"
+          },
+          {
+            "slug": "60x90",
+            "label": "60×90mm",
+            "price_formula": "0"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "350art",
+            "label": "Art Card",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "400art",
+            "label": "Art Card",
+            "price_formula": "qty*0.10"
+          },
+          {
+            "slug": "kraft",
+            "label": "Kraft Paper",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lam",
+            "price_formula": "0"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lam",
+            "price_formula": "0"
+          },
+          {
+            "slug": "spotUV",
+            "label": "Spot UV + Matt",
+            "price_formula": "qty*0.20",
+            "note": "Premium look"
+          },
+          {
+            "slug": "foil",
+            "label": "Foil + Matt",
+            "price_formula": "qty*0.40"
+          }
+        ]
+      },
+      {
+        "step_id": "hole",
+        "label": "Hole + String",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "twine",
+            "label": "Twine Included",
+            "price_formula": "0"
+          },
+          {
+            "slug": "ribbon",
+            "label": "Ribbon Included",
+            "price_formula": "qty*0.05"
+          },
+          {
+            "slug": "none",
+            "label": "No String",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "Within 90mm x 54mm",
+        "Within 90mm x 108mm",
+        "Within 90mm x 162mm"
+      ],
+      "rows": [
+        {
+          "qty": "100pcs",
+          "prices": [
+            8000,
+            10000,
+            12000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            10000,
+            12000,
+            14000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            12000,
+            14000,
+            16000
+          ]
+        },
+        {
+          "qty": "400pcs",
+          "prices": [
+            14000,
+            16000,
+            18000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            16000,
+            18000,
+            20000
+          ]
+        },
+        {
+          "qty": "1000pcs",
+          "prices": [
+            18000,
+            20000,
+            22000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "letterhead",
+    "name": "Letterhead",
+    "category": "Business Stationery",
+    "tagline": "Official correspondence that arrives with authority",
+    "description": "Give your business a professional edge with custom letterhead printing . Whether you're sending out invoices, contracts, or formal letters, a personalised letterhead reinforces your brand identity and adds credibility. Customise with your logo, business name, contact details, and brand colors . Suitable for both corporate and personal stationery , our letterheads are perfect for creating consistent, polished communication. Customisable with your logo, branding, and contact details Printed on 100GSM Woodsfree. Premium paper available with custom enquiries. Available in A4 and other standard siz",
+    "configurator": [
+      {
+        "step_id": "paper",
+        "label": "Paper",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "80gsm",
+            "label": "80gsm Office Paper",
+            "price_formula": "qty*0.07",
+            "note": "Standard"
+          },
+          {
+            "slug": "100gsm",
+            "label": "Standard weight paper — Premium Paper",
+            "price_formula": "0",
+            "note": "Recommended"
+          },
+          {
+            "slug": "120gsm",
+            "label": "Letterhead Bond",
+            "price_formula": "qty*0.07"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity (sheets)",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A4"
+      ],
+      "rows": [
+        {
+          "qty": "1000pcs",
+          "prices": [
+            18000000
+          ]
+        },
+        {
+          "qty": "2000pcs",
+          "prices": [
+            18000
+          ]
+        },
+        {
+          "qty": "3000pcs",
+          "prices": [
+            21000
+          ]
+        },
+        {
+          "qty": "4000pcs",
+          "prices": [
+            24000
+          ]
+        },
+        {
+          "qty": "5000pcs",
+          "prices": [
+            27000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "life-size-standee",
+    "name": "Life Size Standee",
+    "category": "Advertising",
+    "tagline": "The display that stops foot traffic and gets photographed",
+    "description": "Nothing else at a retail location or event commands attention like a life-size human cutout. People stop, stare, and photograph it — which means your brand gets photographed too.",
+    "configurator": [
+      {
+        "step_id": "height",
+        "label": "Height",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "160",
+            "label": "160cm",
+            "price_formula": "qty*120"
+          },
+          {
+            "slug": "180",
+            "label": "180cm",
+            "price_formula": "qty*150"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "0",
+            "note": "Included"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "0",
+            "note": "Included"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Height",
+      "configs": [
+        "1600mm",
+        "1800mm"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            12000,
+            15000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            58200,
+            72800
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            112800,
+            141000
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            211200,
+            264000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "long-brochures",
+    "name": "Long Brochures",
+    "category": "Business Stationery",
+    "tagline": "The brochure that fits a pocket and makes a full argument",
+    "description": "Compact enough to carry, substantial enough to sell. DL brochures fit every display rack, every pocket, every handbag — and they hold more information than a flyer without demanding as much time as a booklet.",
+    "configurator": [
+      {
+        "step_id": "base",
+        "label": "Base Sheet Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a4",
+            "label": "A4 Base (8-panel DL)",
+            "price_formula": "qty*0.22",
+            "note": "Most common"
+          },
+          {
+            "slug": "a3",
+            "label": "A3 Base (wider format)",
+            "price_formula": "qty*0.38"
+          }
+        ]
+      },
+      {
+        "step_id": "fold",
+        "label": "Fold Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "bifold",
+            "label": "Bi-fold (4 panels)",
+            "price_formula": "0"
+          },
+          {
+            "slug": "trifold",
+            "label": "Tri-fold (6 panels)",
+            "price_formula": "qty*0.05",
+            "note": "Popular"
+          },
+          {
+            "slug": "zfold",
+            "label": "Z-fold (6 panels)",
+            "price_formula": "qty*0.05"
+          }
+        ]
+      },
+      {
+        "step_id": "paper",
+        "label": "Paper",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "128art",
+            "label": "128gsm Art Paper",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "157art",
+            "label": "157gsm Art Paper",
+            "price_formula": "qty*0.05"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "157GSM Art Paper",
+        "260GSM Art Card"
+      ],
+      "rows": [
+        {
+          "qty": "300pcs",
+          "prices": [
+            44000,
+            45000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            45000,
+            48000
+          ]
+        },
+        {
+          "qty": "1000pcs",
+          "prices": [
+            48000,
+            58000
+          ]
+        },
+        {
+          "qty": "2000pcs",
+          "prices": [
+            65000,
+            88000
+          ]
+        },
+        {
+          "qty": "3000pcs",
+          "prices": [
+            75000,
+            128000
+          ]
+        },
+        {
+          "qty": "4000pcs",
+          "prices": [
+            95000,
+            158000
+          ]
+        },
+        {
+          "qty": "5000pcs",
+          "prices": [
+            115000,
+            188000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "loose-sheets",
+    "name": "Loose Sheets",
+    "category": "Business Stationery",
+    "tagline": "Fast single-sheet printing from 10 copies — no minimum",
+    "description": "Inserts, notices, table menus, training materials — printed sharp and ready fast. No minimum order, same-day to 2-day turnaround depending on quantity.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a4",
+            "label": "A4",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "a5",
+            "label": "A5",
+            "price_formula": "0"
+          },
+          {
+            "slug": "a3",
+            "label": "A3",
+            "price_formula": "qty*0.08"
+          }
+        ]
+      },
+      {
+        "step_id": "paper",
+        "label": "Paper Weight",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "100gsm",
+            "label": "standard quality paper",
+            "price_formula": "qty*0.18"
+          },
+          {
+            "slug": "128gsm",
+            "label": "quality paper",
+            "price_formula": "qty*0.23"
+          },
+          {
+            "slug": "150gsm",
+            "label": "150gsm Premium Paper",
+            "price_formula": "qty*0.28"
+          },
+          {
+            "slug": "200gsm",
+            "label": "quality paper",
+            "price_formula": "qty*0.38"
+          },
+          {
+            "slug": "260gsm",
+            "label": "260gsm Art Card",
+            "price_formula": "qty*0.52"
+          }
+        ]
+      },
+      {
+        "step_id": "sides",
+        "label": "Print Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "0"
+          },
+          {
+            "slug": "2",
+            "label": "Double Sided",
+            "price_formula": "qty*0.05"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "100GSM Woodsfree",
+        "150GSM Woodsfree",
+        "128GSM Art Paper",
+        "157GSM Art Paper",
+        "200GSM Art Card",
+        "260GSM Art Card"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            200,
+            250,
+            200,
+            250,
+            300,
+            350
+          ]
+        },
+        {
+          "qty": "2pcs",
+          "prices": [
+            400,
+            500,
+            400,
+            500,
+            600,
+            700
+          ]
+        },
+        {
+          "qty": "3pcs",
+          "prices": [
+            600,
+            750,
+            600,
+            750,
+            900,
+            1050
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            800,
+            1000,
+            800,
+            1000,
+            1200,
+            1400
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            1000,
+            1250,
+            1000,
+            1250,
+            1500,
+            1750
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            1200,
+            1500,
+            1200,
+            1500,
+            1800,
+            2100
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            1400,
+            1750,
+            1400,
+            1750,
+            2100,
+            2450
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            1600,
+            2000,
+            1600,
+            2000,
+            2400,
+            2800
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            1800,
+            2250,
+            1800,
+            2250,
+            2700,
+            3150
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            2000,
+            2500,
+            2000,
+            2500,
+            3000,
+            3500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "luxury-business-card",
+    "name": "Luxury Business Card",
+    "category": "Cards & Types",
+    "tagline": "The card that changes how they see you before you speak",
+    "description": "When the card itself is the message. Soft-touch laminate, gold foil, 600gsm cotton stock — before you say another word, they have already revised their opinion of you upward.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "select",
+        "options": [
+          {
+            "slug": "standard",
+            "label": "9cm × 5.4cm (Standard)"
+          },
+          {
+            "slug": "square",
+            "label": "5.5cm × 5.5cm (Square)"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Size"
+          }
+        ]
+      },
+      {
+        "step_id": "size_custom",
+        "label": "Custom dimensions",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "260art",
+            "label": "260gsm Art Card",
+            "price_formula": "qty*(24-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "310art",
+            "label": "310gsm Art Card",
+            "price_formula": "qty*(28-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "tang",
+            "label": "250gsm Tangerine White",
+            "price_formula": "qty*(32-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "maple_b",
+            "label": "300gsm Maple Bright",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "maple_w",
+            "label": "300gsm Maple White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "pearl",
+            "label": "300gsm Pearlux White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "shiruku",
+            "label": "300gsm Shiruku Ivory",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "grand",
+            "label": "350gsm Grandeur White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Lamination",
+            "price_formula": "0"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "qty*8"
+          }
+        ]
+      },
+      {
+        "step_id": "corner",
+        "label": "Corner Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "sq",
+            "label": "Square Corner",
+            "price_formula": "0"
+          },
+          {
+            "slug": "r3",
+            "label": "Rounded R3",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r4",
+            "label": "Rounded R4",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r5",
+            "label": "Rounded R5",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r6",
+            "label": "Rounded R6",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r7",
+            "label": "Rounded R7",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r8",
+            "label": "Rounded R8",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r10",
+            "label": "Rounded R10",
+            "price_formula": "qty*8"
+          }
+        ]
+      },
+      {
+        "step_id": "hotstamp",
+        "label": "Hotstamp",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Hotstamp",
+            "price_formula": "0"
+          },
+          {
+            "slug": "gold",
+            "label": "Gold Hotstamp",
+            "price_formula": "70+(qty-1)*10"
+          },
+          {
+            "slug": "rgold",
+            "label": "Rose Gold Hotstamp",
+            "price_formula": "70+(qty-1)*10"
+          },
+          {
+            "slug": "silver",
+            "label": "Silver Hotstamp",
+            "price_formula": "70+(qty-1)*10"
+          }
+        ]
+      },
+      {
+        "step_id": "spotUV",
+        "label": "Spot UV",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Spot UV",
+            "price_formula": "0"
+          },
+          {
+            "slug": "yes",
+            "label": "Spot UV",
+            "price_formula": "150+(qty-1)*10"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Type",
+      "configs": [
+        "Duplex Card (500GSM)",
+        "Triplex Card (700GSM)",
+        "Quadplex Card (900GSM)"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "2pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "3pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            7000,
+            8000,
+            9000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "money-packet",
+    "name": "Money Packet",
+    "category": "Packaging",
+    "tagline": "Ang baos people keep and reuse — your brand stays visible",
+    "description": "Ang baos are kept and reused — which means your branding stays in circulation long after the money is spent. Custom red packets that people hold onto because they look too good to throw away.",
+    "configurator": [
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "260art",
+            "label": "260gsm Art Card",
+            "price_formula": "qty*(24-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "310art",
+            "label": "310gsm Art Card",
+            "price_formula": "qty*(28-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "tang",
+            "label": "250gsm Tangerine White",
+            "price_formula": "qty*(32-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "maple_b",
+            "label": "300gsm Maple Bright",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "metallic",
+            "label": "Metallic Paper",
+            "price_formula": "qty*(40-Math.min(10,qty-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "Print Only",
+            "price_formula": "0"
+          },
+          {
+            "slug": "foil",
+            "label": "Gold Foil",
+            "price_formula": "70+(qty-1)*5"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lam",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Type",
+      "configs": [
+        "Landscape",
+        "Portrait"
+      ],
+      "rows": [
+        {
+          "qty": "500pcs",
+          "prices": [
+            24500,
+            24500
+          ]
+        },
+        {
+          "qty": "1000pcs",
+          "prices": [
+            34500,
+            34500
+          ]
+        },
+        {
+          "qty": "2000pcs",
+          "prices": [
+            54500,
+            54500
+          ]
+        },
+        {
+          "qty": "3000pcs",
+          "prices": [
+            74500,
+            74500
+          ]
+        },
+        {
+          "qty": "4000pcs",
+          "prices": [
+            94500,
+            94500
+          ]
+        },
+        {
+          "qty": "5000pcs",
+          "prices": [
+            114500,
+            114500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "mug",
+    "name": "Mugs",
+    "category": "Business Stationery",
+    "tagline": "The gift that earns daily visibility on every desk",
+    "description": "A branded mug sits on the desk and gets picked up multiple times every day. It is the highest-frequency touchpoint in any corporate gift programme — and one of the lowest cost per impression.",
+    "configurator": [
+      {
+        "step_id": "type",
+        "label": "Mug Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "11oz",
+            "label": "11oz Ceramic (Standard)",
+            "price_formula": "0",
+            "note": "Most popular"
+          },
+          {
+            "slug": "15oz",
+            "label": "15oz Ceramic (Large)",
+            "price_formula": "qty*2"
+          }
+        ]
+      },
+      {
+        "step_id": "packaging",
+        "label": "Packaging",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Box",
+            "price_formula": "qty*10.00"
+          },
+          {
+            "slug": "box",
+            "label": "With Gift Box",
+            "price_formula": "qty*11.50",
+            "note": "Great for gifting"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "11 oz. White Mug",
+        "11 oz. Black Mug with White Patch",
+        "11 oz. Black Color Changing Mug",
+        "10 oz Frosted Glass Beer Mug",
+        "20 oz Frosted Glass Beer Mug"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            2500,
+            2800,
+            3000,
+            3000,
+            3500
+          ]
+        },
+        {
+          "qty": "2pcs",
+          "prices": [
+            4600,
+            5200,
+            5600,
+            5600,
+            6600
+          ]
+        },
+        {
+          "qty": "3pcs",
+          "prices": [
+            6300,
+            7200,
+            7800,
+            7800,
+            9300
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            7600,
+            8800,
+            9600,
+            9600,
+            11600
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            8500,
+            10000,
+            11000,
+            11000,
+            13500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "name-card",
+    "name": "Name Card",
+    "category": "Cards & Types",
+    "tagline": "The card that gets kept, not binned after three seconds",
+    "description": "You hand it over and they take three seconds to decide if you are worth remembering. Make those three seconds count — with card stock that feels different from the pile, and a finish nobody throws away.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "select",
+        "options": [
+          {
+            "slug": "standard",
+            "label": "9cm × 5.4cm (Standard)",
+            "note": "Most popular"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Size",
+            "note": "Enter dimensions below"
+          }
+        ]
+      },
+      {
+        "step_id": "size_custom",
+        "label": "Custom dimensions (W × H in mm)",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "260art",
+            "label": "260gsm Art Card",
+            "price_formula": "qty*(24-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "310art",
+            "label": "310gsm Art Card",
+            "price_formula": "qty*(28-Math.min(10,qty-1))",
+            "note": "Best seller"
+          },
+          {
+            "slug": "tang",
+            "label": "250gsm Tangerine White",
+            "price_formula": "qty*(32-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "maple_b",
+            "label": "300gsm Maple Bright",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "maple_w",
+            "label": "300gsm Maple White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "pearl",
+            "label": "300gsm Pearlux White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "shiruku",
+            "label": "300gsm Shiruku Ivory",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "grand",
+            "label": "350gsm Grandeur White",
+            "price_formula": "qty*(35-Math.min(10,qty-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Lamination",
+            "price_formula": "0"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "qty*8",
+            "note": "Popular"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "qty*8"
+          }
+        ]
+      },
+      {
+        "step_id": "corner",
+        "label": "Corner Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "sq",
+            "label": "Square Corner",
+            "price_formula": "0"
+          },
+          {
+            "slug": "r3",
+            "label": "Rounded R3",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r4",
+            "label": "Rounded R4",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r5",
+            "label": "Rounded R5",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r6",
+            "label": "Rounded R6",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r7",
+            "label": "Rounded R7",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r8",
+            "label": "Rounded R8",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "r10",
+            "label": "Rounded R10",
+            "price_formula": "qty*8"
+          }
+        ]
+      },
+      {
+        "step_id": "hotstamp",
+        "label": "Hotstamp (Optional)",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Hotstamp",
+            "price_formula": "0"
+          },
+          {
+            "slug": "gold",
+            "label": "Gold Hotstamp",
+            "price_formula": "70+(qty-1)*10",
+            "note": "+$70 base"
+          },
+          {
+            "slug": "rgold",
+            "label": "Rose Gold Hotstamp",
+            "price_formula": "70+(qty-1)*10"
+          },
+          {
+            "slug": "silver",
+            "label": "Silver Hotstamp",
+            "price_formula": "70+(qty-1)*10"
+          }
+        ]
+      },
+      {
+        "step_id": "spotUV",
+        "label": "Spot UV (Optional)",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Spot UV",
+            "price_formula": "0"
+          },
+          {
+            "slug": "yes",
+            "label": "Spot UV",
+            "price_formula": "150+(qty-1)*10",
+            "note": "+$150 base"
+          }
+        ]
+      },
+      {
+        "step_id": "sides",
+        "label": "Printing Sides",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "2",
+            "label": "Double Sided (Recommended)",
+            "price_formula": "0"
+          },
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "-qty*3"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "260GSM Art Card",
+        "310GSM Art Card",
+        "200GSM Tangerine White",
+        "250GSM Zeta Linen",
+        "300GSM Pearlux White",
+        "300GSM Maple Bright"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            2400,
+            2800,
+            3200,
+            3200,
+            3500,
+            3500
+          ]
+        },
+        {
+          "qty": "2pcs",
+          "prices": [
+            4600,
+            5400,
+            6200,
+            6200,
+            6800,
+            6800
+          ]
+        },
+        {
+          "qty": "3pcs",
+          "prices": [
+            6600,
+            7800,
+            9000,
+            9000,
+            9900,
+            9900
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            8400,
+            10000,
+            11600,
+            11600,
+            12800,
+            12800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            10000,
+            12000,
+            14000,
+            14000,
+            15500,
+            15500
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            11400,
+            13800,
+            16200,
+            16200,
+            18000,
+            18000
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            12600,
+            15400,
+            18200,
+            18200,
+            20300,
+            20300
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            13600,
+            16800,
+            20000,
+            20000,
+            22400,
+            22400
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            14400,
+            18000,
+            21600,
+            21600,
+            24300,
+            24300
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            15000,
+            19000,
+            23000,
+            23000,
+            26000,
+            26000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ncr-form",
+    "name": "NCR Form",
+    "category": "Business Stationery",
+    "tagline": "Instant on-site duplicate paperwork — no power needed",
+    "description": "Invoices, delivery orders, job sheets — NCR forms create instant duplicates on-site, with no power and no printer. The operational essential for logistics, field service, and F&B.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a5",
+            "label": "A5",
+            "price_formula": "qty*0.30",
+            "note": "Most common"
+          },
+          {
+            "slug": "a4",
+            "label": "A4",
+            "price_formula": "qty*0.55"
+          }
+        ]
+      },
+      {
+        "step_id": "ply",
+        "label": "Copies per Set",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "2ply",
+            "label": "2-Ply (White + Yellow)",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "3ply",
+            "label": "3-Ply (White + Yellow + Pink)",
+            "price_formula": "qty*0.20"
+          }
+        ]
+      },
+      {
+        "step_id": "numbering",
+        "label": "Sequential Numbering",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Numbering",
+            "price_formula": "0"
+          },
+          {
+            "slug": "yes",
+            "label": "Numbered",
+            "price_formula": "qty*0.10"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity (books)",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "107mm x 196mm",
+        "196mm x 222mm",
+        "146mm x 222mm",
+        "222mm x 298mm"
+      ],
+      "rows": [
+        {
+          "qty": "10pcs",
+          "prices": [
+            15000,
+            16000,
+            17000,
+            18000
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            16000,
+            17000,
+            18000,
+            19000
+          ]
+        },
+        {
+          "qty": "30pcs",
+          "prices": [
+            17000,
+            18000,
+            19000,
+            20000
+          ]
+        },
+        {
+          "qty": "40pcs",
+          "prices": [
+            18000,
+            19000,
+            20000,
+            21000
+          ]
+        },
+        {
+          "qty": "50pcs",
+          "prices": [
+            19000,
+            20000,
+            21000,
+            22000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "nfc-card",
+    "name": "NFC Card",
+    "category": "Cards & Types",
+    "tagline": "Tap to share everything — no app, no QR scan",
+    "description": "Tap. Their phone opens your LinkedIn, your portfolio, your booking page — before you have finished shaking hands. No app. No QR code. Just the card.",
+    "configurator": [
+      {
+        "step_id": "material",
+        "label": "Card Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "pvc",
+            "label": "PVC Card",
+            "price_formula": "qty*8.50",
+            "note": "Most popular"
+          },
+          {
+            "slug": "paper",
+            "label": "Matt Paper Card",
+            "price_formula": "qty*6.50"
+          },
+          {
+            "slug": "premium",
+            "label": "Premium Soft Touch",
+            "price_formula": "qty*11.00"
+          }
+        ]
+      },
+      {
+        "step_id": "url",
+        "label": "Your URL / Link to share",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Choose Your Color",
+      "configs": [
+        "White",
+        "Metallic Silver Color",
+        "Metallic Gold Color",
+        "Metallic Black Colour"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            2800,
+            2800,
+            2800,
+            2800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            13600,
+            13600,
+            13600,
+            13600
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            26300,
+            26300,
+            26300,
+            26300
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            49300,
+            49300,
+            49300,
+            49300
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "paper-bag",
+    "name": "Paper Bag",
+    "category": "Packaging",
+    "tagline": "Your brand carried through the mall by every customer",
+    "description": "Every customer who walks out of your store with a branded bag is carrying your marketing through the mall. Make it a bag worth carrying — because a beautiful bag gets reused.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "small",
+            "label": "Small (18×8×22cm)",
+            "price_formula": "qty*1.10"
+          },
+          {
+            "slug": "medium",
+            "label": "Medium (25×11×28cm)",
+            "price_formula": "qty*1.60",
+            "note": "Popular"
+          },
+          {
+            "slug": "large",
+            "label": "Large (32×12×35cm)",
+            "price_formula": "qty*1.96"
+          }
+        ]
+      },
+      {
+        "step_id": "handle",
+        "label": "Handle",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "cotton",
+            "label": "Cotton Rope",
+            "price_formula": "0",
+            "note": "Premium feel"
+          },
+          {
+            "slug": "twisted",
+            "label": "Twisted Paper",
+            "price_formula": "0"
+          },
+          {
+            "slug": "diecut",
+            "label": "Die-cut Handle",
+            "price_formula": "-qty*0.10"
+          }
+        ]
+      },
+      {
+        "step_id": "paper",
+        "label": "Paper",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "white",
+            "label": "White ",
+            "price_formula": "0"
+          },
+          {
+            "slug": "kraft",
+            "label": "Kraft ",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "Small (18×8×22cm)",
+        "Medium (25×11×28cm)",
+        "Large (32×12×35cm)"
+      ],
+      "rows": [
+        {
+          "qty": "5000pcs",
+          "prices": [
+            5500,
+            8000,
+            9800
+          ]
+        },
+        {
+          "qty": "10000pcs",
+          "prices": [
+            11000,
+            16000,
+            19600
+          ]
+        },
+        {
+          "qty": "25000pcs",
+          "prices": [
+            27500,
+            40000,
+            49000
+          ]
+        },
+        {
+          "qty": "50000pcs",
+          "prices": [
+            55000,
+            80000,
+            98000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "photo-frames",
+    "name": "Photo Frames",
+    "category": "Art & Signage",
+    "tagline": "Give your digital photos a physical home they deserve",
+    "description": "That photo has been on your phone long enough. Printed, framed, and on a wall or desk — it becomes a memory that actually exists in your physical world.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Photo Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "4x6",
+            "label": "4×6 inch",
+            "price_formula": "qty*18"
+          },
+          {
+            "slug": "5x7",
+            "label": "5×7 inch",
+            "price_formula": "qty*24"
+          },
+          {
+            "slug": "8x10",
+            "label": "8×10 inch",
+            "price_formula": "qty*38"
+          }
+        ]
+      },
+      {
+        "step_id": "material",
+        "label": "Frame Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "wood",
+            "label": "Wood Frame",
+            "price_formula": "0",
+            "note": "Popular"
+          },
+          {
+            "slug": "acrylic",
+            "label": "Acrylic Frame",
+            "price_formula": "qty*5"
+          },
+          {
+            "slug": "metal",
+            "label": "Metal Frame",
+            "price_formula": "qty*8"
+          }
+        ]
+      },
+      {
+        "step_id": "personalisation",
+        "label": "Personalisation Text",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            1600,
+            1200,
+            1000,
+            800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            7800,
+            5800,
+            4800,
+            3900
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            15000,
+            11300,
+            9400,
+            7500
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            28200,
+            21100,
+            17600,
+            14100
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "polo-shirts",
+    "name": "Polo Shirts",
+    "category": "Wearables",
+    "tagline": "The uniform your team will actually wear off the clock",
+    "description": "Smart enough for client-facing roles, comfortable enough for a full shift. The corporate uniform standard because it works — and your team will actually wear it.",
+    "configurator": [
+      {
+        "step_id": "method",
+        "label": "Decoration Method",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "emb",
+            "label": "Embroidery (Logo)",
+            "price_formula": "qty*22"
+          },
+          {
+            "slug": "dtf",
+            "label": "DTF Print (full colour)",
+            "price_formula": "qty*18"
+          }
+        ]
+      },
+      {
+        "step_id": "fabric",
+        "label": "Fabric",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "polycotton",
+            "label": "Poly-cotton ",
+            "price_formula": "0"
+          },
+          {
+            "slug": "dri_fit",
+            "label": "100% Polyester Dri-fit",
+            "price_formula": "qty*2"
+          }
+        ]
+      },
+      {
+        "step_id": "color",
+        "label": "Shirt Colour",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "white",
+            "label": "White",
+            "price_formula": "0"
+          },
+          {
+            "slug": "black",
+            "label": "Black",
+            "price_formula": "0"
+          },
+          {
+            "slug": "navy",
+            "label": "Navy",
+            "price_formula": "0"
+          },
+          {
+            "slug": "grey",
+            "label": "Grey",
+            "price_formula": "0"
+          },
+          {
+            "slug": "red",
+            "label": "Red",
+            "price_formula": "0"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom",
+            "price_formula": "0",
+            "note": "Specify in notes"
+          }
+        ]
+      },
+      {
+        "step_id": "sizes",
+        "label": "Sizes Needed",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "qty",
+        "label": "Total Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "Cotton",
+        "Dri Fit"
+      ],
+      "rows": [
+        {
+          "qty": "3pcs",
+          "prices": [
+            1300,
+            1300
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            5000,
+            5000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            6000,
+            6000
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            6900,
+            6900
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            7700,
+            7700
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            8400,
+            8400
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            9000,
+            9000
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            9500,
+            9500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "poster",
+    "name": "Poster",
+    "category": "Art & Signage",
+    "tagline": "Large-format impact that works around the clock",
+    "description": "A poster in the right location is an audience with everyone who passes. Sharp colour, quality media, sized from A4 to A0 — for retail windows, community boards, and event promotion that needs maximum visibility.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a3",
+            "label": "A3 (297×420mm)",
+            "price_formula": "qty*8"
+          },
+          {
+            "slug": "a2",
+            "label": "A2 (420×594mm)",
+            "price_formula": "qty*10"
+          },
+          {
+            "slug": "a1",
+            "label": "A1 (594×841mm)",
+            "price_formula": "qty*17"
+          },
+          {
+            "slug": "a0",
+            "label": "A0 (841×1189mm)",
+            "price_formula": "qty*28"
+          }
+        ]
+      },
+      {
+        "step_id": "media",
+        "label": "Media",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "poster",
+            "label": "Poster Paper",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "sticker",
+            "label": "Poster Sticker",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Lamination",
+            "price_formula": "0"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "qty*4"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "qty*4"
+          }
+        ]
+      },
+      {
+        "step_id": "mounting",
+        "label": "Mounting",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Mounting",
+            "price_formula": "0"
+          },
+          {
+            "slug": "foam",
+            "label": "Compressed Foam Board",
+            "price_formula": "qty*3"
+          },
+          {
+            "slug": "kapaline",
+            "label": "Black Kapaline Board",
+            "price_formula": "qty*6"
+          },
+          {
+            "slug": "standee",
+            "label": "Cardboard Standee",
+            "price_formula": "qty*6"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A3",
+        "A2",
+        "A1",
+        "A0"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            800,
+            1000,
+            1700,
+            2800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            3900,
+            4800,
+            8200,
+            13600
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            7500,
+            9400,
+            16000,
+            26300
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            14100,
+            17600,
+            29900,
+            49300
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "pvc-canvas",
+    "name": "PVC Canvas",
+    "category": "Advertising",
+    "tagline": "Outdoor banners that survive Singapore rain and sun",
+    "description": "Singapore\\",
+    "configurator": [
+      {
+        "step_id": "width",
+        "label": "Width (cm)",
+        "type": "number",
+        "options": []
+      },
+      {
+        "step_id": "height",
+        "label": "Height (cm)",
+        "type": "number",
+        "options": []
+      },
+      {
+        "step_id": "finishing",
+        "label": "Finishing",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "eyelets",
+            "label": "Eyelets",
+            "price_formula": "0",
+            "note": "Standard — Included"
+          },
+          {
+            "slug": "hemmed",
+            "label": "Hemmed + Eyelets",
+            "price_formula": "0",
+            "note": "Included"
+          },
+          {
+            "slug": "poles",
+            "label": "Wooden Poles + Eyelets",
+            "price_formula": "qty*15"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Approx Size",
+      "configs": [
+        "1m×1m",
+        "2m×1m",
+        "3m×1m",
+        "3m×2m"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            3500,
+            7000,
+            10500,
+            21000
+          ]
+        },
+        {
+          "qty": "2 pcs",
+          "prices": [
+            7000,
+            14000,
+            21000,
+            42000
+          ]
+        },
+        {
+          "qty": "3 pcs",
+          "prices": [
+            10500,
+            21000,
+            31500,
+            63000
+          ]
+        },
+        {
+          "qty": "5 pcs",
+          "prices": [
+            17500,
+            35000,
+            52500,
+            105000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "pvc-card",
+    "name": "PVC Card",
+    "category": "Cards & Types",
+    "tagline": "Bank-card quality membership and loyalty cards",
+    "description": "Membership cards, loyalty cards, access cards — built exactly like a bank card because they need to survive exactly what a bank card survives: daily wallet use for years.",
+    "configurator": [
+      {
+        "step_id": "finish",
+        "label": "Finish",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "gloss",
+            "label": "Gloss",
+            "price_formula": "qty*0.9",
+            "note": "Standard"
+          },
+          {
+            "slug": "matt",
+            "label": "Matt",
+            "price_formula": "qty*1.0"
+          },
+          {
+            "slug": "frosted",
+            "label": "Frosted",
+            "price_formula": "qty*1.1"
+          }
+        ]
+      },
+      {
+        "step_id": "print",
+        "label": "Print Style",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "2",
+            "label": "Double Sided",
+            "price_formula": "0",
+            "note": "Recommended"
+          },
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "-qty*0.2"
+          }
+        ]
+      },
+      {
+        "step_id": "addon",
+        "label": "Add-on",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "None",
+            "price_formula": "0"
+          },
+          {
+            "slug": "lanyard",
+            "label": "Lanyard Hole",
+            "price_formula": "qty*3"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "PVC Card"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            2000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            1000
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            600
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            500
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            300
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "roll-up-banner",
+    "name": "Roll Up Banner",
+    "category": "Advertising",
+    "tagline": "Set up in 30 seconds, look prepared all day",
+    "description": "Make a bold statement with our Roll Up Banner, the ultimate promotional tool for businesses, trade shows, events, and retail spaces. Designed for convenience and durability, this lightweight yet sturdy banner stand is easy to set up in seconds. Featuring high-quality, vibrant printing on premium material, your graphics will stand out with sharp details and rich colors. The retractable mechanism ensures hassle-free storage and transport, making it ideal for frequent use. Whether you’re launching a new product, promoting a sale, or enhancing your brand visibility, our roll-up banners provide a p",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "60x160",
+            "label": "60cm × 160cm",
+            "price_formula": "qty * (75 - Math.min(10, 1 * (qty - 1)))"
+          },
+          {
+            "slug": "85x200",
+            "label": "85cm × 200cm",
+            "price_formula": "qty * (75 - Math.min(10, 1 * (qty - 1)))",
+            "note": "Most popular"
+          }
+        ]
+      },
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "pvc",
+            "label": "Poster Paper",
+            "price_formula": "0",
+            "note": "Standard"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "0",
+            "note": "Popular"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "Standard"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            0
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "round-neck-shirts",
+    "name": "Round Neck Shirts",
+    "category": "Wearables",
+    "tagline": "Custom shirts your team chooses to wear again",
+    "description": "For the team that needs to look unified without looking corporate. DTF-printed on quality fabric with wash-fast inks — the shirt they wear to the event and keep wearing after.",
+    "configurator": [
+      {
+        "step_id": "method",
+        "label": "How We Make It",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "dtf",
+            "label": "DTF Print (full colour)",
+            "price_formula": "qty*16"
+          }
+        ]
+      },
+      {
+        "step_id": "fabric",
+        "label": "Fabric",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "cotton",
+            "label": "100% Cotton ",
+            "price_formula": "0"
+          },
+          {
+            "slug": "polycotton",
+            "label": "Poly-cotton Blend ",
+            "price_formula": "0"
+          },
+          {
+            "slug": "dri_fit",
+            "label": "Dri-fit Polyester",
+            "price_formula": "qty*2"
+          }
+        ]
+      },
+      {
+        "step_id": "color",
+        "label": "Shirt Colour",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "white",
+            "label": "White",
+            "price_formula": "0"
+          },
+          {
+            "slug": "black",
+            "label": "Black",
+            "price_formula": "0"
+          },
+          {
+            "slug": "navy",
+            "label": "Navy",
+            "price_formula": "0"
+          },
+          {
+            "slug": "grey",
+            "label": "Grey",
+            "price_formula": "0"
+          },
+          {
+            "slug": "red",
+            "label": "Red",
+            "price_formula": "0"
+          },
+          {
+            "slug": "royal",
+            "label": "Royal Blue",
+            "price_formula": "0"
+          },
+          {
+            "slug": "custom",
+            "label": "Other Colour",
+            "price_formula": "0",
+            "note": "Specify in notes"
+          }
+        ]
+      },
+      {
+        "step_id": "sizes",
+        "label": "Sizes Needed",
+        "type": "text",
+        "options": []
+      },
+      {
+        "step_id": "qty",
+        "label": "Total Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "Cotton",
+        "Dri Fit"
+      ],
+      "rows": [
+        {
+          "qty": "3pcs",
+          "prices": [
+            1100,
+            1100
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            4200,
+            4200
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            5000,
+            5000
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            5700,
+            5700
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            6300,
+            6300
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            6800,
+            6800
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            7200,
+            7200
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            7500,
+            7500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "rubber-stamp",
+    "name": "Rubber Stamp",
+    "category": "Business Stationery",
+    "tagline": "The detail that says your business is built properly",
+    "description": "A stamped logo on kraft packaging, a stamped address block on envelopes, a stamped PAID on invoices — small touches that signal a business that cares about every detail.",
+    "configurator": [
+      {
+        "step_id": "type",
+        "label": "Type",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "self_s",
+            "label": "Self-inking S (30×10mm)",
+            "price_formula": "qty*18"
+          },
+          {
+            "slug": "self_m",
+            "label": "Self-inking M (47×18mm)",
+            "price_formula": "qty*24"
+          },
+          {
+            "slug": "self_l",
+            "label": "Self-inking L (70×42mm)",
+            "price_formula": "qty*32"
+          },
+          {
+            "slug": "trad",
+            "label": "Traditional Rubber Stamp",
+            "price_formula": "qty*14"
+          }
+        ]
+      },
+      {
+        "step_id": "ink",
+        "label": "Ink Colour",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "blue",
+            "label": "Blue",
+            "price_formula": "0"
+          },
+          {
+            "slug": "black",
+            "label": "Black",
+            "price_formula": "0"
+          },
+          {
+            "slug": "red",
+            "label": "Red",
+            "price_formula": "0"
+          },
+          {
+            "slug": "green",
+            "label": "Green",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Model (W x H)",
+      "configs": [
+        "DF1028 / 6mm x 24mm",
+        "DF1370 / 9mm x 66mm",
+        "DF1767 / 13mm x 63mm",
+        "DF2267 / 18mm x 63mm",
+        "DF2278 / 18mm x 74mm",
+        "DF2855 / 24mm x 51mm"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            2000,
+            2400,
+            2600,
+            2800,
+            3000,
+            2800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            9700,
+            11600,
+            12600,
+            13600,
+            14600,
+            13600
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            18800,
+            22600,
+            24400,
+            26300,
+            28200,
+            26300
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            35200,
+            42200,
+            45800,
+            49300,
+            52800,
+            49300
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "stickers",
+    "name": "Stickers",
+    "category": "Business Stationery",
+    "tagline": "Stick your brand anywhere — it survives everything",
+    "description": "Laptops, water bottles, helmets, packaging, shop windows — stickers go where other marketing can't. Cut to any shape, waterproof vinyl that survives outdoor conditions.",
+    "configurator": [
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "vinyl_gloss",
+            "label": "Vinyl Gloss",
+            "price_formula": "qty*0.45",
+            "note": "Most popular"
+          },
+          {
+            "slug": "vinyl_matt",
+            "label": "Vinyl Matt",
+            "price_formula": "qty*0.45"
+          },
+          {
+            "slug": "holo",
+            "label": "Holographic",
+            "price_formula": "qty*0.60"
+          },
+          {
+            "slug": "clear",
+            "label": "Clear Vinyl",
+            "price_formula": "qty*0.45"
+          },
+          {
+            "slug": "kraft",
+            "label": "Kraft Paper",
+            "price_formula": "qty*0.35"
+          }
+        ]
+      },
+      {
+        "step_id": "shape",
+        "label": "Cut Shape",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "rect",
+            "label": "Rectangle / Square",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "circle",
+            "label": "Circle",
+            "price_formula": "0"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Die-cut",
+            "price_formula": "qty*0.08"
+          }
+        ]
+      },
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "select",
+        "options": [
+          {
+            "slug": "a7",
+            "label": "Up to A7 (74×105mm)"
+          },
+          {
+            "slug": "a6",
+            "label": "Up to A6 (105×148mm)"
+          },
+          {
+            "slug": "a5",
+            "label": "Up to A5 (148×210mm)"
+          },
+          {
+            "slug": "custom",
+            "label": "Custom Size"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "Waterproof Sticker (Matt)",
+        "Waterproof Sticker (Gloss)",
+        "Transparent Sticker",
+        "Metallic Holographic Sticker",
+        "Metallic Rainbow Sands Sticker",
+        "Metallic Stripes Sticker"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            1500,
+            1500,
+            1500,
+            1500,
+            1500,
+            1500
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            7300,
+            7300,
+            7300,
+            7300,
+            7300,
+            7300
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            14100,
+            14100,
+            14100,
+            14100,
+            14100,
+            14100
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            26400,
+            26400,
+            26400,
+            26400,
+            26400,
+            26400
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "table-tent",
+    "name": "Table Tent",
+    "category": "Advertising",
+    "tagline": "Eye-level the whole meal — the upsell that works passively",
+    "description": "In every customer\\",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "tc01",
+            "label": "TC01 – 8.6×11.6cm (S)",
+            "price_formula": "qty*180"
+          },
+          {
+            "slug": "tc02",
+            "label": "TC02 – 14×11.6cm (M)",
+            "price_formula": "qty*(95-Math.min(10,qty-1))",
+            "note": "Most popular"
+          },
+          {
+            "slug": "tc03",
+            "label": "TC03 – 13×15.5cm (L)",
+            "price_formula": "qty*(155-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "tc04",
+            "label": "TC04 – 21×17.5cm (XL)",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "0",
+            "note": "Included"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "0",
+            "note": "Included"
+          }
+        ]
+      },
+      {
+        "step_id": "spotUV",
+        "label": "Spot UV",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "none",
+            "label": "No Spot UV",
+            "price_formula": "0"
+          },
+          {
+            "slug": "yes",
+            "label": "Spot UV",
+            "price_formula": "50"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "TT01 - 86mm (W) 116mm (H) 42mm (D)",
+        "TT02 - 140mm (W) 116mm (H) 42mm (D)",
+        "TT03 - 130mm (W) 155mm (H) 58mm (D)",
+        "TT04 - 210mm (W) 175mm (H) 80mm (D)"
+      ],
+      "rows": [
+        {
+          "qty": "100pcs",
+          "prices": [
+            12000,
+            25000,
+            29000,
+            38000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            15000,
+            28000,
+            34000,
+            43000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            18000,
+            31000,
+            39000,
+            48000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            24000,
+            38000,
+            49000,
+            58000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "tote-bag",
+    "name": "Tote Bag",
+    "category": "Packaging",
+    "tagline": "A branded bag they carry everywhere — for years",
+    "description": "People carry tote bags to the market, the MRT, the gym, the office. Brand yours well and it becomes a walking impression that earns its keep for years.",
+    "configurator": [
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "nonwoven",
+            "label": "Non-woven",
+            "price_formula": "qty*3.80",
+            "note": "Budget"
+          },
+          {
+            "slug": "canvas",
+            "label": "Canvas",
+            "price_formula": "qty*5.50",
+            "note": "Popular"
+          },
+          {
+            "slug": "premium",
+            "label": "Premium Canvas",
+            "price_formula": "qty*7.50"
+          }
+        ]
+      },
+      {
+        "step_id": "sides",
+        "label": "Print Sides",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "1",
+            "label": "Single Sided",
+            "price_formula": "0"
+          },
+          {
+            "slug": "2",
+            "label": "Double Sided",
+            "price_formula": "qty*1.50"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "Non-woven",
+        "Canvas",
+        "Premium Canvas"
+      ],
+      "rows": [
+        {
+          "qty": "30pcs",
+          "prices": [
+            11400,
+            16500,
+            22500
+          ]
+        },
+        {
+          "qty": "50pcs",
+          "prices": [
+            19000,
+            27500,
+            37500
+          ]
+        },
+        {
+          "qty": "100pcs",
+          "prices": [
+            38000,
+            55000,
+            75000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            76000,
+            110000,
+            150000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "transparent-card",
+    "name": "Transparent Card",
+    "category": "Cards & Types",
+    "tagline": "The card that stands out because nothing else is clear",
+    "description": "See-through, unmissable. In any card holder, a transparent name card stands out because nothing else in the pile looks remotely like it.",
+    "configurator": [
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "clear",
+            "label": "Clear PVC",
+            "price_formula": "qty*(28-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "frosted",
+            "label": "Frosted PVC",
+            "price_formula": "qty*(32-Math.min(10,qty-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "print",
+        "label": "Print",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "colour",
+            "label": "Full Colour + White Ink",
+            "price_formula": "0"
+          },
+          {
+            "slug": "white",
+            "label": "White Ink Only",
+            "price_formula": "-qty*2"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "Transparent Plastic Card",
+        "Translucent Plastic Card",
+        "Frosted Plastic Card"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            4500,
+            4500,
+            5000
+          ]
+        },
+        {
+          "qty": "2pcs",
+          "prices": [
+            4500,
+            8800,
+            4500
+          ]
+        },
+        {
+          "qty": "3pcs",
+          "prices": [
+            4500,
+            12900,
+            4500
+          ]
+        },
+        {
+          "qty": "4pcs",
+          "prices": [
+            4500,
+            16800,
+            4500
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            4500,
+            20500,
+            4500
+          ]
+        },
+        {
+          "qty": "6pcs",
+          "prices": [
+            4500,
+            24000,
+            4500
+          ]
+        },
+        {
+          "qty": "7pcs",
+          "prices": [
+            4500,
+            27300,
+            4500
+          ]
+        },
+        {
+          "qty": "8pcs",
+          "prices": [
+            4500,
+            30400,
+            4500
+          ]
+        },
+        {
+          "qty": "9pcs",
+          "prices": [
+            4500,
+            33300,
+            4500
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            4500,
+            36000,
+            4500
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "uv-dtf-sticker",
+    "name": "UV DTF Sticker",
+    "category": "Business Stationery",
+    "tagline": "Printed-on look on any hard surface — peel and press",
+    "description": "Sticks to glass, metal, wood, acrylic, ceramic — any hard surface — and looks like it was printed directly on. No heat, no tools, no expertise required.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a6",
+            "label": "Up to A6 (105×148mm)",
+            "price_formula": "qty*2.20"
+          },
+          {
+            "slug": "a5",
+            "label": "Up to A5 (148×210mm)",
+            "price_formula": "qty*3.50"
+          },
+          {
+            "slug": "a4",
+            "label": "Up to A4 (210×297mm)",
+            "price_formula": "qty*5.50"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "A3",
+        "A4"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            5000,
+            3000
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            24200,
+            14600
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            47000,
+            28200
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            88000,
+            52800
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "wobbler",
+    "name": "Wobbler",
+    "category": "Advertising",
+    "tagline": "Motion at point of purchase — catches eyes nothing else does",
+    "description": "Make your promotions impossible to miss with custom wobblers! These dynamic, eye-catching marketing tools sway with movement, instantly attracting customer attention. Ideal for retail stores, supermarkets, and point-of-purchase displays, wobblers highlight special offers, discounts, and new products. Printed on high-quality, durable materials with vibrant colors, they are available in various shapes, sizes, and custom die-cut designs. Easy to install on shelves, counters, or product displays, our wobblers create maximum impact with minimal effort. ✔ High-quality printing for bold, vibrant prom",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "a7",
+            "label": "A7 Round",
+            "price_formula": "qty*1.10"
+          },
+          {
+            "slug": "a6",
+            "label": "A6 Custom",
+            "price_formula": "qty*1.44"
+          },
+          {
+            "slug": "a5",
+            "label": "A5 Custom",
+            "price_formula": "qty*1.90"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Material",
+      "configs": [
+        "260GSM Art Card"
+      ],
+      "rows": [
+        {
+          "qty": "100pcs",
+          "prices": [
+            10000
+          ]
+        },
+        {
+          "qty": "200pcs",
+          "prices": [
+            14000
+          ]
+        },
+        {
+          "qty": "300pcs",
+          "prices": [
+            18000
+          ]
+        },
+        {
+          "qty": "500pcs",
+          "prices": [
+            26000
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "x-stand-banner",
+    "name": "X Stand Banner",
+    "category": "Advertising",
+    "tagline": "Lightweight display banners for anywhere, any budget",
+    "description": "Under 2kg, sets up in under a minute, stores under a desk. The X-stand banner gets your brand displayed anywhere without the logistics of a full roll-up setup.",
+    "configurator": [
+      {
+        "step_id": "size",
+        "label": "Size",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "60x160",
+            "label": "60cm × 160cm",
+            "price_formula": "qty*(60-Math.min(10,qty-1))"
+          },
+          {
+            "slug": "80x180",
+            "label": "80cm × 180cm",
+            "price_formula": "qty*(70-Math.min(10,qty-1))",
+            "note": "Most popular"
+          },
+          {
+            "slug": "120x200",
+            "label": "120cm × 200cm",
+            "price_formula": "qty*(110-Math.min(10,qty-1))"
+          }
+        ]
+      },
+      {
+        "step_id": "material",
+        "label": "Material",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "poster",
+            "label": "Poster Paper",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "pvc",
+            "label": "PVC Canvas",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "lamination",
+        "label": "Lamination",
+        "type": "swatch",
+        "options": [
+          {
+            "slug": "matt",
+            "label": "Matt Lamination",
+            "price_formula": "0",
+            "note": "Standard"
+          },
+          {
+            "slug": "gloss",
+            "label": "Gloss Lamination",
+            "price_formula": "0"
+          }
+        ]
+      },
+      {
+        "step_id": "qty",
+        "label": "Quantity",
+        "type": "qty",
+        "options": []
+      }
+    ],
+    "pricing": {
+      "label": "Size",
+      "configs": [
+        "600mm x 1600mm",
+        "800mm x 1800mm"
+      ],
+      "rows": [
+        {
+          "qty": "1 pc",
+          "prices": [
+            5800,
+            6800
+          ]
+        },
+        {
+          "qty": "5pcs",
+          "prices": [
+            28100,
+            33000
+          ]
+        },
+        {
+          "qty": "10pcs",
+          "prices": [
+            54500,
+            63900
+          ]
+        },
+        {
+          "qty": "20pcs",
+          "prices": [
+            102100,
+            119700
+          ]
+        }
+      ]
+    }
+  }
+]
