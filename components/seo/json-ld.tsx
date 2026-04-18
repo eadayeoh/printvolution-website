@@ -58,6 +58,24 @@ export function BreadcrumbSchema({ items }: { items: Array<{ name: string; item?
   );
 }
 
+export function FAQPageSchema({ items }: { items: Array<{ question?: string; answer?: string }> }) {
+  const qas = items.filter((i) => i.question && i.answer);
+  if (!qas.length) return null;
+  return (
+    <JsonLd
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: qas.map((i) => ({
+          '@type': 'Question',
+          name: i.question,
+          acceptedAnswer: { '@type': 'Answer', text: i.answer },
+        })),
+      }}
+    />
+  );
+}
+
 export function ProductSchema({
   name, slug, description, category, imageUrl, priceFromCents,
 }: {
