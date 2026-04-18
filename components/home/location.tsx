@@ -7,7 +7,7 @@ export type LocationItem = {
   href?: string;
 };
 
-export function Location({ items, imageSrc }: { items: LocationItem[]; imageSrc?: string | null }) {
+export function Location({ items }: { items: LocationItem[] }) {
   if (!items.length) return null;
   return (
     <section
@@ -85,18 +85,22 @@ export function Location({ items, imageSrc }: { items: LocationItem[]; imageSrc?
           </div>
         </div>
         <div
-          role="img"
-          aria-label="Printvolution storefront at Paya Lebar Square"
           style={{
             minHeight: 480,
             border: '3px solid var(--pv-ink)',
             boxShadow: '8px 8px 0 var(--pv-ink)',
-            backgroundImage: imageSrc ? `url(${imageSrc})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            background: imageSrc ? undefined : 'var(--pv-cream)',
+            overflow: 'hidden',
+            background: 'var(--pv-cream)',
           }}
-        />
+        >
+          <iframe
+            title="Printvolution storefront at Paya Lebar Square"
+            src="https://www.google.com/maps?q=60+Paya+Lebar+Road+%23B1-35+Singapore+409051&output=embed"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            style={{ width: '100%', height: '100%', minHeight: 480, border: 0, display: 'block' }}
+          />
+        </div>
       </div>
       <style>{`
         @media (max-width: 900px) {
