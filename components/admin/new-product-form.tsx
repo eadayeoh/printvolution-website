@@ -81,11 +81,13 @@ export function NewProductForm({ categories }: { categories: Cat[] }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  // <div>, not <label>: nested label swallows file-input change events
+  // when children include an ImageUpload.
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-1 block text-xs font-bold text-ink">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';

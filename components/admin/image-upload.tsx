@@ -137,12 +137,18 @@ export function ImageUpload({
   }
 
   return (
-    <div>
+    // Root <div> swallows clicks: if a parent wraps this component in a
+    // <label>, its implicit "activate nested form control" behaviour
+    // would race our own inputRef.current.click() and the browser can
+    // swallow the second file-input activation. Stop propagation so the
+    // click never bubbles past our handler.
+    <div onClick={(e) => e.stopPropagation()}>
       <input
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/heic,image/heif"
         style={{ display: 'none' }}
+        onClick={(e) => e.stopPropagation()}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onPickFile(f);
@@ -151,7 +157,7 @@ export function ImageUpload({
       />
 
       <div
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={(e) => { e.stopPropagation(); if (!uploading) inputRef.current?.click(); }}
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: 14, border: '2px solid #e5e5e5', borderRadius: 6,

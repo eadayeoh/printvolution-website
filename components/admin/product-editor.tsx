@@ -730,11 +730,15 @@ function OptionCard({
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  // Use <div>, not <label>: nested <label> around ImageUpload causes the
+  // browser to double-fire clicks (div's onClick + label's implicit
+  // activate-form-control), which race and swallow the file input's
+  // change event on Safari.
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-1 block text-xs font-bold text-ink">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 
