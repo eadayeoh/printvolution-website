@@ -31,6 +31,8 @@ const ConfiguratorStepSchema = z.object({
     label: z.string(),
     note: z.string().optional(),
     price_formula: z.string().optional(),
+    image_url: z.string().nullable().optional(),
+    swatch: z.string().optional(),
   })).optional(),
   show_if: z.object({ step: z.string(), value: z.string() }).nullable().optional(),
   step_config: z.record(z.string(), z.any()).nullable().optional(),

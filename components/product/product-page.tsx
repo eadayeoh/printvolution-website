@@ -117,6 +117,60 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     [qty, colIdx, rowIdx, cfgState, visibleSteps, product.pricing]
   );
 
+  // Pure price resolver for the Paper Chooser — computes a real total from
+  // a hypothetical configurator state (the combo's picks merged on top of
+  // defaults) without touching the live cfgState. Returns a formatted SGD
+  // string, or null if the product has no pricing data.
+  const priceForPicks = useMemo(() => {
+    return (picks: Record<string, string> | undefined | null): string | null => {
+      const state: Record<string, string> = {};
+      for (const step of product.configurator) {
+        if (step.type === 'swatch' || step.type === 'select') {
+          if (step.options && step.options.length > 0) state[step.step_id] = step.options[0].slug;
+        } else if (step.type === 'qty') {
+          state[step.step_id] = '1';
+        }
+      }
+      if (picks) Object.assign(state, picks);
+
+      const visible = product.configurator.filter(
+        (s) => !s.show_if || state[s.show_if.step] === s.show_if.value
+      );
+
+      const qtyStep = visible.find((s) => s.type === 'qty');
+      const useQty = qtyStep ? parseInt(state[qtyStep.step_id] || '1', 10) || 1 : 1;
+
+      const sizeStep =
+        visible.find((s) => (s.type === 'swatch' || s.type === 'select') && /size|dimension/i.test(s.label)) ||
+        visible.find((s) => s.type === 'swatch' && s.options.length > 1);
+      let useColIdx = 0;
+      if (sizeStep && product.pricing) {
+        const selected = state[sizeStep.step_id];
+        const idx = sizeStep.options.findIndex((o) => o.slug === selected);
+        if (idx >= 0 && idx < product.pricing.configs.length) useColIdx = idx;
+      }
+
+      let sum = 0;
+      let anyFormula = false;
+      for (const step of visible) {
+        if (step.type !== 'swatch' && step.type !== 'select') continue;
+        const selected = state[step.step_id];
+        const opt = step.options.find((o) => o.slug === selected);
+        if (opt?.price_formula) {
+          anyFormula = true;
+          sum += Math.round(evaluateFormula(opt.price_formula, { qty: useQty, base: 0 }) * 100);
+        }
+      }
+      if (!anyFormula && product.pricing) {
+        const row = product.pricing.rows[0];
+        const matrixPrice = row?.prices[useColIdx] ?? 0;
+        if (matrixPrice > 0) sum = matrixPrice;
+      }
+
+      return sum > 0 ? formatSGD(sum) : null;
+    };
+  }, [product.configurator, product.pricing]);
+
   const unitPrice = qty > 0 ? Math.round(lineTotal / qty) : 0;
 
   const { savings, undiscountedTotal } = useMemo(() => {
@@ -625,7 +679,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                             type="button"
                             onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: opt.slug }))}
                             style={{
-                              padding: '9px 14px',
+                              padding: opt.image_url ? '6px 14px 6px 6px' : '9px 14px',
                               border: active ? '1.5px solid var(--pv-ink)' : '1.5px solid var(--pv-rule)',
                               background: active ? 'var(--pv-ink)' : '#fff',
                               color: active ? '#fff' : 'var(--pv-ink)',
@@ -634,8 +688,31 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                               fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.12s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
                             }}
                           >
+                            {opt.image_url && (
+                              <span
+                                aria-hidden
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  flexShrink: 0,
+                                  background: '#fff',
+                                  border: '1px solid var(--pv-rule)',
+                                  overflow: 'hidden',
+                                  display: 'inline-block',
+                                }}
+                              >
+                                <img
+                                  src={opt.image_url}
+                                  alt=""
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                />
+                              </span>
+                            )}
                             {opt.label}
                             {optCents !== null && optCents > 0 && (
                               <span
@@ -982,7 +1059,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 category_name: product.category?.name ?? null,
                 configurator: product.configurator,
               }));
-        return <PaperChooser data={data} configurator={product.configurator} />;
+        return <PaperChooser data={data} configurator={product.configurator} priceForPicks={priceForPicks} />;
       })()}
 
       {/* SEO MAGAZINE — rendered on every product page, same precedence order. */}

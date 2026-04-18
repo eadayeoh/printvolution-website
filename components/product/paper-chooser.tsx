@@ -48,6 +48,7 @@ export type ChooserConfiguratorStep = {
 function resolveSpecs(
   combo: Combo,
   configurator: ChooserConfiguratorStep[] | undefined,
+  comboIndex: number,
 ): Array<{ k: string; v: string }> {
   if (combo.picks && configurator && configurator.length > 0) {
     const rows: Array<{ k: string; v: string }> = [];
@@ -63,7 +64,50 @@ function resolveSpecs(
     }
     if (rows.length > 0) return rows;
   }
-  return combo.specs ?? [];
+  if (combo.specs && combo.specs.length > 0) return combo.specs;
+  // Admin toggled custom content on but didn't fill picks for this combo —
+  // fall back to auto-generating from the configurator so the card still
+  // shows something. Combo index maps to option index (0=Safe/1=Rec/2=Step).
+  if (configurator && configurator.length > 0) {
+    const rows: Array<{ k: string; v: string }> = [];
+    for (const step of configurator) {
+      if (step.type !== 'swatch' && step.type !== 'select') continue;
+      const options = step.options ?? [];
+      if (options.length === 0) continue;
+      const idx = Math.min(comboIndex, options.length - 1);
+      rows.push({ k: step.label, v: options[idx].label });
+    }
+    return rows;
+  }
+  return [];
+}
+
+function choiceKey(c: Choice, ci: number): string {
+  return c.val ?? String(ci);
+}
+
+/** Resolve the picks we'll use for pricing a combo. Mirrors the "Safe Bet
+ *  = option 0, Recommended = option 1, Step Up = option 2" fallback that
+ *  the renderer already applies to spec rows, so the price shown always
+ *  matches the specs shown. */
+function resolvePicksForPricing(
+  combo: Combo,
+  configurator: ChooserConfiguratorStep[] | undefined,
+  comboIndex: number,
+): Record<string, string> {
+  const base: Record<string, string> = {};
+  if (combo.picks) Object.assign(base, combo.picks);
+  if (!configurator) return base;
+  for (const step of configurator) {
+    if (base[step.step_id]) continue;
+    if (step.type === 'swatch' || step.type === 'select') {
+      const options = step.options ?? [];
+      if (options.length === 0) continue;
+      const idx = Math.min(comboIndex, options.length - 1);
+      base[step.step_id] = options[idx].slug;
+    }
+  }
+  return base;
 }
 
 export const DEFAULT_NAME_CARD_CHOOSER: ChooserData = {
@@ -301,27 +345,35 @@ function inlineStars(text: string) {
 export function PaperChooser({
   data,
   configurator,
+  priceForPicks,
 }: {
   data?: ChooserData | null;
   configurator?: ChooserConfiguratorStep[];
+  /** Optional price resolver injected by the product page. Given a combo's
+   *  picks (resolved against defaults), returns a formatted SGD total
+   *  (e.g. "S$68.40") or null when pricing can't be computed. When null
+   *  we fall back to the admin-authored price string on the combo. */
+  priceForPicks?: (picks: Record<string, string>) => string | null;
 }) {
   const d = data ?? DEFAULT_NAME_CARD_CHOOSER;
   const questions = d.questions ?? [];
   const combos = d.combos ?? [];
 
-  // Track selected value per question index
+  // Track selected value per question index. Admin-authored choices often
+  // have no `val` (the editor only collects primary + sub), so we fall
+  // back to the choice index as a stable key.
   const [picks, setPicks] = useState<Record<number, string>>(() => {
     const initial: Record<number, string> = {};
     questions.forEach((q, i) => {
-      const def = q.choices[Math.min(1, q.choices.length - 1)] ?? q.choices[0];
-      if (def) initial[i] = def.val;
+      const idx = Math.min(1, q.choices.length - 1);
+      if (idx >= 0 && q.choices[idx]) initial[i] = choiceKey(q.choices[idx], idx);
     });
     return initial;
   });
 
   const summary = useMemo(() => {
     return questions.map((q, i) => {
-      const picked = q.choices.find((c) => c.val === picks[i]);
+      const picked = q.choices.find((c, ci) => choiceKey(c, ci) === picks[i]);
       return picked?.primary ?? '';
     }).filter(Boolean);
   }, [questions, picks]);
@@ -419,13 +471,16 @@ export function PaperChooser({
                 {q.title}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {q.choices.map((c) => {
-                  const selected = picks[qi] === c.val;
+                {q.choices.map((c, ci) => {
+                  const key = choiceKey(c, ci);
+                  const selected = picks[qi] === key;
                   return (
                     <button
-                      key={c.val}
+                      key={key}
                       type="button"
-                      onClick={() => setPicks((p) => ({ ...p, [qi]: c.val }))}
+                      className="pv-chooser-choice"
+                      data-selected={selected ? '1' : '0'}
+                      onClick={() => setPicks((p) => ({ ...p, [qi]: key }))}
                       style={{
                         padding: '11px 13px',
                         border: '2px solid var(--pv-ink)',
@@ -446,6 +501,7 @@ export function PaperChooser({
                         {c.primary}
                         {c.sub && (
                           <span
+                            className="pv-chooser-choice__sub"
                             style={{
                               fontFamily: 'var(--pv-f-mono)',
                               fontSize: 10,
@@ -461,6 +517,7 @@ export function PaperChooser({
                       </span>
                       <span
                         aria-hidden
+                        className="pv-chooser-choice__box"
                         style={{
                           width: 18,
                           height: 18,
@@ -550,6 +607,8 @@ export function PaperChooser({
             {combos.map((c, ci) => (
               <div
                 key={ci}
+                className="pv-chooser-combo-card"
+                data-recommended={c.recommended ? '1' : '0'}
                 style={{
                   background: '#fff',
                   border: '3px solid var(--pv-ink)',
@@ -557,6 +616,7 @@ export function PaperChooser({
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
+                  transition: 'box-shadow 0.15s, border-color 0.15s, transform 0.15s',
                 }}
               >
                 <div
@@ -591,7 +651,7 @@ export function PaperChooser({
                     {c.title}
                   </h4>
                   <div style={{ marginBottom: 16, padding: 12, background: 'var(--pv-cream)', border: '1px solid var(--pv-rule)' }}>
-                    {resolveSpecs(c, configurator).map((s, si) => (
+                    {resolveSpecs(c, configurator, ci).map((s, si) => (
                       <div key={si} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 13 }}>
                         <span
                           style={{
@@ -625,7 +685,7 @@ export function PaperChooser({
                       Total incl. GST
                     </span>
                     <span style={{ fontFamily: 'var(--pv-f-display)', fontSize: 26, color: 'var(--pv-magenta)', letterSpacing: '-0.02em' }}>
-                      {c.price}
+                      {(priceForPicks && priceForPicks(resolvePicksForPricing(c, configurator, ci))) || c.price || ''}
                     </span>
                   </div>
                   <button
@@ -659,6 +719,22 @@ export function PaperChooser({
         </div>
       </div>
       <style>{`
+        .pv-chooser-choice[data-selected="0"]:hover {
+          background: var(--pv-magenta) !important;
+          color: #fff !important;
+          border-color: var(--pv-magenta) !important;
+        }
+        .pv-chooser-choice[data-selected="0"]:hover .pv-chooser-choice__sub {
+          color: rgba(255,255,255,0.75) !important;
+        }
+        .pv-chooser-choice[data-selected="0"]:hover .pv-chooser-choice__box {
+          border-color: var(--pv-yellow) !important;
+        }
+        .pv-chooser-combo-card:hover {
+          border-color: var(--pv-magenta) !important;
+          box-shadow: 8px 8px 0 var(--pv-magenta) !important;
+          transform: translate(-2px, -2px);
+        }
         @media (max-width: 900px) {
           .pv-chooser-questions, .pv-chooser-combos { grid-template-columns: 1fr !important; }
         }
