@@ -1,8 +1,30 @@
 @import './legacy-design.css';
 @import './shop-design.css';
+@import './pv-brutalist.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* v4/v6 brutalist palette — coexists with the legacy Tailwind pink. */
+    --pv-magenta: #EC008C;
+    --pv-magenta-dark: #C20074;
+    --pv-cyan: #00AEEF;
+    --pv-yellow: #FFDD00;
+    --pv-purple: #7B2CBF;
+    --pv-green: #06D6A0;
+    --pv-ink: #0A0A0A;
+    --pv-ink-soft: #2A2A2A;
+    --pv-cream: #FFF9F0;
+    --pv-muted: #6B6B6B;
+    --pv-rule: #E8E8E8;
+
+    --pv-f-display: 'Archivo Black', sans-serif;
+    --pv-f-body: 'Archivo', system-ui, sans-serif;
+    --pv-f-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+}
 
 @layer base {
   :root {

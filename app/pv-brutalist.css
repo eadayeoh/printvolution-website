@@ -1,0 +1,70 @@
+/* pv-brutalist.css — shared primitives used by the v4 chrome
+   (announce bar, header, footer) and the redesigned homepage /
+   product pages. Keep this file small and vocabulary-focused;
+   component-specific CSS stays inside the component. */
+
+.pv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border: 2px solid var(--pv-ink);
+  font-family: var(--pv-f-body);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.pv-btn-primary {
+  background: var(--pv-magenta);
+  color: #fff;
+  box-shadow: 4px 4px 0 var(--pv-ink);
+}
+.pv-btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pv-ink);
+}
+
+.pv-btn-ghost {
+  background: #fff;
+  color: var(--pv-ink);
+}
+.pv-btn-ghost:hover {
+  background: var(--pv-ink);
+  color: #fff;
+}
+
+.pv-card {
+  background: #fff;
+  border: 2px solid var(--pv-ink);
+  box-shadow: 6px 6px 0 var(--pv-ink);
+}
+
+.pv-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 2px solid var(--pv-ink);
+  background: var(--pv-yellow);
+  box-shadow: 3px 3px 0 var(--pv-ink);
+  font-family: var(--pv-f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pv-mono {
+  font-family: var(--pv-f-mono);
+  letter-spacing: 0.04em;
+}
+.pv-display {
+  font-family: var(--pv-f-display);
+  letter-spacing: -0.02em;
+}
