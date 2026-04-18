@@ -45,7 +45,6 @@ export type ProductExtras = {
   seo_desc: string | null;
   seo_body: string | null;
   hero_big: string | null;
-  chooser: unknown | null;
   seo_magazine: unknown | null;
   how_we_print: unknown | null;
   h1: string | null;
@@ -205,7 +204,6 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
           hero_big: extras.hero_big,
           h1: extras.h1, h1em: extras.h1em,
           intro: extras.intro,
-          chooser: extras.chooser ?? null,
           seo_magazine: extras.seo_magazine ?? null,
           how_we_print: extras.how_we_print ?? null,
           image_url: extras.image_url,

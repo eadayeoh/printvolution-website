@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
-import { ChooserEditor, type ChooserValue } from './product-chooser-editor';
 import { MagazineEditor, type MagValue } from './product-magazine-editor';
 import { HowWePrintEditor, type HowWePrintValue } from './product-how-we-print-editor';
 import { updateProduct } from '@/app/admin/products/actions';
@@ -53,11 +52,8 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   const [intro, setIntro] = useState(product.extras?.intro ?? '');
   const [imageUrl, setImageUrl] = useState(product.extras?.image_url ?? '');
   // Per-product overrides — null means "use the auto-generated default"
-  // (Paper Chooser / SEO Magazine tailored to product name+configurator,
-  // or site-wide Site Settings features for How We Print).
-  const [chooser, setChooser] = useState<ChooserValue | null>(
-    (product.extras?.chooser as ChooserValue) ?? null,
-  );
+  // (SEO Magazine tailored to product name+configurator, or site-wide
+  // Site Settings features for How We Print).
   const [seoMagazine, setSeoMagazine] = useState<MagValue | null>(
     (product.extras?.seo_magazine as MagValue) ?? null,
   );
@@ -96,7 +92,6 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         h1: h1 || null, h1em: h1em || null,
         intro: intro || null,
         image_url: imageUrl || null,
-        chooser,
         seo_magazine: seoMagazine,
         how_we_print: howWePrint,
         pricing: {
@@ -224,7 +219,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             <div className="mb-2 font-bold text-ink">Where to edit the rest of this product page:</div>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Calculator / Configurator</strong> (size, paper, finish, quantity steps + live price matrix) → <strong>Pricing &amp; Options</strong> tab.</li>
-              <li><strong>&quot;Everything worth knowing&quot; / Paper Chooser</strong> (long-form magazine + 3-question chooser) → <strong>SEO</strong> tab, JSON override fields.</li>
+              <li><strong>&quot;Everything worth knowing&quot;</strong> (long-form magazine) → <strong>SEO</strong> tab, JSON override field.</li>
               <li><strong>FAQ</strong> → <strong>FAQs</strong> tab.</li>
               <li><strong>&quot;How we print&quot;</strong> (4 cards, same on every product) → <a className="font-bold text-pink underline" href="/admin/settings">Site Settings</a>.</li>
               <li><strong>Related products</strong> → managed automatically via same-category links.</li>
@@ -273,7 +268,6 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           </div>
 
           <HowWePrintEditor value={howWePrint} onChange={setHowWePrint} productSlug={product.slug} />
-          <ChooserEditor value={chooser} onChange={setChooser} configurator={configurator} />
           <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
         </div>
       )}
