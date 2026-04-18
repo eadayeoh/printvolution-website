@@ -57,10 +57,9 @@ const ProductUpdateSchema = z.object({
   h1em: z.string().nullable(),
   intro: z.string().nullable(),
   image_url: z.string().nullable(),
-  // Admin-authored jsonb overrides for the per-product Paper Chooser and
-  // SEO Magazine sections. Null = component uses the generated default
-  // tailored to the product.
-  chooser: z.any().nullable(),
+  // Admin-authored jsonb override for the per-product SEO Magazine
+  // section. Null = component uses the generated default tailored to
+  // the product.
   seo_magazine: z.any().nullable(),
   how_we_print: z.any().nullable(),
   // nested
@@ -106,7 +105,6 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
     h1: d.h1, h1em: d.h1em,
     intro: d.intro,
     image_url: d.image_url,
-    chooser: d.chooser ?? null,
     seo_magazine: d.seo_magazine ?? null,
     how_we_print: d.how_we_print ?? null,
   }, { onConflict: 'product_id' });
