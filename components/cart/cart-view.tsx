@@ -64,8 +64,13 @@ export function CartView() {
                   </h3>
                   <button
                     onClick={() => remove(item.id)}
-                    style={{ background: 'none', border: 'none', color: '#bbb', cursor: 'pointer' }}
-                    aria-label="Remove"
+                    style={{
+                      background: 'none', border: 'none', color: '#bbb', cursor: 'pointer',
+                      // 44px tap target on mobile without changing the visual icon size.
+                      padding: 14, margin: -14,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    aria-label="Remove from cart"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -95,7 +100,7 @@ export function CartView() {
       </div>
 
       <aside className="cart-rail">
-        <div style={{
+        <div className="cart-summary-card" style={{
           position: 'sticky', top: 80, padding: 28, background: '#fff',
           border: '2px solid #0a0a0a', boxShadow: '6px 6px 0 #E91E8C',
         }}>

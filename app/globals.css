@@ -76,6 +76,14 @@ textarea.pv-checkout-input { min-height: 70px; resize: vertical; line-height: 1.
 }
 @media (max-width: 880px) {
   .cart-layout { grid-template-columns: 1fr; }
+  /* Offset shadow of the summary card on desktop looks great, but at
+     mobile widths it pushes the card past the viewport edge. Tone it
+     down and drop the sticky so the summary flows with the list. */
+  .cart-summary-card {
+    position: static !important;
+    box-shadow: 3px 3px 0 #E91E8C !important;
+    padding: 20px !important;
+  }
 }
 
 /* Login page */

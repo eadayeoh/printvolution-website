@@ -36,11 +36,11 @@ export function AccountSignupForm() {
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Email</span>
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" />
+        <input type="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" />
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Phone (optional)</span>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inp} placeholder="+65 XXXX XXXX" autoComplete="tel" />
+        <input type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inp} placeholder="+65 XXXX XXXX" autoComplete="tel" />
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Password</span>

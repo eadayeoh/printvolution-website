@@ -28,7 +28,7 @@ export function AccountLoginForm() {
     <form onSubmit={submit} className="space-y-4">
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Email</span>
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" maxLength={200} />
+        <input type="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inp} autoComplete="email" maxLength={200} />
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Password</span>

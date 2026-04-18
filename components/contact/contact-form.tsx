@@ -38,15 +38,15 @@ export function ContactForm({ whatsappNumber }: { whatsappNumber: string }) {
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <Field label="Name *">
-          <input name="name" required className="pv-checkout-input" placeholder="Your name" />
+          <input name="name" required autoComplete="name" className="pv-checkout-input" placeholder="Your name" />
         </Field>
         <Field label="Phone">
-          <input name="phone" className="pv-checkout-input" placeholder="+65 XXXX XXXX" />
+          <input name="phone" type="tel" inputMode="tel" autoComplete="tel" className="pv-checkout-input" placeholder="+65 XXXX XXXX" />
         </Field>
       </div>
 
       <Field label="Email *">
-        <input name="email" type="email" required className="pv-checkout-input" placeholder="you@email.com" />
+        <input name="email" type="email" inputMode="email" autoComplete="email" required className="pv-checkout-input" placeholder="you@email.com" />
       </Field>
 
       <Field label="Enquiry Type">

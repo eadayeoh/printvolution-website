@@ -45,6 +45,8 @@ export function ProfileEditor({ initialName, initialPhone }: { initialName: stri
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-ink">Phone (optional)</span>
         <input
+          type="tel"
+          inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           className={inp}

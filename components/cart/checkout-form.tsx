@@ -105,7 +105,14 @@ export function CheckoutForm() {
                 <input type="email" {...register('email')} className={inputCls} placeholder="jane@company.sg" />
               </Field>
               <Field label="Mobile" error={errors.phone?.message}>
-                <input {...register('phone')} className={inputCls} placeholder="8123 4567" />
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  {...register('phone')}
+                  className={inputCls}
+                  placeholder="8123 4567"
+                />
               </Field>
               <Field label="Company (optional)">
                 <input {...register('company')} className={inputCls} />

@@ -631,6 +631,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                         >−</button>
                         <input
                           type="number"
+                          inputMode="numeric"
                           value={currentQty}
                           min={1}
                           onChange={(e) => setCfgState((s) => ({ ...s, [step.step_id]: e.target.value }))}
