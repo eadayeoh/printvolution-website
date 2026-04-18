@@ -230,65 +230,26 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             </Field>
           </Section>
 
-          {/* About / description */}
-          <Section title="About section" desc='Dark "Why this one works so well" block further down the page.'>
+          {/* Short description — used in schema + hero fallback */}
+          <Section title="Product description" desc="Used in JSON-LD schema, meta description fallback, and as hero sub-copy when tagline is empty.">
             <Field label="Short description">
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls} />
-              <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Used in JSON-LD schema and as a fallback meta description.</p>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
+              <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Also feeds the generated SEO Magazine lede.</p>
             </Field>
-            <Field label="Intro paragraph">
-              <textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={4} className={inputCls} />
-              <p className="mt-1 text-[10px] text-neutral-500">Main body text in the About section.</p>
-            </Field>
-            <Field label="Highlights (one per line)">
-              <textarea value={highlights} onChange={(e) => setHighlights(e.target.value)} rows={5} className={inputCls} />
-              <p className="mt-1 text-[10px] text-neutral-500">Pink-dotted bullet list shown next to the intro.</p>
-            </Field>
-            <div>
-              <div className="mb-1 text-xs font-bold text-ink">Specs (right-side card)</div>
-              <p className="mb-2 text-[11px] text-neutral-500">
-                Two columns: the <strong>Label</strong> (e.g. Sizes, Paper, Turnaround) and the <strong>Value</strong>.
-              </p>
-              <div className="mb-1 grid grid-cols-[200px_1fr_36px] gap-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                <div>Label</div>
-                <div>Value</div>
-                <div />
-              </div>
-              {specs.map((s, i) => (
-                <div key={i} className="mb-2 grid grid-cols-[200px_1fr_36px] gap-2 items-center">
-                  <input
-                    value={s.label}
-                    onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                    placeholder="Sizes"
-                    className={inputCls}
-                  />
-                  <input
-                    value={s.value}
-                    onChange={(e) => setSpecs(specs.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
-                    placeholder="A4, A5, DL (99×210mm)"
-                    className={inputCls}
-                  />
-                  <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-              <button type="button" onClick={() => setSpecs([...specs, { label: '', value: '' }])}
-                className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink">
-                <Plus size={12} /> Add spec
-              </button>
-            </div>
           </Section>
 
-          {/* Why us — dark block */}
-          <Section title="Why us (dark block)" desc='Bottom-of-page "why buyers come back" section.'>
-            <Field label="Why us headline (HTML ok, e.g. 'Line 1<br><em>Line 2</em>')">
-              <input value={whyHeadline} onChange={(e) => setWhyHeadline(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Why us bullets (one per line)">
-              <textarea value={whyUs} onChange={(e) => setWhyUs(e.target.value)} rows={4} className={inputCls} />
-            </Field>
-          </Section>
+          {/* Pointers to other tabs so admins know where to edit the other
+              things that appear on the product page. */}
+          <div className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-xs text-neutral-600 leading-relaxed">
+            <div className="mb-2 font-bold text-ink">Where to edit the rest of this product page:</div>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Calculator / Configurator</strong> (size, paper, finish, quantity steps + live price matrix) → <strong>Pricing &amp; Options</strong> tab.</li>
+              <li><strong>&quot;Everything worth knowing&quot; / Paper Chooser</strong> (long-form magazine + 3-question chooser) → <strong>SEO</strong> tab, JSON override fields.</li>
+              <li><strong>FAQ</strong> → <strong>FAQs</strong> tab.</li>
+              <li><strong>&quot;How we print&quot;</strong> (4 cards, same on every product) → <a className="font-bold text-pink underline" href="/admin/settings">Site Settings</a>.</li>
+              <li><strong>Related products</strong> → managed automatically via same-category links.</li>
+            </ul>
+          </div>
         </div>
       )}
 
