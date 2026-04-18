@@ -23,6 +23,10 @@ export type ChooserCombo = {
   price?: string;
   cta_label?: string;
   recommended?: boolean;
+  /** Target profile per question index: which answer does this combo
+   *  best fit? Key is question index, value is the choice key (either
+   *  choice.val or the choice's numeric index as a string). */
+  profile?: Record<number, string>;
 };
 export type ChooserValue = {
   kicker?: string;
@@ -282,6 +286,52 @@ export function ChooserEditor({
                   <div className="rounded border border-dashed border-neutral-300 bg-white p-3 text-[11px] text-neutral-500">
                     This product has no configurator steps yet. Add steps on the{' '}
                     <strong>Pricing &amp; Options</strong> tab and they&apos;ll appear here.
+                  </div>
+                )}
+              </div>
+              <div className="mt-3">
+                <span className={label}>Target answers (drives match %)</span>
+                <p className="-mt-0.5 mb-2 text-[10px] text-neutral-500">
+                  Pick the answer this combo is best for in each question. The chooser shows a real match % on every card and promotes the highest match as the recommended combo.
+                </p>
+                {(data.questions ?? []).length > 0 ? (
+                  <div className="grid gap-2">
+                    {(data.questions ?? []).map((q, qi) => {
+                      const picked = c.profile?.[qi] ?? '';
+                      return (
+                        <div key={qi} className="grid grid-cols-[200px_1fr] items-center gap-2">
+                          <div className="truncate text-xs font-bold text-neutral-600" title={q.title ?? ''}>
+                            Q{qi + 1}: {q.title || `(Question ${qi + 1})`}
+                          </div>
+                          <select
+                            className={input}
+                            value={picked}
+                            onChange={(e) => {
+                              const cs = [...(data.combos ?? [])];
+                              const profile = { ...(cs[ci].profile ?? {}) };
+                              if (e.target.value) profile[qi] = e.target.value;
+                              else delete profile[qi];
+                              cs[ci] = { ...cs[ci], profile };
+                              commit({ ...data, combos: cs });
+                            }}
+                          >
+                            <option value="">— any answer —</option>
+                            {(q.choices ?? []).map((ch, chi) => {
+                              const key = ch.val ?? String(chi);
+                              return (
+                                <option key={key} value={key}>
+                                  {ch.primary || `Choice ${chi + 1}`}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded border border-dashed border-neutral-300 bg-white p-3 text-[11px] text-neutral-500">
+                    Add questions above and their answers will appear here as dropdowns.
                   </div>
                 )}
               </div>
