@@ -4,6 +4,18 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateMyProfile } from '@/app/(site)/account/actions';
 
+const REFERRAL_OPTIONS = [
+  'Google search',
+  'Instagram',
+  'Facebook',
+  'TikTok',
+  'WhatsApp',
+  'Friend / word of mouth',
+  'Walk-in / passed by the shop',
+  'Returning customer',
+  'Other',
+];
+
 export type ProfileFormInitial = {
   name: string;
   phone: string;
@@ -146,7 +158,10 @@ export function ProfileEditor({ initial }: { initial: ProfileFormInitial }) {
             onChange={(e) => set('company', e.target.value)}
             className={inp}
             maxLength={120}
-            autoComplete="organization"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="words"
+            spellCheck={false}
           />
         </label>
       </Fieldset>
@@ -197,13 +212,16 @@ export function ProfileEditor({ initial }: { initial: ProfileFormInitial }) {
           </label>
           <label className="block">
             <span className={label}>How did you hear about us?</span>
-            <input
-              value={form.referral_source}
+            <select
+              value={REFERRAL_OPTIONS.includes(form.referral_source) ? form.referral_source : (form.referral_source ? 'Other' : '')}
               onChange={(e) => set('referral_source', e.target.value)}
               className={inp}
-              maxLength={120}
-              placeholder="Google, Instagram, friend…"
-            />
+            >
+              <option value="">Select one…</option>
+              {REFERRAL_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </label>
         </div>
         <label className="mt-4 flex items-start gap-2 cursor-pointer">
