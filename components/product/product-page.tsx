@@ -9,7 +9,7 @@ import type { ProductDetail } from '@/lib/data/products';
 import { defaultProductSeoBody } from '@/lib/data/product-seo';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
 import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
-import { ProductComparison, DEFAULT_COMPARISON, type ComparisonData } from './product-comparison';
+import { ProductMatcher, DEFAULT_MATCHER, type MatcherData } from './product-matcher';
 import { SeoMagazine, DEFAULT_NAME_CARD_MAGAZINE, buildDefaultMagazine, type SeoMagazineData } from './seo-magazine';
 
 type Props = {
@@ -991,14 +991,14 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         </div>
       </section>
 
-      {/* "Here's what you're actually buying" comparison — replaces the
-         old interactive PaperChooser. Admins can still override per
-         product via product.extras.comparison (jsonb) in the future;
-         today every product renders the same sensible default. */}
+      {/* "Tell us the job, we'll tell you the pick." — IF/THEN matcher.
+         Replaces the earlier comparison block with actionable scenario
+         rows. Per-product override via product.extras.matcher (jsonb)
+         can come later; today every product renders the default. */}
       {(() => {
-        const extras = product.extras as (typeof product.extras & { comparison?: ComparisonData }) | null;
-        const override = extras?.comparison as ComparisonData | undefined;
-        return <ProductComparison data={override ?? DEFAULT_COMPARISON} />;
+        const extras = product.extras as (typeof product.extras & { matcher?: MatcherData }) | null;
+        const override = extras?.matcher as MatcherData | undefined;
+        return <ProductMatcher data={override ?? DEFAULT_MATCHER} />;
       })()}
 
       {/* SEO MAGAZINE — rendered on every product page, same precedence order. */}
