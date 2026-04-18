@@ -8,6 +8,7 @@ import { HowWePrintEditor, type HowWePrintValue } from './product-how-we-print-e
 import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { OptionImagePicker } from '@/components/admin/option-image-picker';
+import { MatcherEditor, type MatcherValue } from '@/components/admin/product-matcher-editor';
 import { FormulaBuilder } from '@/components/admin/formula-builder';
 import type { ProductDetail } from '@/lib/data/products';
 
@@ -57,6 +58,9 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   const [seoMagazine, setSeoMagazine] = useState<MagValue | null>(
     (product.extras?.seo_magazine as MagValue) ?? null,
   );
+  const [matcher, setMatcher] = useState<MatcherValue | null>(
+    (product.extras?.matcher as MatcherValue) ?? null,
+  );
   const [howWePrint, setHowWePrint] = useState<HowWePrintValue | null>(
     (product.extras?.how_we_print as HowWePrintValue) ?? null,
   );
@@ -92,6 +96,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         h1: h1 || null, h1em: h1em || null,
         intro: intro || null,
         image_url: imageUrl || null,
+        matcher,
         seo_magazine: seoMagazine,
         how_we_print: howWePrint,
         pricing: {
@@ -268,6 +273,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           </div>
 
           <HowWePrintEditor value={howWePrint} onChange={setHowWePrint} productSlug={product.slug} />
+          <MatcherEditor value={matcher} onChange={setMatcher} />
           <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
         </div>
       )}
