@@ -7,6 +7,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { createGiftProduct, updateGiftProduct, deleteGiftProduct, setProductTemplates } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GiftMockupEditor } from '@/components/admin/gift-mockup-editor';
+import { MagazineEditor, type MagValue } from '@/components/admin/product-magazine-editor';
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
 import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate } from '@/lib/gifts/types';
 
@@ -19,7 +20,7 @@ type Props = {
   assignedTemplateIds: string[];
 };
 
-type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'seo';
+type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'seo' | 'content';
 
 const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: string }> = [
   { v: 'laser', label: 'Laser', desc: GIFT_MODE_DESCRIPTION['laser'], emoji: '🔥' },
@@ -61,6 +62,15 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
   const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? '');
   const [seoDesc, setSeoDesc] = useState(product?.seo_desc ?? '');
+  // Admin-authored long-form content. Each is nullable — null means the
+  // public-facing component renders the mode-based default instead.
+  const [seoBody, setSeoBody] = useState(product?.seo_body ?? '');
+  const [seoMagazine, setSeoMagazine] = useState<MagValue | null>(
+    (product?.seo_magazine as MagValue) ?? null,
+  );
+  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(
+    (product?.faqs as Array<{ question: string; answer: string }>) ?? [],
+  );
 
   const [mockupUrl, setMockupUrl] = useState(product?.mockup_url ?? '');
   const [mockupArea, setMockupArea] = useState<{ x: number; y: number; width: number; height: number }>(
@@ -98,6 +108,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         .map((t) => ({ qty: parseInt(t.qty, 10), price_cents: Math.round((parseFloat(t.price) || 0) * 100) })),
       seo_title: seoTitle.trim() || null,
       seo_desc: seoDesc.trim() || null,
+      seo_body: seoBody.trim() || null,
+      seo_magazine: seoMagazine,
+      faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()).length > 0
+        ? faqs.filter((f) => f.question.trim() && f.answer.trim())
+        : null,
       is_active: isActive,
       mockup_url: mockupUrl || null,
       mockup_area: mockupUrl ? mockupArea : null,
@@ -143,6 +158,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
     { v: 'mockup', label: 'Mockup' },
+    { v: 'content', label: `Content${faqs.length > 0 ? ` (${faqs.length})` : ''}` },
     { v: 'seo', label: 'SEO' },
   ];
   const visibleTabs = TABS.filter((t) => !t.hide);
@@ -457,6 +473,99 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             <span className="mb-1 block text-xs font-bold text-ink">SEO description</span>
             <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
           </label>
+        </div>
+      )}
+
+      {/* Content — long-form page sections: 2-line SEO body, magazine, FAQs */}
+      {tab === 'content' && (
+        <div className="max-w-4xl space-y-6">
+          {/* Short keyword footer */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3">
+              <div className="text-sm font-black text-ink">SEO footer paragraph</div>
+              <p className="mt-0.5 text-[11px] text-neutral-500">
+                Short, keyword-heavy — the grey mono paragraph at the bottom of the product page. 2 lines max.
+                Leave blank to fall back to the mode-based default.
+              </p>
+            </div>
+            <textarea
+              value={seoBody}
+              onChange={(e) => setSeoBody(e.target.value)}
+              rows={3}
+              placeholder="Custom LED photo base printing Singapore — laser-engraved acrylic, warm LED wood base, personalised photo gift. Ships in 5 days, islandwide delivery."
+              className={inputCls}
+            />
+          </div>
+
+          {/* SEO Magazine — reuses services-side editor */}
+          <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
+
+          {/* Per-gift FAQs */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-ink">FAQs — Common questions</div>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  Rendered as an expandable accordion on the product page. Leave empty to use
+                  the mode-based default set.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFaqs([...faqs, { question: '', answer: '' }])}
+                className="inline-flex items-center gap-1 rounded border-2 border-ink bg-white px-3 py-1.5 text-[11px] font-bold text-ink transition-all hover:bg-yellow"
+              >
+                <Plus size={12} /> Add FAQ
+              </button>
+            </div>
+            {faqs.length === 0 ? (
+              <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-center text-xs text-neutral-500">
+                No FAQs yet — using mode-based defaults. Click &quot;Add FAQ&quot; to override.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {faqs.map((f, i) => (
+                  <div key={i} className="rounded border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        FAQ {i + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFaqs(faqs.filter((_, j) => j !== i))}
+                        className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={11} /> Remove
+                      </button>
+                    </div>
+                    <label className="mb-2 block">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                        Question
+                      </span>
+                      <input
+                        value={f.question}
+                        onChange={(e) => setFaqs(faqs.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))}
+                        className={inputCls}
+                        placeholder="e.g. How long does the LED battery last?"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                        Answer
+                      </span>
+                      <textarea
+                        value={f.answer}
+                        onChange={(e) => setFaqs(faqs.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)))}
+                        rows={3}
+                        className={inputCls}
+                        placeholder="About 8 hours on a single AA battery. USB-C cable also included for always-on display."
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
