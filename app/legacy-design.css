@@ -1748,7 +1748,7 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 :root,html,body{
   --serif:"Archivo Black",-apple-system,system-ui,sans-serif;
   --sans:Archivo,-apple-system,system-ui,sans-serif;
-  --mono:Archivo,-apple-system,system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
   --c:#00B8D9;
   --m:#EC1C7D;
   --m-dark:#C4155A;
@@ -2966,7 +2966,7 @@ footer{
 :root,html,body{
   --serif:"Archivo Black",-apple-system,system-ui,sans-serif!important;
   --sans:Archivo,-apple-system,system-ui,sans-serif!important;
-  --mono:Archivo,-apple-system,system-ui,sans-serif!important;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace!important;
   --pink:#EC1C7D!important;
   --pink-dark:#C4155A!important;
   --paper:#FFFFFF!important;
@@ -8537,7 +8537,7 @@ footer{background:#0a0a0a;color:#fff;padding:56px 40px 24px;border-top:1px solid
 :root,html,body{
   --serif:"Archivo Black",-apple-system,system-ui,sans-serif;
   --sans:Archivo,-apple-system,system-ui,sans-serif;
-  --mono:Archivo,-apple-system,system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
   --c:#00B8D9;
   --m:#EC1C7D;
   --m-dark:#C4155A;
@@ -9755,7 +9755,7 @@ footer{
 :root,html,body{
   --serif:"Archivo Black",-apple-system,system-ui,sans-serif!important;
   --sans:Archivo,-apple-system,system-ui,sans-serif!important;
-  --mono:Archivo,-apple-system,system-ui,sans-serif!important;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace!important;
   --pink:#EC1C7D!important;
   --pink-dark:#C4155A!important;
   --paper:#FFFFFF!important;

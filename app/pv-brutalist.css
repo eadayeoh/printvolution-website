@@ -68,3 +68,25 @@
   font-family: var(--pv-f-display);
   letter-spacing: -0.02em;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   v4 typography enforcement — pins the 3 v4 fonts to the styles set
+   via inline fontFamily: var(--pv-f-*). Legacy-design.css still
+   carries some !important font-family rules that target elements
+   generically (p,span,div,li,etc.); those can override inline styles.
+   These rules have higher specificity AND !important so they always
+   win, making the v4 fonts deterministic on every brutalist page
+   regardless of the legacy-CSS ordering.
+   ────────────────────────────────────────────────────────────────── */
+[style*="--pv-f-display"],
+[style*="var(--pv-f-display)"] {
+  font-family: 'Archivo Black', 'Archivo', sans-serif !important;
+}
+[style*="--pv-f-body"],
+[style*="var(--pv-f-body)"] {
+  font-family: 'Archivo', system-ui, sans-serif !important;
+}
+[style*="--pv-f-mono"],
+[style*="var(--pv-f-mono)"] {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace !important;
+}
