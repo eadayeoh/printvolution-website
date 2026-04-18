@@ -8,6 +8,7 @@ import { MagazineEditor, type MagValue } from './product-magazine-editor';
 import { HowWePrintEditor, type HowWePrintValue } from './product-how-we-print-editor';
 import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { OptionImagePicker } from '@/components/admin/option-image-picker';
 import { FormulaBuilder } from '@/components/admin/formula-builder';
 import type { ProductDetail } from '@/lib/data/products';
 
@@ -623,10 +624,10 @@ function OptionCard({
   onChange,
   onRemove,
 }: {
-  option: { slug: string; label: string; note?: string | null; price_formula?: string | null };
+  option: { slug: string; label: string; note?: string | null; price_formula?: string | null; image_url?: string | null };
   index: number;
   inputCls: string;
-  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null }>) => void;
+  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null }>) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(!option.label || option.label === 'New option');
@@ -690,6 +691,17 @@ function OptionCard({
                 className={inputCls}
               />
             </label>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+              Option image (optional)
+            </div>
+            <OptionImagePicker
+              value={option.image_url ?? ''}
+              onChange={(url) => onChange({ image_url: url || null })}
+              defaultLabel={option.label || ''}
+            />
           </div>
 
           <div>

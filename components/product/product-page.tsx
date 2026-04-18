@@ -679,7 +679,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                             type="button"
                             onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: opt.slug }))}
                             style={{
-                              padding: '9px 14px',
+                              padding: opt.image_url ? '6px 14px 6px 6px' : '9px 14px',
                               border: active ? '1.5px solid var(--pv-ink)' : '1.5px solid var(--pv-rule)',
                               background: active ? 'var(--pv-ink)' : '#fff',
                               color: active ? '#fff' : 'var(--pv-ink)',
@@ -688,8 +688,31 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                               fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.12s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 8,
                             }}
                           >
+                            {opt.image_url && (
+                              <span
+                                aria-hidden
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  flexShrink: 0,
+                                  background: '#fff',
+                                  border: '1px solid var(--pv-rule)',
+                                  overflow: 'hidden',
+                                  display: 'inline-block',
+                                }}
+                              >
+                                <img
+                                  src={opt.image_url}
+                                  alt=""
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                />
+                              </span>
+                            )}
                             {opt.label}
                             {optCents !== null && optCents > 0 && (
                               <span
