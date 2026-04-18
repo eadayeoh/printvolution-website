@@ -86,6 +86,30 @@ function choiceKey(c: Choice, ci: number): string {
   return c.val ?? String(ci);
 }
 
+/** Resolve the picks we'll use for pricing a combo. Mirrors the "Safe Bet
+ *  = option 0, Recommended = option 1, Step Up = option 2" fallback that
+ *  the renderer already applies to spec rows, so the price shown always
+ *  matches the specs shown. */
+function resolvePicksForPricing(
+  combo: Combo,
+  configurator: ChooserConfiguratorStep[] | undefined,
+  comboIndex: number,
+): Record<string, string> {
+  const base: Record<string, string> = {};
+  if (combo.picks) Object.assign(base, combo.picks);
+  if (!configurator) return base;
+  for (const step of configurator) {
+    if (base[step.step_id]) continue;
+    if (step.type === 'swatch' || step.type === 'select') {
+      const options = step.options ?? [];
+      if (options.length === 0) continue;
+      const idx = Math.min(comboIndex, options.length - 1);
+      base[step.step_id] = options[idx].slug;
+    }
+  }
+  return base;
+}
+
 export const DEFAULT_NAME_CARD_CHOOSER: ChooserData = {
   kicker: 'Not sure which paper?',
   title: 'Find your perfect card',
@@ -321,9 +345,15 @@ function inlineStars(text: string) {
 export function PaperChooser({
   data,
   configurator,
+  priceForPicks,
 }: {
   data?: ChooserData | null;
   configurator?: ChooserConfiguratorStep[];
+  /** Optional price resolver injected by the product page. Given a combo's
+   *  picks (resolved against defaults), returns a formatted SGD total
+   *  (e.g. "S$68.40") or null when pricing can't be computed. When null
+   *  we fall back to the admin-authored price string on the combo. */
+  priceForPicks?: (picks: Record<string, string>) => string | null;
 }) {
   const d = data ?? DEFAULT_NAME_CARD_CHOOSER;
   const questions = d.questions ?? [];
@@ -574,9 +604,15 @@ export function PaperChooser({
             className="pv-chooser-combos"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}
           >
-            {combos.map((c, ci) => (
+            {combos.map((c, ci) => {
+              const resolvedPicks = resolvePicksForPricing(c, configurator, ci);
+              const computedPrice = priceForPicks ? priceForPicks(resolvedPicks) : null;
+              const displayPrice = computedPrice ?? c.price ?? '';
+              return (
               <div
                 key={ci}
+                className="pv-chooser-combo-card"
+                data-recommended={c.recommended ? '1' : '0'}
                 style={{
                   background: '#fff',
                   border: '3px solid var(--pv-ink)',
@@ -584,6 +620,7 @@ export function PaperChooser({
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
+                  transition: 'box-shadow 0.15s, border-color 0.15s, transform 0.15s',
                 }}
               >
                 <div
@@ -652,7 +689,7 @@ export function PaperChooser({
                       Total incl. GST
                     </span>
                     <span style={{ fontFamily: 'var(--pv-f-display)', fontSize: 26, color: 'var(--pv-magenta)', letterSpacing: '-0.02em' }}>
-                      {c.price}
+                      {displayPrice}
                     </span>
                   </div>
                   <button
@@ -681,7 +718,8 @@ export function PaperChooser({
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -696,6 +734,11 @@ export function PaperChooser({
         }
         .pv-chooser-choice[data-selected="0"]:hover .pv-chooser-choice__box {
           border-color: var(--pv-yellow) !important;
+        }
+        .pv-chooser-combo-card:hover {
+          border-color: var(--pv-magenta) !important;
+          box-shadow: 8px 8px 0 var(--pv-magenta) !important;
+          transform: translate(-2px, -2px);
         }
         @media (max-width: 900px) {
           .pv-chooser-questions, .pv-chooser-combos { grid-template-columns: 1fr !important; }
