@@ -64,6 +64,30 @@
   }
 }
 
+/* Legacy-design.css has a broad rule that forces every span/em/b/div/li
+   to font-family: Archivo, which wipes out Archivo Black cascade on any
+   brutalist heading whose text is wrapped in inline spans (yellow
+   highlight, line breaks, etc.). These overrides re-cascade the display
+   and mono fonts to descendants wherever inline CSS used our CSS vars. */
+[style*="--pv-f-display"],
+[style*="--pv-f-display"] span,
+[style*="--pv-f-display"] em,
+[style*="--pv-f-display"] b,
+[style*="--pv-f-display"] strong,
+[style*="--pv-f-display"] p,
+[style*="--pv-f-display"] div {
+  font-family: var(--pv-f-display);
+}
+[style*="--pv-f-mono"],
+[style*="--pv-f-mono"] span,
+[style*="--pv-f-mono"] em,
+[style*="--pv-f-mono"] b,
+[style*="--pv-f-mono"] strong,
+[style*="--pv-f-mono"] p,
+[style*="--pv-f-mono"] div {
+  font-family: var(--pv-f-mono);
+}
+
 /* Override hero background images — use local assets instead of picsum */
 .hero-print .hero-side-img {
   background-image: url('/images/name-card.webp') !important;
