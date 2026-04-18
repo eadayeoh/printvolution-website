@@ -1,6 +1,7 @@
 import 'server-only';
 import { Resend } from 'resend';
 import { formatSGD } from '@/lib/utils';
+import { BRAND, SITE } from '@/lib/brand';
 
 /**
  * Thin wrapper around Resend.
@@ -74,8 +75,8 @@ export function adminEmail(): string | null {
 // Templates
 // ---------------------------------------------------------------------------
 
-const BRAND_PINK = '#E91E8C';
-const BRAND_INK = '#0a0a0a';
+const BRAND_PINK = BRAND.pink;
+const BRAND_INK = BRAND.ink;
 
 function shell(title: string, body: string): string {
   return `<!doctype html>
@@ -96,8 +97,8 @@ function shell(title: string, body: string): string {
       </tr>
       <tr>
         <td style="background:#fafaf7;padding:14px 24px;font-size:11px;color:#888;text-align:center;border-top:1px solid #eee;">
-          Printvolution Pte Ltd · 60 Paya Lebar Road #B1-35 · S409051<br>
-          <a href="https://wa.me/6585533497" style="color:${BRAND_PINK};text-decoration:none">WhatsApp +65 8553 3497</a>
+          ${SITE.legalName} · ${SITE.address}<br>
+          <a href="https://wa.me/${SITE.whatsappE164}" style="color:${BRAND_PINK};text-decoration:none">WhatsApp ${SITE.whatsappDisplay}</a>
         </td>
       </tr>
     </table>
