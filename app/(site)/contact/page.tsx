@@ -1,257 +1,724 @@
-import { getContactMethods } from '@/lib/data/page_content';
+import { getPageContent } from '@/lib/data/page_content';
 import { ContactForm } from '@/components/contact/contact-form';
 
 export const metadata = {
-  title: 'Contact Us',
-  description: 'WhatsApp, phone, or visit our store at Paya Lebar Square. Same-day express available.',
+  title: 'Contact Printvolution | Paya Lebar Square, Singapore',
+  description:
+    'Visit Printvolution at Paya Lebar Square or reach us by phone, email or WhatsApp. Open every day except public holidays.',
   alternates: { canonical: 'https://printvolution.sg/contact' },
 };
 
-const SOCIAL_META: Record<string, { icon: string; href: (v: string) => string; name: string }> = {
-  instagram: { icon: 'IG', href: (v) => `https://instagram.com/${v.replace('@', '')}`, name: 'Instagram' },
-  facebook: { icon: 'FB', href: (v) => (v.startsWith('http') ? v : `https://facebook.com/${v}`), name: 'Facebook' },
-  tiktok: { icon: 'TT', href: (v) => `https://tiktok.com/@${v.replace('@', '')}`, name: 'TikTok' },
-  telegram: { icon: 'TG', href: (v) => `https://t.me/${v.replace('@', '')}`, name: 'Telegram' },
-  line: { icon: 'LN', href: (v) => `https://line.me/ti/p/${v}`, name: 'LINE' },
+type Item = Record<string, any>;
+function first<T = Item>(section: { items?: T[] } | undefined): T | null {
+  const items = section?.items;
+  return Array.isArray(items) && items.length > 0 ? items[0] : null;
+}
+function items<T = Item>(section: { items?: T[] } | undefined): T[] {
+  return Array.isArray(section?.items) ? (section!.items as T[]) : [];
+}
+
+const METHOD_BG: Record<string, string> = {
+  magenta: 'var(--pv-magenta)',
+  yellow: 'var(--pv-yellow)',
+  ink: 'var(--pv-ink)',
+  green: 'var(--pv-green)',
+  cyan: 'var(--pv-cyan)',
+};
+const METHOD_FG: Record<string, string> = {
+  magenta: '#fff',
+  yellow: 'var(--pv-ink)',
+  ink: 'var(--pv-yellow)',
+  green: 'var(--pv-ink)',
+  cyan: '#fff',
 };
 
 export default async function ContactPage() {
-  const methods = await getContactMethods();
-  const whatsapp = methods.find((m) => m.type === 'whatsapp');
-  const landline = methods.find((m) => m.type === 'phone');
-  const email = methods.find((m) => m.type === 'email');
-  const socials = methods.filter((m) => SOCIAL_META[m.type]);
+  const content = await getPageContent('contact');
+  const hero = first<Item>(content['hero.v4']);
+  const methods = items<Item>(content['methods']);
+  const formHeader = first<Item>(content['form.header']);
+  const formTabs = items<Item>(content['form.tabs']);
+  const location = first<Item>(content['location.main']);
+  const hoursHeader = first<Item>(content['hours.header']);
+  const hoursDays = items<Item>(content['hours.days']);
+  const faqItems = items<Item>(content['faq']);
+
+  const whatsappNumber =
+    (location?.whatsapp_url && String(location.whatsapp_url).match(/wa\.me\/(\d+)/)?.[1]) ||
+    '6585533497';
 
   return (
-    <div className="screen active" id="screen-contact">
-      {/* HERO — dark */}
-      <section style={{ background: '#0D0D0D', color: '#fff', padding: '80px 28px 64px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 70% 40%, rgba(233,30,140,.12), transparent 60%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', padding: '6px 14px', border: '1.5px solid #E91E8C', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 20 }}>
-            Get in touch
-          </div>
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(36px,5vw,64px)', fontWeight: 700, lineHeight: 1.05, margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-            Let&rsquo;s make<br /><em style={{ color: '#E91E8C' }}>something great.</em>
-          </h1>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,.65)', marginTop: 18, maxWidth: 640, marginInline: 'auto', lineHeight: 1.7 }}>
-            Walk in, WhatsApp, or drop us a message. We respond fast and we never ghost a quote request.
-          </p>
-        </div>
-      </section>
-
-      {/* MAP */}
-      <div style={{ width: '100%', height: 320, position: 'relative' }}>
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7763!2d103.8919!3d1.3174!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19a0a6555555%3A0x1!2sPaya+Lebar+Square%2C+60+Paya+Lebar+Rd%2C+Singapore+409051!5e0!3m2!1sen!2ssg!4v1"
-          width="100%"
-          height="320"
-          style={{ border: 0, display: 'block' }}
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-      </div>
-
-      {/* INFO CARDS (CMYK-shadowed) on dotted bg */}
-      <section
-        style={{
-          background: '#fafaf7',
-          backgroundImage: 'radial-gradient(circle, #e8e4dc 1.2px, transparent 1.2px)',
-          backgroundSize: '22px 22px',
-          padding: '56px 28px',
-        }}
-      >
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-            {/* WALK IN */}
-            <div style={{ background: '#fff', border: '2px solid #0a0a0a', padding: '28px 28px 24px', boxShadow: '6px 6px 0 #E91E8C', position: 'relative' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#E91E8C', marginBottom: 14 }}>
-                Walk In
-              </div>
-              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 700, lineHeight: 1.1, color: '#0a0a0a', marginBottom: 14 }}>
-                Paya Lebar Square<br />B1-35
-              </div>
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.65, margin: '0 0 14px' }}>
-                60 Paya Lebar Road, Singapore 409051 &middot; 2 min walk from Paya Lebar MRT
-              </p>
-              <a
-                href="https://maps.google.com/?q=Paya+Lebar+Square+Singapore"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#E91E8C', textDecoration: 'none' }}
+    <article>
+      {/* HERO */}
+      {hero && (
+        <section style={{ padding: '56px 24px 40px', borderBottom: '2px solid var(--pv-ink)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            {hero.kicker && (
+              <div
+                style={{
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: 'var(--pv-magenta)',
+                  marginBottom: 18,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
               >
-                Get directions ↗
-              </a>
-            </div>
-
-            {/* OPENING HOURS */}
-            <div style={{ background: '#fff', border: '2px solid #0a0a0a', padding: '28px', boxShadow: '6px 6px 0 #00B8D9' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#00B8D9', marginBottom: 14 }}>
-                Opening Hours
+                <span style={{ width: 24, height: 2, background: 'var(--pv-magenta)' }} />
+                {hero.kicker}
               </div>
-              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 700, lineHeight: 1.1, color: '#0a0a0a', marginBottom: 14 }}>
-                Mon – Sat<br />10am – 7.30pm
-              </div>
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.65, margin: 0 }}>
-                Closed Sundays &amp; Singapore public holidays
-              </p>
-            </div>
-
-            {/* DIRECT LINE */}
-            <div style={{ background: '#fff', border: '2px solid #0a0a0a', padding: '28px', boxShadow: '6px 6px 0 #FFD100' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#e6b800', marginBottom: 14 }}>
-                Direct Line
-              </div>
-              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 700, lineHeight: 1.1, color: '#0a0a0a', marginBottom: 14 }}>
-                {whatsapp?.value ?? '+65 8553 3497'}
-              </div>
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.65, margin: 0 }}>
-                Call or WhatsApp &middot; Same-day express available
-              </p>
-              {landline && (
-                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
-                  <span style={{ fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>Landline</span>
-                  <a href={`tel:${landline.value.replace(/\s/g, '')}`} style={{ color: '#0a0a0a', fontWeight: 700, textDecoration: 'none' }}>
-                    {landline.value}
-                  </a>
-                </div>
+            )}
+            <h1
+              style={{
+                fontFamily: 'var(--pv-f-display)',
+                fontSize: 'clamp(44px, 6.5vw, 84px)',
+                lineHeight: 0.9,
+                letterSpacing: '-0.04em',
+                margin: 0,
+                marginBottom: 20,
+              }}
+            >
+              {hero.headline}{' '}
+              {hero.headline_accent && (
+                <span style={{ color: 'var(--pv-magenta)' }}>{hero.headline_accent}</span>
               )}
-            </div>
+            </h1>
+            {hero.body && (
+              <p style={{ fontSize: 16, lineHeight: 1.55, maxWidth: 560, color: 'var(--pv-muted)', fontWeight: 500 }}>
+                {hero.body}
+              </p>
+            )}
           </div>
+        </section>
+      )}
 
-          {/* Socials row */}
-          {(socials.length > 0 || email) && (
-            <div style={{ marginTop: 24, display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
-              {email && (
+      {/* 4 METHODS */}
+      {methods.length > 0 && (
+        <section style={{ padding: '40px 24px', background: 'var(--pv-cream)', borderBottom: '2px solid var(--pv-ink)' }}>
+          <div
+            className="pv-methods-grid"
+            style={{
+              maxWidth: 1400,
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 18,
+            }}
+          >
+            {methods.map((m, i) => {
+              const tone = String(m.tone ?? 'magenta');
+              return (
                 <a
-                  href={`mailto:${email.value}`}
+                  key={i}
+                  href={m.href ?? '#'}
+                  target={String(m.href ?? '').startsWith('http') ? '_blank' : undefined}
+                  rel={String(m.href ?? '').startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="pv-method-tile"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 16px', background: '#fff', border: '1.5px solid #0a0a0a',
-                    borderRadius: 999, fontSize: 12, fontWeight: 700, color: '#0a0a0a',
+                    background: '#fff',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '6px 6px 0 var(--pv-ink)',
+                    padding: 26,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'all 0.15s',
+                    color: 'inherit',
                     textDecoration: 'none',
                   }}
                 >
-                  ✉️ {email.value}
-                </a>
-              )}
-              {socials.map((s, i) => {
-                const meta = SOCIAL_META[s.type];
-                if (!meta) return null;
-                return (
-                  <a
-                    key={i}
-                    href={meta.href(s.value)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <div
+                    aria-hidden
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 8,
-                      padding: '10px 16px', background: '#fff', border: '1.5px solid #0a0a0a',
-                      borderRadius: 999, fontSize: 12, fontWeight: 700, color: '#0a0a0a',
-                      textDecoration: 'none',
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 28,
+                      width: 52,
+                      height: 52,
+                      border: '2px solid var(--pv-ink)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 18,
+                      background: METHOD_BG[tone] ?? 'var(--pv-magenta)',
+                      color: METHOD_FG[tone] ?? '#fff',
                     }}
                   >
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1 }}>{meta.icon}</span>
-                    {s.label ?? meta.name}
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* WHATSAPP HERO */}
-      <section
-        style={{
-          background: '#fafaf7',
-          backgroundImage: 'radial-gradient(circle, #e8e4dc 1.2px, transparent 1.2px)',
-          backgroundSize: '22px 22px',
-          padding: '0 28px 64px',
-        }}
-      >
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div
-            style={{
-              background: '#0D0D0D', color: '#fff',
-              padding: '64px 32px', textAlign: 'center',
-              border: '2px solid #0a0a0a',
-              boxShadow: '8px 8px 0 #22c55e',
-              position: 'relative', overflow: 'hidden',
-            }}
-          >
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 30%, rgba(34,197,94,.12), transparent 60%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#22c55e', marginBottom: 14 }}>
-                ● Fastest way to reach us ●
-              </div>
-              <h2 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(32px,4.5vw,60px)', fontWeight: 700, lineHeight: 1.05, margin: '0 0 18px', color: '#fff', letterSpacing: '-0.01em' }}>
-                Prefer WhatsApp? <em style={{ color: '#FFD100', fontStyle: 'italic' }}>Same.</em>
-              </h2>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,.65)', maxWidth: 640, margin: '0 auto 28px', lineHeight: 1.75 }}>
-                Send us your files, describe what you need, or just ask a question. Most WhatsApp
-                messages get a reply within one business hour during opening hours — faster than email, faster than calling.
-              </p>
-              {whatsapp && (
-                <a
-                  href={`https://wa.me/${whatsapp.value.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 10,
-                    padding: '14px 28px', background: '#22c55e', color: '#fff',
-                    fontSize: 14, fontWeight: 800, letterSpacing: 0.3,
-                    textDecoration: 'none', border: '2px solid #fff',
-                    borderRadius: 999,
-                  }}
-                >
-                  <span style={{
-                    width: 28, height: 28, borderRadius: '50%', background: '#fff',
-                    color: '#22c55e', display: 'inline-flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: 14,
-                  }}>💬</span>
-                  Chat on WhatsApp
+                    {m.icon}
+                  </div>
+                  {m.label && (
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: 'var(--pv-muted)',
+                        fontWeight: 700,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {m.label}
+                    </div>
+                  )}
+                  {m.title && (
+                    <h3 style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1, margin: 0, marginBottom: 10 }}>
+                      {m.title}
+                    </h3>
+                  )}
+                  {m.body && (
+                    <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--pv-ink-soft)', fontWeight: 500, margin: 0, marginBottom: 14, flex: 1 }}>
+                      {m.body}
+                    </p>
+                  )}
+                  {m.value && (
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        paddingTop: 14,
+                        borderTop: '2px dashed var(--pv-rule)',
+                        color: 'var(--pv-magenta)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {m.value}
+                    </div>
+                  )}
                 </a>
-              )}
-            </div>
+              );
+            })}
           </div>
-        </div>
-      </section>
+          <style>{`
+            .pv-method-tile:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--pv-ink) !important; }
+            @media (max-width: 900px) { .pv-methods-grid { grid-template-columns: 1fr 1fr !important; } }
+            @media (max-width: 520px) { .pv-methods-grid { grid-template-columns: 1fr !important; } }
+          `}</style>
+        </section>
+      )}
 
-      {/* FORM on dotted bg */}
+      {/* FORM + LOCATION */}
       <section
+        id="location"
         style={{
-          background: '#fafaf7',
-          backgroundImage: 'radial-gradient(circle, #e8e4dc 1.2px, transparent 1.2px)',
-          backgroundSize: '22px 22px',
-          padding: '0 28px 96px',
+          maxWidth: 1400,
+          margin: '0 auto',
+          padding: '72px 24px',
+          borderBottom: '2px solid var(--pv-ink)',
         }}
       >
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, lineHeight: 1.05, margin: '0 0 6px', color: '#0a0a0a', letterSpacing: '-0.01em' }}>
-              Send us a<br /><em style={{ color: '#E91E8C' }}>message.</em>
-            </h2>
-          </div>
-
+        <div
+          className="pv-form-location-grid"
+          style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 40, alignItems: 'start' }}
+        >
+          {/* FORM */}
           <div
             style={{
               background: '#fff',
-              border: '2px solid #0a0a0a',
-              padding: 40,
-              boxShadow: '8px 8px 0 #E91E8C',
+              border: '2px solid var(--pv-ink)',
+              boxShadow: '8px 8px 0 var(--pv-magenta)',
+              padding: 36,
             }}
           >
-            <div style={{ textAlign: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px dashed #e5e5e5' }}>
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#E91E8C' }}>
-                ✉️ Send us a message
-              </span>
-            </div>
-            <ContactForm whatsappNumber={whatsapp?.value ?? '+65 8553 3497'} />
+            {formHeader && (
+              <>
+                {formHeader.kicker && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: 'var(--pv-magenta)',
+                      marginBottom: 10,
+                    }}
+                  >
+                    {formHeader.kicker}
+                  </div>
+                )}
+                {formHeader.title && (
+                  <h2
+                    style={{
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 'clamp(30px, 3.5vw, 40px)',
+                      lineHeight: 0.95,
+                      letterSpacing: '-0.03em',
+                      margin: 0,
+                      marginBottom: 10,
+                    }}
+                  >
+                    {formHeader.title}{' '}
+                    {formHeader.title_em && (
+                      <span style={{ position: 'relative', display: 'inline-block' }}>
+                        <span
+                          aria-hidden
+                          style={{
+                            position: 'absolute',
+                            bottom: 2,
+                            left: '-2%',
+                            width: '104%',
+                            height: 12,
+                            background: 'var(--pv-yellow)',
+                            zIndex: -1,
+                            transform: 'skew(-6deg)',
+                          }}
+                        />
+                        {formHeader.title_em}
+                      </span>
+                    )}
+                  </h2>
+                )}
+                {formHeader.sub && (
+                  <p style={{ fontSize: 14, color: 'var(--pv-muted)', marginBottom: 28, fontWeight: 500 }}>
+                    {formHeader.sub}
+                  </p>
+                )}
+              </>
+            )}
+
+            <ContactForm
+              whatsappNumber={`+${whatsappNumber}`}
+              enquiryTabs={formTabs.map((t) => String(t.label ?? '')).filter(Boolean)}
+            />
           </div>
+
+          {/* LOCATION */}
+          {location && (
+            <aside
+              className="pv-location-block"
+              style={{
+                background: '#fff',
+                border: '2px solid var(--pv-ink)',
+                boxShadow: '6px 6px 0 var(--pv-ink)',
+                position: 'sticky',
+                top: 100,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  aspectRatio: '4/3',
+                  borderBottom: '2px solid var(--pv-ink)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: 'var(--pv-cream)',
+                  backgroundImage: location.map_image_url ? `url(${location.map_image_url})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '44%',
+                    left: '50%',
+                    transform: 'translate(-50%, -100%) rotate(-3deg)',
+                    background: 'var(--pv-magenta)',
+                    color: '#fff',
+                    padding: '8px 14px',
+                    border: '2px solid var(--pv-ink)',
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 14,
+                    letterSpacing: '-0.01em',
+                    boxShadow: '3px 3px 0 var(--pv-ink)',
+                  }}
+                >
+                  {location.name}
+                </div>
+              </div>
+
+              <div style={{ padding: 26 }}>
+                <h3 style={{ fontFamily: 'var(--pv-f-display)', fontSize: 26, letterSpacing: '-0.02em', lineHeight: 1, margin: 0, marginBottom: 4 }}>
+                  {location.name}
+                </h3>
+                {location.subtitle && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11,
+                      color: 'var(--pv-magenta)',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      marginBottom: 18,
+                    }}
+                  >
+                    {location.subtitle}
+                  </div>
+                )}
+
+                <LocRow k="Address">
+                  <>
+                    {location.address_line1}
+                    {location.address_line2 && (
+                      <>
+                        <br />
+                        {location.address_line2}
+                      </>
+                    )}
+                    {location.address_line3 && (
+                      <>
+                        <br />
+                        {location.address_line3}
+                      </>
+                    )}
+                  </>
+                </LocRow>
+                {location.phone_label && (
+                  <LocRow k="Phone">
+                    {location.phone_href ? (
+                      <a href={String(location.phone_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
+                        {location.phone_label}
+                      </a>
+                    ) : (
+                      <>{location.phone_label}</>
+                    )}
+                  </LocRow>
+                )}
+                {location.email_label && (
+                  <LocRow k="Email">
+                    {location.email_href ? (
+                      <a href={String(location.email_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
+                        {location.email_label}
+                      </a>
+                    ) : (
+                      <>{location.email_label}</>
+                    )}
+                  </LocRow>
+                )}
+                {(location.mrt_label || location.mrt_detail) && (
+                  <LocRow k="MRT">
+                    <>
+                      {location.mrt_label}
+                      {location.mrt_detail && (
+                        <>
+                          <br />
+                          {location.mrt_detail}
+                        </>
+                      )}
+                    </>
+                  </LocRow>
+                )}
+                {(location.parking_label || location.parking_detail) && (
+                  <LocRow k="Parking">
+                    <>
+                      {location.parking_label}
+                      {location.parking_detail && (
+                        <>
+                          <br />
+                          {location.parking_detail}
+                        </>
+                      )}
+                    </>
+                  </LocRow>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 18 }}>
+                  {location.maps_url && (
+                    <a
+                      href={String(location.maps_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        background: 'var(--pv-ink)',
+                        color: '#fff',
+                        padding: 12,
+                        border: '2px solid var(--pv-ink)',
+                        fontFamily: 'var(--pv-f-body)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Directions
+                    </a>
+                  )}
+                  {location.whatsapp_url && (
+                    <a
+                      href={String(location.whatsapp_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        background: 'var(--pv-ink)',
+                        color: '#fff',
+                        padding: 12,
+                        border: '2px solid var(--pv-ink)',
+                        fontFamily: 'var(--pv-f-body)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
         </div>
+        <style>{`
+          @media (max-width: 900px) {
+            .pv-form-location-grid { grid-template-columns: 1fr !important; }
+            .pv-location-block { position: static !important; }
+          }
+        `}</style>
       </section>
+
+      {/* HOURS */}
+      {(hoursHeader || hoursDays.length > 0) && (
+        <section
+          style={{
+            background: 'var(--pv-ink)',
+            color: '#fff',
+            padding: '56px 24px',
+            borderBottom: '2px solid var(--pv-ink)',
+          }}
+        >
+          <div
+            className="pv-hours-grid"
+            style={{
+              maxWidth: 1400,
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1.5fr',
+              gap: 40,
+              alignItems: 'center',
+            }}
+          >
+            {hoursHeader && (
+              <div>
+                {hoursHeader.kicker && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11,
+                      color: 'var(--pv-yellow)',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      marginBottom: 14,
+                    }}
+                  >
+                    {hoursHeader.kicker}
+                  </div>
+                )}
+                <h2
+                  style={{
+                    fontFamily: 'var(--pv-f-display)',
+                    fontSize: 'clamp(32px, 4vw, 48px)',
+                    lineHeight: 0.95,
+                    letterSpacing: '-0.03em',
+                    margin: 0,
+                  }}
+                >
+                  {hoursHeader.title}{' '}
+                  {hoursHeader.title_yellow && <span style={{ color: 'var(--pv-yellow)' }}>{hoursHeader.title_yellow}</span>}
+                  {hoursHeader.title_suffix && (
+                    <>
+                      <br />
+                      {hoursHeader.title_suffix}
+                    </>
+                  )}
+                </h2>
+                {hoursHeader.body && (
+                  <p style={{ fontSize: 14, marginTop: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                    {hoursHeader.body}
+                  </p>
+                )}
+              </div>
+            )}
+            <div
+              className="pv-hours-table"
+              style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(hoursDays.length, 1)}, 1fr)`, gap: 6 }}
+            >
+              {hoursDays.map((d, i) => {
+                const closed = Boolean(d.is_closed);
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '14px 4px',
+                      textAlign: 'center',
+                      border: '2px solid rgba(255,255,255,0.15)',
+                      background: 'rgba(255,255,255,0.04)',
+                      opacity: closed ? 0.45 : 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: 'rgba(255,255,255,0.55)',
+                        marginBottom: 6,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {d.day_label}
+                    </div>
+                    <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 14, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+                      {closed ? 'Closed' : d.time}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <style>{`
+            @media (max-width: 900px) {
+              .pv-hours-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+              .pv-hours-table { grid-template-columns: repeat(3, 1fr) !important; }
+            }
+          `}</style>
+        </section>
+      )}
+
+      {/* FAQ */}
+      {faqItems.length > 0 && (
+        <section style={{ padding: '72px 24px', background: 'var(--pv-cream)', borderBottom: '2px solid var(--pv-ink)' }}>
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <div
+              style={{
+                fontFamily: 'var(--pv-f-mono)',
+                fontSize: 11,
+                color: 'var(--pv-magenta)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                marginBottom: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <span style={{ width: 24, height: 2, background: 'var(--pv-magenta)' }} />
+              Quick answers
+            </div>
+            <h2
+              style={{
+                fontFamily: 'var(--pv-f-display)',
+                fontSize: 'clamp(32px, 4vw, 52px)',
+                lineHeight: 0.95,
+                letterSpacing: '-0.03em',
+                marginBottom: 28,
+              }}
+            >
+              Before you{' '}
+              <span style={{ position: 'relative', display: 'inline-block' }}>
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    left: '-2%',
+                    width: '104%',
+                    height: 14,
+                    background: 'var(--pv-yellow)',
+                    zIndex: -1,
+                    transform: 'skew(-6deg)',
+                  }}
+                />
+                write.
+              </span>
+            </h2>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {faqItems.map((f, i) => (
+                <details
+                  key={i}
+                  className="pv-contact-faq-item"
+                  style={{
+                    background: '#fff',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '4px 4px 0 var(--pv-ink)',
+                  }}
+                >
+                  <summary
+                    style={{
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 18,
+                      letterSpacing: '-0.01em',
+                      padding: '18px 22px',
+                      cursor: 'pointer',
+                      listStyle: 'none',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 16,
+                    }}
+                  >
+                    {f.question}
+                    <span
+                      aria-hidden
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        flexShrink: 0,
+                        background: 'var(--pv-magenta)',
+                        color: '#fff',
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 20,
+                      }}
+                    >
+                      +
+                    </span>
+                  </summary>
+                  <div style={{ padding: '0 22px 22px', fontSize: 14, lineHeight: 1.6, color: 'var(--pv-ink-soft)', fontWeight: 500 }}>
+                    {f.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+          <style>{`
+            .pv-contact-faq-item summary::-webkit-details-marker { display: none; }
+          `}</style>
+        </section>
+      )}
+    </article>
+  );
+}
+
+function LocRow({ k, children }: { k: string; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '80px 1fr',
+        padding: '12px 0',
+        borderBottom: '1px dashed var(--pv-rule)',
+        fontSize: 14,
+        alignItems: 'start',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--pv-f-mono)',
+          fontSize: 10,
+          color: 'var(--pv-muted)',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          paddingTop: 3,
+        }}
+      >
+        {k}
+      </span>
+      <span style={{ fontWeight: 500, lineHeight: 1.45 }}>{children}</span>
     </div>
   );
 }

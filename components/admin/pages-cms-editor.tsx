@@ -359,8 +359,8 @@ export function PagesCmsEditor({
           <SectionEditor
             pageKey="about"
             sectionKey="cta"
-            title="Bottom CTA strip"
-            hint="Walk-in / contact block at the bottom of /about."
+            title="Bottom CTA strip (legacy)"
+            hint="Legacy — not shown on the v6 /about page."
             initial={sections['about:cta'] ?? []}
             fields={[
               { key: 'h2', label: 'Headline', type: 'text' },
@@ -371,11 +371,300 @@ export function PagesCmsEditor({
               { key: 'btn2_href', label: 'Button 2 URL', type: 'text' },
             ]}
           />
+
+          <SectionHeader label="v6 sections (live)" />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="hero.v6"
+            title="Hero (v6)"
+            hint="Kicker + 3-line headline (normal / yellow-highlighted em / pink) + subcopy + mascot image."
+            initial={sections['about:hero.v6'] ?? []}
+            fields={[
+              { key: 'kicker', label: 'Kicker', type: 'text' },
+              { key: 'headline', label: 'Headline line 1', type: 'text' },
+              { key: 'headline_em', label: 'Headline line 2 (yellow highlight)', type: 'text' },
+              { key: 'headline_pink', label: 'Headline line 3 (pink word)', type: 'text' },
+              { key: 'body', label: 'Subcopy', type: 'textarea' },
+              { key: 'image_url', label: 'Mascot / shop photo', type: 'image' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="story.header"
+            title="Story header"
+            hint="Section label, title (with yellow em) and intro for the Story band. One side image."
+            initial={sections['about:story.header'] ?? []}
+            fields={[
+              { key: 'label_num', label: 'Label number e.g. 01', type: 'text' },
+              { key: 'label', label: 'Label text e.g. Our Story', type: 'text' },
+              { key: 'title', label: 'Title (first part)', type: 'text' },
+              { key: 'title_em', label: 'Title (yellow-highlighted em)', type: 'text' },
+              { key: 'intro', label: 'Short intro paragraph', type: 'textarea' },
+              { key: 'image_url', label: 'Side photo', type: 'image' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="story.paras"
+            title="Story paragraphs"
+            hint="Body paragraphs beneath the story header. First paragraph gets a drop-cap. Use **text** for yellow-highlighted inline emphasis."
+            initial={sections['about:story.paras'] ?? []}
+            fields={[{ key: 'text', label: 'Paragraph', type: 'textarea' }]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="stats.header"
+            title="Stats strip — header"
+            hint="Dark band intro above the four stat cards."
+            initial={sections['about:stats.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Small yellow label', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'title_yellow', label: 'Title accent (yellow word)', type: 'text' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="stats.items"
+            title="Stats strip — items"
+            hint="One item per stat tile. Colours alternate yellow / magenta."
+            initial={sections['about:stats.items'] ?? []}
+            fields={[
+              { key: 'num', label: 'Number', type: 'text' },
+              { key: 'suffix', label: 'Suffix e.g. yrs, +, hr', type: 'text' },
+              { key: 'label', label: 'Description', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="beliefs.header"
+            title="Beliefs — header"
+            hint="Kicker + title + intro above the 3 tilted cards."
+            initial={sections['about:beliefs.header'] ?? []}
+            fields={[
+              { key: 'label_num', label: 'Label number', type: 'text' },
+              { key: 'label', label: 'Label text', type: 'text' },
+              { key: 'title', label: 'Title (first part)', type: 'text' },
+              { key: 'title_pink', label: 'Title (pink word)', type: 'text' },
+              { key: 'title_suffix', label: 'Title (final part)', type: 'text' },
+              { key: 'intro', label: 'Intro', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="beliefs.cards"
+            title="Beliefs — cards"
+            hint="Three tilted brutalist cards. Numerals colour magenta / cyan / purple by order. Use **text** for yellow highlight in body."
+            initial={sections['about:beliefs.cards'] ?? []}
+            fields={[
+              { key: 'num', label: 'Number', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'body', label: 'Body', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="shop.header"
+            title="The Shop — header"
+            hint="Kicker + title + intro above the 6-photo grid."
+            initial={sections['about:shop.header'] ?? []}
+            fields={[
+              { key: 'label_num', label: 'Label number', type: 'text' },
+              { key: 'label', label: 'Label text', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'title_em', label: 'Title (yellow em)', type: 'text' },
+              { key: 'intro', label: 'Intro', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="shop.tiles"
+            title="The Shop — photo tiles"
+            hint="Six tiles. Supply image_url; caption shows as fallback label if image missing."
+            initial={sections['about:shop.tiles'] ?? []}
+            fields={[
+              { key: 'caption', label: 'Caption (fallback)', type: 'text' },
+              { key: 'image_url', label: 'Photo', type: 'image' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="promises.header"
+            title="Promises — header"
+            hint="Kicker + title + intro above the numbered promise list."
+            initial={sections['about:promises.header'] ?? []}
+            fields={[
+              { key: 'label_num', label: 'Label number', type: 'text' },
+              { key: 'label', label: 'Label text', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'title_em', label: 'Title (yellow em)', type: 'text' },
+              { key: 'intro', label: 'Intro', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="about"
+            sectionKey="promises.items"
+            title="Promises — rows"
+            hint="Four numbered rows. Tone controls tag colour (magenta | cyan | yellow | green)."
+            initial={sections['about:promises.items'] ?? []}
+            fields={[
+              { key: 'num', label: 'Number', type: 'text' },
+              { key: 'title', label: 'Promise title', type: 'text' },
+              { key: 'body', label: 'Promise body', type: 'textarea' },
+              { key: 'tag', label: 'Tag label', type: 'text' },
+              { key: 'tone', label: 'Tag tone (magenta | cyan | yellow | green)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="about"
+            sectionKey="final_cta.main"
+            title="Final CTA band"
+            hint="Magenta band at the bottom of /about with two buttons."
+            initial={sections['about:final_cta.main'] ?? []}
+            fields={[
+              { key: 'headline', label: 'Headline', type: 'text' },
+              { key: 'headline_yellow', label: 'Headline accent (yellow second line)', type: 'text' },
+              { key: 'body', label: 'Body copy', type: 'textarea' },
+              { key: 'cta1_label', label: 'Primary button label', type: 'text' },
+              { key: 'cta1_href', label: 'Primary button URL', type: 'text' },
+              { key: 'cta2_label', label: 'Secondary button label', type: 'text' },
+              { key: 'cta2_href', label: 'Secondary button URL', type: 'text' },
+            ]}
+          />
         </div>
       )}
 
       {tab === 'contact' && (
-        <ContactEditor initial={contacts} />
+        <div className="space-y-6">
+          <ContactEditor initial={contacts} />
+
+          <SectionHeader label="Contact page v4 sections" />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="hero.v4"
+            title="Hero"
+            hint="Kicker + headline + pink accent word + subcopy."
+            initial={sections['contact:hero.v4'] ?? []}
+            fields={[
+              { key: 'kicker', label: 'Kicker', type: 'text' },
+              { key: 'headline', label: 'Headline', type: 'text' },
+              { key: 'headline_accent', label: 'Headline accent (pink word)', type: 'text' },
+              { key: 'body', label: 'Subcopy', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="methods"
+            title="4 contact methods"
+            hint="One item per method card. Tone: magenta | yellow | ink | green | cyan."
+            initial={sections['contact:methods'] ?? []}
+            fields={[
+              { key: 'icon', label: 'Icon glyph (e.g. ☎ ✎ @ ★)', type: 'text' },
+              { key: 'label', label: 'Small uppercase label', type: 'text' },
+              { key: 'title', label: 'Title', type: 'text' },
+              { key: 'body', label: 'Body copy', type: 'textarea' },
+              { key: 'value', label: 'Value shown at card bottom', type: 'text' },
+              { key: 'href', label: 'Link URL', type: 'text' },
+              { key: 'tone', label: 'Tone (magenta | yellow | ink | green | cyan)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="form.header"
+            title="Form header"
+            hint="Shown above the contact form."
+            initial={sections['contact:form.header'] ?? []}
+            fields={[
+              { key: 'kicker', label: 'Kicker', type: 'text' },
+              { key: 'title', label: 'Title (first part)', type: 'text' },
+              { key: 'title_em', label: 'Title (yellow em)', type: 'text' },
+              { key: 'sub', label: 'Subtitle', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="form.tabs"
+            title="Form enquiry tabs"
+            hint="Tab labels shown above the form. Selected tab adds a Type: line to the generated WhatsApp message."
+            initial={sections['contact:form.tabs'] ?? []}
+            fields={[{ key: 'label', label: 'Tab label', type: 'text' }]}
+          />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="location.main"
+            title="Location card"
+            hint="Shop details beside the form. Single item."
+            initial={sections['contact:location.main'] ?? []}
+            fields={[
+              { key: 'name', label: 'Location name', type: 'text' },
+              { key: 'subtitle', label: 'Sub-label', type: 'text' },
+              { key: 'map_image_url', label: 'Map / exterior image', type: 'image' },
+              { key: 'address_line1', label: 'Address line 1', type: 'text' },
+              { key: 'address_line2', label: 'Address line 2', type: 'text' },
+              { key: 'address_line3', label: 'Address line 3', type: 'text' },
+              { key: 'phone_label', label: 'Phone label', type: 'text' },
+              { key: 'phone_href', label: 'Phone URL (tel:+...)', type: 'text' },
+              { key: 'email_label', label: 'Email label', type: 'text' },
+              { key: 'email_href', label: 'Email URL (mailto:...)', type: 'text' },
+              { key: 'mrt_label', label: 'MRT label', type: 'text' },
+              { key: 'mrt_detail', label: 'MRT detail', type: 'text' },
+              { key: 'parking_label', label: 'Parking label', type: 'text' },
+              { key: 'parking_detail', label: 'Parking detail', type: 'text' },
+              { key: 'maps_url', label: 'Google Maps URL', type: 'text' },
+              { key: 'whatsapp_url', label: 'WhatsApp URL (wa.me/...)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="hours.header"
+            title="Hours band — header"
+            hint="Dark band above the 7-day grid."
+            initial={sections['contact:hours.header'] ?? []}
+            fields={[
+              { key: 'kicker', label: 'Kicker', type: 'text' },
+              { key: 'title', label: 'Title (first part)', type: 'text' },
+              { key: 'title_yellow', label: 'Title (yellow accent)', type: 'text' },
+              { key: 'title_suffix', label: 'Title (final line)', type: 'text' },
+              { key: 'body', label: 'Body copy', type: 'textarea' },
+            ]}
+          />
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="hours.days"
+            title="Hours band — days"
+            hint="One item per column. Set is_closed to true (or 1) to dim the column."
+            initial={sections['contact:hours.days'] ?? []}
+            fields={[
+              { key: 'day_label', label: 'Day label (Mon, Tue, …)', type: 'text' },
+              { key: 'time', label: 'Hours e.g. 9 – 7', type: 'text' },
+              { key: 'is_closed', label: 'Closed? (true / false)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="contact"
+            sectionKey="faq"
+            title="FAQ"
+            hint="Question / answer accordion at the bottom of /contact."
+            initial={sections['contact:faq'] ?? []}
+            fields={[
+              { key: 'question', label: 'Question', type: 'text' },
+              { key: 'answer', label: 'Answer', type: 'textarea' },
+            ]}
+          />
+        </div>
       )}
 
       {tab === 'nav' && (
