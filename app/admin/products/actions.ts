@@ -12,7 +12,6 @@ import { logAdminAction } from '@/lib/auth/admin-audit';
 // service-role client.
 const adminClient = createServiceClient;
 
-const SpecSchema = z.array(z.object({ label: z.string(), value: z.string() }));
 const PricingRowSchema = z.object({
   qty: z.string(),
   prices: z.array(z.number()),
@@ -47,25 +46,21 @@ const ProductUpdateSchema = z.object({
   subcategory_id: z.string().uuid().nullable(),
   is_active: z.boolean(),
   is_gift: z.boolean().default(false),
-  highlights: z.array(z.string()),
-  specs: SpecSchema,
   // extras
   seo_title: z.string().nullable(),
   seo_desc: z.string().nullable(),
   seo_body: z.string().nullable(),
-  hero_color: z.string().nullable(),
   hero_big: z.string().nullable(),
   h1: z.string().nullable(),
   h1em: z.string().nullable(),
   intro: z.string().nullable(),
-  why_headline: z.string().nullable(),
-  why_us: z.array(z.string()),
   image_url: z.string().nullable(),
   // Admin-authored jsonb overrides for the per-product Paper Chooser and
   // SEO Magazine sections. Null = component uses the generated default
   // tailored to the product.
   chooser: z.any().nullable(),
   seo_magazine: z.any().nullable(),
+  how_we_print: z.any().nullable(),
   // nested
   pricing: PricingSchema.nullable(),
   configurator: z.array(ConfiguratorStepSchema),
@@ -93,8 +88,6 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
       subcategory_id: d.subcategory_id,
       is_active: d.is_active,
       is_gift: d.is_gift,
-      highlights: d.highlights,
-      specs: d.specs,
     })
     .eq('slug', slug)
     .select('id')
@@ -107,12 +100,13 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
   await sb.from('product_extras').upsert({
     product_id: id,
     seo_title: d.seo_title, seo_desc: d.seo_desc, seo_body: d.seo_body,
-    hero_color: d.hero_color, hero_big: d.hero_big,
+    hero_big: d.hero_big,
     h1: d.h1, h1em: d.h1em,
-    intro: d.intro, why_headline: d.why_headline,
-    why_us: d.why_us, image_url: d.image_url,
+    intro: d.intro,
+    image_url: d.image_url,
     chooser: d.chooser ?? null,
     seo_magazine: d.seo_magazine ?? null,
+    how_we_print: d.how_we_print ?? null,
   }, { onConflict: 'product_id' });
 
   // 3. Pricing
@@ -198,8 +192,6 @@ export async function createProduct(input: z.infer<typeof ProductCreateSchema>) 
     is_gift: d.is_gift,
     is_active: true,
     sort_order: 999,
-    highlights: [],
-    specs: [],
   }).select('id, slug').single();
 
   if (error || !product) return { ok: false, error: error?.message ?? 'Create failed' };

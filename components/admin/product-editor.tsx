@@ -3,6 +3,9 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
+import { ChooserEditor, type ChooserValue } from './product-chooser-editor';
+import { MagazineEditor, type MagValue } from './product-magazine-editor';
+import { HowWePrintEditor, type HowWePrintValue } from './product-how-we-print-editor';
 import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { FormulaBuilder } from '@/components/admin/formula-builder';
@@ -36,8 +39,6 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   );
   const [isActive, setIsActive] = useState(true);
   const [isGift, setIsGift] = useState(product.is_gift ?? false);
-  const [highlights, setHighlights] = useState(product.highlights.join('\n'));
-  const [specs, setSpecs] = useState<Array<{ label: string; value: string }>>(product.specs);
 
   // Extras
   const [seoTitle, setSeoTitle] = useState(product.extras?.seo_title ?? '');
@@ -45,27 +46,23 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   // Prefill with the live fallback text so the admin edits the paragraph
   // they actually see on the page, instead of staring at an empty field.
   const [seoBody, setSeoBody] = useState(product.extras?.seo_body ?? defaultSeoBody ?? '');
-  // hero_color is no longer edited from the UI; pass the existing DB
-  // value through on save so nothing is wiped.
-  const heroColor = product.extras?.hero_color ?? null;
   const [heroBig, setHeroBig] = useState(product.extras?.hero_big ?? '');
   const [h1, setH1] = useState(product.extras?.h1 ?? '');
   const [h1em, setH1em] = useState(product.extras?.h1em ?? '');
   const [intro, setIntro] = useState(product.extras?.intro ?? '');
-  const [whyHeadline, setWhyHeadline] = useState(product.extras?.why_headline ?? '');
-  const [whyUs, setWhyUs] = useState((product.extras?.why_us ?? []).join('\n'));
   const [imageUrl, setImageUrl] = useState(product.extras?.image_url ?? '');
-  // Paper Chooser + SEO Magazine overrides — stored as JSON strings in the
-  // editor so admins can paste full structures. Empty = use the generated
-  // default tailored to this product's name + configurator.
-  const [chooserJson, setChooserJson] = useState(
-    product.extras?.chooser ? JSON.stringify(product.extras.chooser, null, 2) : '',
+  // Per-product overrides — null means "use the auto-generated default"
+  // (Paper Chooser / SEO Magazine tailored to product name+configurator,
+  // or site-wide Site Settings features for How We Print).
+  const [chooser, setChooser] = useState<ChooserValue | null>(
+    (product.extras?.chooser as ChooserValue) ?? null,
   );
-  const [seoMagazineJson, setSeoMagazineJson] = useState(
-    product.extras?.seo_magazine ? JSON.stringify(product.extras.seo_magazine, null, 2) : '',
+  const [seoMagazine, setSeoMagazine] = useState<MagValue | null>(
+    (product.extras?.seo_magazine as MagValue) ?? null,
   );
-  const [chooserErr, setChooserErr] = useState<string | null>(null);
-  const [seoMagazineErr, setSeoMagazineErr] = useState<string | null>(null);
+  const [howWePrint, setHowWePrint] = useState<HowWePrintValue | null>(
+    (product.extras?.how_we_print as HowWePrintValue) ?? null,
+  );
 
   // Pricing (cents in backend, dollars in UI)
   const [pricingLabel, setPricingLabel] = useState(product.pricing?.label ?? 'Size');
@@ -85,22 +82,6 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
 
   async function handleSave() {
     setErr(null);
-    setChooserErr(null);
-    setSeoMagazineErr(null);
-
-    // Parse the JSON override fields — empty string is a null override
-    // (use generated default), invalid JSON blocks the save.
-    let chooserValue: any = null;
-    if (chooserJson.trim()) {
-      try { chooserValue = JSON.parse(chooserJson); }
-      catch (e: any) { setChooserErr('Invalid JSON: ' + e.message); return; }
-    }
-    let seoMagazineValue: any = null;
-    if (seoMagazineJson.trim()) {
-      try { seoMagazineValue = JSON.parse(seoMagazineJson); }
-      catch (e: any) { setSeoMagazineErr('Invalid JSON: ' + e.message); return; }
-    }
-
     startTransition(async () => {
       const input = {
         name, icon: icon || null, tagline: tagline || null,
@@ -109,16 +90,14 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         subcategory_id: subcategoryId || null,
         is_active: isActive,
         is_gift: isGift,
-        highlights: highlights.split('\n').map((s) => s.trim()).filter(Boolean),
-        specs: specs.filter((s) => s.label.trim() || s.value.trim()),
         seo_title: seoTitle || null, seo_desc: seoDesc || null, seo_body: seoBody || null,
-        hero_color: heroColor || null, hero_big: heroBig || null,
+        hero_big: heroBig || null,
         h1: h1 || null, h1em: h1em || null,
-        intro: intro || null, why_headline: whyHeadline || null,
-        why_us: whyUs.split('\n').map((s) => s.trim()).filter(Boolean),
+        intro: intro || null,
         image_url: imageUrl || null,
-        chooser: chooserValue,
-        seo_magazine: seoMagazineValue,
+        chooser,
+        seo_magazine: seoMagazine,
+        how_we_print: howWePrint,
         pricing: {
           label: pricingLabel,
           configs: pricingConfigs,
@@ -292,69 +271,9 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             </p>
           </div>
 
-          {/* Paper Chooser override ------------------------------------- */}
-          <div className="rounded border border-neutral-200 bg-neutral-50 p-4">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-bold text-ink">Paper Chooser — custom JSON</div>
-                <p className="text-[10px] text-neutral-500">
-                  Overrides the &quot;Find your perfect X&quot; widget. Leave empty to use the generated default.
-                  <br />
-                  Schema: <code>{`{ kicker, title, title_em, intro, questions: [...], combos: [...] }`}</code>
-                </p>
-              </div>
-              {chooserJson && (
-                <button
-                  type="button"
-                  onClick={() => { setChooserJson(''); setChooserErr(null); }}
-                  className="text-[10px] font-bold text-pink hover:underline"
-                >
-                  Clear (use default)
-                </button>
-              )}
-            </div>
-            <textarea
-              value={chooserJson}
-              onChange={(e) => { setChooserJson(e.target.value); setChooserErr(null); }}
-              rows={8}
-              placeholder='Leave empty to use the generated default.'
-              className={`${inputCls} font-mono text-[11px]`}
-              style={{ whiteSpace: 'pre' }}
-            />
-            {chooserErr && <p className="mt-1 text-[10px] font-bold text-red-600">{chooserErr}</p>}
-          </div>
-
-          {/* SEO Magazine override -------------------------------------- */}
-          <div className="rounded border border-neutral-200 bg-neutral-50 p-4">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-bold text-ink">SEO Magazine — custom JSON</div>
-                <p className="text-[10px] text-neutral-500">
-                  Overrides the long-form magazine-style block. Leave empty to use the generated default.
-                  <br />
-                  Schema: <code>{`{ issue_label, title, title_em, lede, articles: [{ num, title, body: [...], side: {...} }] }`}</code>
-                </p>
-              </div>
-              {seoMagazineJson && (
-                <button
-                  type="button"
-                  onClick={() => { setSeoMagazineJson(''); setSeoMagazineErr(null); }}
-                  className="text-[10px] font-bold text-pink hover:underline"
-                >
-                  Clear (use default)
-                </button>
-              )}
-            </div>
-            <textarea
-              value={seoMagazineJson}
-              onChange={(e) => { setSeoMagazineJson(e.target.value); setSeoMagazineErr(null); }}
-              rows={10}
-              placeholder='Leave empty to use the generated default.'
-              className={`${inputCls} font-mono text-[11px]`}
-              style={{ whiteSpace: 'pre' }}
-            />
-            {seoMagazineErr && <p className="mt-1 text-[10px] font-bold text-red-600">{seoMagazineErr}</p>}
-          </div>
+          <HowWePrintEditor value={howWePrint} onChange={setHowWePrint} productSlug={product.slug} />
+          <ChooserEditor value={chooser} onChange={setChooser} />
+          <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
         </div>
       )}
 

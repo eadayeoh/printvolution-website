@@ -44,16 +44,13 @@ export type ProductExtras = {
   seo_title: string | null;
   seo_desc: string | null;
   seo_body: string | null;
-  hero_color: string | null;
   hero_big: string | null;
   chooser: unknown | null;
   seo_magazine: unknown | null;
+  how_we_print: unknown | null;
   h1: string | null;
   h1em: string | null;
   intro: string | null;
-  why_headline: string | null;
-  why_us: string[];
-  use_cases: unknown[];
   image_url: string | null;
 };
 
@@ -64,8 +61,6 @@ export type ProductDetail = {
   icon: string | null;
   tagline: string | null;
   description: string | null;
-  highlights: string[];
-  specs: ProductSpec[];
   is_gift: boolean;
   category: { slug: string; name: string } | null;
   subcategory: { slug: string; name: string } | null;
@@ -136,7 +131,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, icon, tagline, description, highlights, specs, is_gift,
+      id, slug, name, icon, tagline, description, is_gift,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_extras(*),
@@ -198,8 +193,6 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     icon: d.icon,
     tagline: d.tagline,
     description: d.description,
-    highlights: d.highlights ?? [],
-    specs: (d.specs as ProductSpec[]) ?? [],
     is_gift: d.is_gift,
     category: Array.isArray(d.category) ? d.category[0] ?? null : d.category,
     subcategory: Array.isArray(d.subcategory) ? d.subcategory[0] ?? null : d.subcategory,
@@ -209,12 +202,12 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     extras: extras
       ? {
           seo_title: extras.seo_title, seo_desc: extras.seo_desc, seo_body: extras.seo_body,
-          hero_color: extras.hero_color, hero_big: extras.hero_big,
+          hero_big: extras.hero_big,
           h1: extras.h1, h1em: extras.h1em,
-          intro: extras.intro, why_headline: extras.why_headline,
-          why_us: extras.why_us ?? [], use_cases: extras.use_cases ?? [],
+          intro: extras.intro,
           chooser: extras.chooser ?? null,
           seo_magazine: extras.seo_magazine ?? null,
+          how_we_print: extras.how_we_print ?? null,
           image_url: extras.image_url,
         }
       : null,

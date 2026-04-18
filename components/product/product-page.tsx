@@ -19,7 +19,13 @@ type Props = {
 };
 
 export function ProductPage({ product, productRoutes, features }: Props) {
-  const productFeatures = features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES;
+  // "How we print" cards — per-product override wins, otherwise fall back
+  // to the site-wide default defined in Site Settings.
+  const perProductHwp = product.extras?.how_we_print as ProductFeature[] | null | undefined;
+  const productFeatures: ProductFeature[] =
+    (perProductHwp && Array.isArray(perProductHwp) && perProductHwp.length > 0)
+      ? perProductHwp
+      : (features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES);
   const addToCart = useCart((s) => s.add);
 
   // Column index used when no size/dimension configurator step is
@@ -212,8 +218,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const h1 = product.extras?.h1 ?? product.name;
   const h1em = product.extras?.h1em ?? '';
   const intro = product.extras?.intro ?? product.description ?? '';
-  const whyHeadlineHtml = product.extras?.why_headline ?? '';
-  const whyUs = (product.extras?.why_us ?? []).filter(Boolean);
   const related = (product.related ?? []).slice(0, 4);
 
   function handleAddToCart() {
