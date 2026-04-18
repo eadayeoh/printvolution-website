@@ -673,13 +673,14 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                         const optCents = opt.price_formula
                           ? Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100)
                           : null;
+                        const hasImage = !!opt.image_url;
                         return (
                           <button
                             key={opt.slug}
                             type="button"
                             onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: opt.slug }))}
                             style={{
-                              padding: opt.image_url ? '6px 14px 6px 6px' : '9px 14px',
+                              padding: hasImage ? 10 : '9px 14px',
                               border: active ? '1.5px solid var(--pv-ink)' : '1.5px solid var(--pv-rule)',
                               background: active ? 'var(--pv-ink)' : '#fff',
                               color: active ? '#fff' : 'var(--pv-ink)',
@@ -688,22 +689,23 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                               fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.12s',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
+                              display: hasImage ? 'flex' : 'inline-flex',
+                              flexDirection: hasImage ? 'column' : 'row',
+                              alignItems: hasImage ? 'stretch' : 'center',
+                              gap: hasImage ? 8 : 8,
+                              width: hasImage ? 160 : undefined,
                             }}
                           >
-                            {opt.image_url && (
+                            {hasImage && (
                               <span
                                 aria-hidden
                                 style={{
-                                  width: 28,
-                                  height: 28,
-                                  flexShrink: 0,
+                                  width: '100%',
+                                  aspectRatio: '1 / 1',
                                   background: '#fff',
                                   border: '1px solid var(--pv-rule)',
                                   overflow: 'hidden',
-                                  display: 'inline-block',
+                                  display: 'block',
                                 }}
                               >
                                 <img
