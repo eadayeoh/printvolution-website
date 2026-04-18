@@ -1,5 +1,6 @@
 import { getPageContent } from '@/lib/data/page_content';
 import { ContactForm } from '@/components/contact/contact-form';
+import { HoursGrid } from '@/components/contact/hours-grid';
 
 export const metadata = {
   title: 'Contact Printvolution | Paya Lebar Square, Singapore',
@@ -299,37 +300,32 @@ export default async function ContactPage() {
                 overflow: 'hidden',
               }}
             >
-              <div
-                style={{
-                  aspectRatio: '4/3',
-                  borderBottom: '2px solid var(--pv-ink)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  background: 'var(--pv-cream)',
-                  backgroundImage: location.map_image_url ? `url(${location.map_image_url})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '44%',
-                    left: '50%',
-                    transform: 'translate(-50%, -100%) rotate(-3deg)',
-                    background: 'var(--pv-magenta)',
-                    color: '#fff',
-                    padding: '8px 14px',
-                    border: '2px solid var(--pv-ink)',
-                    fontFamily: 'var(--pv-f-display)',
-                    fontSize: 14,
-                    letterSpacing: '-0.01em',
-                    boxShadow: '3px 3px 0 var(--pv-ink)',
-                  }}
-                >
-                  {location.name}
-                </div>
-              </div>
+              {(() => {
+                const query = encodeURIComponent(
+                  [location.address_line1, location.address_line2, location.address_line3]
+                    .filter(Boolean)
+                    .join(', ') || String(location.name ?? 'Paya Lebar Square, Singapore'),
+                );
+                return (
+                  <div
+                    style={{
+                      aspectRatio: '4/3',
+                      borderBottom: '2px solid var(--pv-ink)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      background: 'var(--pv-cream)',
+                    }}
+                  >
+                    <iframe
+                      title={`Map of ${location.name ?? 'Paya Lebar Square'}`}
+                      src={`https://www.google.com/maps?q=${query}&output=embed`}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                    />
+                  </div>
+                );
+              })()}
 
               <div style={{ padding: 26 }}>
                 <h3 style={{ fontFamily: 'var(--pv-f-display)', fontSize: 26, letterSpacing: '-0.02em', lineHeight: 1, margin: 0, marginBottom: 4 }}>
@@ -539,43 +535,13 @@ export default async function ContactPage() {
                 )}
               </div>
             )}
-            <div
-              className="pv-hours-table"
-              style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(hoursDays.length, 1)}, 1fr)`, gap: 6 }}
-            >
-              {hoursDays.map((d, i) => {
-                const closed = Boolean(d.is_closed);
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '14px 4px',
-                      textAlign: 'center',
-                      border: '2px solid rgba(255,255,255,0.15)',
-                      background: 'rgba(255,255,255,0.04)',
-                      opacity: closed ? 0.45 : 1,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 10,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'rgba(255,255,255,0.55)',
-                        marginBottom: 6,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {d.day_label}
-                    </div>
-                    <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 14, letterSpacing: '-0.01em', lineHeight: 1.1 }}>
-                      {closed ? 'Closed' : d.time}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <HoursGrid
+              days={hoursDays.map((d) => ({
+                day_label: String(d.day_label ?? ''),
+                time: String(d.time ?? ''),
+                is_closed: Boolean(d.is_closed),
+              }))}
+            />
           </div>
           <style>{`
             @media (max-width: 900px) {
