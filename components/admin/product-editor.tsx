@@ -746,10 +746,58 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
               </div>
             )}
 
-            {/* Qty type info */}
+            {/* Qty type info + config */}
             {s.type === 'qty' && (
-              <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
-                Customers will see a <strong>− / + stepper</strong>. Price scales with quantity using the <em>Pricing & base pricing</em> matrix above, or any option-level formulas that reference <code>qty</code>.
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4 space-y-3">
+                <div className="text-[11px] text-neutral-600">
+                  Customers see a <strong>− / + stepper</strong>. Price scales with quantity using the <em>Pricing & base pricing</em> matrix above, or any option-level formulas that reference <code>qty</code>.
+                </div>
+
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                    Helper note (shown next to the stepper)
+                  </span>
+                  <input
+                    value={s.step_config?.note ?? ''}
+                    onChange={(e) => update(i, { step_config: { ...(s.step_config ?? {}), note: e.target.value || null } })}
+                    placeholder="e.g. Order 5 or more to unlock the 5% bulk discount."
+                    className={inputCls}
+                  />
+                  <p className="mt-1 text-[10px] text-neutral-500">Leave blank to hide. Shown directly next to the quantity input.</p>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                      Minimum quantity
+                    </span>
+                    <input
+                      type="number"
+                      value={s.step_config?.min ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value === '' ? null : Math.max(1, parseInt(e.target.value, 10) || 1);
+                        update(i, { step_config: { ...(s.step_config ?? {}), min: v } });
+                      }}
+                      placeholder="1"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                      Preset quantity buttons (comma-separated)
+                    </span>
+                    <input
+                      value={Array.isArray(s.step_config?.presets) ? (s.step_config!.presets as number[]).join(', ') : ''}
+                      onChange={(e) => {
+                        const parts = e.target.value.split(',').map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
+                        update(i, { step_config: { ...(s.step_config ?? {}), presets: parts } });
+                      }}
+                      placeholder="e.g. 50, 100, 200, 500"
+                      className={inputCls}
+                    />
+                    <p className="mt-1 text-[10px] text-neutral-500">Leave blank for no buttons. Buttons only render when there are 4 or more presets.</p>
+                  </label>
+                </div>
               </div>
             )}
 
