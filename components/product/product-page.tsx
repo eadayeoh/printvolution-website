@@ -1107,74 +1107,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               </div>
             </div>
 
-            {/* READY BY — calendar-style lead time preview */}
-            {readyBy && product.lead_time_days && (
-              <div
-                style={{
-                  marginTop: 22,
-                  border: '2px solid var(--pv-ink)',
-                  boxShadow: '6px 6px 0 var(--pv-magenta)',
-                  background: '#fff',
-                }}
-              >
-                <div
-                  style={{
-                    background: 'var(--pv-ink)',
-                    color: 'var(--pv-yellow)',
-                    fontFamily: 'var(--pv-f-mono)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: '0.15em',
-                    textTransform: 'uppercase',
-                    padding: '8px 14px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span>Ready by</span>
-                  <span style={{ color: '#fff' }}>
-                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto 1fr',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '18px 14px',
-                  }}
-                >
-                  <DateTile label="Order today" date={readyBy.today} tone="muted" />
-                  <div
-                    aria-hidden
-                    style={{
-                      fontFamily: 'var(--pv-f-display)',
-                      fontSize: 24,
-                      color: 'var(--pv-magenta)',
-                      letterSpacing: '-0.05em',
-                    }}
-                  >
-                    →
-                  </div>
-                  <DateTile label="Ready for collection" date={readyBy.ready} tone="highlight" />
-                </div>
-                <div
-                  style={{
-                    borderTop: '1px dashed var(--pv-rule)',
-                    padding: '10px 14px',
-                    fontFamily: 'var(--pv-f-mono)',
-                    fontSize: 10,
-                    color: 'var(--pv-muted)',
-                    letterSpacing: '0.06em',
-                    textAlign: 'center',
-                  }}
-                >
-                  Production clock starts the next working day. Weekends and file revisions add time.
-                </div>
-              </div>
-            )}
-
             {/* PRICE LADDER */}
             {priceLadder.length > 1 && (
               <div style={{ marginTop: 28 }}>
@@ -1360,6 +1292,74 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* READY BY — calendar-style lead time preview */}
+            {readyBy && product.lead_time_days && (
+              <div
+                style={{
+                  marginTop: 28,
+                  border: '2px solid var(--pv-ink)',
+                  boxShadow: '6px 6px 0 var(--pv-magenta)',
+                  background: '#fff',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'var(--pv-ink)',
+                    color: 'var(--pv-yellow)',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    padding: '8px 14px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>Ready by</span>
+                  <span style={{ color: '#fff' }}>
+                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '18px 14px',
+                  }}
+                >
+                  <DateTile label="Order today" date={readyBy.today} tone="muted" />
+                  <div
+                    aria-hidden
+                    style={{
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 24,
+                      color: 'var(--pv-magenta)',
+                      letterSpacing: '-0.05em',
+                    }}
+                  >
+                    →
+                  </div>
+                  <DateTile label="Ready for collection" date={readyBy.ready} tone="highlight" />
+                </div>
+                <div
+                  style={{
+                    borderTop: '1px dashed var(--pv-rule)',
+                    padding: '10px 14px',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    color: 'var(--pv-muted)',
+                    letterSpacing: '0.06em',
+                    textAlign: 'center',
+                  }}
+                >
+                  Production clock starts the next working day. Weekends and file revisions add time.
+                </div>
               </div>
             )}
           </div>
