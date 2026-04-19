@@ -69,6 +69,8 @@ export type ProductDetail = {
   tagline: string | null;
   description: string | null;
   is_gift: boolean;
+  lead_time_days: number | null;
+  print_mode: string | null;
   category: { slug: string; name: string } | null;
   subcategory: { slug: string; name: string } | null;
   pricing: PricingData | null;
@@ -146,7 +148,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, icon, tagline, description, is_gift, pricing_table,
+      id, slug, name, icon, tagline, description, is_gift, pricing_table, lead_time_days, print_mode,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_extras(*),
@@ -209,6 +211,8 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     tagline: d.tagline,
     description: d.description,
     is_gift: d.is_gift,
+    lead_time_days: (typeof d.lead_time_days === 'number') ? d.lead_time_days : null,
+    print_mode: (typeof d.print_mode === 'string' && d.print_mode.trim()) ? d.print_mode : null,
     category: Array.isArray(d.category) ? d.category[0] ?? null : d.category,
     subcategory: Array.isArray(d.subcategory) ? d.subcategory[0] ?? null : d.subcategory,
     pricing: pricing

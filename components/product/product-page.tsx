@@ -86,7 +86,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return manualColIdx;
   }, [visibleSteps, cfgState, product.pricing, manualColIdx]);
 
-  // Snap any user-entered quantity to the nearest supplier tier at or
+  // Snap any user-entered quantity to the nearest pricing tier at or
   // below it. Below the first tier → first tier.
   function snapToTier(q: number, tiers: number[]): number {
     if (!tiers.length) return q;
@@ -229,7 +229,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const priceLadder = useMemo(() => {
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
 
-    // pricing_table: one ladder row per supplier qty tier, for the
+    // pricing_table: one ladder row per qty tier, for the
     // currently-selected axes (size + view).
     if (product.pricing_table) {
       const pt = product.pricing_table;
@@ -503,6 +503,61 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               {product.tagline || intro}
             </p>
           )}
+          {(product.lead_time_days !== null || product.print_mode) && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 10,
+                marginTop: 18,
+              }}
+            >
+              {product.lead_time_days !== null && product.lead_time_days > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: '#fff',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '3px 3px 0 var(--pv-ink)',
+                    padding: '7px 12px',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <span style={{ color: 'var(--pv-muted)' }}>Lead time</span>
+                  <span style={{ color: 'var(--pv-ink)' }}>
+                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
+                  </span>
+                </span>
+              )}
+              {product.print_mode && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: '#fff',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '3px 3px 0 var(--pv-ink)',
+                    padding: '7px 12px',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <span style={{ color: 'var(--pv-muted)' }}>Print</span>
+                  <span style={{ color: 'var(--pv-magenta)' }}>{product.print_mode}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -647,6 +702,11 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             )}
 
             {visibleSteps.map((step, stepIdx) => {
+              // Products with a multi-axis pricing_table let users pick
+              // the quantity by clicking a row in the Volume Pricing
+              // table further down. Hiding the duplicate qty picker here
+              // keeps one source of truth.
+              if (step.type === 'qty' && product.pricing_table) return null;
               const stepNum = stepIdx + 1;
               if (step.type === 'qty') {
                 const currentQty = parseInt(cfgState[step.step_id] || '1', 10) || 1;

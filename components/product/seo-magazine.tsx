@@ -196,7 +196,7 @@ export function buildDefaultMagazine(input: {
         title: `What makes a good ${lower}.`,
         body: [
           `A ${lower} is a first impression in someone's hand or on their wall. Before anyone reads the text, they feel the **material, the finish, and the weight**. The best ${lower} in Singapore pair thoughtful ${cat.toLowerCase()} craft with a finish that holds up to real-world use — moisture, fingerprints, handbag wear and tear.`,
-          `Every option we offer is **FSC-certified** where applicable and sourced from established suppliers. No budget substitutions sneaked in to cut margins — what you see in the configurator is what runs on the press.`,
+          `Every option we offer is **FSC-certified** where applicable and carefully sourced. No budget substitutions sneaked in to cut margins — what you see in the configurator is what runs on the press.`,
         ],
         side: article1Side,
       },

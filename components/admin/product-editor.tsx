@@ -40,6 +40,10 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   );
   const [isActive, setIsActive] = useState(true);
   const [isGift, setIsGift] = useState(product.is_gift ?? false);
+  const [leadTimeDays, setLeadTimeDays] = useState<string>(
+    product.lead_time_days != null ? String(product.lead_time_days) : ''
+  );
+  const [printMode, setPrintMode] = useState(product.print_mode ?? '');
 
   // Extras
   const [seoTitle, setSeoTitle] = useState(product.extras?.seo_title ?? '');
@@ -91,6 +95,8 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         subcategory_id: subcategoryId || null,
         is_active: isActive,
         is_gift: isGift,
+        lead_time_days: leadTimeDays.trim() === '' ? null : (parseInt(leadTimeDays, 10) || null),
+        print_mode: printMode.trim() === '' ? null : printMode.trim(),
         seo_title: seoTitle || null, seo_desc: seoDesc || null, seo_body: seoBody || null,
         hero_big: heroBig || null,
         h1: h1 || null, h1em: h1em || null,
@@ -216,6 +222,32 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
               <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Also feeds the generated SEO Magazine lede.</p>
             </Field>
+          </Section>
+
+          {/* Production metadata — shown as chips in the hero */}
+          <Section title="Production details" desc="Shown as small chips below the tagline on the product page. Leave blank to hide.">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Lead time (working days)">
+                <input
+                  type="number"
+                  min={0}
+                  value={leadTimeDays}
+                  onChange={(e) => setLeadTimeDays(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. 7"
+                />
+                <p className="mt-1 text-[10px] text-neutral-500">Integer only. Rendered as "{leadTimeDays || 'N'} working days".</p>
+              </Field>
+              <Field label="Print method">
+                <input
+                  value={printMode}
+                  onChange={(e) => setPrintMode(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. Offset, Digital, UV, Embroidery"
+                />
+                <p className="mt-1 text-[10px] text-neutral-500">Free text. Rendered in magenta next to the Print chip.</p>
+              </Field>
+            </div>
           </Section>
 
           {/* Pointers to other tabs so admins know where to edit the other

@@ -48,6 +48,8 @@ const ProductUpdateSchema = z.object({
   subcategory_id: z.string().uuid().nullable(),
   is_active: z.boolean(),
   is_gift: z.boolean().default(false),
+  lead_time_days: z.number().int().nullable().optional(),
+  print_mode: z.string().nullable().optional(),
   // extras
   seo_title: z.string().nullable(),
   seo_desc: z.string().nullable(),
@@ -90,6 +92,8 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
       subcategory_id: d.subcategory_id,
       is_active: d.is_active,
       is_gift: d.is_gift,
+      lead_time_days: d.lead_time_days ?? null,
+      print_mode: d.print_mode ?? null,
     })
     .eq('slug', slug)
     .select('id')
