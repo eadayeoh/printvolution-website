@@ -67,26 +67,31 @@ const matcher = {
       need: 'Vehicle-ID tab or a small *contact-info* sticker on the side panel',
       pick_title: '90 × 54mm · Face In / Face Out · 200 pcs',
       pick_detail: 'From S$49.50 for the whole run (≈ S$0.25/pc at 1000 pcs). The name-card footprint fits a quiet corner without crowding the panel.',
+      apply: { size: '90x54', view: 'face', qty: 200 },
     },
     {
       need: 'Square *door or bumper* sticker — shop logo, campaign badge',
       pick_title: '115 × 120mm · Face In / Face Out · 500 pcs',
       pick_detail: 'From S$364.30 for 500 pcs (≈ S$0.73 each). Good visibility without needing a wrap-grade install.',
+      apply: { size: '115x120', view: 'face', qty: 500 },
     },
     {
       need: 'Standard *door-panel logo* for a delivery or service vehicle fleet',
       pick_title: '130 × 170mm · Face In / Face Out · 1000 pcs',
       pick_detail: 'From S$822.30 for 1000 pcs (≈ S$0.82 each). Scales to full-fleet rollouts at five-thousand-piece tier.',
+      apply: { size: '130x170', view: 'face', qty: 1000 },
     },
     {
       need: 'Long *windscreen sunstrip* or side-body stripe',
       pick_title: '90 × 420mm · Face In / Face Out · 200 pcs',
       pick_detail: 'From S$318.80 for 200 pcs. The 420mm length gives room for a URL plus a phone number across the top of the glass.',
+      apply: { size: '90x420', view: 'face', qty: 200 },
     },
     {
       need: "Decal sits on a *rear windscreen* and must read from both sides (ride-hail, courier ID)",
-      pick_title: 'Any size · Both Side View (4C + White Base + 4C)',
+      pick_title: '130 × 170mm · Both Side View (4C + White Base + 4C)',
       pick_detail: 'Reverse print on the inside face, forward print on the outside. Drivers see it right-way-round from the cabin, the road sees it from behind. Roughly 1.5–2× the Face-only tier price.',
+      apply: { size: '130x170', view: 'both', qty: 500 },
     },
   ],
 };

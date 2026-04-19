@@ -1478,7 +1478,23 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       {(() => {
         const extras = product.extras as (typeof product.extras & { matcher?: MatcherData }) | null;
         const override = extras?.matcher as MatcherData | undefined;
-        return <ProductMatcher data={override ?? DEFAULT_MATCHER} />;
+        return (
+          <ProductMatcher
+            data={override ?? DEFAULT_MATCHER}
+            onUse={(apply) => {
+              // Merge the recommended combo over current state. String
+              // values land on swatch/select steps by slug; numbers
+              // become qty string values.
+              setCfgState((s) => {
+                const next = { ...s };
+                for (const [k, v] of Object.entries(apply)) {
+                  next[k] = typeof v === 'number' ? String(v) : v;
+                }
+                return next;
+              });
+            }}
+          />
+        );
       })()}
 
       {/* SEO MAGAZINE — rendered on every product page, same precedence order. */}

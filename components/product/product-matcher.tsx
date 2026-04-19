@@ -14,9 +14,13 @@ type MatcherRow = {
   pick_title: string;
   /** Second line of detail under the pick title. */
   pick_detail: string;
-  /** Optional preset key — reserved for future wiring where clicking
-   *  "Use this" pre-fills the configurator. Today we just scroll. */
+  /** Optional preset key — legacy, kept for data compatibility. */
   preset?: string;
+  /** Pre-configuration payload. Keys are configurator step_ids
+   *  (e.g. "size", "view"), values are option slugs or a quantity
+   *  number for the qty step. Clicking "Use this" applies this over
+   *  the current cfgState and scrolls to the pricing section. */
+  apply?: Record<string, string | number>;
   cta_label?: string;
 };
 
@@ -103,7 +107,16 @@ function renderNeed(text: string) {
   });
 }
 
-export function ProductMatcher({ data }: { data?: MatcherData | null }) {
+export function ProductMatcher({
+  data,
+  onUse,
+}: {
+  data?: MatcherData | null;
+  /** Called when a "Use this" button is clicked. Receives the row's
+   *  `apply` payload (step_id → option slug / qty). Parent should merge
+   *  it into configurator state. */
+  onUse?: (apply: Record<string, string | number>) => void;
+}) {
   const d = data ?? DEFAULT_MATCHER;
   const titleLines = (d.title ?? '').split('\n');
 
@@ -293,8 +306,7 @@ export function ProductMatcher({ data }: { data?: MatcherData | null }) {
                 type="button"
                 className="pv-matcher-goto"
                 onClick={() => {
-                  // Reserved for future: pre-select configurator options from
-                  // row.preset. Today just scroll to the configurator.
+                  if (row.apply && onUse) onUse(row.apply);
                   document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
                 style={{
