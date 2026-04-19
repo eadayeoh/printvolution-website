@@ -233,48 +233,61 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
               boxShadow: '0 12px 30px rgba(10,10,10,0.08)',
             }}
           >
-            <div style={{ maxWidth: 1560, margin: '0 auto', padding: '32px 24px' }}>
+            <div style={{ maxWidth: 1560, margin: '0 auto', padding: '28px 24px' }}>
               <div
+                className="pv-mega-grid"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 40,
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  columnGap: 32,
+                  rowGap: 28,
+                  alignItems: 'start',
                 }}
               >
-                {mega[openMega].map((section) => (
-                  <div key={section.id}>
-                    <h4
-                      style={{
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 11,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: 'var(--pv-magenta)',
-                        marginBottom: 12,
-                        paddingBottom: 6,
-                        borderBottom: '1px solid var(--pv-rule)',
-                      }}
-                    >
-                      {section.section_heading}
-                    </h4>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
-                      {section.items.map((it) => (
-                        <li key={it.product_slug}>
-                          <Link
-                            href={productHref(it.product_slug, productRoutes)}
-                            onClick={() => setOpenMega(null)}
-                            style={{ fontSize: 13, color: 'var(--pv-ink)' }}
-                          >
-                            {it.label}
-                          </Link>
-                        </li>
-                      ))}
-                      {section.items.length === 0 && (
-                        <li style={{ fontSize: 11, color: 'var(--pv-muted)' }}>Coming soon</li>
-                      )}
-                    </ul>
-                  </div>
-                ))}
+                {mega[openMega]
+                  .filter((section) => section.items.length > 0)
+                  .map((section) => (
+                    <div key={section.id}>
+                      <h4
+                        style={{
+                          fontFamily: 'var(--pv-f-mono)',
+                          fontSize: 11,
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          color: 'var(--pv-magenta)',
+                          margin: 0,
+                          marginBottom: 10,
+                          paddingBottom: 6,
+                          borderBottom: '1px solid var(--pv-rule)',
+                        }}
+                      >
+                        {section.section_heading}
+                      </h4>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 4 }}>
+                        {section.items.map((it) => (
+                          <li key={it.product_slug}>
+                            <Link
+                              href={productHref(it.product_slug, productRoutes)}
+                              onClick={() => setOpenMega(null)}
+                              className="pv-mega-link"
+                              style={{
+                                display: 'block',
+                                fontSize: 13,
+                                color: 'var(--pv-ink)',
+                                padding: '3px 6px',
+                                margin: '0 -6px',
+                                borderRadius: 3,
+                                textDecoration: 'none',
+                                transition: 'background 0.12s, color 0.12s',
+                              }}
+                            >
+                              {it.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
@@ -402,6 +415,10 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
         @media (max-width: 899px) {
           .pv-header-links { display: none !important; }
           .pv-header-account { display: none; }
+        }
+        .pv-mega-link:hover {
+          background: var(--pv-cream);
+          color: var(--pv-magenta);
         }
       `}</style>
     </>
