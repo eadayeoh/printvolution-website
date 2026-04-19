@@ -139,6 +139,26 @@ const pricingTable = {
   prices,
 };
 
+// Merge admin-uploaded option.image_url values from existing configurator
+// rows into a freshly-built option array. We key by step_id + slug so
+// that even if the option list is reordered, an image uploaded by the
+// admin for (e.g.) step='type', slug='b' carries across a re-run of
+// this script. Previously this script DELETE+INSERTed the configurator
+// with hardcoded options, wiping every image_url the admin had set.
+function mergeOptionImages(newOptions, existingOptions) {
+  if (!Array.isArray(existingOptions) || existingOptions.length === 0) return newOptions;
+  const imgBySlug = new Map();
+  for (const o of existingOptions) {
+    if (o?.slug && typeof o.image_url === 'string' && o.image_url) {
+      imgBySlug.set(o.slug, o.image_url);
+    }
+  }
+  return newOptions.map((o) => {
+    const existing = imgBySlug.get(o.slug);
+    return existing ? { ...o, image_url: existing } : o;
+  });
+}
+
 try {
   const [prod] = await sql`select id from public.products where slug='hand-fan'`;
   if (!prod) throw new Error('hand-fan product not found');
@@ -147,6 +167,19 @@ try {
   await sql`update public.products set pricing_table = ${sql.json(pricingTable)}, pricing_compute = null where id = ${prod.id}`;
   console.log(`✓ pricing_table seeded — ${priceCount} prices across 3 valid combos`);
 
+  // Snapshot existing configurator before delete so we can carry
+  // admin-uploaded option images into the rebuilt rows.
+  const existingCfg = await sql`
+    select step_id, options from public.product_configurator where product_id = ${prod.id}
+  `;
+  const existingByStep = new Map();
+  for (const row of existingCfg) existingByStep.set(row.step_id, row.options);
+  const mergedMaterial  = mergeOptionImages(materialAxis,  existingByStep.get('material'));
+  const mergedFinishing = mergeOptionImages(finishingAxis, existingByStep.get('finishing'));
+  const mergedHandle    = mergeOptionImages(handleAxis,    existingByStep.get('handle'));
+  const mergedType      = mergeOptionImages(typeAxis,      existingByStep.get('type'));
+  const mergedAssembly  = mergeOptionImages(assemblyAxis,  existingByStep.get('assembly'));
+
   await sql`delete from public.product_configurator where product_id = ${prod.id}`;
   await sql`
     insert into public.product_configurator
@@ -154,27 +187,27 @@ try {
     values
       (
         ${prod.id}, 'material', 0, 'Material', 'swatch', true,
-        ${sql.json(materialAxis)},
+        ${sql.json(mergedMaterial)},
         null, null
       ),
       (
         ${prod.id}, 'finishing', 1, 'Finishing', 'swatch', true,
-        ${sql.json(finishingAxis)},
+        ${sql.json(mergedFinishing)},
         null, null
       ),
       (
         ${prod.id}, 'handle', 2, 'Handle', 'swatch', true,
-        ${sql.json(handleAxis)},
+        ${sql.json(mergedHandle)},
         null, null
       ),
       (
         ${prod.id}, 'type', 3, 'Type (shape)', 'swatch', true,
-        ${sql.json(typeAxis)},
+        ${sql.json(mergedType)},
         null, null
       ),
       (
         ${prod.id}, 'assembly', 4, 'Assembly', 'swatch', true,
-        ${sql.json(assemblyAxis)},
+        ${sql.json(mergedAssembly)},
         ${sql.json({ step: 'handle', value: 'yes' })},
         ${sql.json({ note: 'Included — body glued to handle, ready to wave. S$0.21/pc.' })}
       ),

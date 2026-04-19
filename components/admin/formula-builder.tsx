@@ -12,7 +12,7 @@ type Props = {
  * Formula presets the admin can pick from without typing any code.
  * All outputs are SGD dollars (the product page multiplies by 100).
  */
-type PresetKey = 'none' | 'flat' | 'per_unit' | 'volume_discount' | 'bulk_tier' | 'custom';
+type PresetKey = 'none' | 'flat' | 'per_unit' | 'volume_discount' | 'bulk_tier' | 'percent_bulk_discount' | 'custom';
 
 type Preset = {
   key: PresetKey;
@@ -91,6 +91,26 @@ const PRESETS: Preset[] = [
     },
   },
   {
+    key: 'percent_bulk_discount',
+    label: 'Bulk % discount (threshold)',
+    description:
+      'Give a percent discount off the running total once quantity hits a threshold. Example: 10% off the whole line at 500 pcs and above. Place this step LAST in the configurator so the discount sees the full base price.',
+    fields: [
+      { id: 'percent', label: 'Discount (%)', type: 'number', defaultValue: '10' },
+      { id: 'threshold', label: 'Kicks in at qty', hint: 'Orders of this quantity and above get the discount.', type: 'number', defaultValue: '500' },
+    ],
+    build: ({ percent, threshold }) => {
+      const p = Math.max(0, Number(percent || 0));
+      const t = Math.max(1, Math.floor(Number(threshold || 1)));
+      if (p <= 0) return '0';
+      const shift = t - 1;
+      const frac = p / 100;
+      // 0 below threshold; -frac × base at / above. The `Math.min(1, Math.max(0, qty - shift))`
+      // is 0 for qty <= shift (= threshold-1) and 1 for qty >= threshold.
+      return `-base * ${frac} * Math.min(1, Math.max(0, qty - ${shift}))`;
+    },
+  },
+  {
     key: 'custom',
     label: 'Custom formula (advanced)',
     description: 'Write your own. Allowed: numbers, qty, + − × ÷, parentheses, Math.min(...), Math.max(...). Output is SGD dollars for the whole line.',
@@ -118,6 +138,20 @@ function detectPreset(formula: string): { key: PresetKey; vars: Record<string, s
   if (vd) {
     const base = vd[1], cap = vd[2], step = vd[3];
     return { key: 'volume_discount', vars: { base, step, cap } };
+  }
+
+  // percent_bulk_discount: -base*FRAC*Math.min(1,Math.max(0,qty-SHIFT))
+  const pbd = /^-base\*(-?\d+(?:\.\d+)?)\*Math\.min\(1,Math\.max\(0,qty-(-?\d+(?:\.\d+)?)\)\)$/.exec(f);
+  if (pbd) {
+    const fraction = parseFloat(pbd[1]);
+    const shift = parseFloat(pbd[2]);
+    return {
+      key: 'percent_bulk_discount',
+      vars: {
+        percent: String(Math.round(fraction * 10000) / 100),
+        threshold: String(shift + 1),
+      },
+    };
   }
 
   return { key: 'custom', vars: { formula } };

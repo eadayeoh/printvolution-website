@@ -42,11 +42,18 @@ const h1em = 'offset-run, fully assembled.';
 const tagline =
   'Custom-printed branded hand fans for Singapore events — matt-laminated art card or waterproof synthetic, 14 ready shapes plus custom-quote die-cuts, plastic-handle or paddle, fully assembled. From 100 pieces, seven working days.';
 
+// Short description — shown as the hero sub-copy directly under the
+// H1, so keep it to one crisp sentence. The full stock / shape / handle
+// details live in the intro + magazine below, not here.
 const description =
-  'Hand fan printing in Singapore for roadshows, GE rallies, National Day block parties, temple and religious-festival handouts, wedding favours and corporate anniversaries. 310gsm Art Card with Matt Lamination for the event-standard build, or 500gsm Synthetic Card for outdoor-all-day heat and humid air. Plastic-handle or hand-held paddle, 14 ready shapes (round, cloud, cross, soft square, flower, star, raindrop, bear, thumbs-up, polka, diamond, paddles) plus custom die-cut shapes on custom quote, fully assembled at our Paya Lebar workshop, ready to wave straight out of the box.';
+  'Hand fan printing in Singapore for roadshows, rallies, block parties, temple handouts, weddings and corporate anniversaries — fully assembled at our Paya Lebar workshop, from 100 pieces in seven working days.';
 
+// Intro — plain text; not rendered on the hero anymore (description
+// wins there now) but still feeds JSON-LD / search-engine metadata.
+// Kept concise and without markdown — asterisks would show up verbatim
+// in structured-data snippets.
 const intro =
-  'Hand fan printing in Singapore splits the decision into four axes — **stock, finishing, handle, shape** — and the calculator locks each down in order. **310gsm Art Card with Matt Lamination** is the event-standard pick: survives a three-hour roadshow in 32°C heat, ink does not crack at the handle crease, and unlocks the full shape library (11 with-handle Types A–K plus 3 no-handle paddles L–N). **500gsm Synthetic Card** is waterproof — outdoor-all-day, humid goodie-bag, Chinese-New-Year open-house scenarios all favour it — and comes in the round Type A shape only. Handle options: **Yes — with plastic handle** (body glued to handle in a straight line, S$0.21/pc assembly included) or **No — hand-held paddle** (310gsm only, no stick). Quantity tiers: 100, 200, 300, 400, 500, 1,000 — plus 2,000 and 3,000 on 310gsm matt with no handle. Need a custom die-cut silhouette? That route runs on a custom quote, not the on-page calculator. Seven working days from artwork approval to ready-for-collection at Paya Lebar Square.';
+  'Hand fan printing in Singapore splits into four decisions — stock, finishing, handle, shape — and the calculator locks each down in order. 310gsm Art Card with Matt Lamination is the event-standard pick (survives a three-hour roadshow in 32°C heat, full library of 11 with-handle shapes plus 3 paddles). 500gsm Synthetic Card is waterproof for outdoor-all-day and humid-goodie-bag use cases (round Type A only). Handle: Yes (with plastic handle, body glued straight, S$0.21/pc assembly included) or No (hand-held paddle, 310gsm only). Quantity tiers run 100 through 3,000 pieces; custom die-cut silhouettes are available on a custom quote. Seven working days from artwork approval to ready-for-collection at Paya Lebar Square.';
 
 // SEO attributes intentionally carry use-cases + location + outcome
 // only — no material names (gsm, art card, synthetic) or print specs
@@ -264,11 +271,35 @@ const faqs = [
 ];
 
 // ────────────────────────────────────────────────────────────────────
-// Apply
+// Apply — preserves any admin-uploaded images on how_we_print cards
+// (keyed by title) so re-running this rewrite never wipes icons the
+// admin set through the editor.
 // ────────────────────────────────────────────────────────────────────
+function mergeHowWePrintIcons(newCards, existingCards) {
+  if (!Array.isArray(existingCards) || existingCards.length === 0) return newCards;
+  // Match by title first (safe against reorder), fall back to index.
+  const byTitle = new Map();
+  existingCards.forEach((c, i) => {
+    if (c?.title) byTitle.set(c.title, { icon_url: c.icon_url ?? null, index: i });
+  });
+  return newCards.map((card, i) => {
+    const titleMatch = card.title ? byTitle.get(card.title) : null;
+    const existingIconByIndex = existingCards[i]?.icon_url ?? null;
+    const preservedIcon = titleMatch?.icon_url ?? existingIconByIndex ?? null;
+    return preservedIcon ? { ...card, icon_url: preservedIcon } : card;
+  });
+}
+
 try {
   const [prod] = await sql`select id from public.products where slug='hand-fan'`;
   if (!prod) throw new Error('hand-fan not found');
+
+  // Snapshot existing extras so we can merge admin-set images back in
+  // rather than clobbering them with the hard-coded defaults below.
+  const [existingExtras] = await sql`
+    select how_we_print from public.product_extras where product_id = ${prod.id}
+  `;
+  const mergedHowWePrint = mergeHowWePrintIcons(how_we_print, existingExtras?.how_we_print);
 
   await sql`
     update public.products
@@ -281,7 +312,7 @@ try {
   // override the default "skip h1 on rewrites" convention here.
   await sql`
     insert into public.product_extras (product_id, seo_title, seo_desc, seo_body, h1, h1em, intro, matcher, seo_magazine, how_we_print)
-    values (${prod.id}, ${seo_title}, ${seo_desc}, ${seo_body}, ${h1}, ${h1em}, ${intro}, ${sql.json(matcher)}, ${sql.json(seo_magazine)}, ${sql.json(how_we_print)})
+    values (${prod.id}, ${seo_title}, ${seo_desc}, ${seo_body}, ${h1}, ${h1em}, ${intro}, ${sql.json(matcher)}, ${sql.json(seo_magazine)}, ${sql.json(mergedHowWePrint)})
     on conflict (product_id) do update
       set seo_title = excluded.seo_title,
           seo_desc = excluded.seo_desc,
