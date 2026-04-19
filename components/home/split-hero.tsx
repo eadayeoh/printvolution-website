@@ -22,7 +22,6 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
           margin: '0 auto',
           display: 'grid',
           gridTemplateColumns: items.length > 1 ? '1fr 1fr' : '1fr',
-          minHeight: 640,
           position: 'relative',
         }}
       >
@@ -63,8 +62,8 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
                 background: bg,
                 borderRight: i === 0 && items.length > 1 ? '3px solid var(--pv-ink)' : 'none',
                 padding: '64px 48px',
-                display: 'grid',
-                gridTemplateRows: 'auto 1fr',
+                display: 'flex',
+                flexDirection: 'column',
                 gap: 32,
                 overflow: 'hidden',
               }}
@@ -142,7 +141,7 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
               <div
                 style={{
                   width: '100%',
-                  minHeight: 280,
+                  aspectRatio: '2 / 1',
                   border: '3px solid var(--pv-ink)',
                   boxShadow: item.side === 'gifts' ? '8px 8px 0 var(--pv-cyan)' : '8px 8px 0 var(--pv-ink)',
                   backgroundImage: item.image_url ? `url(${item.image_url})` : undefined,
@@ -158,7 +157,7 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
 
       <style>{`
         @media (max-width: 900px) {
-          .pv-split-hero-inner { grid-template-columns: 1fr !important; min-height: auto !important; }
+          .pv-split-hero-inner { grid-template-columns: 1fr !important; }
           .pv-split-side { padding: 48px 24px !important; border-right: none !important; }
           .pv-split-side:first-child { border-bottom: 3px solid var(--pv-ink); }
         }
