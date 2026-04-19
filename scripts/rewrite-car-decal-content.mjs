@@ -61,7 +61,7 @@ const matcher = {
   title: "Tell us the job,\nwe'll point you at",
   title_em: 'the right spec.',
   right_note_title: 'Every decal is outdoor-graded.',
-  right_note_body: 'Offset-printed on vinyl with an opaque white base. Reads bright on tinted or dark glass, survives SG sun + carpark cycles.',
+  right_note_body: 'Offset-printed on weatherproof adhesive film with an opaque white base. Reads bright on tinted or dark glass, survives SG sun and carpark cycles.',
   rows: [
     {
       need: 'Vehicle-ID tab or a small *contact-info* sticker on the side panel',
@@ -98,7 +98,7 @@ const seo_magazine = {
       title: 'Why offset for a car-decal run.',
       body: [
         `Digital prints are perfect for *under two hundred pieces* — no setup cost, fast turnaround, great for one-off designs. The second you cross into fleet quantities, offset flips the maths. The press plate is a one-time setup, but once it's running every additional sticker is pennies. That's why the 5000-piece tier lands at roughly one-fifth the per-piece cost of the 200 tier — the plate cost amortises across the whole run.`,
-        `The other reason offset wins for vehicle use is **colour consistency**. A fleet of two hundred vans with the same logo sticker needs every decal to be the same pantone. Digital can drift across a long run; offset does not — the ink mix is set once and laid down identically on every sheet.`,
+        `The other reason offset wins for vehicle use is **colour consistency**. A fleet of two hundred vans with the same logo sticker needs every decal in the same exact colour. Digital can drift across a long run; offset does not — the ink mix is set once and laid down identically on every sheet.`,
       ],
       side: 'ink',
     },
@@ -132,6 +132,35 @@ const seo_magazine = {
   ],
 };
 
+// "How we print" — 4 cards under the fold. Replaces the old gloss/vinyl/
+// calendared-film narrative with offset + white-base + bulk-run truth.
+const how_we_print = [
+  {
+    icon_url: null,
+    emoji: '🖨️',
+    title: 'Offset with white base',
+    desc: 'CMYK over an opaque white layer so the colours read bright on tinted or dark glass — not the washed-out look you get from a digital print straight onto clear film.',
+  },
+  {
+    icon_url: null,
+    emoji: '🪟',
+    title: 'Both-side-view on menu',
+    desc: '4C · white · 4C sandwich for rear-window decals that need to read correctly from the road AND from the driver\'s seat.',
+  },
+  {
+    icon_url: null,
+    emoji: '📦',
+    title: 'Bulk-run economics',
+    desc: 'Offset plates are a one-time setup. Price per piece drops sharply from the 200 tier to the 5000 tier — the bigger the fleet, the lower the unit cost.',
+  },
+  {
+    icon_url: null,
+    emoji: '🔍',
+    title: 'File check inside 12 hours',
+    desc: 'Every PDF is reviewed by a human before plate setup. CMYK conversion, 3mm bleed, 300dpi and font embedding are checked; you hear back the same business day.',
+  },
+];
+
 const faqs = [
   {
     question: 'What is the minimum order for car decals?',
@@ -151,7 +180,7 @@ const faqs = [
   },
   {
     question: 'How long do the decals last outdoors?',
-    answer: 'Our vinyl + offset-ink combination is rated for 3–5 years of outdoor exposure under Singapore conditions. Edge lifting and fading are the usual failure modes; daily high-pressure car washes accelerate both. For a permanent fleet install budget a reorder cycle every 2 years to keep the branding fresh.',
+    answer: 'The adhesive film we use with offset ink is rated for 3–5 years of outdoor exposure under Singapore conditions. Edge lifting and fading are the usual failure modes; daily high-pressure car washes accelerate both. For long-term fleet branding budget a reorder cycle every 2 years to keep the colours fresh.',
   },
   {
     question: 'What artwork format do you need?',
@@ -159,7 +188,7 @@ const faqs = [
   },
   {
     question: 'Do you install the decals on the vehicles?',
-    answer: 'We supply the decals ready for self-install. For full fleet installation (200+ vehicles) we can introduce you to installer partners in Paya Lebar / Ubi — the install quote is separate from the print quote.',
+    answer: 'We supply the decals ready for self-install — peel, align, press. For full fleet rollouts across many vehicles we can point you to application partners in the Paya Lebar / Ubi area; that quote is separate from the print quote.',
   },
   {
     question: 'What is the turnaround time?',
@@ -183,8 +212,8 @@ try {
   `;
 
   await sql`
-    insert into public.product_extras (product_id, seo_title, seo_desc, seo_body, h1, h1em, intro, matcher, seo_magazine)
-    values (${prod.id}, ${seo_title}, ${seo_desc}, ${seo_body}, ${h1}, ${h1em}, ${intro}, ${sql.json(matcher)}, ${sql.json(seo_magazine)})
+    insert into public.product_extras (product_id, seo_title, seo_desc, seo_body, h1, h1em, intro, matcher, seo_magazine, how_we_print)
+    values (${prod.id}, ${seo_title}, ${seo_desc}, ${seo_body}, ${h1}, ${h1em}, ${intro}, ${sql.json(matcher)}, ${sql.json(seo_magazine)}, ${sql.json(how_we_print)})
     on conflict (product_id) do update
       set seo_title = excluded.seo_title,
           seo_desc = excluded.seo_desc,
@@ -193,8 +222,14 @@ try {
           h1em = excluded.h1em,
           intro = excluded.intro,
           matcher = excluded.matcher,
-          seo_magazine = excluded.seo_magazine
+          seo_magazine = excluded.seo_magazine,
+          how_we_print = excluded.how_we_print
   `;
+
+  // Drop the legacy 1-axis product_pricing matrix — pricing_table is
+  // the source of truth now, and leaving the old rows around lets the
+  // homepage tiles show a stale "from" price.
+  await sql`delete from public.product_pricing where product_id = ${prod.id}`;
 
   // Replace FAQs
   await sql`delete from public.product_faqs where product_id = ${prod.id}`;

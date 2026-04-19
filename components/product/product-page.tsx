@@ -1,6 +1,102 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+
+// Business-day math for the "ready by" calendar card. Weekends are
+// skipped; SG public holidays are not (the lead time is a quote, and
+// admin can always bump the per-product day count to absorb holidays).
+function nextBusinessDay(from: Date): Date {
+  const d = new Date(from);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return d;
+}
+function addBusinessDays(start: Date, days: number): Date {
+  const d = new Date(start);
+  let remaining = days;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) remaining--;
+  }
+  return d;
+}
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function DateTile({
+  label,
+  date,
+  tone,
+}: {
+  label: string;
+  date: Date;
+  tone: 'muted' | 'highlight';
+}) {
+  const isHi = tone === 'highlight';
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          fontFamily: 'var(--pv-f-mono)',
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: isHi ? 'var(--pv-magenta)' : 'var(--pv-muted)',
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          border: `2px solid ${isHi ? 'var(--pv-magenta)' : 'var(--pv-ink)'}`,
+          background: isHi ? 'var(--pv-yellow)' : '#fff',
+          padding: '6px 10px 8px',
+          display: 'inline-block',
+          minWidth: 80,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--pv-f-mono)',
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--pv-ink)',
+          }}
+        >
+          {WEEKDAY_SHORT[date.getDay()]}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--pv-f-display)',
+            fontSize: 32,
+            lineHeight: 1,
+            letterSpacing: '-0.04em',
+            color: 'var(--pv-ink)',
+            margin: '2px 0',
+          }}
+        >
+          {date.getDate()}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--pv-f-mono)',
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--pv-ink)',
+          }}
+        >
+          {MONTH_SHORT[date.getMonth()]}
+        </div>
+      </div>
+    </div>
+  );
+}
 import Link from 'next/link';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
@@ -62,6 +158,22 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Ready-by calendar. Deferred until after mount so SSR vs client
+  // date drift can't cause a hydration mismatch.
+  const [readyBy, setReadyBy] = useState<{ today: Date; ready: Date } | null>(null);
+  useEffect(() => {
+    if (!product.lead_time_days || product.lead_time_days <= 0) return;
+    const today = new Date();
+    // Clock starts the next business day (tomorrow if it's a weekday,
+    // otherwise the following Monday).
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const jobStart = nextBusinessDay(tomorrow);
+    // Ready on the Nth business day inclusive of jobStart.
+    const ready = addBusinessDays(jobStart, product.lead_time_days - 1);
+    setReadyBy({ today, ready });
+  }, [product.lead_time_days]);
 
   const visibleSteps = useMemo(
     () => product.configurator.filter((step) => !step.show_if || cfgState[step.show_if.step] === step.show_if.value),
@@ -1033,6 +1145,82 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 Pre-press file check · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$80</b>
               </div>
             </div>
+
+            {/* READY BY — calendar-style lead time preview */}
+            {readyBy && product.lead_time_days && (
+              <div
+                style={{
+                  marginTop: 22,
+                  border: '2px solid var(--pv-ink)',
+                  boxShadow: '6px 6px 0 var(--pv-magenta)',
+                  background: '#fff',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'var(--pv-ink)',
+                    color: 'var(--pv-yellow)',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    padding: '8px 14px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>Ready by</span>
+                  <span style={{ color: '#fff' }}>
+                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '18px 14px',
+                  }}
+                >
+                  <DateTile
+                    label="Order today"
+                    date={readyBy.today}
+                    tone="muted"
+                  />
+                  <div
+                    aria-hidden
+                    style={{
+                      fontFamily: 'var(--pv-f-display)',
+                      fontSize: 24,
+                      color: 'var(--pv-magenta)',
+                      letterSpacing: '-0.05em',
+                    }}
+                  >
+                    →
+                  </div>
+                  <DateTile
+                    label="Ready for collection"
+                    date={readyBy.ready}
+                    tone="highlight"
+                  />
+                </div>
+                <div
+                  style={{
+                    borderTop: '1px dashed var(--pv-rule)',
+                    padding: '10px 14px',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    color: 'var(--pv-muted)',
+                    letterSpacing: '0.06em',
+                    textAlign: 'center',
+                  }}
+                >
+                  Production clock starts the next working day. Weekends and file revisions add time.
+                </div>
+              </div>
+            )}
 
             {/* PRICE LADDER */}
             {priceLadder.length > 1 && (
