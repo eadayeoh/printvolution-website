@@ -111,7 +111,7 @@ try {
       (
         ${prod.id}, 'qty', 2, 'Quantity', 'qty', true,
         '[]'::jsonb, null,
-        ${sql.json({ presets: [1, 2, 5, 10, 20], min: 1, step: 1, note: 'Order 5 or more to unlock the 5% bulk discount built into the Height price.' })}
+        ${sql.json({ presets: [], min: 1, step: 1, note: 'Order 5 or more to unlock the 5% bulk discount built into the Height price.' })}
       )
   `;
   console.log('✓ configurator rebuilt — Height / Finish / Quantity (discount baked into Height options)');

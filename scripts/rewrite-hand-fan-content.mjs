@@ -83,37 +83,37 @@ const matcher = {
   rows: [
     {
       need: '*Roadshow at Bugis Junction* this Saturday — 500 branded fans for booth visitors',
-      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type B Cloud · 500 pcs',
+      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type B · 500 pcs',
       pick_detail:
         'Matt lam on 310gsm is the event-standard print for Singapore-heat booths — solid hand-feel, fingerprint-resistant, photographs premium across the run. From S$549.40 including assembly. Seven working days.',
       apply: { material: '310gsm', finishing: 'matt', handle: 'yes', type: 'b', assembly: 'yes', qty: 500 },
     },
     {
-      need: '*National Day block party* — 1,000 printed fans in polka-dot shape for the neighbourhood',
-      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type J Polka · 1,000 pcs',
+      need: '*National Day block party* — 1,000 branded fans for the neighbourhood',
+      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type J · 1,000 pcs',
       pick_detail:
-        'At 1,000 pieces the per-fan print cost drops sharply — from S$794.10 including assembly. Polka circle reads playful across a crowd; matt lam keeps the fingerprints off after a full afternoon of handling.',
+        'At 1,000 pieces the per-fan print cost drops sharply — from S$794.10 including assembly. Matt lam keeps the fingerprints off after a full afternoon of handling.',
       apply: { material: '310gsm', finishing: 'matt', handle: 'yes', type: 'j', assembly: 'yes', qty: 1000 },
     },
     {
       need: '*Outdoor all-day corporate anniversary* — humidity, sweaty palms, 300 fans printed',
-      pick_title: '500gsm Synthetic Card · Plastic Handle · Type A Round · 300 pcs',
+      pick_title: '500gsm Synthetic Card · Plastic Handle · Type A · 300 pcs',
       pick_detail:
-        '500gsm synthetic is waterproof — no absorption when palms sweat, no warping in humid air. Type A round is the only shape printed on synthetic stock. From S$587.70 including assembly.',
+        '500gsm synthetic is waterproof — no absorption when palms sweat, no warping in humid air. Type A is the only shape printed on synthetic stock. From S$587.70 including assembly.',
       apply: { material: '500gsm', finishing: 'none', handle: 'yes', type: 'a', assembly: 'yes', qty: 300 },
     },
     {
       need: '*Temple / religious-festival distribution* — 3,000 paddle fans, no stick',
-      pick_title: '310gsm Art Card · Matt Lam · No Handle · Type L Paddle · 3,000 pcs',
+      pick_title: '310gsm Art Card · Matt Lam · No Handle · Type L · 3,000 pcs',
       pick_detail:
         'Hand-held paddle (no stick) — fits palms of all ages in a prayer hall, quicker to distribute in bulk, no assembly fee. From S$918.00. Only printed on 310gsm matt — synthetic has no no-handle option.',
       apply: { material: '310gsm', finishing: 'matt', handle: 'no', type: 'l', qty: 3000 },
     },
     {
       need: '*Small corporate event*, 100 fans, *tight budget* — still prints premium',
-      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type G Raindrop · 100 pcs',
+      pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type G · 100 pcs',
       pick_detail:
-        'Cheapest entry — 100 pcs printed with handle and assembly from S$257.10. Raindrop circle is one of the 11 with-handle shapes; matt-lam finish still photographs premium at the smallest run size.',
+        'Cheapest entry — 100 pcs printed with handle and assembly from S$257.10. Type G is one of the 11 with-handle shapes; matt-lam finish still photographs premium at the smallest run size.',
       apply: { material: '310gsm', finishing: 'matt', handle: 'yes', type: 'g', assembly: 'yes', qty: 100 },
     },
   ],
@@ -148,7 +148,7 @@ const seo_magazine = {
       title: '310gsm Art Card with Matt Lam, or 500gsm Synthetic — the stock call.',
       body: [
         '**310gsm Art Card with Matt Lamination** is the event default. Matt lam adds a tactile, premium hand-feel, keeps fingerprints off across a day of handling, and reads well on camera under booth lighting. On 310gsm it is the cheapest stock that still feels proper, and it unlocks the full shape library — 11 with-handle shapes (A–K) and 3 paddle shapes (L–N).',
-        '**500gsm Synthetic Card** is the premium call. It is waterproof — outdoor-all-day events, humid goodie bags and rain-on-the-forecast scenarios all favour synthetic over card. Trade-off: price (roughly 60% more per piece at 500 pcs) and shape — synthetic only runs the round Type A, so custom silhouettes would need to switch to 310gsm matt (or run on a custom quote).',
+        '**500gsm Synthetic Card** is the premium call. It is waterproof — outdoor-all-day events, humid goodie bags and rain-on-the-forecast scenarios all favour synthetic over card. Trade-off: price (roughly 60% more per piece at 500 pcs) and shape — synthetic only runs Type A, so custom silhouettes would need to switch to 310gsm matt (or run on a custom quote).',
       ],
       side: {
         kind: 'pills',
@@ -184,7 +184,7 @@ const seo_magazine = {
       title: 'Files, bleed, and the 14 ready shapes — what to hand our print shop.',
       body: [
         'Send an **Adobe Illustrator (.AI) file or print-ready PDF** — CMYK colour space, 300dpi minimum, 3mm bleed around the die-cut shape, fonts outlined. Double-sided: put front and back on separate artboards, or a two-page PDF clearly labelled front / back. Our file check runs inside 12 hours — if bleed is short, a colour is in RGB, or a font is missing you hear from us the same business day, before the plates go down.',
-        'The 14 ready shapes are: Type A round (synthetic only), Types B–K with handle on 310gsm matt (cloud, cross-pattern, soft square, flower, star, raindrop circle, bear, thumbs-up, polka circle, small diamond), Types L–N no-handle round paddles. Pick by two-metre silhouette readability — the fan is read while moving, so silhouette does more work than fine detail. **Custom die-cut silhouettes are available** too (mascot outlines, logo marks, bottle shapes) — they run on a custom quote since the one-off plotter tooling sits outside the on-page calculator.',
+        'The 14 ready shapes break down as Type A (500gsm synthetic only), Types B–K on 310gsm matt with handle (11 with-handle shapes in total), and Types L–N on 310gsm matt without handle (3 paddle shapes). The shape gallery on this page is the source of truth — each Type carries its own image and dimensions, and the configurator filters the list to what is actually available for your stock + finishing + handle combo. **Custom die-cut silhouettes are available** too (mascot outlines, logo marks, bottle shapes) — they run on a custom quote since the one-off plotter tooling sits outside the on-page calculator.',
       ],
       side: {
         kind: 'stat',
@@ -242,7 +242,7 @@ const faqs = [
   {
     question: 'What shapes are available?',
     answer:
-      '14 ready shapes total. Type A (round, on 500gsm synthetic only); Types B–K on 310gsm matt with handle — cloud, cross-pattern, soft square, flower, star, raindrop circle, bear, thumbs-up, polka circle, small diamond; Types L–N on 310gsm matt without handle — three round paddle variants at 170 × 170mm. The configurator on this page filters the shape list live to what is actually available for your stock + finishing + handle combo.',
+      '14 ready shapes in total. Type A on 500gsm synthetic only; Types B–K on 310gsm matt with handle (11 with-handle shapes overall, counting Type A); Types L–N on 310gsm matt without handle (3 paddle shapes). Each Type has its own image + exact dimensions in the configurator — the page filters the shape list live to what is actually available for your stock + finishing + handle combo.',
   },
   {
     question: 'Can I order a custom die-cut shape on a hand fan?',
