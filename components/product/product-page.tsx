@@ -515,8 +515,14 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             <button
               type="button"
               onClick={handleAddToCart}
-              className="pv-btn pv-btn-primary"
-              style={{ padding: '10px 16px', fontSize: 12 }}
+              className="pv-btn"
+              style={{
+                padding: '10px 16px',
+                fontSize: 12,
+                background: 'var(--pv-orange)',
+                color: '#fff',
+                borderColor: 'var(--pv-ink)',
+              }}
             >
               Add to Cart →
             </button>
@@ -585,21 +591,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 </>
               )}
             </h1>
-            <div
-              style={{
-                display: 'flex',
-                gap: 14,
-                alignItems: 'center',
-                fontFamily: 'var(--pv-f-mono)',
-                fontSize: 12,
-                color: 'var(--pv-muted)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {product.category && <span>{product.category.name}</span>}
-              {product.category && <span style={{ color: 'var(--pv-rule)' }}>•</span>}
-              {fromPrice !== null && <span>From {formatSGD(fromPrice)}</span>}
-            </div>
           </div>
           {(intro || product.tagline) && (
             <p
@@ -1112,7 +1103,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   type="button"
                   onClick={handleAddToCart}
                   style={{
-                    background: addedFlash ? 'var(--pv-green)' : 'var(--pv-magenta)',
+                    background: addedFlash ? 'var(--pv-green)' : 'var(--pv-orange)',
                     color: '#fff',
                     padding: '16px 22px',
                     fontWeight: 800,
@@ -1142,7 +1133,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   border: '1px dashed rgba(255,255,255,0.2)',
                 }}
               >
-                Pre-press file check · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$80</b>
+                Pre-press file check · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$150</b>
               </div>
             </div>
 

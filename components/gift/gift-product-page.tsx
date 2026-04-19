@@ -885,7 +885,7 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                 onClick={handleAddToCart}
                 disabled={!preview || uploading}
                 style={{
-                  background: addedFlash ? 'var(--pv-green)' : !preview ? 'rgba(255,255,255,0.15)' : 'var(--pv-magenta)',
+                  background: addedFlash ? 'var(--pv-green)' : !preview ? 'rgba(255,255,255,0.15)' : 'var(--pv-orange)',
                   color: !preview ? 'rgba(255,255,255,0.4)' : '#fff',
                   width: '100%',
                   padding: '16px 24px',
@@ -919,7 +919,7 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                   border: '1px dashed rgba(255,255,255,0.2)',
                 }}
               >
-                5-day turnaround · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$80</b>
+                5-day turnaround · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$150</b>
               </div>
             </div>
           </div>
@@ -1630,7 +1630,7 @@ function buildProcessSteps(product: GiftProduct): Array<{ title: string; time: s
     { title: 'Upload & Preview', time: '2 minutes', desc: upload },
     ai,
     { title: 'We Produce It', time: '3–4 days', desc: modeDesc[product.mode] ?? modeDesc['uv'] },
-    { title: 'Ship or Pickup', time: 'Next day · SG', desc: 'Islandwide next-day delivery, free over S$80. Or collect at Paya Lebar Square day 5.' },
+    { title: 'Ship or Pickup', time: 'Next day · SG', desc: 'Islandwide next-day delivery, free over S$150. Or collect at Paya Lebar Square day 5.' },
   ];
 }
 
@@ -1792,7 +1792,7 @@ function buildGiftMagazine(product: GiftProduct): SeoMagazineData {
           title: 'Turnaround & SG delivery.',
           body: [
             "UV-printed gifts go from approved preview to shipped piece in **5 working days**. Same-day pickup at Paya Lebar Square is available for orders before 10am with the rush surcharge.",
-            "Islandwide next-day delivery is free on orders over S$80. Otherwise flat rate S$8 for SG-wide door-to-door. Corporate bulk orders (20+) ship direct to each recipient if you need — ask us for the per-piece flow.",
+            "Islandwide next-day delivery is free on orders over S$150. Otherwise flat rate S$8 for SG-wide door-to-door. Corporate bulk orders (20+) ship direct to each recipient if you need — ask us for the per-piece flow.",
           ],
           side: { kind: 'stat', label: 'Standard', num: '5', suffix: 'days', caption: 'Rush: 48hr available' },
         },
