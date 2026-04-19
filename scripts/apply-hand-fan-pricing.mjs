@@ -181,7 +181,7 @@ try {
       (
         ${prod.id}, 'qty', 5, 'Quantity', 'qty', true,
         '[]'::jsonb, null,
-        ${sql.json({ presets: qtyTiers, min: 100, step: 1, note: 'Supplier tiers — price snaps to nearest tier below.' })}
+        ${sql.json({ presets: qtyTiers, min: 100, step: 1, note: 'Price tiers — price snaps to the nearest tier at or below your quantity.' })}
       )
   `;
   console.log('✓ configurator rebuilt — Material / Finishing / Handle / Type / Assembly / Qty (6 steps)');
