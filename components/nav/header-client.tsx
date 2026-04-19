@@ -234,20 +234,11 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
             }}
           >
             <div style={{ maxWidth: 1560, margin: '0 auto', padding: '28px 24px' }}>
-              <div
-                className="pv-mega-grid"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  columnGap: 32,
-                  rowGap: 28,
-                  alignItems: 'start',
-                }}
-              >
+              <div className="pv-mega-grid">
                 {mega[openMega]
                   .filter((section) => section.items.length > 0)
                   .map((section) => (
-                    <div key={section.id}>
+                    <div key={section.id} className="pv-mega-section">
                       <h4
                         style={{
                           fontFamily: 'var(--pv-f-mono)',
@@ -419,6 +410,23 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
         .pv-mega-link:hover {
           background: var(--pv-cream);
           color: var(--pv-magenta);
+        }
+        .pv-mega-grid {
+          column-count: 4;
+          column-gap: 32px;
+          column-fill: balance;
+        }
+        .pv-mega-section {
+          break-inside: avoid;
+          margin-bottom: 24px;
+          display: inline-block;
+          width: 100%;
+        }
+        @media (max-width: 1200px) {
+          .pv-mega-grid { column-count: 3; }
+        }
+        @media (max-width: 900px) {
+          .pv-mega-grid { column-count: 2; }
         }
       `}</style>
     </>
