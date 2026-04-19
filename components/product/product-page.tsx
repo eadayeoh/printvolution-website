@@ -997,9 +997,18 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             {visibleSteps.map((step, stepIdx) => {
               // Products with a multi-axis pricing_table let users pick
               // the quantity by clicking a row in the Volume Pricing
-              // table further down. Hiding the duplicate qty picker here
-              // keeps one source of truth.
-              if (step.type === 'qty' && product.pricing_table) return null;
+              // table further down — hiding the duplicate qty picker
+              // here keeps one source of truth. BUT: if the current
+              // method uses pricing_compute.bm (continuous-qty, no tier
+              // rows), we MUST show the qty input here so customers
+              // can type any number.
+              if (step.type === 'qty' && product.pricing_table) {
+                const bmActive = !!(
+                  product.pricing_compute?.bm &&
+                  pricingComputeMatches(product.pricing_compute.bm.match)
+                );
+                if (!bmActive) return null;
+              }
               const stepNum = stepIdx + 1;
               if (step.type === 'qty') {
                 const currentQty = parseInt(cfgState[step.step_id] || '1', 10) || 1;
