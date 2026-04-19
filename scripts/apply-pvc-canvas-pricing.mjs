@@ -1,17 +1,17 @@
-// PVC Canvas — dimensional pricing with eyelet count + minimum fee.
+// PVC Canvas — dimensional pricing, eyelets optional, no floor.
 //
 // Formula (per piece, before quantity):
 //   base_sqft = (width_cm * 10) * (height_cm * 10) / 93025   // cm → mm² then ÷ (305²)
 //   canvas    = base_sqft * 3.50                             // $3.50 per sq ft
 //   eyelets   = eyelets_count * 3                            // $3 per eyelet
-//   per_piece = max(15, canvas + eyelets)                    // $15 minimum fee per piece
+//   per_piece = canvas + eyelets                             // no minimum fee; 0 eyelets = $0 eyelet cost
 //
 // The /93025 constant (305²) is the square-feet conversion from mm².
 // Keeping admin width/height in cm (friendly unit) and using
 // `* 10 * * 10 = * 100` inside the formula preserves the user's
 // "/93025" shape literally while still accepting cm inputs.
 //
-// Wooden Poles + Eyelets finishing adds $15/pc on top.
+// Wooden Poles + Eyelets finishing adds $15/pc on top of the base.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -47,15 +47,15 @@ function mergeOptionImages(newOptions, existingOptions) {
 
 // Per-piece base — keep identical across all finishing options except
 // where a finishing-specific surcharge applies. The formula references
-// `width`, `height`, `eyelets` (populated from number-type steps).
+// `width`, `height`, `eyelets` (populated from number-type steps). No
+// minimum fee: width=0 / height=0 / eyelets=0 → per_piece = 0.
 const baseFormula =
-  'Math.max(15, width * height * 100 / 93025 * 3.50 + eyelets * 3)';
+  'width * height * 100 / 93025 * 3.50 + eyelets * 3';
 
 // Standard finishing options share the base formula multiplied by qty.
 const standardFormula = `(${baseFormula}) * qty`;
 // Wooden poles finishing: base per-piece + $15 per piece for the pole
-// hardware, multiplied by qty. The $15 is ADDED after the min-fee floor
-// so the pole surcharge is always visible.
+// hardware, multiplied by qty.
 const polesFormula = `((${baseFormula}) + 15) * qty`;
 
 const finishingAxis = [
@@ -119,7 +119,7 @@ try {
       (
         ${prod.id}, 'qty', 4, 'Quantity', 'qty', true,
         '[]'::jsonb, null,
-        ${sql.json({ presets: [1, 2, 5, 10], min: 1, step: 1, note: 'S$15 minimum fee per piece — small canvases still land at the floor.' })}
+        ${sql.json({ presets: [1, 2, 5, 10], min: 1, step: 1, note: 'Price scales with canvas area and eyelet count — type the size above to see your total.' })}
       )
   `;
   console.log('✓ configurator rebuilt — Width / Height / Eyelets / Finishing / Quantity');
@@ -132,11 +132,12 @@ try {
 
   // Sanity preview — tabulate a few sizes.
   function price(w, h, e, poles = false) {
-    const base = Math.max(15, w * h * 100 / 93025 * 3.5 + e * 3);
+    const base = w * h * 100 / 93025 * 3.5 + e * 3;
     return poles ? base + 15 : base;
   }
   const samples = [
-    [30, 30, 0, false, 'min size, no eyelets'],
+    [30, 30, 0, false, '30×30cm, no eyelets'],
+    [100, 100, 0, false, '1m × 1m, no eyelets'],
     [100, 100, 4, false, '1m × 1m, 4 eyelets'],
     [150, 100, 4, false, '1.5m × 1m, 4 eyelets'],
     [200, 100, 4, true, '2m × 1m with poles'],
