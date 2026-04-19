@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, GripVertical } from 'lucide-react';
 import { MagazineEditor, type MagValue } from './product-magazine-editor';
 // HowWePrintEditor removed — the "How we print" cards are site-wide now.
 // Edit them at /admin/settings.
@@ -477,12 +477,107 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
 }
 
 /** Configurator editor — redesigned for clarity */
+/** Collapse show_if to a single-condition form for the admin UI.
+ *  The underlying schema supports arrays (multi-AND) and string[] values
+ *  (multi-OR) — but 95% of use is one condition with one value. Admin
+ *  exposes only that shape; power users can still set arrays via the
+ *  apply scripts. */
+type ShowIfSimple = { step: string; value: string } | null;
+function normalizeShowIf(raw: unknown): ShowIfSimple {
+  if (!raw) return null;
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  if (!first || typeof first !== 'object') return null;
+  const step = (first as any).step;
+  const rawVal = (first as any).value;
+  if (typeof step !== 'string') return null;
+  const value = Array.isArray(rawVal) ? (rawVal[0] ?? '') : rawVal;
+  if (typeof value !== 'string') return null;
+  return { step, value };
+}
+
+function ShowIfEditor({
+  label,
+  hint,
+  value,
+  otherSteps,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: ShowIfSimple;
+  otherSteps: ProductDetail['configurator'];
+  onChange: (next: ShowIfSimple) => void;
+}) {
+  // Only swatch/select steps can be gated on — they're the ones with
+  // pickable option slugs that make sense as a show_if value.
+  const candidateSteps = otherSteps.filter((s) => s.type === 'swatch' || s.type === 'select');
+  const picked = value && candidateSteps.find((s) => s.step_id === value.step);
+  return (
+    <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3">
+      <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+        {label}
+      </div>
+      <p className="mb-3 text-[11px] leading-snug text-neutral-500">{hint}</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+            Depends on step
+          </span>
+          <select
+            value={value?.step ?? ''}
+            onChange={(e) => {
+              const step = e.target.value;
+              if (!step) { onChange(null); return; }
+              const target = candidateSteps.find((s) => s.step_id === step);
+              const firstOptSlug = target?.options?.[0]?.slug ?? '';
+              onChange({ step, value: firstOptSlug });
+            }}
+            className={inputCls}
+          >
+            <option value="">— always show —</option>
+            {candidateSteps.map((s) => (
+              <option key={s.step_id} value={s.step_id}>{s.label || s.step_id}</option>
+            ))}
+          </select>
+        </label>
+        {value && picked && (
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+              When value is
+            </span>
+            <select
+              value={value.value}
+              onChange={(e) => onChange({ step: value.step, value: e.target.value })}
+              className={inputCls}
+            >
+              {(picked.options ?? []).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.label || o.slug}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configurator']; setSteps: (s: ProductDetail['configurator']) => void }) {
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
   function update(i: number, patch: Partial<ProductDetail['configurator'][0]>) {
     setSteps(steps.map((s, j) => j === i ? { ...s, ...patch } as any : s));
   }
   function autoSlug(label: string): string {
     return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'step';
+  }
+  function moveStep(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= steps.length || to >= steps.length) return;
+    const next = [...steps];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    // Re-assign step_order so the saved payload matches the visual order.
+    setSteps(next.map((s, idx) => ({ ...s, step_order: idx } as any)));
   }
 
   const TYPES: Array<{ v: string; label: string; hint: string; icon: string }> = [
@@ -503,10 +598,32 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
       )}
 
       {steps.map((s, i) => (
-        <div key={i} className="overflow-hidden rounded-lg border-2 border-neutral-200 bg-white">
-          {/* Step header bar */}
-          <div className="flex items-center justify-between border-b border-neutral-100 bg-gradient-to-r from-pink/5 to-transparent px-5 py-3">
+        <div
+          key={i}
+          onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) setDragOverIdx(i); }}
+          onDragLeave={() => { if (dragOverIdx === i) setDragOverIdx(null); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIdx !== null) moveStep(dragIdx, i);
+            setDragIdx(null); setDragOverIdx(null);
+          }}
+          className={`overflow-hidden rounded-lg border-2 bg-white transition-colors ${
+            dragOverIdx === i ? 'border-pink ring-2 ring-pink/30' :
+            dragIdx === i ? 'border-neutral-300 opacity-50' :
+            'border-neutral-200'
+          }`}
+        >
+          {/* Step header bar — draggable by the grip handle */}
+          <div
+            draggable
+            onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; }}
+            onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+            className="flex cursor-grab items-center justify-between border-b border-neutral-100 bg-gradient-to-r from-pink/5 to-transparent px-5 py-3 active:cursor-grabbing"
+          >
             <div className="flex items-center gap-3">
+              <div className="text-neutral-400" title="Drag to reorder">
+                <GripVertical size={16} />
+              </div>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[11px] font-black text-white">
                 {i + 1}
               </div>
@@ -587,6 +704,15 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
               </div>
             </div>
 
+            {/* Show-if rule — gate this step on another step's value */}
+            <ShowIfEditor
+              label="Visibility rule (optional)"
+              hint="Show this step only when another step equals a specific value. Leave blank to always show."
+              value={normalizeShowIf(s.show_if)}
+              otherSteps={steps.filter((x, idx) => idx !== i)}
+              onChange={(v) => update(i, { show_if: v })}
+            />
+
             {/* Options (swatch / select) */}
             {(s.type === 'swatch' || s.type === 'select') && (
               <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
@@ -615,6 +741,7 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
                       option={opt}
                       index={oi}
                       inputCls={inputCls}
+                      otherSteps={steps.filter((_, idx) => idx !== i)}
                       onChange={(patch) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, ...patch } as any : x) })}
                       onRemove={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
                     />
@@ -663,13 +790,15 @@ function OptionCard({
   option,
   index,
   inputCls,
+  otherSteps,
   onChange,
   onRemove,
 }: {
-  option: { slug: string; label: string; note?: string | null; price_formula?: string | null; image_url?: string | null; lead_time_days?: number | null; print_mode?: string | null };
+  option: { slug: string; label: string; note?: string | null; price_formula?: string | null; image_url?: string | null; lead_time_days?: number | null; print_mode?: string | null; show_if?: unknown };
   index: number;
   inputCls: string;
-  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null }>) => void;
+  otherSteps: ProductDetail['configurator'];
+  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null; show_if: { step: string; value: string } | null }>) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(!option.label || option.label === 'New option');
@@ -794,6 +923,14 @@ function OptionCard({
               </label>
             </div>
           </div>
+
+          <ShowIfEditor
+            label="Visibility rule (optional)"
+            hint="Hide this option unless another step equals a specific value — e.g. hide 310gsm card paper unless size is A5. Leave blank to always show."
+            value={normalizeShowIf(option.show_if)}
+            otherSteps={otherSteps}
+            onChange={(v) => onChange({ show_if: v })}
+          />
 
           <div className="flex justify-end border-t border-neutral-100 pt-3">
             <button
