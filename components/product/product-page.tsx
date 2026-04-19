@@ -614,19 +614,30 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       // No entries for this combo — fall through to formula-ladder below.
     }
 
+    // Legacy pricing matrix ladder — only used if the matrix actually
+    // has non-zero prices. A placeholder row of `[0]` would otherwise
+    // return a single zero-row ladder and hide the Volume Pricing
+    // section entirely (even when the product has working step formulas
+    // that produce genuine volume breakpoints).
     if (product.pricing && product.pricing.rows.length > 0) {
-      return product.pricing.rows.map((r, rIdx) => {
-        const qtyNum = parseInt((r.qty.match(/\d+/) ?? ['1'])[0], 10) || 1;
-        const { total } = computeTotal(qtyNum, colIdx, rIdx);
-        const undiscountedTotal = singleTotal * qtyNum;
-        return {
-          qty: r.qty,
-          qtyNum,
-          total,
-          perPiece: qtyNum > 0 ? total / qtyNum : total,
-          saves: Math.max(0, undiscountedTotal - total),
-        };
-      });
+      const hasRealPrices = product.pricing.rows.some(
+        (r) => Array.isArray(r.prices) && r.prices.some((p) => typeof p === 'number' && p > 0)
+      );
+      if (hasRealPrices) {
+        return product.pricing.rows.map((r, rIdx) => {
+          const qtyNum = parseInt((r.qty.match(/\d+/) ?? ['1'])[0], 10) || 1;
+          const { total } = computeTotal(qtyNum, colIdx, rIdx);
+          const undiscountedTotal = singleTotal * qtyNum;
+          return {
+            qty: r.qty,
+            qtyNum,
+            total,
+            perPiece: qtyNum > 0 ? total / qtyNum : total,
+            saves: Math.max(0, undiscountedTotal - total),
+          };
+        });
+      }
+      // Matrix exists but is zero-priced — fall through to formula ladder.
     }
 
     const hasFormula = product.configurator.some(

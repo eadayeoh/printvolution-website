@@ -19,7 +19,7 @@
 type Token =
   | { type: 'num'; value: number }
   | { type: 'var'; name: string }
-  | { type: 'call'; fn: 'min' | 'max' }
+  | { type: 'call'; fn: 'min' | 'max' | 'ceil' | 'floor' | 'round' }
   | { type: 'op'; value: '+' | '-' | '*' | '/' }
   | { type: 'lparen' }
   | { type: 'rparen' }
@@ -74,6 +74,12 @@ function tokenize(src: string): Token[] {
         out.push({ type: 'call', fn: 'min' });
       } else if (ident === 'Math.max' || ident === 'max') {
         out.push({ type: 'call', fn: 'max' });
+      } else if (ident === 'Math.ceil' || ident === 'ceil') {
+        out.push({ type: 'call', fn: 'ceil' });
+      } else if (ident === 'Math.floor' || ident === 'floor') {
+        out.push({ type: 'call', fn: 'floor' });
+      } else if (ident === 'Math.round' || ident === 'round') {
+        out.push({ type: 'call', fn: 'round' });
       } else if (VARS.has(ident)) {
         out.push({ type: 'var', name: ident });
       } else {
@@ -170,7 +176,12 @@ class Parser {
       const fn = t.fn;
       return (ctx) => {
         const vals = args.map((a) => a(ctx));
-        return fn === 'min' ? Math.min(...vals) : Math.max(...vals);
+        if (fn === 'min') return Math.min(...vals);
+        if (fn === 'max') return Math.max(...vals);
+        if (fn === 'ceil')  return Math.ceil(vals[0]);
+        if (fn === 'floor') return Math.floor(vals[0]);
+        if (fn === 'round') return Math.round(vals[0]);
+        return vals[0];
       };
     }
     throw new Error(`Unexpected token at ${this.pos}`);
