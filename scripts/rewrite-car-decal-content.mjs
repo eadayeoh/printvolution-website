@@ -112,7 +112,7 @@ const seo_magazine = {
       title: 'The white base is the whole trick.',
       body: [
         `Car windows are **tinted**. Body panels are usually a dark colour. Regular CMYK ink is semi-transparent — lay it straight on dark glass and your logo dulls into the tint. That's why every size on the spec sheet says "4C + White Base": we print a solid white rectangle *underneath* the colour, so the colours read as bright on a tinted rear screen as they would on white paper.`,
-        `If you pick **Both Side View (4C + White Base + 4C)**, we sandwich the white layer between two colour passes — the driver sees the design right-way-round from the cabin, the road sees it from the back. No other Singapore printer does this as a standard menu item on a short lead time.`,
+        `If you pick **Both Side View (4C + White Base + 4C)**, we sandwich the white layer between two colour passes — the driver sees the design right-way-round from the cabin, the road sees it from the back. It's a menu option here, priced on the same tier sheet as the one-sided version; no custom quote dance.`,
       ],
       side: 'offset',
     },
