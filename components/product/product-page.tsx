@@ -233,9 +233,102 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return pt.axis_order;
   }
 
+  // BM (basic-materials) tier-floor calc — mirrors pvpricelist's
+  // computeBasicMaterials. Returns cents, or null if the combo is
+  // invalid or exceeds the configured finished-qty cap.
+  function computeBM(
+    bm: NonNullable<NonNullable<typeof product.pricing_compute>['bm']>,
+    useQty: number,
+  ): { cents: number; breakdownLabel: string } | null {
+    const size = cfgState[bm.size_key];
+    const paper = cfgState[bm.paper_key];
+    const sides = cfgState[bm.sides_key];
+    if (!size || !paper || !sides) return null;
+    const ups = bm.ups[size];
+    if (!ups) return null;
+    const tierKey = bm.tier_map[`${paper}:${sides}`];
+    if (!tierKey) return null;
+    const tiers = bm.tiers[tierKey];
+    if (!tiers || tiers.length === 0) return null;
+    if (useQty < 1) return null;
+    if (useQty > bm.max_finished_qty) return null;
+
+    const a3Qty = Math.ceil(useQty / ups);
+    // Below the first tier's minQty there's no supplier rate — mirrors
+    // pvpricelist's "Minimum 11 A3 sheets" guard (11 A3 = 22 A4 = 44 A5).
+    if (a3Qty < tiers[0][0]) return null;
+    // applyTierFloor
+    let unitIdx = 0;
+    for (let i = 0; i < tiers.length; i++) if (a3Qty >= tiers[i][0]) unitIdx = i;
+    const unit = tiers[unitIdx][1];
+    const raw = a3Qty * unit;
+    let minFloor = 0;
+    if (unitIdx > 0) {
+      const prev = tiers[unitIdx - 1];
+      const prevUpper = tiers[unitIdx][0] - 1;
+      minFloor = prevUpper * prev[1];
+    }
+    const print = Math.max(raw, minFloor);
+    // Cut fee — first col_break ≥ a3Qty wins; last column if none match.
+    let colIdx = bm.cut.col_breaks.length - 1;
+    for (let i = 0; i < bm.cut.col_breaks.length; i++) {
+      if (a3Qty <= bm.cut.col_breaks[i]) { colIdx = i; break; }
+    }
+    const cut = bm.cut.table[size]?.[colIdx] ?? 0;
+    const total = print + cut;
+    const sizeLabel = product.pricing_table?.axes[bm.size_key]?.find((o) => o.slug === size)?.label ?? size;
+    const paperLabel = product.pricing_table?.axes[bm.paper_key]?.find((o) => o.slug === paper)?.label ?? paper;
+    const sidesLabel = product.pricing_table?.axes[bm.sides_key]?.find((o) => o.slug === sides)?.label ?? sides;
+    return {
+      cents: Math.round(total * 100),
+      breakdownLabel: `${sizeLabel} · ${paperLabel} · ${sidesLabel} × ${useQty} pcs`,
+    };
+  }
+
+  function pricingComputeMatches(
+    match: Record<string, string>,
+  ): boolean {
+    for (const [k, v] of Object.entries(match)) {
+      if (cfgState[k] !== v) return false;
+    }
+    return true;
+  }
+
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number) {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let sum = 0;
+
+    // 0. Formula-driven compute (e.g. flyers Digital BM) — wins when
+    //    the current cfgState matches the compute's predicate. Returns
+    //    the exact price for any integer qty (no tier snap). Add-on
+    //    formulas for visible swatch steps not in the axis set still
+    //    stack on top.
+    if (product.pricing_compute?.bm && pricingComputeMatches(product.pricing_compute.bm.match)) {
+      const bm = product.pricing_compute.bm;
+      const r = computeBM(bm, useQty);
+      if (r) {
+        breakdown.push({ label: r.breakdownLabel, amount: r.cents });
+        sum = r.cents;
+        const axisIds = new Set([bm.size_key, bm.paper_key, bm.sides_key, ...Object.keys(bm.match)]);
+        for (const step of visibleSteps) {
+          if (step.type !== 'swatch' && step.type !== 'select') continue;
+          if (axisIds.has(step.step_id)) continue;
+          const selected = cfgState[step.step_id];
+          const opt = step.options.find((o) => o.slug === selected);
+          if (opt?.price_formula) {
+            const valueCents = Math.round(
+              evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+            );
+            sum += valueCents;
+            if (valueCents > 0) {
+              breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
+            }
+          }
+        }
+        return { total: sum, breakdown };
+      }
+      // BM computation failed (invalid combo / over cap) — fall through.
+    }
 
     // 1. Multi-axis pricing_table lookup wins if the current combo has
     //    an entry (e.g. car decals, door hangers, flyers-offset). If the
@@ -326,7 +419,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const { total: lineTotal, breakdown } = useMemo(
     () => computeTotal(qty, colIdx, rowIdx),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [qty, colIdx, rowIdx, cfgState, visibleSteps, product.pricing, product.pricing_table]
+    [qty, colIdx, rowIdx, cfgState, visibleSteps, product.pricing, product.pricing_table, product.pricing_compute]
   );
 
 
@@ -401,6 +494,33 @@ export function ProductPage({ product, productRoutes, features }: Props) {
 
   const priceLadder = useMemo(() => {
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
+
+    // BM compute active — ladder at 50/100/200/300/400/500 breakpoints
+    // (the qtys customers actually think in). Per-piece price drops
+    // meaningfully across these points.
+    if (product.pricing_compute?.bm && pricingComputeMatches(product.pricing_compute.bm.match)) {
+      const bm = product.pricing_compute.bm;
+      const baselineAt = Math.min(50, bm.max_finished_qty);
+      const baseline = computeBM(bm, baselineAt);
+      const baselinePerPiece = baseline ? baseline.cents / baselineAt : 0;
+      const breakpoints = [50, 100, 200, 300, 400, 500].filter((q) => q <= bm.max_finished_qty);
+      return breakpoints
+        .map((q) => {
+          const r = computeBM(bm, q);
+          if (!r) return null;
+          const total = r.cents;
+          const perPiece = total / q;
+          const undiscounted = baselinePerPiece * q;
+          return {
+            qty: `${q} pcs`,
+            qtyNum: q,
+            total,
+            perPiece,
+            saves: Math.max(0, undiscounted - total),
+          };
+        })
+        .filter(Boolean) as Array<{ qty: string; qtyNum: number; total: number; perPiece: number; saves: number }>;
+    }
 
     // pricing_table: one ladder row per qty tier, for the currently-
     // selected axes. If no tier has an entry for this combo (e.g. the
@@ -485,7 +605,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.pricing, product.pricing_table, product.configurator, colIdx, cfgState, visibleSteps]);
+  }, [product.pricing, product.pricing_table, product.pricing_compute, product.configurator, colIdx, cfgState, visibleSteps]);
 
   const iconIsUrl = isImageUrl(product.icon);
   const heroImg = product.extras?.image_url || null;

@@ -85,19 +85,11 @@ function computeDigital(size, gsmGroup, sides, qty) {
   return print + cut;
 }
 
-const digitalQtyTiers = [50, 100, 200, 300, 400, 500];
-
-// 128gsm Art = BM '100' group; 157gsm Art = BM '150' group.
-const digitalCombos = [
-  { size: 'a4', paper: '128art', paperGsm: '100', sides: '1', bmSides: 'ss' },
-  { size: 'a4', paper: '128art', paperGsm: '100', sides: '2', bmSides: 'ds' },
-  { size: 'a4', paper: '157art', paperGsm: '150', sides: '1', bmSides: 'ss' },
-  { size: 'a4', paper: '157art', paperGsm: '150', sides: '2', bmSides: 'ds' },
-  { size: 'a5', paper: '128art', paperGsm: '100', sides: '1', bmSides: 'ss' },
-  { size: 'a5', paper: '128art', paperGsm: '100', sides: '2', bmSides: 'ds' },
-  { size: 'a5', paper: '157art', paperGsm: '150', sides: '1', bmSides: 'ss' },
-  { size: 'a5', paper: '157art', paperGsm: '150', sides: '2', bmSides: 'ds' },
-];
+// Digital qty is now continuous (1 → 500 finished pieces) via the
+// pricing_compute.bm path on the product, not tier entries in the
+// pricing_table. These qty presets are just helpful shortcuts.
+const digitalQtyPresets = [50, 100, 200, 300, 400, 500];
+const MAX_DIGITAL_FINISHED_QTY = 500;
 
 // ────────────────────────────────────────────────────────────────────
 // Offset pricing — pvpricelist live prices (already have $150 floor)
@@ -175,9 +167,10 @@ const sidesOffsetAxis = [
   { slug: '4c4c', label: 'Double Sided (4C + 4C)' },
 ];
 
-// Union of all qty tiers used.
+// pricing_table qty tiers — offset only now; digital is formula-driven
+// via pricing_compute.bm so it doesn't need tier entries.
 const qtyTiers = [
-  50, 100, 200, 300, 400, 500, 600, 1000, 2000, 3000, 4000, 5000,
+  300, 500, 600, 1000, 2000, 3000, 4000, 5000,
   6000, 7000, 8000, 9000, 10000, 12000, 14000, 16000, 18000, 20000,
   40000, 60000, 100000, 200000,
 ];
@@ -186,21 +179,11 @@ const qtyTiers = [
 // Build prices dictionary
 // ────────────────────────────────────────────────────────────────────
 const prices = {};
-let digitalPriceCount = 0;
 let offsetPriceCount = 0;
 
-// Digital entries: key = method:size:paper:sides:qty (digital step_ids)
-for (const c of digitalCombos) {
-  for (const qty of digitalQtyTiers) {
-    const dollars = computeDigital(c.size, c.paperGsm, c.bmSides, qty);
-    // Round up to the next whole cent to match pvpricelist behaviour
-    // (they round to whole dollar; we store cents so keep precision).
-    prices[`digital:${c.size}:${c.paper}:${c.sides}:${qty}`] = Math.round(dollars * 100);
-    digitalPriceCount++;
-  }
-}
-
 // Offset entries: key = method:size_offset:paper_offset:sides_offset:qty
+// Digital is no longer in pricing_table — it's handled by
+// pricing_compute.bm for continuous-qty pricing.
 for (const [comboKey, tierMap] of Object.entries(RAW_OFFSET)) {
   for (const [qty, dollars] of Object.entries(tierMap)) {
     prices[`offset:${comboKey}:${qty}`] = Math.round(dollars * 100);
@@ -240,15 +223,47 @@ const digitalShowIf = { step: 'method', value: 'digital' };
 const offsetShowIf  = { step: 'method', value: 'offset' };
 
 const offsetQtyTiersForStep = [600, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 14000, 16000, 18000, 20000, 40000, 60000, 100000, 200000];
-const digitalQtyTiersForStep = digitalQtyTiers; // [50, 100, 200, 300, 400, 500]
+const digitalQtyTiersForStep = digitalQtyPresets; // [50, 100, 200, 300, 400, 500]
+
+// ────────────────────────────────────────────────────────────────────
+// pricing_compute.bm — continuous-qty pricing for Digital method.
+// The page calculator reads this, computes a3Qty via ups, runs
+// applyTierFloor on the right tier table, adds the cut fee, and
+// returns the exact price for whatever finished qty the customer types.
+// ────────────────────────────────────────────────────────────────────
+const pricingCompute = {
+  bm: {
+    match: { method: 'digital' },
+    size_key: 'size',
+    paper_key: 'paper',
+    sides_key: 'sides',
+    ups: BM_PRINT_UPS,  // { a4: 2, a5: 4 }
+    tier_map: {
+      '128art:1': '100ss', '128art:2': '100ds',
+      '157art:1': '150ss', '157art:2': '150ds',
+    },
+    tiers: BM,
+    cut: {
+      col_breaks: [100, 200, 300, 400, 500],
+      table: BM_CUT_TABLE,
+    },
+    max_finished_qty: MAX_DIGITAL_FINISHED_QTY,
+  },
+};
 
 try {
   const [prod] = await sql`select id from public.products where slug='flyers'`;
   if (!prod) throw new Error('flyers product not found');
   console.log('✓ found flyers', prod.id);
 
-  await sql`update public.products set pricing_table = ${sql.json(pricingTable)} where id = ${prod.id}`;
-  console.log(`✓ pricing_table seeded — ${digitalPriceCount} digital + ${offsetPriceCount} offset = ${digitalPriceCount + offsetPriceCount} total prices`);
+  await sql`
+    update public.products
+    set pricing_table = ${sql.json(pricingTable)},
+        pricing_compute = ${sql.json(pricingCompute)}
+    where id = ${prod.id}
+  `;
+  console.log(`✓ pricing_table seeded — ${offsetPriceCount} offset price points`);
+  console.log(`✓ pricing_compute.bm seeded — any-qty 1→${MAX_DIGITAL_FINISHED_QTY} via pvpricelist basic-materials`);
 
   await sql`delete from public.product_configurator where product_id = ${prod.id}`;
   await sql`
@@ -305,7 +320,7 @@ try {
         ${prod.id}, 'qty', 8, 'Quantity', 'qty', true,
         '[]'::jsonb,
         ${sql.json(digitalShowIf)},
-        ${sql.json({ presets: digitalQtyTiersForStep, min: 50, step: 1, note: 'Supplier tiers — price snaps to nearest tier below.' })}
+        ${sql.json({ presets: digitalQtyTiersForStep, min: 1, step: 1, note: `Type any quantity from 1 to ${MAX_DIGITAL_FINISHED_QTY} pcs — price updates live.` })}
       ),
       (
         ${prod.id}, 'qty_offset', 9, 'Quantity', 'qty', true,
@@ -328,17 +343,27 @@ try {
   `;
   console.log('\nverify:', JSON.stringify(check, null, 2));
 
-  // Sample a few digital + offset prices
-  const samples = [
-    ['digital:a4:128art:2:100', 'A4 128gsm DS × 100 pcs (digital)'],
-    ['digital:a5:157art:1:200', 'A5 157gsm SS × 200 pcs (digital)'],
-    ['digital:a4:128art:1:500', 'A4 128gsm SS × 500 pcs (digital)'],
+  // Sample prices — digital via pvpricelist BM calc, offset via pricing_table.
+  const digitalSamples = [
+    ['a4', '100', 'ds', 87],
+    ['a4', '100', 'ds', 100],
+    ['a4', '100', 'ds', 157],
+    ['a4', '100', 'ds', 500],
+    ['a5', '150', 'ss', 200],
+    ['a5', '150', 'ss', 333],
+  ];
+  console.log('\nsample digital prices (SGD, continuous qty):');
+  for (const [size, gsm, sides, qty] of digitalSamples) {
+    const $ = computeDigital(size, gsm, sides, qty);
+    console.log(`  ${size.toUpperCase()} ${gsm==='100'?'128':'157'}gsm ${sides.toUpperCase()} × ${qty} pcs: $${$.toFixed(2)}`);
+  }
+  const offsetSamples = [
     ['offset:a4:128art:4c4c:2000', 'A4 128gsm DS × 2000 pcs (offset · floor)'],
     ['offset:a5:128art:4c0c:600', 'A5 128gsm SS × 600 pcs (offset · floor)'],
     ['offset:a5:260card:4c4c:5000', 'A5 260gsm Card DS × 5000 pcs (offset)'],
   ];
-  console.log('\nsample prices (SGD):');
-  for (const [key, label] of samples) {
+  console.log('\nsample offset prices (SGD):');
+  for (const [key, label] of offsetSamples) {
     const cents = prices[key] ?? 0;
     console.log(`  ${label}: $${(cents / 100).toFixed(2)}`);
   }

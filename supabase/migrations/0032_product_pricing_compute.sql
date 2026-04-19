@@ -1,0 +1,38 @@
+-- 0032_product_pricing_compute.sql
+-- Formula-driven pricing for products where tier snap-to-nearest isn't
+-- good enough (e.g. flyers digital: customer types any qty from 1 to
+-- 500 pieces and gets the exact BM tier-floor price — no snapping).
+--
+-- Shape of the jsonb value:
+--   {
+--     "bm": {                               -- BM (basic-materials) calc
+--       "match": { "method": "digital" },   -- cfgState predicate: run this calc when matched
+--       "size_key": "size",                 -- cfgState key for size
+--       "paper_key": "paper",               -- cfgState key for paper
+--       "sides_key": "sides",               -- cfgState key for sides
+--       "ups":    { "a4": 2, "a5": 4 },     -- finished pieces per A3 sheet
+--       "tier_map": {                       -- paper:sides → BM tier key
+--         "128art:1": "100ss", "128art:2": "100ds",
+--         "157art:1": "150ss", "157art:2": "150ds"
+--       },
+--       "tiers": {                          -- [minA3Qty, unitPrice] asc
+--         "100ss": [[11,1.9],[20,1.7],…],
+--         "100ds": [[11,3.2],…],
+--         "150ss": [[11,2.1],…],
+--         "150ds": [[11,3.3],…]
+--       },
+--       "cut": {                            -- finished-size cut fee
+--         "col_breaks": [100,200,300,400,500],
+--         "table": { "a4": [4,7,10,13,16], "a5": [10,18,25,32,40] }
+--       },
+--       "max_finished_qty": 500             -- hard cap (above = no price)
+--     }
+--   }
+--
+-- When pricing_compute.bm matches the current cfgState, the calculator
+-- runs the BM formula (print = max(a3Qty × unit, prev-upper × prev-unit)
+-- + cut fee) instead of looking in pricing_table. Add-on formulas (e.g.
+-- Lamination) still stack on top.
+
+alter table public.products
+  add column if not exists pricing_compute jsonb;

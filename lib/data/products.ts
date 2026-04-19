@@ -35,6 +35,35 @@ export type PricingTable = {
   prices: Record<string, number>; // key: "<axis1>:<axis2>:<qty>" → cents
 };
 
+/** Formula-driven pricing for products where tier snap-to-nearest
+ *  isn't good enough — customer types any integer qty and the BM
+ *  tier-floor calc produces an exact price. Currently only `bm`
+ *  (basic-materials, for flyers digital) is supported. */
+export type PricingCompute = {
+  bm?: {
+    /** cfgState predicate — run this calc only when all keys match. */
+    match: Record<string, string>;
+    /** cfgState keys to read for size / paper / sides. */
+    size_key: string;
+    paper_key: string;
+    sides_key: string;
+    /** Finished pieces per A3 sheet, keyed by size slug. */
+    ups: Record<string, number>;
+    /** "paper:sides" slug pair → BM tier-table key. */
+    tier_map: Record<string, string>;
+    /** BM tier tables: `[minA3Qty, unitPrice]` asc. */
+    tiers: Record<string, Array<[number, number]>>;
+    /** Cut fee picker: size slug → 5-column array, indexed by
+     *  first col_breaks bucket a3Qty ≤. */
+    cut: {
+      col_breaks: number[];
+      table: Record<string, number[]>;
+    };
+    /** Hard cap on finished qty; above this, no price. */
+    max_finished_qty: number;
+  };
+};
+
 export type ProductSpec = { label: string; value: string };
 
 export type ConfiguratorStep = {
@@ -95,6 +124,7 @@ export type ProductDetail = {
   subcategory: { slug: string; name: string } | null;
   pricing: PricingData | null;
   pricing_table: PricingTable | null;
+  pricing_compute: PricingCompute | null;
   extras: ProductExtras | null;
   configurator: ConfiguratorStep[];
   faqs: Array<{ question: string; answer: string }>;
@@ -168,7 +198,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, icon, tagline, description, is_gift, pricing_table, lead_time_days, print_mode,
+      id, slug, name, icon, tagline, description, is_gift, pricing_table, pricing_compute, lead_time_days, print_mode,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_extras(*),
@@ -239,6 +269,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
       ? { label: pricing.label ?? 'Size', configs: pricing.configs ?? [], rows: pricing.rows as PricingRow[] }
       : null,
     pricing_table: (d.pricing_table as PricingTable | null) ?? null,
+    pricing_compute: (d.pricing_compute as PricingCompute | null) ?? null,
     extras: extras
       ? {
           seo_title: extras.seo_title, seo_desc: extras.seo_desc, seo_body: extras.seo_body,
