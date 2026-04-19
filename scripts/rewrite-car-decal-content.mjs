@@ -42,19 +42,7 @@ const intro = 'Fleet-scale window and body decals in four fixed sizes, printed o
 const seo_title = 'Car Decal Printing Singapore | Offset Bulk Window Stickers';
 const seo_desc = 'Offset-printed car decals in four sizes, single- or double-sided. Bulk runs from 200 pieces. Live tier pricing, 7-working-day lead time. Quote instantly.';
 
-const seo_body = `Car decals are a low-cost way to put a brand, a compliance label or a campaign on the move. A logistics fleet with two hundred vans can paint the side of every vehicle with a printed sticker for the cost of wrapping one. Dealers use them for **new-arrival** and **sold** window runs. Driving schools print "L" and "P" plate stickers for every instructor car. Private-hire operators add vehicle-ID labels that meet LTA fleet-marking rules.
-
-What the supplier sheet actually covers:
-- **90×54mm** — name-card sized. Good for vehicle-ID stickers, contact-info tabs, quiet-side branding on service vans.
-- **115×120mm** — compact square. Fits a door-edge, a headrest cover, a rear-window corner.
-- **130×170mm** — standard rectangle. The workhorse for door-panel logos and shop-name decals on delivery vehicles.
-- **90×420mm** — long strip. Ideal for windscreen sunstrips ("www.yoursite.com · call 8888-8888") or a single-line stripe across a side body panel.
-
-Every size comes in two view modes. **Face In / Face Out** is the normal single-sided print — 4C colour laid down over a white base so it reads bright on dark or tinted glass. **Both Side View** is a reverse-plus-forward print for decals that sit on a rear windscreen and need to be legible from the road **and** from the driver's seat — think ride-hail fleet IDs, courier licence numbers, emergency-vehicle markings.
-
-Production is offset, which is why the per-piece cost drops so sharply as the quantity climbs. At two hundred pieces the 90×54mm runs about twenty-five cents a sticker; by five thousand it's under a cent apart. If the numbers in your quote feel high for a first run, remember offset plates are a one-time setup — every repeat order rides on the same plates and the price-per-piece stays at the top tier.
-
-Lead time is seven working days after file approval. If you're on a tight roadshow or launch deadline, tell us up front and we'll flag whether digital reprint on a smaller run makes more sense.`;
+const seo_body = `Offset-printed car decals in four fixed sizes, single- or double-sided, with an opaque white base so colours read bright on tinted glass. Priced by qty tier from 200 pieces up; lead time seven working days after file approval.`;
 
 const matcher = {
   kicker: 'Quick guide',
