@@ -42,8 +42,8 @@ const product_features = [
   {
     icon_url: null,
     emoji: '⚡',
-    title: '24-hour express on digital jobs',
-    desc: 'Digital files approved before 4pm can ship the next day. Offset runs need their standard lead time — we flag if a rush changes the spec or cost.',
+    title: 'Rush? Tell us up front',
+    desc: 'Many jobs can ship next-day or collect same-day from Paya Lebar. WhatsApp us the deadline with your file and we\'ll confirm the fastest route before production starts.',
   },
 ];
 
