@@ -89,7 +89,7 @@ const matcher = {
       need: 'Large-estate *5000+ piece* rollout where thickness signals seriousness',
       pick_title: '310gsm + Matt Lamination · 5000 pcs',
       pick_detail:
-        'S$1,036.80 for 5000 pcs (≈ S$0.21 each). 310gsm feels noticeably heavier in the hand — the hanger lands with intent, not disposable-flyer energy. Full 15-tier pricing ladder from 100 up to 10,000.',
+        'S$1,036.80 for 5000 pcs (≈ S$0.21 each). 310gsm feels noticeably heavier in the hand — the hanger lands with intent, not disposable-flyer energy. At 5000 pieces the price-per-piece is nearly the same as 260gsm, so the upgrade to thicker stock is almost free at scale.',
       apply: { paper: '310', lamination: 'matt', uv: 'none', qty: 5000 },
     },
   ],
@@ -127,7 +127,7 @@ const seo_magazine = {
       title: '260gsm vs 310gsm — when the extra weight earns its price.',
       body: [
         `Both weights are proper art card — neither flops in the hand. **260gsm** is the default: sturdy, feels deliberate, prints colour beautifully, and lands at the lowest per-piece cost. For most F&B and property-launch jobs it's the right call. **310gsm** adds about 20% thickness and a noticeable density in the hand — the hanger registers before anyone even reads it.`,
-        `The price gap is small at short runs and closes further at scale. At 5000 pieces the 310gsm + Matt Lam tier is only ~8% more per piece than 260gsm + Matt Lam, and unlike 260gsm it offers every quantity tier from 100 up to 10,000 in 1000-step increments — the cleanest ladder on the product. Pick 310gsm when the hanger is the brand, not an ad.`,
+        `The price gap is smaller than you'd expect. At 5000 pieces, 310gsm + Matt Lam is only about 8% more per piece than 260gsm + Matt Lam. For most F&B and promo drops, 260gsm is the right call. Pick 310gsm when the hanger IS the brand impression — luxury guest packs, premium launches, anywhere "feels cheap" would undo the job.`,
       ],
       side: {
         kind: 'list',
@@ -216,7 +216,7 @@ const faqs = [
   },
   {
     question: 'What is the difference between 260gsm and 310gsm art card?',
-    answer: '260gsm is the default — solid, premium-feeling, takes colour beautifully. 310gsm is about 20% thicker and noticeably heavier in the hand — the hanger registers its own presence before anyone reads it. 310gsm also has the full 15-tier price ladder from 100 to 10,000 in 1000-piece steps; 260gsm has 9 tiers.',
+    answer: '260gsm is the default — solid, premium-feeling, takes colour beautifully, and lands at the lowest cost per piece. 310gsm is about 20% thicker and noticeably heavier in the hand, so the hanger registers its own presence before anyone reads it. Pick 260gsm for most F&B, promo and launch drops. Pick 310gsm when the hanger IS the brand impression — hotel guest packs, premium property openings, anything where "feels cheap" would undo the job.',
   },
   {
     question: 'What is spot UV and why is it only available on 260gsm + Matt Lamination?',
@@ -232,7 +232,7 @@ const faqs = [
   },
   {
     question: 'Can I order a quantity between the tiers, like 250 or 1500 pieces?',
-    answer: 'Quantities lock to supplier tiers — what the calculator shows is what you order and what you receive. Type any number and the calculator snaps down to the nearest tier: 250 becomes 200 pcs, 1500 becomes 1000 pcs. If you specifically need an in-between number (exactly 250, not 200), drop a note in WhatsApp and we\'ll quote a custom run.',
+    answer: 'Quantities lock to the supplier tiers listed in the calculator. Type any number and it snaps down to the nearest tier — 250 becomes 200 pcs, 1500 becomes 1000 pcs. What the calculator shows is what you order and what you receive. We don\'t quote custom in-between numbers on this product; pick the tier that fits your run.',
   },
   {
     question: 'What is the lead time?',

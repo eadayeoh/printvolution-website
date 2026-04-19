@@ -105,10 +105,16 @@ function OptionImageLibraryModal({
   async function refresh() {
     setLoading(true);
     setError(null);
-    const res = await listOptionImages();
-    setLoading(false);
-    if (res.ok) setRows(res.rows);
-    else setError(res.error);
+    try {
+      const res = await listOptionImages();
+      setLoading(false);
+      if (!res) { setError('Could not load the image library (no response).'); return; }
+      if (res.ok) setRows(res.rows);
+      else setError(res.error);
+    } catch (e: any) {
+      setLoading(false);
+      setError(e?.message ?? 'Could not load the image library.');
+    }
   }
 
   useEffect(() => {
@@ -128,8 +134,8 @@ function OptionImageLibraryModal({
       fd.append('file', file);
       fd.append('prefix', 'opt');
       const upload = await uploadProductImage(fd);
-      if (!upload.ok || !upload.url) {
-        setError(upload.error || 'Upload failed');
+      if (!upload || !upload.ok || !upload.url) {
+        setError(upload?.error || 'Upload failed (no response from server)');
         setUploading(false);
         return;
       }
@@ -142,9 +148,9 @@ function OptionImageLibraryModal({
         'Untitled';
       const added = await createOptionImage({ url: upload.url, label: libLabel });
       setUploading(false);
-      if (!added.ok) {
-        // Still usable on this option even if library save failed
-        setError(`Image uploaded, but library save failed: ${added.error}`);
+      if (!added || !added.ok) {
+        // Still usable on this option even if library save failed.
+        setError(`Image uploaded, but library save failed: ${added?.error ?? 'no response from server'}`);
         onPick(upload.url);
         return;
       }
@@ -159,9 +165,14 @@ function OptionImageLibraryModal({
 
   async function onDelete(id: string) {
     if (!confirm('Remove this image from the library? Products already using it will keep rendering.')) return;
-    const res = await deleteOptionImage(id);
-    if (res.ok) setRows((prev) => prev.filter((r) => r.id !== id));
-    else alert(res.error);
+    try {
+      const res = await deleteOptionImage(id);
+      if (!res) { alert('No response from server'); return; }
+      if (res.ok) setRows((prev) => prev.filter((r) => r.id !== id));
+      else alert(res.error);
+    } catch (e: any) {
+      alert(e?.message ?? 'Delete failed');
+    }
   }
 
   const filtered = query.trim()

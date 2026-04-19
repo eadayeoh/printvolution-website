@@ -1,11 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { fileTypeFromBuffer } from 'file-type';
 import { createClient } from '@/lib/supabase/server';
 import { serviceClient, GIFT_BUCKETS, makeKey } from '@/lib/gifts/storage';
 import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
+import { detectImage } from '@/lib/upload/detect-image';
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -66,7 +66,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // Magic-byte sniff. file.type is browser-supplied and spoofable; if
   // the real bytes don't match a supported image format, reject.
   const bytesForSniff = new Uint8Array(await file.arrayBuffer());
-  const detected = await fileTypeFromBuffer(bytesForSniff);
+  const detected = detectImage(bytesForSniff);
   const actualMime = detected?.mime;
   if (!actualMime || !ALLOWED_MIME.has(actualMime)) {
     return { ok: false, error: 'File is not a supported image format' };
