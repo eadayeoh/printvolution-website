@@ -46,14 +46,14 @@ const tagline =
 // H1, so keep it to one crisp sentence. The full stock / shape / handle
 // details live in the intro + magazine below, not here.
 const description =
-  'Hand fan printing in Singapore for roadshows, rallies, block parties, temple handouts, weddings and corporate anniversaries — fully assembled at our Paya Lebar workshop, from 100 pieces in seven working days.';
+  'Hand fan printing in Singapore for roadshows, rallies, block parties, temple handouts, weddings and corporate anniversaries — fully assembled, from 100 pieces in seven working days.';
 
 // Intro — plain text; not rendered on the hero anymore (description
 // wins there now) but still feeds JSON-LD / search-engine metadata.
 // Kept concise and without markdown — asterisks would show up verbatim
 // in structured-data snippets.
 const intro =
-  'Hand fan printing in Singapore splits into four decisions — stock, finishing, handle, shape — and the calculator locks each down in order. 310gsm Art Card with Matt Lamination is the event-standard pick (survives a three-hour roadshow in 32°C heat, full library of 11 with-handle shapes plus 3 paddles). 500gsm Synthetic Card is waterproof for outdoor-all-day and humid-goodie-bag use cases (round Type A only). Handle: Yes (with plastic handle, body glued straight, S$0.21/pc assembly included) or No (hand-held paddle, 310gsm only). Quantity tiers run 100 through 3,000 pieces; custom die-cut silhouettes are available on a custom quote. Seven working days from artwork approval to ready-for-collection at Paya Lebar Square.';
+  'Hand fan printing in Singapore splits into four decisions — stock, finishing, handle, shape — and the calculator locks each down in order. 310gsm Art Card with Matt Lamination is the event-standard pick and unlocks the full shape library (11 with-handle shapes Types A–K plus 3 paddle shapes Types L–N). 500gsm Synthetic Card is waterproof for outdoor-all-day and humid-goodie-bag use cases (round Type A only). Handle: Yes (with plastic handle, fully assembled at S$0.21/pc assembly fee included in the line) or No (hand-held paddle, 310gsm only). Quantity tiers run 100 through 3,000 pieces; custom die-cut silhouettes are available on a custom quote. Seven working days from artwork approval to ready-for-collection at Paya Lebar Square.';
 
 // SEO attributes intentionally carry use-cases + location + outcome
 // only — no material names (gsm, art card, synthetic) or print specs
@@ -67,7 +67,7 @@ const seo_desc =
 // names / specs here — just use-cases, location, quantity, lead time.
 const seo_body =
   'Hand fan printing Singapore — roadshow giveaways, GE rally fans, National Day block-party handouts, temple and religious-festival distributions, wedding favours, corporate-anniversary fans, mall-launch merchandise, trade-show takeaways. ' +
-  'Printed both faces in our Paya Lebar workshop, 14 ready shapes plus custom-quote die-cut silhouettes, plastic-handle or hand-held paddle, fully assembled from 100 to 3,000 pieces in seven working days — collected at Paya Lebar Square or delivered island-wide free over S$150.';
+  '14 ready shapes plus custom-quote die-cut silhouettes, plastic-handle or hand-held paddle, fully assembled from 100 to 3,000 pieces in seven working days — collected at Paya Lebar Square or delivered island-wide free over S$150.';
 
 // ────────────────────────────────────────────────────────────────────
 // Matcher — each row maps to a real configurator combo.
@@ -79,13 +79,13 @@ const matcher = {
   title_em: 'the right fan.',
   right_note_title: 'Offset-run, event-graded.',
   right_note_body:
-    'Offset-printed CMYK on both faces, matt-laminated on 310gsm or 500gsm synthetic, die-cut cleanly, handle glued in a straight line — boxed by 100s with the face protected.',
+    'Offset-printed on both faces, matt-laminated on 310gsm or 500gsm synthetic, die-cut to the shape you pick, plastic handle attached and fully assembled on the handle builds.',
   rows: [
     {
       need: '*Roadshow at Bugis Junction* this Saturday — 500 branded fans for booth visitors',
       pick_title: '310gsm Art Card · Matt Lam · Plastic Handle · Type B Cloud · 500 pcs',
       pick_detail:
-        'Matt lam on 310gsm is the event-standard print — survives a three-hour afternoon in 32°C heat without the ink cracking at the handle crease. From S$549.40 including assembly. Seven working days.',
+        'Matt lam on 310gsm is the event-standard print for Singapore-heat booths — solid hand-feel, fingerprint-resistant, photographs premium across the run. From S$549.40 including assembly. Seven working days.',
       apply: { material: '310gsm', finishing: 'matt', handle: 'yes', type: 'b', assembly: 'yes', qty: 500 },
     },
     {
@@ -127,32 +127,28 @@ const seo_magazine = {
   title: 'Everything worth knowing,',
   title_em: 'before the plates lock.',
   lede:
-    'Hand fans are offset-printed, not digital — we run plates, lay ink both sides, die-cut the shape, matt-laminate 310gsm stock, and glue the handle straight. **Stock, handle, shape, quantity** — four decisions that change the outcome on the booth floor. Here is what actually matters on each one.',
+    'Hand fans are offset-printed, not digital — we run plates, lay ink both sides, die-cut the shape, matt-laminate 310gsm stock, and attach the plastic handle on the handle builds. **Stock, handle, shape, quantity** — four decisions that change the outcome on the booth floor. Here is what actually matters on each one.',
   articles: [
     {
       num: '01',
       title: 'Why hand fans are offset-printed from 100 pieces, not digital.',
       body: [
-        'Hand fans are **offset-printed on both faces**, cured, die-cut, and finished — not digital. The reason is simple: offset amortises plate setup across the whole run and locks colour identically from fan 1 to fan 3,000, which is what a National Day block party or a retail roadshow actually needs. Digital drifts slightly across a 500-piece run; on a welcome table fanned out in front of visitors, that drift shows up as one corner of the pile reading warmer than the other.',
-        'Seven working days is the real lead time — day 1 preflight, days 2–3 plate setup and print, days 4–5 die-cut plus matt lamination on 310gsm, days 6–7 handle glue and the 48-hour cure before packing. Over 2,000 pieces we bulk-box by 100s so the boxes are carriable, fan face protected, handle-down for grab-and-distribute at the booth.',
+        'Hand fans are **offset-printed on both faces**, die-cut to the shape you pick, and finished — not digital. The reason: offset amortises plate setup across the whole run and locks colour identically from fan 1 to fan 3,000, which is what a National Day block party or a retail roadshow actually needs. Digital drifts slightly across a 500-piece run; on a welcome table fanned out in front of visitors, that drift shows up as one corner of the pile reading warmer than the other.',
+        'Total lead time is **seven working days** from artwork approval to ready-for-collection at Paya Lebar Square. On the handle builds, the fans ship **fully assembled** — plastic handle already attached, so you unbox and distribute at the event. Free delivery within Singapore over S$150.',
       ],
       side: {
-        kind: 'list',
-        label: 'Day-by-day',
-        rows: [
-          { text: 'Preflight', time: 'Day 1' },
-          { text: 'Plate + print', time: 'Days 2–3' },
-          { text: 'Die-cut + lam', time: 'Days 4–5' },
-          { text: 'Glue + cure + pack', time: 'Days 6–7' },
-        ],
+        kind: 'stat',
+        label: 'Lead time',
+        num: '7 days',
+        caption: 'artwork approval → ready for collection',
       },
     },
     {
       num: '02',
       title: '310gsm Art Card with Matt Lam, or 500gsm Synthetic — the stock call.',
       body: [
-        '**310gsm Art Card with Matt Lamination** is the event default. The matt-lam finish survives a three-hour afternoon at Gardens by the Bay or a Bugis Junction roadshow — the ink does not crack at the crease where the card meets the plastic handle, the edge stays crisp through 400 flaps an hour, and fingerprints do not register. It is the cheapest stock that still reads as premium and it unlocks the full shape library — 11 with-handle shapes (A–K) and 3 paddle shapes (L–N).',
-        '**500gsm Synthetic Card** is the premium call. It is waterproof — so outdoor-all-day events, humid goodie bags and rain-on-the-forecast scenarios all favour synthetic. It does not absorb perspiration from the palm. Trade-off: price (roughly 60% more per piece at 500 pcs) and shape — synthetic only prints the round Type A, so custom silhouettes would need to switch to 310gsm matt (or run on a custom quote).',
+        '**310gsm Art Card with Matt Lamination** is the event default. Matt lam adds a tactile, premium hand-feel, keeps fingerprints off across a day of handling, and reads well on camera under booth lighting. On 310gsm it is the cheapest stock that still feels proper, and it unlocks the full shape library — 11 with-handle shapes (A–K) and 3 paddle shapes (L–N).',
+        '**500gsm Synthetic Card** is the premium call. It is waterproof — outdoor-all-day events, humid goodie bags and rain-on-the-forecast scenarios all favour synthetic over card. Trade-off: price (roughly 60% more per piece at 500 pcs) and shape — synthetic only runs the round Type A, so custom silhouettes would need to switch to 310gsm matt (or run on a custom quote).',
       ],
       side: {
         kind: 'pills',
@@ -169,8 +165,8 @@ const seo_magazine = {
       num: '03',
       title: 'Plastic handle or hand-held paddle — decide by how the fan gets used.',
       body: [
-        '**Plastic handle (Yes)** is the conventional fan — a rigid stick glued in a straight line along the centre axis of the card, body-to-handle bonded, 48-hour cure, arrives fully assembled. Assembly is S$0.21 per piece and shows as a separate line in the breakdown. Available on both 310gsm and 500gsm, across 11 ready shapes (Types A through K). This is what you pick for roadshows, rallies, block parties — anywhere people will flap it.',
-        '**No handle — hand-held paddle (No)** is a 310gsm-only option with 3 paddle shapes (Types L, M, N — all round, 170 × 170mm). Reasons to pick it: temple and religious-festival distributions where the fan is held flat in a prayer hall, bulk giveaways where speed of distribution outweighs the flapping use case, or brands that want a clean round silhouette with the grip built into the card itself. Skip the assembly fee — nothing to glue.',
+        '**Plastic handle (Yes)** is the conventional fan — rigid stick attached to the fan body, arrives fully assembled. Assembly is S$0.21 per piece and shows as a separate line in the breakdown. Available on both 310gsm and 500gsm, across 11 ready shapes (Types A through K). This is what you pick for roadshows, rallies, block parties — anywhere people will flap it.',
+        '**No handle — hand-held paddle (No)** is a 310gsm-only option with 3 paddle shapes (Types L, M, N — all round, 170 × 170mm). Reasons to pick it: temple and religious-festival distributions where the fan is held flat in a prayer hall, bulk giveaways where speed of distribution outweighs the flapping use case, or brands that want a clean round silhouette with the grip built into the card itself. Skip the assembly fee — nothing to attach.',
       ],
       side: {
         kind: 'list',
@@ -211,19 +207,19 @@ const how_we_print = [
     icon_url: null,
     emoji: '✨',
     title: 'Matt lam on 310gsm art card',
-    desc: 'Matt lamination protects ink at the handle crease, keeps fingerprints off, and photographs premium across a booth through a full afternoon of use.',
+    desc: 'Matt lamination gives the fan a premium, fingerprint-resistant hand-feel and reads well on camera under booth lighting across a day of use.',
   },
   {
     icon_url: null,
     emoji: '💦',
     title: '500gsm waterproof synthetic',
-    desc: 'Waterproof synthetic stock for outdoor heat, humid air and sweaty palms. No absorption; stays rigid through a full-day event.',
+    desc: 'Waterproof synthetic stock — pick this for outdoor-all-day events, humid goodie bags, or anything where rain is on the forecast.',
   },
   {
     icon_url: null,
     emoji: '🪭',
-    title: 'Straight-glued + 48hr cure',
-    desc: 'Plastic handle aligned to the centre axis, body-to-handle bonded, cured 48 hours before packing — arrives ready to wave, no DIY step.',
+    title: 'Fully assembled on handles',
+    desc: 'Handle-build fans ship with the plastic handle already attached — unbox and distribute, no DIY assembly at the event.',
   },
 ];
 
@@ -236,12 +232,12 @@ const faqs = [
   {
     question: 'Which stock should I pick — 310gsm Art Card or 500gsm Synthetic?',
     answer:
-      '310gsm Art Card with Matt Lamination is the event default — survives a three-hour roadshow in 32°C heat, ink does not crack at the handle crease, and it unlocks the full shape library (11 with-handle shapes plus 3 no-handle paddles). 500gsm Synthetic Card is waterproof — outdoor-all-day, humid goodie bag, rain-on-the-forecast. The trade-off: synthetic is roughly 60% more per piece at 500 pcs and only prints in the round Type A shape.',
+      '310gsm Art Card with Matt Lamination is the event default — tactile, fingerprint-resistant, reads premium on camera, and it unlocks the full shape library (11 with-handle shapes plus 3 no-handle paddles). 500gsm Synthetic Card is waterproof — outdoor-all-day events, humid goodie bags, or rain-on-the-forecast. The trade-off: synthetic is roughly 60% more per piece at 500 pcs and only runs in the round Type A shape.',
   },
   {
     question: 'Do I need the plastic handle, or can I go hand-held?',
     answer:
-      'Both work. Plastic handle (Yes) is the conventional fan — a rigid stick glued in a straight line along the centre axis, body-to-handle bonded, arrives fully assembled and ready to wave. Available across Types A–K. No handle (hand-held paddle) is a 310gsm-only option with 3 paddle shapes (Types L, M, N — all round 170 × 170mm). It skips the assembly fee, distributes quicker in bulk, and suits temple or religious-festival use where the fan is held flat in a prayer hall.',
+      'Both work. Plastic handle (Yes) is the conventional fan — rigid stick attached to the body, arrives fully assembled and ready to wave. Available across Types A–K. No handle (hand-held paddle) is a 310gsm-only option with 3 paddle shapes (Types L, M, N — all round 170 × 170mm). It skips the assembly fee, distributes quicker in bulk, and suits temple or religious-festival use where the fan is held flat in a prayer hall.',
   },
   {
     question: 'What shapes are available?',
@@ -256,7 +252,7 @@ const faqs = [
   {
     question: 'Is assembly included, and what does "fully assembled" mean?',
     answer:
-      'Yes — when you pick the plastic handle, fully assembled is the only build we offer. Body glued to handle in a straight line along the centre axis, cured 48 hours before packing, shipped in bulk boxes of 100 ready to distribute at the event. The assembly fee is S$0.21 per piece and shows as a separate line in the breakdown. When you pick no handle (paddle), there is nothing to assemble and no fee.',
+      'Yes — when you pick the plastic handle, fully assembled is the only build we offer. The fans ship with the handle already attached, ready to distribute at the event. The assembly fee is S$0.21 per piece and shows as a separate line in the breakdown. When you pick no handle (paddle), there is nothing to assemble and no fee.',
   },
   {
     question: "What's the minimum order and how do quantity tiers work?",
