@@ -90,10 +90,12 @@ const typeAxis = [
   { slug: 'n', label: 'Type N · Round no-handle (170 × 170mm)',show_if: NO_HANDLE_310_MATT },
 ];
 
+// Handle fans always ship fully assembled — the supplier only quotes
+// the body-glued-to-handle build. Kept as a single-option step so the
+// $0.212/pc assembly fee is visible in the breakdown rather than
+// silently baked into tier prices.
 const assemblyAxis = [
-  { slug: 'no',  label: 'No — body + handle only', price_formula: '0' },
-  // Supplier: $0.212 per piece assembly fee (linear across all qtys).
-  { slug: 'yes', label: 'Yes — fully assembled',   price_formula: 'qty*0.212' },
+  { slug: 'yes', label: 'Fully assembled', price_formula: 'qty*0.212' },
 ];
 
 const qtyTiers = [100, 200, 300, 400, 500, 1000, 2000, 3000];
@@ -174,7 +176,7 @@ try {
         ${prod.id}, 'assembly', 4, 'Assembly', 'swatch', true,
         ${sql.json(assemblyAxis)},
         ${sql.json({ step: 'handle', value: 'yes' })},
-        ${sql.json({ note: 'Fully-assembled = body glued to handle, ready to wave. Adds S$0.21/pc.' })}
+        ${sql.json({ note: 'Included — body glued to handle, ready to wave. S$0.21/pc.' })}
       ),
       (
         ${prod.id}, 'qty', 5, 'Quantity', 'qty', true,
