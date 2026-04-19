@@ -35,7 +35,19 @@ export type ConfiguratorStep = {
   label: string;
   type: 'select' | 'swatch' | 'text' | 'qty' | 'number';
   required: boolean;
-  options: Array<{ slug: string; label: string; note?: string; price_formula?: string; swatch?: string; image_url?: string }>;
+  options: Array<{
+    slug: string;
+    label: string;
+    note?: string;
+    price_formula?: string;
+    swatch?: string;
+    image_url?: string;
+    /** Per-option production overrides. Lets a Print Method step carry
+     *  its own lead time + print mode (e.g. Digital: 1 day, Offset: 7
+     *  days on flyers). Falls back to product-level fields when absent. */
+    lead_time_days?: number | null;
+    print_mode?: string | null;
+  }>;
   show_if?: { step: string; value: string } | Array<{ step: string; value: string }> | null;
   step_config?: {
     presets?: number[] | null;

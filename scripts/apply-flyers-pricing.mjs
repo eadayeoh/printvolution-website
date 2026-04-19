@@ -196,12 +196,14 @@ try {
     insert into public.product_configurator
       (product_id, step_id, step_order, label, type, required, options, show_if, step_config)
     values
-      -- 0. Print Method — top of the configurator, drives everything else
+      -- 0. Print Method — top of the configurator, drives everything else.
+      --    Per-option lead_time_days + print_mode let the page chips and
+      --    "Ready by" calendar swap when the customer flips Digital ↔ Offset.
       (
         ${prod.id}, 'method', 0, 'Print Method', 'swatch', true,
         ${sql.json([
-          { slug: 'digital', label: 'Digital', note: 'Short runs · 500 → 5,000 pcs · 1-day turnaround' },
-          { slug: 'offset',  label: 'Offset',  note: 'Bulk runs · 600 → 200,000 pcs · 7-day turnaround' },
+          { slug: 'digital', label: 'Digital', note: 'Short runs · 500 → 5,000 pcs', lead_time_days: 1, print_mode: 'Digital' },
+          { slug: 'offset',  label: 'Offset',  note: 'Bulk runs · 600 → 200,000 pcs', lead_time_days: 7, print_mode: 'Offset' },
         ])},
         null, null
       ),

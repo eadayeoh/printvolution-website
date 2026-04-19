@@ -666,10 +666,10 @@ function OptionCard({
   onChange,
   onRemove,
 }: {
-  option: { slug: string; label: string; note?: string | null; price_formula?: string | null; image_url?: string | null };
+  option: { slug: string; label: string; note?: string | null; price_formula?: string | null; image_url?: string | null; lead_time_days?: number | null; print_mode?: string | null };
   index: number;
   inputCls: string;
-  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null }>) => void;
+  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null }>) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(!option.label || option.label === 'New option');
@@ -754,6 +754,45 @@ function OptionCard({
               value={option.price_formula ?? ''}
               onChange={(formula) => onChange({ price_formula: formula || null })}
             />
+          </div>
+
+          <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+              Per-option production overrides (optional)
+            </div>
+            <p className="mb-3 text-[11px] leading-snug text-neutral-500">
+              Use when this option changes the turnaround or print method — e.g. a "Print Method" step where Digital = 1 day and Offset = 7 days. Leave blank to fall back to the product-level Lead time / Print method set in Basics.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                  Lead time for this option (working days)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={option.lead_time_days ?? ''}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    onChange({ lead_time_days: raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0) });
+                  }}
+                  placeholder="e.g. 1"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                  Print method for this option
+                </span>
+                <input
+                  value={option.print_mode ?? ''}
+                  onChange={(e) => onChange({ print_mode: e.target.value || null })}
+                  placeholder="e.g. Digital"
+                  className={inputCls}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end border-t border-neutral-100 pt-3">

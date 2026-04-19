@@ -131,20 +131,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Ready-by calendar. Deferred until after mount so SSR vs client
-  // date drift can't cause a hydration mismatch.
-  const [readyBy, setReadyBy] = useState<{ today: Date; ready: Date } | null>(null);
-  useEffect(() => {
-    if (!product.lead_time_days || product.lead_time_days <= 0) return;
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const jobStart = nextBusinessDay(tomorrow);
-    const ready = addBusinessDays(jobStart, product.lead_time_days - 1);
-    setReadyBy({ today, ready });
-  }, [product.lead_time_days]);
-
-
   const visibleSteps = useMemo(
     () =>
       product.configurator.filter((step) => {
@@ -154,6 +140,38 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       }),
     [product.configurator, cfgState]
   );
+
+  // Effective lead time + print mode — walks visible swatch steps and
+  // lets an option's own lead_time_days / print_mode override the
+  // product-level fields. Enables one product (e.g. flyers) to advertise
+  // different turnaround per method (Digital: 1 day, Offset: 7 days).
+  const { leadTimeDays, printMode } = useMemo(() => {
+    let leadTimeDays: number | null = product.lead_time_days ?? null;
+    let printMode: string | null = product.print_mode ?? null;
+    for (const step of visibleSteps) {
+      if (step.type !== 'swatch' && step.type !== 'select') continue;
+      const selected = cfgState[step.step_id];
+      const opt = step.options?.find((o) => o.slug === selected);
+      if (!opt) continue;
+      if (typeof opt.lead_time_days === 'number') leadTimeDays = opt.lead_time_days;
+      if (typeof opt.print_mode === 'string' && opt.print_mode.trim()) printMode = opt.print_mode;
+    }
+    return { leadTimeDays, printMode };
+  }, [visibleSteps, cfgState, product.lead_time_days, product.print_mode]);
+
+  // Ready-by calendar. Deferred until after mount so SSR vs client
+  // date drift can't cause a hydration mismatch. Recomputes when the
+  // effective lead time changes (e.g. customer flips Digital ↔ Offset).
+  const [readyBy, setReadyBy] = useState<{ today: Date; ready: Date } | null>(null);
+  useEffect(() => {
+    if (!leadTimeDays || leadTimeDays <= 0) { setReadyBy(null); return; }
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const jobStart = nextBusinessDay(tomorrow);
+    const ready = addBusinessDays(jobStart, leadTimeDays - 1);
+    setReadyBy({ today, ready });
+  }, [leadTimeDays]);
 
   // Reset hidden steps to their first option so pricing lookups don't
   // carry a stale axis value into an invalid combo key (e.g. picking
@@ -624,7 +642,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               {product.tagline || intro}
             </p>
           )}
-          {(product.lead_time_days !== null || product.print_mode) && (
+          {((leadTimeDays ?? 0) > 0 || printMode) && (
             <div
               style={{
                 display: 'flex',
@@ -633,7 +651,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 marginTop: 18,
               }}
             >
-              {product.lead_time_days !== null && product.lead_time_days > 0 && (
+              {leadTimeDays !== null && leadTimeDays > 0 && (
                 <span
                   style={{
                     display: 'inline-flex',
@@ -652,11 +670,11 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 >
                   <span style={{ color: 'var(--pv-muted)' }}>Lead time</span>
                   <span style={{ color: 'var(--pv-ink)' }}>
-                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
+                    {leadTimeDays} working day{leadTimeDays === 1 ? '' : 's'}
                   </span>
                 </span>
               )}
-              {product.print_mode && (
+              {printMode && (
                 <span
                   style={{
                     display: 'inline-flex',
@@ -674,7 +692,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   }}
                 >
                   <span style={{ color: 'var(--pv-muted)' }}>Print</span>
-                  <span style={{ color: 'var(--pv-magenta)' }}>{product.print_mode}</span>
+                  <span style={{ color: 'var(--pv-magenta)' }}>{printMode}</span>
                 </span>
               )}
             </div>
@@ -1344,7 +1362,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             )}
 
             {/* READY BY — calendar-style lead time preview */}
-            {readyBy && product.lead_time_days && (
+            {readyBy && leadTimeDays && (
               <div
                 style={{
                   marginTop: 28,
@@ -1369,7 +1387,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 >
                   <span>Ready by</span>
                   <span style={{ color: '#fff' }}>
-                    {product.lead_time_days} working day{product.lead_time_days === 1 ? '' : 's'}
+                    {leadTimeDays} working day{leadTimeDays === 1 ? '' : 's'}
                   </span>
                 </div>
                 <div

@@ -33,6 +33,10 @@ const ConfiguratorStepSchema = z.object({
     price_formula: z.string().optional(),
     image_url: z.string().nullable().optional(),
     swatch: z.string().optional(),
+    // Per-option production overrides — lets a Print Method step carry
+    // its own lead time + print mode per selectable option.
+    lead_time_days: z.number().int().nullable().optional(),
+    print_mode: z.string().nullable().optional(),
   })).optional(),
   show_if: z
     .union([
