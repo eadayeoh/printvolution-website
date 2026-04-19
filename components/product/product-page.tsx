@@ -115,13 +115,12 @@ type Props = {
 };
 
 export function ProductPage({ product, productRoutes, features }: Props) {
-  // "How we print" cards — per-product override wins, otherwise fall back
-  // to the site-wide default defined in Site Settings.
-  const perProductHwp = product.extras?.how_we_print as ProductFeature[] | null | undefined;
+  // "How we print" cards are site-wide — sourced from Site Settings
+  // (admin at /admin/settings). The per-product override column
+  // product_extras.how_we_print is ignored now; same 4 cards on every
+  // product page.
   const productFeatures: ProductFeature[] =
-    (perProductHwp && Array.isArray(perProductHwp) && perProductHwp.length > 0)
-      ? perProductHwp
-      : (features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES);
+    features && features.length > 0 ? features : DEFAULT_PRODUCT_FEATURES;
   const addToCart = useCart((s) => s.add);
 
   // Column index used when no size/dimension configurator step is

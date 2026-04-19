@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { MagazineEditor, type MagValue } from './product-magazine-editor';
-import { HowWePrintEditor, type HowWePrintValue } from './product-how-we-print-editor';
+// HowWePrintEditor removed — the "How we print" cards are site-wide now.
+// Edit them at /admin/settings.
 import { updateProduct } from '@/app/admin/products/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { OptionImagePicker } from '@/components/admin/option-image-picker';
@@ -65,9 +66,8 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   const [matcher, setMatcher] = useState<MatcherValue | null>(
     (product.extras?.matcher as MatcherValue) ?? null,
   );
-  const [howWePrint, setHowWePrint] = useState<HowWePrintValue | null>(
-    (product.extras?.how_we_print as HowWePrintValue) ?? null,
-  );
+  // "How we print" is site-wide — edit at /admin/settings. Kept as a
+  // null payload on save so existing per-product overrides are cleared.
 
   // Pricing (cents in backend, dollars in UI)
   const [pricingLabel, setPricingLabel] = useState(product.pricing?.label ?? 'Size');
@@ -104,7 +104,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         image_url: imageUrl || null,
         matcher,
         seo_magazine: seoMagazine,
-        how_we_print: howWePrint,
+        how_we_print: null,
         pricing: {
           label: pricingLabel,
           configs: pricingConfigs,
@@ -304,7 +304,17 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             </p>
           </div>
 
-          <HowWePrintEditor value={howWePrint} onChange={setHowWePrint} productSlug={product.slug} />
+          <div className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-xs text-neutral-600">
+            <div className="mb-1 font-bold text-ink">How we print (4 cards)</div>
+            <p>
+              This section is now site-wide — the same four cards appear on every product page.
+              Edit them at{' '}
+              <a className="font-bold text-pink underline" href="/admin/settings">
+                Site Settings
+              </a>
+              .
+            </p>
+          </div>
           <MatcherEditor value={matcher} onChange={setMatcher} />
           <MagazineEditor value={seoMagazine} onChange={setSeoMagazine} />
         </div>
