@@ -4,14 +4,19 @@ export type ProofItem =
   | { kind: 'quote'; text?: string; cite?: string }
   | { kind: 'stat'; num?: string; suffix?: string; label?: string };
 
+export type ProofHeader = { label?: string };
+
+const PROOF_DEFAULT_LABEL = '03 Trusted since 2014';
+
 export function Proof({
   items,
-  label = '03 Trusted since 2014',
+  header,
 }: {
   items: ProofItem[];
-  label?: string;
+  header?: ProofHeader | null;
 }) {
   if (!items.length) return null;
+  const label = header?.label || PROOF_DEFAULT_LABEL;
   const quote = items.find((i) => i.kind === 'quote') as Extract<ProofItem, { kind: 'quote' }> | undefined;
   const stats = items.filter((i): i is Extract<ProofItem, { kind: 'stat' }> => i.kind === 'stat');
   const statColors = ['var(--pv-magenta)', 'var(--pv-cyan)', 'var(--pv-yellow)', 'var(--pv-green)'];

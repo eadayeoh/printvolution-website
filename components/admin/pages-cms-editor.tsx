@@ -73,6 +73,20 @@ export function PagesCmsEditor({
 
           <SectionEditor
             pageKey="home"
+            sectionKey="why.header"
+            title="Why section — header"
+            hint="Kicker, headline, purple-accented second line, and intro paragraph above the three why cards. Wrap text in *stars* inside the accent to apply the yellow underline highlight."
+            initial={sections['home:why.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Kicker (e.g. 01 Why Printvolution)', type: 'text' },
+              { key: 'title', label: 'Title (purple first line)', type: 'text' },
+              { key: 'title_accent', label: 'Title accent (black second line — wrap highlight in *stars*)', type: 'text' },
+              { key: 'intro', label: 'Intro paragraph', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
             sectionKey="why.cards"
             title="Why cards (3)"
             hint="Three numbered brutalist why cards on cream background."
@@ -81,6 +95,31 @@ export function PagesCmsEditor({
               { key: 'num', label: 'Number (01, 02, 03)', type: 'text' },
               { key: 'title', label: 'Title', type: 'text' },
               { key: 'body', label: 'Body', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="categories.header"
+            title="Product catalogue — header"
+            hint="Kicker + headline + intro above the Print/Gifts product tabs."
+            initial={sections['home:categories.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Kicker (e.g. 02 Product Catalogue)', type: 'text' },
+              { key: 'title', label: 'Title (black first part)', type: 'text' },
+              { key: 'title_accent', label: 'Title accent (magenta last word)', type: 'text' },
+              { key: 'intro', label: 'Intro paragraph', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="proof.header"
+            title="Proof — header pill"
+            hint="The single magenta pill label above the quote + stats band."
+            initial={sections['home:proof.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Pill label (e.g. 03 Trusted since 2014)', type: 'text' },
             ]}
           />
 
@@ -131,6 +170,19 @@ export function PagesCmsEditor({
 
           <SectionEditor
             pageKey="home"
+            sectionKey="faq.header"
+            title="FAQ — header"
+            hint="Kicker + headline above the FAQ accordion."
+            initial={sections['home:faq.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Kicker (e.g. 05 Questions)', type: 'text' },
+              { key: 'title', label: 'Title (black first part)', type: 'text' },
+              { key: 'title_accent', label: 'Title accent (cyan last word)', type: 'text' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
             sectionKey="faq.items"
             title="FAQ"
             hint="Accordion FAQs on the homepage."
@@ -138,6 +190,19 @@ export function PagesCmsEditor({
             fields={[
               { key: 'question', label: 'Question', type: 'text' },
               { key: 'answer', label: 'Answer', type: 'textarea' },
+            ]}
+          />
+
+          <SectionEditor
+            pageKey="home"
+            sectionKey="location.header"
+            title="Location — header"
+            hint="Kicker + headline above the address rows and map."
+            initial={sections['home:location.header'] ?? []}
+            fields={[
+              { key: 'label', label: 'Kicker (e.g. 06 Visit Us)', type: 'text' },
+              { key: 'title', label: 'Title (black first part)', type: 'text' },
+              { key: 'title_accent', label: 'Title accent (magenta last word)', type: 'text' },
             ]}
           />
 

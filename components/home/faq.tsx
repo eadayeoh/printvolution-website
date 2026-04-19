@@ -1,9 +1,19 @@
 import { SectionLabel } from './section-label';
 
 export type FaqItem = { question?: string; answer?: string };
+export type FaqHeader = { label?: string; title?: string; title_accent?: string };
 
-export function Faq({ items }: { items: FaqItem[] }) {
+const FAQ_DEFAULTS = {
+  label: '05 Questions',
+  title: 'Things people',
+  title_accent: 'ask us.',
+};
+
+export function Faq({ items, header }: { items: FaqItem[]; header?: FaqHeader | null }) {
   if (!items.length) return null;
+  const label = header?.label || FAQ_DEFAULTS.label;
+  const title = header?.title || FAQ_DEFAULTS.title;
+  const title_accent = header?.title_accent || FAQ_DEFAULTS.title_accent;
   return (
     <section
       style={{
@@ -13,7 +23,7 @@ export function Faq({ items }: { items: FaqItem[] }) {
       }}
     >
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <SectionLabel text="05 Questions" />
+        <SectionLabel text={label} />
         <h2
           style={{
             fontFamily: 'var(--pv-f-display)',
@@ -24,7 +34,7 @@ export function Faq({ items }: { items: FaqItem[] }) {
             marginBottom: 40,
           }}
         >
-          Things people <span style={{ color: 'var(--pv-cyan)' }}>ask us.</span>
+          {title} <span style={{ color: 'var(--pv-cyan)' }}>{title_accent}</span>
         </h2>
         <div style={{ display: 'grid', gap: 14 }}>
           {items.map((f, i) => (

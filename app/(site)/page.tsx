@@ -3,12 +3,12 @@ import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { getHomePageContent, homeItems, homeFirst } from '@/lib/data/home';
 import { LocalBusinessSchema, FAQPageSchema } from '@/components/seo/json-ld';
 import { SplitHero, type SplitHeroItem } from '@/components/home/split-hero';
-import { WhyCards, type WhyItem } from '@/components/home/why-cards';
-import { CategoryTiles, type CategoryTab } from '@/components/home/category-tiles';
-import { Proof, type ProofItem } from '@/components/home/proof';
+import { WhyCards, type WhyItem, type WhyHeader } from '@/components/home/why-cards';
+import { CategoryTiles, type CategoryTab, type CategoryTilesHeader } from '@/components/home/category-tiles';
+import { Proof, type ProofItem, type ProofHeader } from '@/components/home/proof';
 import { HowItWorks, type HowHeader, type HowStep } from '@/components/home/how-it-works';
-import { Faq, type FaqItem } from '@/components/home/faq';
-import { Location, type LocationItem } from '@/components/home/location';
+import { Faq, type FaqItem, type FaqHeader } from '@/components/home/faq';
+import { Location, type LocationItem, type LocationHeader } from '@/components/home/location';
 import { FinalCta, type FinalCtaItem } from '@/components/home/final-cta';
 
 export const metadata = {
@@ -36,11 +36,16 @@ export default async function HomePage() {
 
   const heroItems = homeItems(sections, 'hero.split') as SplitHeroItem[];
   const whyItems = homeItems(sections, 'why.cards') as WhyItem[];
+  const whyHeader = homeFirst<WhyHeader>(sections, 'why.header');
+  const categoriesHeader = homeFirst<CategoryTilesHeader>(sections, 'categories.header');
   const proofItems = homeItems(sections, 'proof.main') as ProofItem[];
+  const proofHeader = homeFirst<ProofHeader>(sections, 'proof.header');
   const howHeader = homeFirst<HowHeader>(sections, 'how.header');
   const howSteps = homeItems(sections, 'how.steps') as HowStep[];
   const faqItems = homeItems(sections, 'faq.items') as FaqItem[];
+  const faqHeader = homeFirst<FaqHeader>(sections, 'faq.header');
   const locationItems = homeItems(sections, 'location.main') as LocationItem[];
+  const locationHeader = homeFirst<LocationHeader>(sections, 'location.header');
   const finalCta = homeFirst<FinalCtaItem>(sections, 'final_cta.main');
 
   const categoryTabs: CategoryTab[] = (homeItems(sections, 'categories.tabs') as CategoryTabSection[]).map((t) => {
@@ -72,12 +77,12 @@ export default async function HomePage() {
       <LocalBusinessSchema />
       <FAQPageSchema items={faqItems} />
       <SplitHero items={heroItems} />
-      <WhyCards items={whyItems} />
-      <CategoryTiles tabs={categoryTabs} />
-      <Proof items={proofItems} />
+      <WhyCards items={whyItems} header={whyHeader} />
+      <CategoryTiles tabs={categoryTabs} header={categoriesHeader} />
+      <Proof items={proofItems} header={proofHeader} />
       <HowItWorks header={howHeader} steps={howSteps} />
-      <Faq items={faqItems} />
-      <Location items={locationItems} />
+      <Faq items={faqItems} header={faqHeader} />
+      <Location items={locationItems} header={locationHeader} />
       <FinalCta item={finalCta} />
     </>
   );

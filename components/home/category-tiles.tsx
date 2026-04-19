@@ -20,6 +20,20 @@ export type CategoryTab = {
   tiles: CategoryTile[];
 };
 
+export type CategoryTilesHeader = {
+  label?: string;
+  title?: string;
+  title_accent?: string;
+  intro?: string;
+};
+
+const CAT_DEFAULTS = {
+  label: '02 Product Catalogue',
+  title: 'Everything we',
+  title_accent: 'make.',
+  intro: 'From silk-laminated business cards to custom photo mugs — pick a side, pick a product, configure live, order in under 5 minutes.',
+};
+
 function formatSGD(cents: number): string {
   return `S$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
 }
@@ -38,16 +52,21 @@ function badgeText(badge: string): string {
   return '#fff';
 }
 
-export function CategoryTiles({ tabs }: { tabs: CategoryTab[] }) {
+export function CategoryTiles({ tabs, header }: { tabs: CategoryTab[]; header?: CategoryTilesHeader | null }) {
   const visible = tabs.filter((t) => t.tiles.length > 0);
   const [activeKey, setActiveKey] = useState(visible[0]?.tab_key ?? '');
   if (!visible.length) return null;
   const active = visible.find((t) => t.tab_key === activeKey) ?? visible[0];
 
+  const label = header?.label || CAT_DEFAULTS.label;
+  const title = header?.title || CAT_DEFAULTS.title;
+  const title_accent = header?.title_accent || CAT_DEFAULTS.title_accent;
+  const intro = header?.intro || CAT_DEFAULTS.intro;
+
   return (
     <section style={{ padding: '96px 24px' }}>
       <div style={{ maxWidth: 1560, margin: '0 auto' }}>
-        <SectionLabel text="02 Product Catalogue" />
+        <SectionLabel text={label} />
         <h2
           style={{
             fontFamily: 'var(--pv-f-display)',
@@ -58,10 +77,10 @@ export function CategoryTiles({ tabs }: { tabs: CategoryTab[] }) {
             marginBottom: 24,
           }}
         >
-          Everything we <span style={{ color: 'var(--pv-magenta)' }}>make.</span>
+          {title} <span style={{ color: 'var(--pv-magenta)' }}>{title_accent}</span>
         </h2>
         <p style={{ maxWidth: 720, fontSize: 17, lineHeight: 1.55, color: 'var(--pv-ink-soft)', marginBottom: 32, fontWeight: 500 }}>
-          From silk-laminated business cards to custom photo mugs — pick a side, pick a product, configure live, order in under 5 minutes.
+          {intro}
         </p>
 
         {visible.length > 1 && (

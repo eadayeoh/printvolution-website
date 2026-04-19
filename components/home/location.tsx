@@ -7,8 +7,19 @@ export type LocationItem = {
   href?: string;
 };
 
-export function Location({ items }: { items: LocationItem[] }) {
+export type LocationHeader = { label?: string; title?: string; title_accent?: string };
+
+const LOC_DEFAULTS = {
+  label: '06 Visit Us',
+  title: 'Paya Lebar Square,',
+  title_accent: 'SG.',
+};
+
+export function Location({ items, header }: { items: LocationItem[]; header?: LocationHeader | null }) {
   if (!items.length) return null;
+  const label = header?.label || LOC_DEFAULTS.label;
+  const title = header?.title || LOC_DEFAULTS.title;
+  const title_accent = header?.title_accent || LOC_DEFAULTS.title_accent;
   return (
     <section
       style={{
@@ -28,7 +39,7 @@ export function Location({ items }: { items: LocationItem[] }) {
         }}
       >
         <div>
-          <SectionLabel text="06 Visit Us" />
+          <SectionLabel text={label} />
           <h2
             style={{
               fontFamily: 'var(--pv-f-display)',
@@ -39,9 +50,7 @@ export function Location({ items }: { items: LocationItem[] }) {
               marginBottom: 20,
             }}
           >
-            Paya Lebar
-            <br />
-            Square, <span style={{ color: 'var(--pv-magenta)' }}>SG.</span>
+            {title} <span style={{ color: 'var(--pv-magenta)' }}>{title_accent}</span>
           </h2>
           <div style={{ marginTop: 24 }}>
             {items.map((row, i) => (

@@ -2,22 +2,28 @@ import { SectionLabel } from './section-label';
 import { renderHighlight } from './highlight';
 
 export type WhyItem = { num?: string; title?: string; body?: string };
+export type WhyHeader = { label?: string; title?: string; title_accent?: string; intro?: string };
 
 const NUM_COLORS = ['var(--pv-magenta)', 'var(--pv-cyan)', 'var(--pv-purple)'];
 
+const WHY_DEFAULTS = {
+  label: '01 Why Printvolution',
+  title: 'Three reasons',
+  title_accent: "we *don't suck.*",
+  intro: 'Most printing companies in Singapore treat your file like a transaction — upload, pay, hope for the best. We treat it like a job with your name on it.',
+};
+
 export function WhyCards({
   items,
-  label = '01 Why Printvolution',
-  title = 'Three reasons',
-  title_accent = "we *don't suck.*",
-  intro = "Most printing companies in Singapore treat your file like a transaction — upload, pay, hope for the best. We treat it like a job with your name on it.",
+  header,
 }: {
   items: WhyItem[];
-  label?: string;
-  title?: string;
-  title_accent?: string;
-  intro?: string;
+  header?: WhyHeader | null;
 }) {
+  const label = header?.label || WHY_DEFAULTS.label;
+  const title = header?.title || WHY_DEFAULTS.title;
+  const title_accent = header?.title_accent || WHY_DEFAULTS.title_accent;
+  const intro = header?.intro || WHY_DEFAULTS.intro;
   if (!items.length) return null;
   return (
     <section
