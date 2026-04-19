@@ -142,9 +142,12 @@ const sizeDigitalAxis = [
   { slug: 'dl', label: 'DL (99 × 210mm)' },
 ];
 
+// Digital paper options — 128gsm + 157gsm only, matching pvpricelist
+// basic-material tier coverage. 128gsm is default ("Standard") so the
+// page lands on a real tier price on first render; 115gsm was dropped
+// because pvpricelist has no tier data for it.
 const paperDigitalAxis = [
-  { slug: '115art', label: '115gsm Art Paper', note: 'Standard' },
-  { slug: '128art', label: '128gsm Art Paper' },
+  { slug: '128art', label: '128gsm Art Paper', note: 'Standard' },
   { slug: '157art', label: '157gsm Art Paper' },
 ];
 
