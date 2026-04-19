@@ -118,6 +118,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             : (step.step_config?.min ?? 1);
         initial[step.step_id] = String(defaultQty);
       }
+      if (step.type === 'number') {
+        // Seed with the configured minimum so formulas referencing the
+        // step (e.g. width / height on PVC Canvas) have a meaningful
+        // starting value instead of 0.
+        const mn = Number(step.step_config?.min);
+        initial[step.step_id] = Number.isFinite(mn) && mn > 0 ? String(mn) : '';
+      }
     }
     return initial;
   });
@@ -322,9 +329,25 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return true;
   }
 
+  // Gather all `number`-type configurator steps as numeric variables
+  // that price_formula strings can reference. e.g. PVC Canvas uses
+  // `width * height / 930.25 * 3.50` where width/height come from
+  // customer-entered number steps. Non-number values are ignored.
+  function numericCtx(): Record<string, number> {
+    const ctx: Record<string, number> = {};
+    for (const step of product.configurator) {
+      if (step.type !== 'number') continue;
+      const raw = cfgState[step.step_id] ?? '';
+      const n = parseFloat(raw);
+      ctx[step.step_id] = Number.isFinite(n) ? n : 0;
+    }
+    return ctx;
+  }
+
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number) {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let sum = 0;
+    const nctx = numericCtx();
 
     // 0. Formula-driven compute (e.g. flyers Digital BM) — wins when
     //    the current cfgState matches the compute's predicate. Returns
@@ -345,7 +368,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
           const opt = step.options.find((o) => o.slug === selected);
           if (opt?.price_formula) {
             const valueCents = Math.round(
-              evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+              evaluateFormula(opt.price_formula, { ...nctx, qty: useQty, base: sum / 100 }) * 100,
             );
             sum += valueCents;
             // Show both charges (positive) and discounts (negative) in
@@ -404,7 +427,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             const opt = step.options.find((o) => o.slug === selected);
             if (opt?.price_formula) {
               const valueCents = Math.round(
-                evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+                evaluateFormula(opt.price_formula, { ...nctx, qty: useQty, base: sum / 100 }) * 100,
               );
               sum += valueCents;
               if (valueCents !== 0) {
@@ -428,8 +451,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         anyFormula = true;
         // Pass the running sum as `base` so later steps (e.g. a bulk
         // % discount) can modify the total set by earlier steps.
+        // Spread number-step values so dimensional formulas (width,
+        // height, eyelets, …) can reference them.
         const valueCents = Math.round(
-          evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+          evaluateFormula(opt.price_formula, { ...nctx, qty: useQty, base: sum / 100 }) * 100,
         );
         sum += valueCents;
         if (valueCents !== 0) breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
@@ -1274,6 +1299,48 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   </div>
                 );
               }
+              if (step.type === 'number') {
+                const raw = cfgState[step.step_id] || '';
+                const numMin = Math.max(0, Number(step.step_config?.min ?? 0));
+                const currentN = parseFloat(raw);
+                const currentLabel = Number.isFinite(currentN) && raw !== '' ? String(currentN) : '—';
+                return (
+                  <div
+                    key={step.step_id}
+                    style={{
+                      background: '#fff',
+                      border: '2px solid var(--pv-ink)',
+                      boxShadow: '6px 6px 0 var(--pv-ink)',
+                      padding: 22,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <StepHead num={stepNum} label={step.label} current={currentLabel} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={raw}
+                        min={numMin || undefined}
+                        onChange={(e) => setCfgState((s) => ({ ...s, [step.step_id]: e.target.value }))}
+                        onBlur={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!Number.isFinite(v) || v < numMin) {
+                            setCfgState((s) => ({ ...s, [step.step_id]: numMin > 0 ? String(numMin) : '' }));
+                          }
+                        }}
+                        placeholder={numMin > 0 ? `${numMin}` : ''}
+                        style={{ width: 160, height: 44, textAlign: 'center', border: '1.5px solid var(--pv-ink)', fontFamily: 'var(--pv-f-display)', fontSize: 18 }}
+                      />
+                      {step.step_config?.note && (
+                        <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)' }}>
+                          {step.step_config.note}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
               return null;
             })}
 
@@ -1435,172 +1502,119 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 <h3 style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22, letterSpacing: '-0.02em', margin: 0, marginBottom: 14 }}>
                   Order more, pay less per piece.
                 </h3>
-                {product.pricing_table ? (
-                  // Table view for multi-tier pricing — easier to scan 17
-                  // rows and compare per-piece cost than a card grid.
-                  (() => {
-                    const qtyStepId = visibleSteps.find((s) => s.type === 'qty')?.step_id ?? 'qty';
-                    const baselinePerPiece = priceLadder[0]?.perPiece ?? 0;
-                    const bestPerPiece = priceLadder.reduce((m, r) => Math.min(m, r.perPiece), baselinePerPiece);
-                    return (
+                {/* Single table view for every product — previously split
+                    into a table (pricing_table products) and a card grid
+                    (formula-only). That inconsistency had door hangers
+                    showing a table while roll-ups / standees showed
+                    squares. Table reads the same data (priceLadder) and
+                    works for 3-row and 17-row ladders alike. */}
+                {(() => {
+                  const qtyStepId = visibleSteps.find((s) => s.type === 'qty')?.step_id ?? 'qty';
+                  const baselinePerPiece = priceLadder[0]?.perPiece ?? 0;
+                  const bestPerPiece = priceLadder.reduce((m, r) => Math.min(m, r.perPiece), baselinePerPiece);
+                  const baselineLabel = priceLadder[0]?.qty ?? '';
+                  return (
+                    <div
+                      style={{
+                        border: '2px solid var(--pv-ink)',
+                        boxShadow: '6px 6px 0 var(--pv-ink)',
+                        background: '#fff',
+                        overflow: 'hidden',
+                      }}
+                    >
                       <div
                         style={{
-                          border: '2px solid var(--pv-ink)',
-                          boxShadow: '6px 6px 0 var(--pv-ink)',
-                          background: '#fff',
-                          overflow: 'hidden',
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
+                          background: 'var(--pv-ink)',
+                          color: '#fff',
+                          fontFamily: 'var(--pv-f-mono)',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          padding: '10px 16px',
+                          gap: 8,
                         }}
                       >
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
-                            background: 'var(--pv-ink)',
-                            color: '#fff',
-                            fontFamily: 'var(--pv-f-mono)',
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            padding: '10px 16px',
-                            gap: 8,
-                          }}
-                        >
-                          <div>Quantity</div>
-                          <div style={{ textAlign: 'right' }}>Total</div>
-                          <div style={{ textAlign: 'right' }}>Per piece</div>
-                          <div style={{ textAlign: 'right' }}>vs 200 qty</div>
-                        </div>
-                        {priceLadder.map((r, i) => {
-                          const isCurrent = r.qtyNum === qty;
-                          const isBest = Math.abs(r.perPiece - bestPerPiece) < 0.5;
-                          const deltaVsBaseline = baselinePerPiece > 0
-                            ? Math.round(((baselinePerPiece - r.perPiece) / baselinePerPiece) * 100)
-                            : 0;
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setCfgState((s) => ({ ...s, [qtyStepId]: String(r.qtyNum) }))}
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
-                                gap: 8,
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                borderTop: i === 0 ? 'none' : '1px solid var(--pv-rule)',
-                                background: isCurrent ? 'var(--pv-yellow)' : '#fff',
-                                color: 'var(--pv-ink)',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                alignItems: 'center',
-                                fontFamily: 'var(--pv-f-body)',
-                                fontSize: 14,
-                                fontWeight: isCurrent ? 700 : 500,
-                                transition: 'background 0.12s',
-                              }}
-                              onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = 'var(--pv-cream)'; }}
-                              onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
-                            >
-                              <div style={{ fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.02em' }}>
-                                {r.qtyNum.toLocaleString()}
-                                {isBest && !isCurrent && (
-                                  <span
-                                    style={{
-                                      marginLeft: 8,
-                                      fontSize: 9,
-                                      padding: '2px 6px',
-                                      background: 'var(--pv-green)',
-                                      color: '#fff',
-                                      letterSpacing: '0.1em',
-                                      verticalAlign: 'middle',
-                                    }}
-                                  >
-                                    BEST /PC
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-display)', fontSize: 16 }}>
-                                {formatSGD(r.total)}
-                              </div>
-                              <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 13, color: 'var(--pv-muted)' }}>
-                                {formatSGD(Math.round(r.perPiece))}
-                              </div>
-                              <div
-                                style={{
-                                  textAlign: 'right',
-                                  fontFamily: 'var(--pv-f-mono)',
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  color: deltaVsBaseline > 0 ? 'var(--pv-green)' : 'var(--pv-muted)',
-                                }}
-                              >
-                                {deltaVsBaseline > 0 ? `−${deltaVsBaseline}%` : '—'}
-                              </div>
-                            </button>
-                          );
-                        })}
+                        <div>Quantity</div>
+                        <div style={{ textAlign: 'right' }}>Total</div>
+                        <div style={{ textAlign: 'right' }}>Per piece</div>
+                        <div style={{ textAlign: 'right' }}>vs {baselineLabel}</div>
                       </div>
-                    );
-                  })()
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-                    {priceLadder.map((r, i) => {
-                      const isCurrent = i === rowIdx;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setRowIdx(i)}
-                          style={{
-                            textAlign: 'left',
-                            padding: '14px 16px',
-                            border: '2px solid var(--pv-ink)',
-                            background: isCurrent ? 'var(--pv-ink)' : '#fff',
-                            color: isCurrent ? '#fff' : 'var(--pv-ink)',
-                            boxShadow: isCurrent ? '4px 4px 0 var(--pv-magenta)' : '4px 4px 0 var(--pv-ink)',
-                            cursor: 'pointer',
-                            transition: 'all 0.12s',
-                          }}
-                        >
-                          <div
+                      {priceLadder.map((r, i) => {
+                        const isCurrent = r.qtyNum === qty;
+                        const isBest = Math.abs(r.perPiece - bestPerPiece) < 0.5;
+                        const deltaVsBaseline = baselinePerPiece > 0
+                          ? Math.round(((baselinePerPiece - r.perPiece) / baselinePerPiece) * 100)
+                          : 0;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setCfgState((s) => ({ ...s, [qtyStepId]: String(r.qtyNum) }))}
                             style={{
-                              fontFamily: 'var(--pv-f-mono)',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              letterSpacing: '0.08em',
-                              textTransform: 'uppercase',
-                              color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)',
-                              marginBottom: 4,
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
+                              gap: 8,
+                              width: '100%',
+                              padding: '12px 16px',
+                              border: 'none',
+                              borderTop: i === 0 ? 'none' : '1px solid var(--pv-rule)',
+                              background: isCurrent ? 'var(--pv-yellow)' : '#fff',
+                              color: 'var(--pv-ink)',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              alignItems: 'center',
+                              fontFamily: 'var(--pv-f-body)',
+                              fontSize: 14,
+                              fontWeight: isCurrent ? 700 : 500,
+                              transition: 'background 0.12s',
                             }}
+                            onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = 'var(--pv-cream)'; }}
+                            onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
                           >
-                            {r.qty}
-                          </div>
-                          <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 20, color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-ink)' }}>
-                            {formatSGD(r.total)}
-                          </div>
-                          <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)', marginTop: 2 }}>
-                            {formatSGD(Math.round(r.perPiece))} /pc
-                          </div>
-                          {r.saves > 0 && (
+                            <div style={{ fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.02em' }}>
+                              {r.qtyNum.toLocaleString()}
+                              {isBest && !isCurrent && priceLadder.length > 1 && (
+                                <span
+                                  style={{
+                                    marginLeft: 8,
+                                    fontSize: 9,
+                                    padding: '2px 6px',
+                                    background: 'var(--pv-green)',
+                                    color: '#fff',
+                                    letterSpacing: '0.1em',
+                                    verticalAlign: 'middle',
+                                  }}
+                                >
+                                  BEST /PC
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-display)', fontSize: 16 }}>
+                              {formatSGD(r.total)}
+                            </div>
+                            <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 13, color: 'var(--pv-muted)' }}>
+                              {formatSGD(Math.round(r.perPiece))}
+                            </div>
                             <div
                               style={{
-                                marginTop: 4,
+                                textAlign: 'right',
                                 fontFamily: 'var(--pv-f-mono)',
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: 700,
-                                color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-green)',
+                                color: deltaVsBaseline > 0 ? 'var(--pv-green)' : 'var(--pv-muted)',
                               }}
                             >
-                              Save {formatSGD(r.saves)}
+                              {deltaVsBaseline > 0 ? `−${deltaVsBaseline}%` : '—'}
                             </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

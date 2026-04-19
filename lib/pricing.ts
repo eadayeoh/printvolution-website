@@ -25,7 +25,26 @@ type Token =
   | { type: 'rparen' }
   | { type: 'comma' };
 
-const VARS = new Set(['qty', 'base']);
+// Variables allowed inside a price_formula. `qty` and `base` are the
+// legacy core; `width`, `height`, `length`, `depth`, `diameter`,
+// `eyelets`, `pages` let dimensional / count-based pricing reference
+// the values of `number`-type configurator steps. If a future product
+// needs a new variable, add its slug here and ensure the product-page
+// evaluator passes it in the ctx.
+const VARS = new Set([
+  'qty',
+  'base',
+  'width',
+  'height',
+  'length',
+  'depth',
+  'diameter',
+  'radius',
+  'eyelets',
+  'pages',
+  'area',
+  'sides',
+]);
 
 function tokenize(src: string): Token[] {
   const out: Token[] = [];
