@@ -37,13 +37,13 @@ const h1 = 'PVC Canvas Singapore';
 const h1em = 'any size, priced by area.';
 
 const tagline =
-  'PVC canvas printing in Singapore — any size from 30cm up, priced by the square foot, matt or gloss lamination, eyelets priced per piece. Event banners, shop signage, exhibition displays, backdrops, and photocall walls.';
+  'PVC canvas printing in Singapore — any size from 300mm up, priced by the square foot, eyelets priced per piece. Event banners, shop signage, exhibition displays, backdrops, and photocall walls.';
 
 const description =
-  'Custom PVC canvas printing in Singapore for event banners, shop signage, exhibition displays, photocall backdrops and temporary signage. Type your exact width and height — price is calculated by the square foot at S$3.50/sq ft. Eyelets optional, charged S$3 each. Wooden poles available as a finishing upgrade.';
+  'Custom PVC canvas printing in Singapore for event banners, shop signage, exhibition displays, photocall backdrops and temporary signage. Type your exact width and height in millimetres — price is calculated by the square foot at S$3.50/sqft, with a S$15 per-piece minimum. Eyelets optional at S$3 each. Wooden poles available as a finishing upgrade.';
 
 const intro =
-  'PVC canvas is a waterproof print substrate for banners, event backdrops, shop signage and any display that needs to survive outdoor weather or a long event run. Price is set by **area** — width × height in cm, converted to square feet, charged at S$3.50/sq ft — so a 2m × 1m banner costs exactly the same whether you order round numbers or odd ones. **Eyelets are priced per piece** (S$3 each), added after you decide how many corners or edges need hanging points. **Wooden Poles + Eyelets** is the finishing upgrade if you need a ready-to-hang banner with top and bottom poles. No minimum fee — a 30 × 30 cm sample costs exactly its area × rate.';
+  'PVC canvas is a waterproof print substrate for banners, event backdrops, shop signage and any display that needs to survive outdoor weather or a long event run. Price is set by **area** — enter width × height in **millimetres**, charged by the square foot at S$3.50/sqft — so a 2m × 1m (2000 × 1000 mm) banner reads straight off the formula: 2000 × 1000 / 93025 × 3.50 = S$75.25 for the print. **Eyelets are priced per piece** (S$3 each), added after you decide how many corners or edges need hanging points. **Wooden Poles + Eyelets** is the finishing upgrade if you need a ready-to-hang banner with top and bottom poles (+S$15/pc). Per-piece minimum fee is S$15 — a 300 × 300mm sample lands at the floor even though its pure area price is lower.';
 
 // SEO attributes: use-cases + location + outcome only. No material
 // names or print specs. Those belong in the body.
@@ -53,14 +53,15 @@ const seo_desc =
 
 const seo_body =
   'PVC canvas printing Singapore — event banners, shop signage, exhibition displays, conference backdrops, photocall walls, outdoor banners, sports-event finish lines, religious-festival banners, property show-flat signage, roadshow backdrops. ' +
-  'Any size from 30cm upward, priced by area at S$3.50 per square foot, eyelets S$3 each, optional wooden-pole finishing — delivered island-wide free over S$150 or collected at Paya Lebar Square.';
+  'Any size from 300mm upward, priced by area at S$3.50 per square foot with S$15 per-piece minimum, eyelets S$3 each, optional wooden-pole finishing — delivered island-wide free over S$150 or collected at Paya Lebar Square.';
 
 // ────────────────────────────────────────────────────────────────────
 // Matcher — each row maps to a real configurator combo.
 // ────────────────────────────────────────────────────────────────────
-// Per-piece price = width*height*100/93025*3.50 + eyelets*3 (+ 15 if poles)
+// Per-piece price — mm inputs, $15 per-piece area floor, +$3/eyelet,
+// +$15/pc for wooden poles. `w` and `h` below are in mm.
 function pp(w, h, e, poles = false) {
-  const area = w * h * 100 / 93025 * 3.50;
+  const area = Math.max(15, w * h / 93025 * 3.50);
   return area + e * 3 + (poles ? 15 : 0);
 }
 
@@ -74,33 +75,33 @@ const matcher = {
   rows: [
     {
       need: '*Shop-front sale banner* — 2m wide, 1m tall, hang from 4 corner eyelets',
-      pick_title: 'PVC Canvas · 200cm × 100cm · 4 eyelets · Eyelets finishing',
-      pick_detail: `At 200 × 100cm that is ~21.5 sqft of print × S$3.50/sqft = S$75.25, plus 4 eyelets × S$3 = S$12. Total S$${pp(200, 100, 4).toFixed(2)}/pc.`,
-      apply: { material: 'pvc', width: 200, height: 100, eyelets: 4, finishing: 'eyelets', qty: 1 },
+      pick_title: 'PVC Canvas · 2000 × 1000 mm · 4 eyelets · Eyelets finishing',
+      pick_detail: `At 2000 × 1000 mm that is ~21.5 sqft × S$3.50/sqft = S$75.25, plus 4 eyelets × S$3 = S$12. Total S$${pp(2000, 1000, 4).toFixed(2)}/pc.`,
+      apply: { material: 'pvc', width: 2000, height: 1000, eyelets: 4, finishing: 'eyelets', qty: 1 },
     },
     {
       need: '*Conference photocall backdrop* — 3m × 2m, 8 eyelets around the perimeter',
-      pick_title: 'PVC Canvas · 300cm × 200cm · 8 eyelets · Eyelets finishing',
-      pick_detail: `3m × 2m is the standard photocall size — ~64.5 sqft × S$3.50/sqft = S$225.75, plus 8 eyelets × S$3 = S$24. Total S$${pp(300, 200, 8).toFixed(2)}/pc.`,
-      apply: { material: 'pvc', width: 300, height: 200, eyelets: 8, finishing: 'eyelets', qty: 1 },
+      pick_title: 'PVC Canvas · 3000 × 2000 mm · 8 eyelets · Eyelets finishing',
+      pick_detail: `3m × 2m is the standard photocall size — ~64.5 sqft × S$3.50/sqft = S$225.75, plus 8 eyelets × S$3 = S$24. Total S$${pp(3000, 2000, 8).toFixed(2)}/pc.`,
+      apply: { material: 'pvc', width: 3000, height: 2000, eyelets: 8, finishing: 'eyelets', qty: 1 },
     },
     {
       need: '*Exhibition booth banner* — 1.5m × 2m, ready-to-hang with wooden poles',
-      pick_title: 'PVC Canvas · 150cm × 200cm · Wooden Poles + Eyelets',
-      pick_detail: `With top and bottom poles pre-attached the banner hangs straight and clean at the booth. Area ~32.3 sqft × S$3.50 = S$112.94, plus 4 eyelets + S$15 poles. Total S$${pp(150, 200, 4, true).toFixed(2)}/pc.`,
-      apply: { material: 'pvc', width: 150, height: 200, eyelets: 4, finishing: 'poles', qty: 1 },
+      pick_title: 'PVC Canvas · 1500 × 2000 mm · Wooden Poles + Eyelets',
+      pick_detail: `With top and bottom poles pre-attached the banner hangs straight and clean at the booth. Area ~32.3 sqft × S$3.50 = S$112.94, plus 4 eyelets + S$15 poles. Total S$${pp(1500, 2000, 4, true).toFixed(2)}/pc.`,
+      apply: { material: 'pvc', width: 1500, height: 2000, eyelets: 4, finishing: 'poles', qty: 1 },
     },
     {
       need: '*Religious-festival banner* — 4m × 1m, hung from eyelets every metre',
-      pick_title: 'PVC Canvas · 400cm × 100cm · 5 eyelets · Eyelets finishing',
-      pick_detail: `4m × 1m is the long-banner format for temple / religious events. ~43 sqft × S$3.50 = S$150.57, plus 5 eyelets × S$3 = S$15. Total S$${pp(400, 100, 5).toFixed(2)}/pc.`,
-      apply: { material: 'pvc', width: 400, height: 100, eyelets: 5, finishing: 'eyelets', qty: 1 },
+      pick_title: 'PVC Canvas · 4000 × 1000 mm · 5 eyelets · Eyelets finishing',
+      pick_detail: `4m × 1m is the long-banner format for temple / religious events. ~43 sqft × S$3.50 = S$150.50, plus 5 eyelets × S$3 = S$15. Total S$${pp(4000, 1000, 5).toFixed(2)}/pc.`,
+      apply: { material: 'pvc', width: 4000, height: 1000, eyelets: 5, finishing: 'eyelets', qty: 1 },
     },
     {
-      need: '*Small shop signboard* — 60cm × 40cm, no eyelets, taped to glass',
-      pick_title: 'PVC Canvas · 60cm × 40cm · 0 eyelets · Eyelets finishing',
-      pick_detail: `No eyelets, just the canvas — area-priced at ~2.58 sqft × S$3.50 = S$${pp(60, 40, 0).toFixed(2)}/pc. No minimum fee, so small canvases stay cheap.`,
-      apply: { material: 'pvc', width: 60, height: 40, eyelets: 0, finishing: 'eyelets', qty: 1 },
+      need: '*Small shop signboard* — 600 × 400 mm, no eyelets, taped to glass',
+      pick_title: 'PVC Canvas · 600 × 400 mm · 0 eyelets · Eyelets finishing',
+      pick_detail: `Area is below the $15 per-piece floor, so the canvas lands at the minimum: S$${pp(600, 400, 0).toFixed(2)}/pc. 4 eyelets on this size would be S$${pp(600, 400, 4).toFixed(2)}/pc.`,
+      apply: { material: 'pvc', width: 600, height: 400, eyelets: 0, finishing: 'eyelets', qty: 1 },
     },
   ],
 };
@@ -117,10 +118,10 @@ const seo_magazine = {
   articles: [
     {
       num: '01',
-      title: 'How area pricing works — and why no minimum fee is a feature.',
+      title: 'How area pricing works — square feet, S$3.50 flat, $15 minimum.',
       body: [
-        'PVC canvas is priced by the **square foot** — width × height (cm), converted to sq ft via the /93025 constant (305mm² per sq ft), multiplied by **S$3.50/sq ft**. A 100cm × 100cm banner is 10.75 sqft → S$37.62. A 2m × 1m banner is 21.5 sqft → S$75.25. The rate is linear: double the area, double the price.',
-        'There is **no minimum fee** — a 30 × 30cm sample for a test print costs exactly S$3.39, not S$15. That matters when you need a short handful of small canvases for file-check proofs or internal mockups. For production runs the rate stays at S$3.50/sqft up to the largest sizes we print.',
+        'PVC canvas is priced by the **square foot**: width × height **in millimetres**, divided by 93,025 (which is 305² — the number of square millimetres in one square foot), multiplied by **S$3.50/sq ft**. So a 1000 × 1000 mm (1m × 1m) banner is 10.75 sqft → S$37.62. A 2000 × 1000 mm banner is 21.5 sqft → S$75.25. The rate is linear — double the area, double the print price.',
+        'A **S$15 per-piece floor** applies to the print. A 300 × 300 mm test sample lands at the floor (its raw area price is S$3.39, but the minimum sits at S$15). That keeps very-small orders from pricing below viable production costs while still letting mid-size banners scale linearly at the S$3.50/sqft rate.',
       ],
       side: {
         kind: 'stat',
@@ -213,12 +214,12 @@ const faqs = [
   {
     question: 'How is the price calculated?',
     answer:
-      'Price is set by area. Width × height in centimetres, converted to square feet (using the /93025 constant — 305mm squared per sq ft), multiplied by S$3.50 per sq ft. For example: 100 × 100 cm is 10.75 sqft, which is S$37.62; a 2m × 1m banner is 21.5 sqft, S$75.25. Eyelets add S$3 per piece on top. Wooden Poles finishing adds S$15 per piece flat. No minimum fee.',
+      'Price is set by area. Enter width × height in millimetres. The formula is width × height / 93,025 × S$3.50 (93,025 mm² = 1 sq ft, since 305mm² = 1 sqft). Examples: 1000 × 1000 mm = 10.75 sqft = S$37.62; 2000 × 1000 mm = 21.5 sqft = S$75.25. A S$15 per-piece minimum floor applies — small canvases land at S$15 even if the pure area price would be lower. Eyelets add S$3 each on top. Wooden Poles finishing adds S$15/pc flat.',
   },
   {
     question: 'What sizes can I order?',
     answer:
-      'Any size from 30cm upward on each dimension. Common sizes customers order: 60 × 40cm (small signboard), 100 × 100cm (standard indoor banner), 200 × 100cm (shop-front banner), 300 × 200cm (conference photocall backdrop), 400 × 100cm (long temple / religious-festival banner). Maximum print width is around 300cm per piece; beyond that we can split the banner into two panels with a seam — contact us for that route.',
+      'Any size from 300 mm upward on each dimension. Common sizes customers order: 600 × 400 mm (small signboard), 1000 × 1000 mm (standard indoor banner), 2000 × 1000 mm (shop-front banner), 3000 × 2000 mm (conference photocall backdrop), 4000 × 1000 mm (long temple / religious-festival banner). Maximum print width is around 3000 mm per piece; beyond that we can split the banner into two panels with a seam — contact us for that route.',
   },
   {
     question: 'Do I need eyelets, and how many?',
@@ -233,7 +234,7 @@ const faqs = [
   {
     question: 'Is there a minimum order or minimum fee?',
     answer:
-      'No. Single-piece orders are fine, and the per-piece price is purely area × rate + eyelets — no floor. A 30 × 30 cm test sample costs S$3.39 at S$3.50/sqft. Order as many pieces as you need; the per-piece price does not change with quantity on PVC canvas.',
+      'Minimum 1 piece, no minimum quantity — order a single canvas if that is what you need. A per-piece minimum fee of S$15 applies to the print (area) portion, so very-small canvases (say 300 × 300 mm) land at the S$15 floor rather than the raw area price. Eyelets and Wooden Poles finishing are billed on top of that floor. The per-piece rate does not change with quantity.',
   },
   {
     question: 'How long does the canvas last outdoors?',
