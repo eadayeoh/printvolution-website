@@ -74,7 +74,7 @@ import Link from 'next/link';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
-import type { ProductDetail } from '@/lib/data/products';
+import type { ProductDetail, ConfiguratorStep } from '@/lib/data/products';
 import { defaultProductSeoBody } from '@/lib/data/product-seo';
 import { productHref, type ProductLookup } from '@/lib/data/navigation-types';
 import { DEFAULT_PRODUCT_FEATURES, type ProductFeature } from '@/lib/data/site-settings-types';
@@ -131,13 +131,22 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Matches a single show_if condition. value can be a literal string
+  // (exact match) or a string[] (OR-match — matches if cfgState[step]
+  // is in the list). Used at both step and option level.
+  function showIfClauseMatches(c: { step: string; value: string | string[] }): boolean {
+    const expected = Array.isArray(c.value) ? c.value : [c.value];
+    return expected.includes(cfgState[c.step] ?? '');
+  }
+  function showIfMatches(pred: ConfiguratorStep['show_if']): boolean {
+    if (!pred) return true;
+    const conds = Array.isArray(pred) ? pred : [pred];
+    return conds.every(showIfClauseMatches);
+  }
+
   const visibleSteps = useMemo(
-    () =>
-      product.configurator.filter((step) => {
-        if (!step.show_if) return true;
-        const conds = Array.isArray(step.show_if) ? step.show_if : [step.show_if];
-        return conds.every((c) => cfgState[c.step] === c.value);
-      }),
+    () => product.configurator.filter((step) => showIfMatches(step.show_if)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [product.configurator, cfgState]
   );
 
@@ -173,19 +182,32 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     setReadyBy({ today, ready });
   }, [leadTimeDays]);
 
-  // Reset hidden steps to their first option so pricing lookups don't
-  // carry a stale axis value into an invalid combo key (e.g. picking
-  // Spot UV=double, then switching Paper to 310gsm which hides Spot UV —
-  // without this, the key would still read `310:matt:double:qty`).
+  // Reset hidden steps + hidden option selections so pricing lookups
+  // don't carry stale axis values. Two passes:
+  //   1. If a step is hidden by its show_if, reset its value to the
+  //      step's first option (so invisible axes don't leak into keys).
+  //   2. If the currently-selected option on a visible step is itself
+  //      hidden by an option-level show_if, reset to the first visible
+  //      option (e.g. offset 260/310 card hides when size ≠ a5; user
+  //      switches size → their card selection auto-resets to 128art).
   useEffect(() => {
     for (const step of product.configurator) {
-      if (!step.show_if) continue;
-      const conds = Array.isArray(step.show_if) ? step.show_if : [step.show_if];
-      const hidden = conds.some((c) => cfgState[c.step] !== c.value);
-      if (!hidden) continue;
-      const fallback = step.options?.[0]?.slug;
-      if (fallback && cfgState[step.step_id] !== fallback) {
-        setCfgState((prev) => ({ ...prev, [step.step_id]: fallback }));
+      // Pass 1 — hidden steps.
+      if (step.show_if && !showIfMatches(step.show_if)) {
+        const fallback = step.options?.[0]?.slug;
+        if (fallback && cfgState[step.step_id] !== fallback) {
+          setCfgState((prev) => ({ ...prev, [step.step_id]: fallback }));
+          continue;
+        }
+      }
+      // Pass 2 — hidden option on a visible step.
+      if (!step.options || step.options.length === 0) continue;
+      const visibleOpts = step.options.filter((o) => showIfMatches(o.show_if));
+      if (visibleOpts.length === 0) continue;
+      const current = cfgState[step.step_id];
+      const isVisible = visibleOpts.some((o) => o.slug === current);
+      if (!isVisible) {
+        setCfgState((prev) => ({ ...prev, [step.step_id]: visibleOpts[0].slug }));
       }
     }
   }, [cfgState, product.configurator]);
@@ -1097,7 +1119,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   >
                     <StepHead num={stepNum} label={step.label} current={selected?.label ?? ''} />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {step.options.map((opt) => {
+                      {step.options.filter((opt) => showIfMatches(opt.show_if)).map((opt) => {
                         const active = cfgState[step.step_id] === opt.slug;
                         const optCents = opt.price_formula
                           ? Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100)

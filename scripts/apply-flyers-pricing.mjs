@@ -38,21 +38,27 @@ const sql = postgres(process.env.SUPABASE_DB_URL, { max: 1, prepare: false });
 // ────────────────────────────────────────────────────────────────────
 
 // [minA3Qty, unitPrice] tiers, from pvpricelist basicMaterials.ts.
-// Keys: `${gsmGroup}${sides}`. gsmGroup 100 = 128gsm, 150 = 157gsm.
+// Keys: `${gsmGroup}${sides}`. gsmGroup 100 = 128gsm Art Paper,
+// 150 = 157gsm Art Paper, 260 = 250gsm Art Card, 310 = 300gsm Art Card.
 const BM = {
   '100ss': [[11,1.9],[20,1.7],[30,1.55],[40,1.45],[50,1.35],[60,1.3],[70,1.25],[80,1.2],[90,1.15],[100,1.1],[150,1.05],[200,1.0],[250,0.95],[300,0.9],[350,0.85],[400,0.8],[450,0.75]],
   '100ds': [[11,3.2],[20,2.65],[30,2.25],[40,1.95],[50,1.8],[60,1.75],[70,1.7],[80,1.65],[90,1.6],[100,1.55],[150,1.5],[200,1.45],[250,1.4],[300,1.35],[350,1.3],[400,1.25],[450,1.2]],
   '150ss': [[11,2.1],[20,1.85],[30,1.65],[40,1.5],[50,1.4],[60,1.35],[70,1.3],[80,1.25],[90,1.2],[100,1.15],[150,1.1],[200,1.05],[250,1.0],[300,0.95],[350,0.9],[400,0.85],[450,0.8]],
   '150ds': [[11,3.3],[20,2.75],[30,2.35],[40,2.05],[50,1.9],[60,1.85],[70,1.8],[80,1.75],[90,1.7],[100,1.65],[150,1.6],[200,1.55],[250,1.5],[300,1.45],[350,1.4],[400,1.35],[450,1.3]],
+  '260ss': [[11,2.7],[20,2.4],[30,2.15],[40,2.0],[50,1.9],[60,1.85],[70,1.8],[80,1.75],[90,1.7],[100,1.65],[150,1.6],[200,1.55],[250,1.5],[300,1.45],[350,1.4],[400,1.35],[450,1.3]],
+  '260ds': [[11,4.4],[20,3.45],[30,2.75],[40,2.25],[50,2.0],[60,1.95],[70,1.9],[80,1.85],[90,1.8],[100,1.75],[150,1.7],[200,1.65],[250,1.6],[300,1.55],[350,1.5],[400,1.45],[450,1.4]],
+  '310ss': [[11,2.9],[20,2.55],[30,2.3],[40,2.1],[50,1.95],[60,1.9],[70,1.85],[80,1.8],[90,1.75],[100,1.7],[150,1.65],[200,1.6],[250,1.55],[300,1.5],[350,1.45],[400,1.4],[450,1.35]],
+  '310ds': [[11,5.0],[20,3.85],[30,3.0],[40,2.4],[50,2.05],[60,2.0],[70,1.95],[80,1.9],[90,1.85],[100,1.8],[150,1.75],[200,1.7],[250,1.65],[300,1.6],[350,1.55],[400,1.5],[450,1.45]],
 };
 
-const BM_PRINT_UPS = { a4: 2, a5: 4 };
+const BM_PRINT_UPS = { a4: 2, a5: 4, a6: 8 };
 
 // Cutting fee by finished size + a3Qty column.
 // Columns: idx0=≤100, idx1=≤200, idx2=≤300, idx3=≤400, idx4=≤500
 const BM_CUT_TABLE = {
   a4: [4, 7, 10, 13, 16],
   a5: [10, 18, 25, 32, 40],
+  a6: [12, 21, 30, 39, 48],
 };
 
 function cutCol(a3Qty) {
@@ -128,20 +134,24 @@ const methodAxis = [
 ];
 
 // DIGITAL axis options (step_ids: size, paper, sides)
-// DL removed — pvpricelist basic-materials has no tier data for DL, and
-// there's no cut table for DL finished size either. Digital = A4 or A5.
+// DL removed — pvpricelist basic-materials has no tier data for DL.
+// A4 / A5 / A6 are the supported digital sizes (finished-size cut fees
+// exist for all three; BM tier tables share the per-A3-sheet rates).
 const sizeDigitalAxis = [
   { slug: 'a4', label: 'A4 (210 × 297mm)', note: 'Most common' },
   { slug: 'a5', label: 'A5 (148 × 210mm)' },
+  { slug: 'a6', label: 'A6 (105 × 148mm)' },
 ];
 
-// Digital paper options — 128gsm + 157gsm only, matching pvpricelist
-// basic-material tier coverage. 128gsm is default ("Standard") so the
-// page lands on a real tier price on first render; 115gsm was dropped
-// because pvpricelist has no tier data for it.
+// Digital paper options — 128/157gsm Art Paper for flyer stock,
+// 250/300gsm Art Card for heavier card-stock flyers (postcards,
+// door-hangers-style). Art Card is lamination-eligible; Art Paper
+// isn't (enforced via step-level show_if on the Lamination step).
 const paperDigitalAxis = [
   { slug: '128art', label: '128gsm Art Paper', note: 'Standard' },
   { slug: '157art', label: '157gsm Art Paper' },
+  { slug: '250card', label: '250gsm Art Card' },
+  { slug: '300card', label: '300gsm Art Card' },
 ];
 
 const sidesDigitalAxis = [
@@ -155,11 +165,14 @@ const sizeOffsetAxis = [
   { slug: 'a5', label: 'A5 (148 × 210mm)' },
 ];
 
+// Offset paper — 128/157gsm art paper for any size, 260/310gsm art
+// card only for A5 (supplier sheet limitation). Option-level show_if
+// hides the card options when size_offset isn't A5.
 const paperOffsetAxis = [
-  { slug: '128art', label: '128gsm Art Paper' },
-  { slug: '157art', label: '157gsm Art Paper' },
-  { slug: '260card', label: '260gsm Art Card', note: 'A5 only' },
-  { slug: '310card', label: '310gsm Art Card', note: 'A5 only' },
+  { slug: '128art',  label: '128gsm Art Paper' },
+  { slug: '157art',  label: '157gsm Art Paper' },
+  { slug: '260card', label: '260gsm Art Card', show_if: { step: 'size_offset', value: 'a5' } },
+  { slug: '310card', label: '310gsm Art Card', show_if: { step: 'size_offset', value: 'a5' } },
 ];
 
 const sidesOffsetAxis = [
@@ -239,8 +252,10 @@ const pricingCompute = {
     sides_key: 'sides',
     ups: BM_PRINT_UPS,  // { a4: 2, a5: 4 }
     tier_map: {
-      '128art:1': '100ss', '128art:2': '100ds',
-      '157art:1': '150ss', '157art:2': '150ds',
+      '128art:1':  '100ss', '128art:2':  '100ds',
+      '157art:1':  '150ss', '157art:2':  '150ds',
+      '250card:1': '260ss', '250card:2': '260ds',
+      '300card:1': '310ss', '300card:2': '310ds',
     },
     tiers: BM,
     cut: {
@@ -311,10 +326,16 @@ try {
         })))},
         ${sql.json(offsetShowIf)}, null
       ),
+      -- Lamination is only offered on art-card stock (200gsm+), not on
+      -- art paper. Show the step only when method=digital AND paper is
+      -- one of the card options. Uses show_if array + multi-value form.
       (
-        ${prod.id}, 'lamination', 7, 'Lamination', 'swatch', true,
+        ${prod.id}, 'lamination', 7, 'Lamination', 'swatch', false,
         ${sql.json(digitalLamOpts)},
-        ${sql.json(digitalShowIf)}, null
+        ${sql.json([
+          { step: 'method', value: 'digital' },
+          { step: 'paper',  value: ['250card', '300card'] },
+        ])}, null
       ),
       (
         ${prod.id}, 'qty', 8, 'Quantity', 'qty', true,

@@ -66,6 +66,12 @@ export type PricingCompute = {
 
 export type ProductSpec = { label: string; value: string };
 
+/** Single show_if clause. `value` can be a literal string (exact match)
+ *  or a string[] (OR-match — matches if cfgState[step] is in the list).
+ *  An array of clauses at the step or option level means ALL clauses
+ *  must match (AND). */
+export type ShowIfCond = { step: string; value: string | string[] };
+
 export type ConfiguratorStep = {
   step_id: string;
   step_order: number;
@@ -84,8 +90,14 @@ export type ConfiguratorStep = {
      *  days on flyers). Falls back to product-level fields when absent. */
     lead_time_days?: number | null;
     print_mode?: string | null;
+    /** Optional per-option visibility predicate. If set, the option is
+     *  hidden from the swatch grid unless all conditions match. Same
+     *  schema as step-level show_if — value can be a single string or
+     *  an array (OR-match). Used e.g. to hide 260/310gsm Art Card paper
+     *  on flyers offset unless size_offset = 'a5'. */
+    show_if?: ShowIfCond | ShowIfCond[] | null;
   }>;
-  show_if?: { step: string; value: string } | Array<{ step: string; value: string }> | null;
+  show_if?: ShowIfCond | ShowIfCond[] | null;
   step_config?: {
     presets?: number[] | null;
     min?: number | null;

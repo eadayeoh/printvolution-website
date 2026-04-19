@@ -37,11 +37,20 @@ const ConfiguratorStepSchema = z.object({
     // its own lead time + print mode per selectable option.
     lead_time_days: z.number().int().nullable().optional(),
     print_mode: z.string().nullable().optional(),
+    // Per-option visibility — hide this option unless the predicate
+    // matches (e.g. hide 310gsm card paper unless size_offset = 'a5').
+    show_if: z
+      .union([
+        z.object({ step: z.string(), value: z.union([z.string(), z.array(z.string())]) }),
+        z.array(z.object({ step: z.string(), value: z.union([z.string(), z.array(z.string())]) })),
+      ])
+      .nullable()
+      .optional(),
   })).optional(),
   show_if: z
     .union([
-      z.object({ step: z.string(), value: z.string() }),
-      z.array(z.object({ step: z.string(), value: z.string() })),
+      z.object({ step: z.string(), value: z.union([z.string(), z.array(z.string())]) }),
+      z.array(z.object({ step: z.string(), value: z.union([z.string(), z.array(z.string())]) })),
     ])
     .nullable()
     .optional(),
