@@ -136,10 +136,11 @@ const methodAxis = [
 ];
 
 // DIGITAL axis options (step_ids: size, paper, sides)
+// DL removed — pvpricelist basic-materials has no tier data for DL, and
+// there's no cut table for DL finished size either. Digital = A4 or A5.
 const sizeDigitalAxis = [
   { slug: 'a4', label: 'A4 (210 × 297mm)', note: 'Most common' },
   { slug: 'a5', label: 'A5 (148 × 210mm)' },
-  { slug: 'dl', label: 'DL (99 × 210mm)' },
 ];
 
 // Digital paper options — 128gsm + 157gsm only, matching pvpricelist
