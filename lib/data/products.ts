@@ -20,6 +20,13 @@ export type PricingData = {
   rows: PricingRow[];
 };
 
+export type PricingTable = {
+  axes: Record<string, Array<{ slug: string; label: string }>>;
+  axis_order: string[];
+  qty_tiers: number[];
+  prices: Record<string, number>; // key: "<axis1>:<axis2>:<qty>" → cents
+};
+
 export type ProductSpec = { label: string; value: string };
 
 export type ConfiguratorStep = {
@@ -65,6 +72,7 @@ export type ProductDetail = {
   category: { slug: string; name: string } | null;
   subcategory: { slug: string; name: string } | null;
   pricing: PricingData | null;
+  pricing_table: PricingTable | null;
   extras: ProductExtras | null;
   configurator: ConfiguratorStep[];
   faqs: Array<{ question: string; answer: string }>;
@@ -90,7 +98,7 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, icon, tagline, is_gift,
+      id, slug, name, icon, tagline, is_gift, pricing_table,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_pricing(rows),
@@ -107,6 +115,13 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
     for (const r of rows) {
       for (const price of r.prices ?? []) {
         if (typeof price === 'number' && (min === null || price < min)) min = price;
+      }
+    }
+    // pricing_table takes precedence if present
+    const pt = p.pricing_table as PricingTable | null;
+    if (pt && pt.prices) {
+      for (const v of Object.values(pt.prices)) {
+        if (typeof v === 'number' && (min === null || v < min)) min = v;
       }
     }
     const extras = embedOne<any>(p.product_extras);
@@ -131,7 +146,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, icon, tagline, description, is_gift,
+      id, slug, name, icon, tagline, description, is_gift, pricing_table,
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_extras(*),
@@ -199,6 +214,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     pricing: pricing
       ? { label: pricing.label ?? 'Size', configs: pricing.configs ?? [], rows: pricing.rows as PricingRow[] }
       : null,
+    pricing_table: (d.pricing_table as PricingTable | null) ?? null,
     extras: extras
       ? {
           seo_title: extras.seo_title, seo_desc: extras.seo_desc, seo_body: extras.seo_body,

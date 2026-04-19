@@ -42,7 +42,14 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       if (step.type === 'swatch' || step.type === 'select') {
         if (step.options && step.options.length > 0) initial[step.step_id] = step.options[0].slug;
       }
-      if (step.type === 'qty') initial[step.step_id] = '1';
+      if (step.type === 'qty') {
+        const presets = step.step_config?.presets;
+        const defaultQty =
+          (Array.isArray(presets) && presets.length > 0 && typeof presets[0] === 'number')
+            ? presets[0]
+            : (step.step_config?.min ?? 1);
+        initial[step.step_id] = String(defaultQty);
+      }
     }
     return initial;
   });
@@ -79,9 +86,48 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return manualColIdx;
   }, [visibleSteps, cfgState, product.pricing, manualColIdx]);
 
+  // Snap any user-entered quantity to the nearest supplier tier at or
+  // below it. Below the first tier → first tier.
+  function snapToTier(q: number, tiers: number[]): number {
+    if (!tiers.length) return q;
+    let best = tiers[0];
+    for (const t of tiers) {
+      if (t <= q) best = t;
+      else break;
+    }
+    return best;
+  }
+
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number) {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let sum = 0;
+
+    // 1. Multi-axis pricing_table lookup wins if present (e.g. car decals
+    //    priced by size × view × qty).
+    if (product.pricing_table) {
+      const pt = product.pricing_table;
+      const tier = snapToTier(useQty, pt.qty_tiers);
+      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '');
+      const key = `${axisKeys.join(':')}:${tier}`;
+      const tablePrice = pt.prices[key] ?? 0;
+      if (tablePrice > 0) {
+        // Readable breakdown — "Size: 90mm × 54mm · Face In / Face Out View"
+        const parts: string[] = [];
+        for (const axis of pt.axis_order) {
+          const selectedSlug = cfgState[axis];
+          const opts = pt.axes[axis] ?? [];
+          const match = opts.find((o) => o.slug === selectedSlug);
+          if (match) parts.push(match.label);
+        }
+        breakdown.push({
+          label: `${parts.join(' · ')} × ${tier} pcs`,
+          amount: tablePrice,
+        });
+        sum = tablePrice;
+      }
+      return { total: sum, breakdown };
+    }
+
     let anyFormula = false;
 
     for (const step of visibleSteps) {
@@ -114,7 +160,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const { total: lineTotal, breakdown } = useMemo(
     () => computeTotal(qty, colIdx, rowIdx),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [qty, colIdx, rowIdx, cfgState, visibleSteps, product.pricing]
+    [qty, colIdx, rowIdx, cfgState, visibleSteps, product.pricing, product.pricing_table]
   );
 
 
@@ -129,11 +175,18 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       undiscountedTotal: undiscounted,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qty, colIdx, cfgState, visibleSteps, product.pricing, lineTotal]);
+  }, [qty, colIdx, cfgState, visibleSteps, product.pricing, product.pricing_table, lineTotal]);
   const savingsPct = undiscountedTotal > 0 ? Math.round((savings / undiscountedTotal) * 100) : 0;
 
   const fromPrice = useMemo(() => {
     let min: number | null = null;
+    // pricing_table wins when present — min over the entire lookup.
+    if (product.pricing_table) {
+      for (const v of Object.values(product.pricing_table.prices)) {
+        if (typeof v === 'number' && v > 0 && (min === null || v < min)) min = v;
+      }
+      return min;
+    }
     if (product.pricing) {
       for (let i = 0; i < product.pricing.configs.length; i++) {
         const { total } = computeTotal(1, i, 0);
@@ -155,10 +208,33 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     }
     return min;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.pricing, product.configurator, cfgState]);
+  }, [product.pricing, product.pricing_table, product.configurator, cfgState]);
 
   const priceLadder = useMemo(() => {
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
+
+    // pricing_table: one ladder row per supplier qty tier, for the
+    // currently-selected axes (size + view).
+    if (product.pricing_table) {
+      const pt = product.pricing_table;
+      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
+      const baselinePerPiece = (pt.prices[`${axisKeys}:${pt.qty_tiers[0]}`] ?? 0) / pt.qty_tiers[0];
+      return pt.qty_tiers
+        .map((q) => {
+          const total = pt.prices[`${axisKeys}:${q}`] ?? 0;
+          if (total <= 0) return null;
+          const perPiece = total / q;
+          const undiscounted = baselinePerPiece * q;
+          return {
+            qty: `${q} pcs`,
+            qtyNum: q,
+            total,
+            perPiece,
+            saves: Math.max(0, undiscounted - total),
+          };
+        })
+        .filter(Boolean) as Array<{ qty: string; qtyNum: number; total: number; perPiece: number; saves: number }>;
+    }
 
     if (product.pricing && product.pricing.rows.length > 0) {
       return product.pricing.rows.map((r, rIdx) => {
@@ -211,7 +287,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.pricing, product.configurator, colIdx, cfgState, visibleSteps]);
+  }, [product.pricing, product.pricing_table, product.configurator, colIdx, cfgState, visibleSteps]);
 
   const iconIsUrl = isImageUrl(product.icon);
   const heroImg = product.extras?.image_url || null;
@@ -558,6 +634,8 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               const stepNum = stepIdx + 1;
               if (step.type === 'qty') {
                 const currentQty = parseInt(cfgState[step.step_id] || '1', 10) || 1;
+                const presets = step.step_config?.presets;
+                const hasTierPresets = Array.isArray(presets) && presets.length > 3;
                 return (
                   <div
                     key={step.step_id}
@@ -570,6 +648,32 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     }}
                   >
                     <StepHead num={stepNum} label={step.label} current={`${currentQty} pc${currentQty !== 1 ? 's' : ''}`} />
+                    {hasTierPresets && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                        {(presets as number[]).map((p) => {
+                          const active = currentQty === p;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: String(p) }))}
+                              style={{
+                                padding: '7px 14px',
+                                fontFamily: 'var(--pv-f-mono)',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                background: active ? 'var(--pv-ink)' : '#fff',
+                                color: active ? 'var(--pv-yellow)' : 'var(--pv-ink)',
+                                border: '1.5px solid var(--pv-ink)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <button
                         type="button"
@@ -584,7 +688,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                         value={currentQty}
                         min={1}
                         onChange={(e) => setCfgState((s) => ({ ...s, [step.step_id]: e.target.value }))}
-                        style={{ width: 80, height: 44, textAlign: 'center', border: '1.5px solid var(--pv-ink)', fontFamily: 'var(--pv-f-display)', fontSize: 18 }}
+                        style={{ width: 96, height: 44, textAlign: 'center', border: '1.5px solid var(--pv-ink)', fontFamily: 'var(--pv-f-display)', fontSize: 18 }}
                       />
                       <button
                         type="button"
@@ -594,7 +698,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                         +
                       </button>
                       <span style={{ marginLeft: 10, fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)' }}>
-                        Min 1 · price scales
+                        {step.step_config?.note || 'Min 1 · price scales'}
                       </span>
                     </div>
                   </div>
