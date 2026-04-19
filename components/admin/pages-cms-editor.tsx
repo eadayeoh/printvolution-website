@@ -67,7 +67,7 @@ export function PagesCmsEditor({
               { key: 'body', label: 'Body copy', type: 'textarea' },
               { key: 'cta_label', label: 'CTA label', type: 'text' },
               { key: 'cta_href', label: 'CTA URL', type: 'text' },
-              { key: 'image_url', label: 'Image (URL or upload)', type: 'image' },
+              { key: 'image_url', label: 'Image (URL or upload)', type: 'image', aspect: 2 },
             ]}
           />
 
@@ -265,7 +265,7 @@ export function PagesCmsEditor({
               { key: 'headline_em', label: 'Headline line 2 (yellow highlight)', type: 'text' },
               { key: 'headline_pink', label: 'Headline line 3 (pink word)', type: 'text' },
               { key: 'body', label: 'Subcopy', type: 'textarea' },
-              { key: 'image_url', label: 'Mascot / shop photo', type: 'image' },
+              { key: 'image_url', label: 'Mascot / shop photo', type: 'image', aspect: 1 },
             ]}
           />
 
@@ -281,7 +281,7 @@ export function PagesCmsEditor({
               { key: 'title', label: 'Title (first part)', type: 'text' },
               { key: 'title_em', label: 'Title (yellow-highlighted em)', type: 'text' },
               { key: 'intro', label: 'Short intro paragraph', type: 'textarea' },
-              { key: 'image_url', label: 'Side photo', type: 'image' },
+              { key: 'image_url', label: 'Side photo', type: 'image', aspect: 3 / 4 },
             ]}
           />
           <SectionEditor
@@ -368,7 +368,7 @@ export function PagesCmsEditor({
             initial={sections['about:shop.tiles'] ?? []}
             fields={[
               { key: 'caption', label: 'Caption (fallback)', type: 'text' },
-              { key: 'image_url', label: 'Photo', type: 'image' },
+              { key: 'image_url', label: 'Photo', type: 'image', aspect: 4 / 3 },
             ]}
           />
 
@@ -575,7 +575,15 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
-type FieldDef = { key: string; label: string; type: 'text' | 'textarea' | 'image' };
+type FieldDef = {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'image';
+  /** For image fields: crop aspect ratio that matches the frontend render. Default 1 (square). */
+  aspect?: number;
+  /** For image fields: skip the crop modal (logos / icons / free-form photos). */
+  skipCrop?: boolean;
+};
 
 function SectionEditor({ pageKey, sectionKey, title, hint, initial, fields }: {
   pageKey: string; sectionKey: string; title: string; hint: string;
@@ -639,7 +647,8 @@ function SectionEditor({ pageKey, sectionKey, title, hint, initial, fields }: {
                     value={item[f.key] ?? ''}
                     onChange={(url) => setItems(items.map((x, j) => j === i ? { ...x, [f.key]: url } : x))}
                     prefix={`${pageKey}-${sectionKey}-${f.key}`}
-                    aspect={1}
+                    aspect={f.aspect ?? 1}
+                    skipCrop={f.skipCrop}
                     size="sm"
                     label={f.label}
                   />
