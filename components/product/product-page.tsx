@@ -168,6 +168,22 @@ export function ProductPage({ product, productRoutes, features }: Props) {
 
   const { savings, undiscountedTotal } = useMemo(() => {
     if (qty <= 1 || lineTotal <= 0) return { savings: 0, undiscountedTotal: 0 };
+    // For pricing_table products, "single unit price" is meaningless
+    // (quantities below the smallest tier are snapped to it). Use the
+    // smallest-tier per-piece price × qty as the "no discount" baseline.
+    if (product.pricing_table) {
+      const pt = product.pricing_table;
+      const firstTier = pt.qty_tiers[0];
+      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
+      const firstTierPrice = pt.prices[`${axisKeys}:${firstTier}`] ?? 0;
+      if (!firstTierPrice || !firstTier) return { savings: 0, undiscountedTotal: 0 };
+      const perPieceAtSmallestTier = firstTierPrice / firstTier;
+      const undiscounted = Math.round(perPieceAtSmallestTier * qty);
+      return {
+        savings: Math.max(0, undiscounted - lineTotal),
+        undiscountedTotal: undiscounted,
+      };
+    }
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
     const undiscounted = singleTotal * qty;
     return {
@@ -904,15 +920,16 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     <span style={{ color: '#fff', fontWeight: 700 }}>{formatSGD(b.amount)}</span>
                   </div>
                 ))}
-                {qty > 1 && (
+                {/* For pricing_table products the qty is already in the breakdown label. */}
+                {qty > 1 && !product.pricing_table && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'rgba(255,255,255,0.75)' }}>
                     <span>Quantity</span>
                     <span style={{ color: '#fff', fontWeight: 700 }}>× {qty}</span>
                   </div>
                 )}
-                {savings > 0 && (
+                {savings > 0 && savingsPct > 0 && savingsPct < 100 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--pv-green)' }}>
-                    <span>Volume discount{savingsPct > 0 ? ` (${savingsPct}% off)` : ''}</span>
+                    <span>Volume discount ({savingsPct}% off)</span>
                     <span style={{ color: 'var(--pv-green)', fontWeight: 700 }}>− {formatSGD(savings)}</span>
                   </div>
                 )}
@@ -976,61 +993,172 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 <h3 style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22, letterSpacing: '-0.02em', margin: 0, marginBottom: 14 }}>
                   Order more, pay less per piece.
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-                  {priceLadder.map((r, i) => {
-                    const isCurrent = i === rowIdx;
+                {product.pricing_table ? (
+                  // Table view for multi-tier pricing — easier to scan 17
+                  // rows and compare per-piece cost than a card grid.
+                  (() => {
+                    const qtyStepId = visibleSteps.find((s) => s.type === 'qty')?.step_id ?? 'qty';
+                    const baselinePerPiece = priceLadder[0]?.perPiece ?? 0;
+                    const bestPerPiece = priceLadder.reduce((m, r) => Math.min(m, r.perPiece), baselinePerPiece);
                     return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setRowIdx(i)}
+                      <div
                         style={{
-                          textAlign: 'left',
-                          padding: '14px 16px',
                           border: '2px solid var(--pv-ink)',
-                          background: isCurrent ? 'var(--pv-ink)' : '#fff',
-                          color: isCurrent ? '#fff' : 'var(--pv-ink)',
-                          boxShadow: isCurrent ? '4px 4px 0 var(--pv-magenta)' : '4px 4px 0 var(--pv-ink)',
-                          cursor: 'pointer',
-                          transition: 'all 0.12s',
+                          boxShadow: '6px 6px 0 var(--pv-ink)',
+                          background: '#fff',
+                          overflow: 'hidden',
                         }}
                       >
                         <div
                           style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
+                            background: 'var(--pv-ink)',
+                            color: '#fff',
                             fontFamily: 'var(--pv-f-mono)',
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: 700,
-                            letterSpacing: '0.08em',
+                            letterSpacing: '0.1em',
                             textTransform: 'uppercase',
-                            color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)',
-                            marginBottom: 4,
+                            padding: '10px 16px',
+                            gap: 8,
                           }}
                         >
-                          {r.qty}
+                          <div>Quantity</div>
+                          <div style={{ textAlign: 'right' }}>Total</div>
+                          <div style={{ textAlign: 'right' }}>Per piece</div>
+                          <div style={{ textAlign: 'right' }}>vs 200 qty</div>
                         </div>
-                        <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 20, color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-ink)' }}>
-                          {formatSGD(r.total)}
-                        </div>
-                        <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)', marginTop: 2 }}>
-                          {formatSGD(Math.round(r.perPiece))} /pc
-                        </div>
-                        {r.saves > 0 && (
+                        {priceLadder.map((r, i) => {
+                          const isCurrent = r.qtyNum === qty;
+                          const isBest = Math.abs(r.perPiece - bestPerPiece) < 0.5;
+                          const deltaVsBaseline = baselinePerPiece > 0
+                            ? Math.round(((baselinePerPiece - r.perPiece) / baselinePerPiece) * 100)
+                            : 0;
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setCfgState((s) => ({ ...s, [qtyStepId]: String(r.qtyNum) }))}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1.3fr 1fr 1fr',
+                                gap: 8,
+                                width: '100%',
+                                padding: '12px 16px',
+                                border: 'none',
+                                borderTop: i === 0 ? 'none' : '1px solid var(--pv-rule)',
+                                background: isCurrent ? 'var(--pv-yellow)' : '#fff',
+                                color: 'var(--pv-ink)',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                alignItems: 'center',
+                                fontFamily: 'var(--pv-f-body)',
+                                fontSize: 14,
+                                fontWeight: isCurrent ? 700 : 500,
+                                transition: 'background 0.12s',
+                              }}
+                              onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = 'var(--pv-cream)'; }}
+                              onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+                            >
+                              <div style={{ fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.02em' }}>
+                                {r.qtyNum.toLocaleString()}
+                                {isBest && !isCurrent && (
+                                  <span
+                                    style={{
+                                      marginLeft: 8,
+                                      fontSize: 9,
+                                      padding: '2px 6px',
+                                      background: 'var(--pv-green)',
+                                      color: '#fff',
+                                      letterSpacing: '0.1em',
+                                      verticalAlign: 'middle',
+                                    }}
+                                  >
+                                    BEST /PC
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-display)', fontSize: 16 }}>
+                                {formatSGD(r.total)}
+                              </div>
+                              <div style={{ textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 13, color: 'var(--pv-muted)' }}>
+                                {formatSGD(Math.round(r.perPiece))}
+                              </div>
+                              <div
+                                style={{
+                                  textAlign: 'right',
+                                  fontFamily: 'var(--pv-f-mono)',
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: deltaVsBaseline > 0 ? 'var(--pv-green)' : 'var(--pv-muted)',
+                                }}
+                              >
+                                {deltaVsBaseline > 0 ? `−${deltaVsBaseline}%` : '—'}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+                    {priceLadder.map((r, i) => {
+                      const isCurrent = i === rowIdx;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setRowIdx(i)}
+                          style={{
+                            textAlign: 'left',
+                            padding: '14px 16px',
+                            border: '2px solid var(--pv-ink)',
+                            background: isCurrent ? 'var(--pv-ink)' : '#fff',
+                            color: isCurrent ? '#fff' : 'var(--pv-ink)',
+                            boxShadow: isCurrent ? '4px 4px 0 var(--pv-magenta)' : '4px 4px 0 var(--pv-ink)',
+                            cursor: 'pointer',
+                            transition: 'all 0.12s',
+                          }}
+                        >
                           <div
                             style={{
-                              marginTop: 4,
                               fontFamily: 'var(--pv-f-mono)',
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: 700,
-                              color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-green)',
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase',
+                              color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)',
+                              marginBottom: 4,
                             }}
                           >
-                            Save {formatSGD(r.saves)}
+                            {r.qty}
                           </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 20, color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-ink)' }}>
+                            {formatSGD(r.total)}
+                          </div>
+                          <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: isCurrent ? 'rgba(255,255,255,0.6)' : 'var(--pv-muted)', marginTop: 2 }}>
+                            {formatSGD(Math.round(r.perPiece))} /pc
+                          </div>
+                          {r.saves > 0 && (
+                            <div
+                              style={{
+                                marginTop: 4,
+                                fontFamily: 'var(--pv-f-mono)',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: isCurrent ? 'var(--pv-yellow)' : 'var(--pv-green)',
+                              }}
+                            >
+                              Save {formatSGD(r.saves)}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
