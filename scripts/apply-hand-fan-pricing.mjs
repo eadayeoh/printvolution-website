@@ -173,7 +173,7 @@ try {
       (
         ${prod.id}, 'assembly', 4, 'Assembly', 'swatch', true,
         ${sql.json(assemblyAxis)},
-        null,
+        ${sql.json({ step: 'handle', value: 'yes' })},
         ${sql.json({ note: 'Fully-assembled = body glued to handle, ready to wave. Adds S$0.21/pc.' })}
       ),
       (
