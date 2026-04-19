@@ -748,57 +748,11 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
 
             {/* Qty type info + config */}
             {s.type === 'qty' && (
-              <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4 space-y-3">
-                <div className="text-[11px] text-neutral-600">
-                  Customers see a <strong>− / + stepper</strong>. Price scales with quantity using the <em>Pricing & base pricing</em> matrix above, or any option-level formulas that reference <code>qty</code>.
-                </div>
-
-                <label className="block">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
-                    Helper note (shown next to the stepper)
-                  </span>
-                  <input
-                    value={s.step_config?.note ?? ''}
-                    onChange={(e) => update(i, { step_config: { ...(s.step_config ?? {}), note: e.target.value || null } })}
-                    placeholder="e.g. Order 5 or more to unlock the 5% bulk discount."
-                    className={inputCls}
-                  />
-                  <p className="mt-1 text-[10px] text-neutral-500">Leave blank to hide. Shown directly next to the quantity input.</p>
-                </label>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
-                      Minimum quantity
-                    </span>
-                    <input
-                      type="number"
-                      value={s.step_config?.min ?? ''}
-                      onChange={(e) => {
-                        const v = e.target.value === '' ? null : Math.max(1, parseInt(e.target.value, 10) || 1);
-                        update(i, { step_config: { ...(s.step_config ?? {}), min: v } });
-                      }}
-                      placeholder="1"
-                      className={inputCls}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
-                      Preset quantity buttons (comma-separated)
-                    </span>
-                    <input
-                      value={Array.isArray(s.step_config?.presets) ? (s.step_config!.presets as number[]).join(', ') : ''}
-                      onChange={(e) => {
-                        const parts = e.target.value.split(',').map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
-                        update(i, { step_config: { ...(s.step_config ?? {}), presets: parts } });
-                      }}
-                      placeholder="e.g. 50, 100, 200, 500"
-                      className={inputCls}
-                    />
-                    <p className="mt-1 text-[10px] text-neutral-500">Leave blank for no buttons. Buttons only render when there are 4 or more presets.</p>
-                  </label>
-                </div>
-              </div>
+              <QtyStepConfig
+                step={s}
+                inputCls={inputCls}
+                onChange={(patch) => update(i, { step_config: { ...(s.step_config ?? {}), ...patch } })}
+              />
             )}
 
             {(s.type === 'text' || s.type === 'number') && (
@@ -820,6 +774,98 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
       >
         <Plus size={16} /> Add another step
       </button>
+    </div>
+  );
+}
+
+/**
+ * Qty-step config panel. Kept as its own component so the "preset
+ * buttons" input can hold a local text state and only parse into the
+ * numeric array on blur. The earlier inline version regenerated the
+ * input's value from the parsed array on every keystroke, which meant
+ * typing a comma got filtered back out before the next digit could
+ * land — the user literally could not type a comma.
+ */
+function QtyStepConfig({
+  step,
+  inputCls,
+  onChange,
+}: {
+  step: ProductDetail['configurator'][0];
+  inputCls: string;
+  onChange: (patch: { note?: string | null; min?: number | null; presets?: number[] | null }) => void;
+}) {
+  const presetsArray = Array.isArray(step.step_config?.presets) ? (step.step_config!.presets as number[]) : [];
+  const [presetText, setPresetText] = useState(presetsArray.join(', '));
+
+  function commitPresets(raw: string) {
+    const parts = raw
+      .split(',')
+      .map((x) => parseInt(x.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    // Re-write the text with a canonical "50, 100, 200" shape on commit,
+    // so the next render matches what was saved.
+    setPresetText(parts.join(', '));
+    onChange({ presets: parts.length > 0 ? parts : [] });
+  }
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4 space-y-3">
+      <div className="text-[11px] text-neutral-600">
+        Customers see a <strong>− / + stepper</strong>. Price scales with quantity using the <em>Pricing & base pricing</em> matrix above, or any option-level formulas that reference <code>qty</code>.
+      </div>
+
+      <label className="block">
+        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+          Helper note (shown next to the stepper)
+        </span>
+        <input
+          value={step.step_config?.note ?? ''}
+          onChange={(e) => onChange({ note: e.target.value || null })}
+          placeholder="e.g. Order 5 or more to unlock the 5% bulk discount."
+          className={inputCls}
+        />
+        <p className="mt-1 text-[10px] text-neutral-500">Leave blank to hide. Shown directly next to the quantity input.</p>
+      </label>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+            Minimum quantity
+          </span>
+          <input
+            type="number"
+            value={step.step_config?.min ?? ''}
+            onChange={(e) => {
+              const v = e.target.value === '' ? null : Math.max(1, parseInt(e.target.value, 10) || 1);
+              onChange({ min: v });
+            }}
+            placeholder="1"
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+            Preset quantity buttons (comma-separated)
+          </span>
+          <input
+            value={presetText}
+            onChange={(e) => setPresetText(e.target.value)}
+            onBlur={(e) => commitPresets(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitPresets((e.target as HTMLInputElement).value);
+              }
+            }}
+            placeholder="e.g. 50, 100, 200, 500"
+            className={inputCls}
+          />
+          <p className="mt-1 text-[10px] text-neutral-500">
+            Type the numbers separated by commas. Press Enter or click away to save. Leave blank for no buttons; buttons only render when there are 4 or more presets.
+          </p>
+        </label>
+      </div>
     </div>
   );
 }

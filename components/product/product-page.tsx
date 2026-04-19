@@ -609,34 +609,49 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     );
     if (!hasFormula || singleTotal <= 0) return [];
 
-    const sample: Array<{ qty: number; total: number; perPiece: number; saves: number }> = [];
-    let prevPerPiece = singleTotal;
-    let plateauAt: number | null = null;
-    for (let q = 1; q <= 20; q++) {
+    // Formula-only ladder — only expose quantities where the per-piece
+    // cost is actually cheaper than qty 1. Skip the "qty 2/3 at the same
+    // rate as qty 1" rows entirely — showing them with no savings was
+    // misleading. If nothing in the sample range beats the qty 1 rate,
+    // the ladder returns empty and the whole Volume Pricing section
+    // hides (guarded by `priceLadder.length > 1`).
+    const maxSample = 20;
+    const perPieceTolerance = 1; // cents — ignore float noise
+    const totals: number[] = [];
+    for (let q = 1; q <= maxSample; q++) {
       const { total } = computeTotal(q, colIdx, 0);
-      const perPiece = total / q;
-      const saves = Math.max(0, singleTotal * q - total);
-      sample.push({ qty: q, total, perPiece, saves });
-      if (q > 1 && Math.abs(perPiece - prevPerPiece) < 1 && plateauAt === null) {
-        plateauAt = q;
+      totals.push(total);
+    }
+    const basePerPiece = totals[0]; // qty 1 per-piece = total at qty 1
+    const breakpoints: number[] = [];
+    let lastPerPiece = basePerPiece;
+    for (let q = 2; q <= maxSample; q++) {
+      const perPiece = totals[q - 1] / q;
+      if (perPiece < lastPerPiece - perPieceTolerance) {
+        breakpoints.push(q);
+        lastPerPiece = perPiece;
       }
-      prevPerPiece = perPiece;
+    }
+    if (breakpoints.length === 0) return []; // No discount → hide section
+
+    // Add one "scale" row at ~2× the first breakpoint so customers see
+    // the discount holds at a higher qty too. Skip if the scale qty
+    // would duplicate an existing breakpoint or exceed the sample.
+    const first = breakpoints[0];
+    const scale = first * 2;
+    if (scale <= maxSample && !breakpoints.includes(scale)) {
+      breakpoints.push(scale);
     }
 
-    const stopAt = plateauAt ? Math.min(plateauAt + 1, 10) : 10;
-    const tierQtys = new Set<number>([1, 2, 3]);
-    if (stopAt >= 5) tierQtys.add(5);
-    if (stopAt >= 10) tierQtys.add(10);
-    tierQtys.add(stopAt);
-    const sorted = Array.from(tierQtys).filter((q) => q >= 1 && q <= 12).sort((a, b) => a - b);
-    return sorted.map((q) => {
-      const s = sample[q - 1];
+    const ladderQtys = [1, ...breakpoints];
+    return ladderQtys.map((q) => {
+      const total = totals[q - 1];
       return {
         qty: q === 1 ? '1 pc' : `${q} pcs`,
         qtyNum: q,
-        total: s.total,
-        perPiece: s.perPiece,
-        saves: s.saves,
+        total,
+        perPiece: total / q,
+        saves: Math.max(0, basePerPiece * q - total),
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
