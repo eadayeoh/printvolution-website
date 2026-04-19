@@ -698,93 +698,12 @@
     "category": "Advertising",
     "tagline": "Your message on their door handle — impossible to ignore",
     "description": "No inbox, no algorithm, no gatekeeper — your message lands directly on the door handle of exactly who you want to reach. For property launches, F&B promotions, and neighbourhood campaigns.",
-    "configurator": [
-      {
-        "step_id": "lamination",
-        "label": "Lamination",
-        "type": "swatch",
-        "options": [
-          {
-            "slug": "matt",
-            "label": "Matt Lamination",
-            "price_formula": "qty*0.45",
-            "note": "Popular"
-          },
-          {
-            "slug": "gloss",
-            "label": "Gloss Lamination",
-            "price_formula": "qty*0.42"
-          }
-        ]
-      },
-      {
-        "step_id": "sides",
-        "label": "Print Style",
-        "type": "swatch",
-        "options": [
-          {
-            "slug": "2",
-            "label": "Double Sided",
-            "price_formula": "0",
-            "note": "Recommended"
-          },
-          {
-            "slug": "1",
-            "label": "Single Sided",
-            "price_formula": "-qty*0.05"
-          }
-        ]
-      },
-      {
-        "step_id": "qty",
-        "label": "Quantity",
-        "type": "qty",
-        "options": []
-      }
-    ],
+    "_configurator_note": "Configurator + pricing_table seeded by scripts/apply-door-hanger-pricing.mjs (Paper & Finish × Qty, 60 supplier price points). Do not re-seed from here.",
+    "configurator": [],
     "pricing": {
       "label": "Size",
-      "configs": [
-        "240mm x 89mm"
-      ],
-      "rows": [
-        {
-          "qty": "100pcs",
-          "prices": [
-            15000
-          ]
-        },
-        {
-          "qty": "200pcs",
-          "prices": [
-            17000
-          ]
-        },
-        {
-          "qty": "300pcs",
-          "prices": [
-            19000
-          ]
-        },
-        {
-          "qty": "400pcs",
-          "prices": [
-            21000
-          ]
-        },
-        {
-          "qty": "500pcs",
-          "prices": [
-            23000
-          ]
-        },
-        {
-          "qty": "1000pcs",
-          "prices": [
-            25000
-          ]
-        }
-      ]
+      "configs": [],
+      "rows": []
     }
   },
   {

@@ -188,9 +188,16 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     //    priced by size × view × qty).
     if (product.pricing_table) {
       const pt = product.pricing_table;
-      const tier = snapToTier(useQty, pt.qty_tiers);
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '');
-      const key = `${axisKeys.join(':')}:${tier}`;
+      const axisPrefix = axisKeys.join(':');
+      // Filter to tiers the supplier actually priced for this combo —
+      // door-hanger finishes have different tier sets (e.g. 310gsm Art
+      // starts at 200, 310gsm + Matt Lam starts at 100).
+      const comboTiers = pt.qty_tiers.filter(
+        (t) => (pt.prices[`${axisPrefix}:${t}`] ?? 0) > 0,
+      );
+      const tier = snapToTier(useQty, comboTiers);
+      const key = `${axisPrefix}:${tier}`;
       const tablePrice = pt.prices[key] ?? 0;
       if (tablePrice > 0) {
         // Readable breakdown — "Size: 90mm × 54mm · Face In / Face Out View"
@@ -255,9 +262,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     // smallest-tier per-piece price × qty as the "no discount" baseline.
     if (product.pricing_table) {
       const pt = product.pricing_table;
-      const firstTier = pt.qty_tiers[0];
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
-      const firstTierPrice = pt.prices[`${axisKeys}:${firstTier}`] ?? 0;
+      // First tier available for THIS combo — not pt.qty_tiers[0], since
+      // combos with sparse coverage (e.g. 310gsm Art) start higher.
+      const firstTier = pt.qty_tiers.find(
+        (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
+      );
+      const firstTierPrice = firstTier ? pt.prices[`${axisKeys}:${firstTier}`] ?? 0 : 0;
       if (!firstTierPrice || !firstTier) return { savings: 0, undiscountedTotal: 0 };
       const perPieceAtSmallestTier = firstTierPrice / firstTier;
       const undiscounted = Math.round(perPieceAtSmallestTier * qty);
@@ -316,7 +327,12 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     if (product.pricing_table) {
       const pt = product.pricing_table;
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
-      const baselinePerPiece = (pt.prices[`${axisKeys}:${pt.qty_tiers[0]}`] ?? 0) / pt.qty_tiers[0];
+      const firstTier = pt.qty_tiers.find(
+        (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
+      );
+      const baselinePerPiece = firstTier
+        ? (pt.prices[`${axisKeys}:${firstTier}`] ?? 0) / firstTier
+        : 0;
       return pt.qty_tiers
         .map((q) => {
           const total = pt.prices[`${axisKeys}:${q}`] ?? 0;
