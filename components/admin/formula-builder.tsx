@@ -94,7 +94,7 @@ const PRESETS: Preset[] = [
     key: 'percent_bulk_discount',
     label: 'Bulk % discount (threshold)',
     description:
-      'Give a percent discount off the running total once quantity hits a threshold. Example: 10% off the whole line at 500 pcs and above. Place this step LAST in the configurator so the discount sees the full base price.',
+      'Give a percent discount off the running total once quantity hits a threshold. Example: 10% off the whole line at 500 pcs. ⚠ Requires a PRIOR charge step — a per-unit price, a flat charge, or a pricing_table tier on this product. The discount subtracts from whatever earlier steps have already set; on its own, with no base, it discounts nothing. Place this step LAST in the configurator so it sees the full base.',
     fields: [
       { id: 'percent', label: 'Discount (%)', type: 'number', defaultValue: '10' },
       { id: 'threshold', label: 'Kicks in at qty', hint: 'Orders of this quantity and above get the discount.', type: 'number', defaultValue: '500' },
@@ -179,15 +179,23 @@ export function FormulaBuilder({ value, onChange }: Props) {
     onChange(p.build(initial));
   }
 
-  // Preview for qty 1, 5, 10
+  // Preview for qty 1, 5, 10. Most presets only reference `qty` so
+  // base=0 is fine, but the bulk-discount preset references `base` —
+  // passing 0 would hide the discount in the preview. Use a synthetic
+  // $100 base when the formula touches `base`, and surface that in the
+  // label so admins know the preview is "on a $100 base".
+  const previewBase = /\bbase\b/.test(value || '') ? 100 : 0;
   const preview = useMemo(() => {
     if (!value) return null;
     try {
-      return [1, 5, 10].map((q) => ({ q, total: evaluateFormula(value, { qty: q, base: 0 }) }));
+      return [1, 5, 10].map((q) => ({
+        q,
+        total: evaluateFormula(value, { qty: q, base: previewBase }),
+      }));
     } catch {
       return null;
     }
-  }, [value]);
+  }, [value, previewBase]);
 
   return (
     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
@@ -230,12 +238,19 @@ export function FormulaBuilder({ value, onChange }: Props) {
             Formula: <code className="font-mono text-[10px] text-neutral-800">{value}</code>
           </div>
           {preview && (
-            <div className="flex gap-3 text-neutral-600">
-              {preview.map(({ q, total }) => (
-                <span key={q}>
-                  qty <strong>{q}</strong> → <strong>S${total.toFixed(2)}</strong>
-                </span>
-              ))}
+            <div className="flex flex-col gap-0.5 text-neutral-600">
+              <div className="flex gap-3">
+                {preview.map(({ q, total }) => (
+                  <span key={q}>
+                    qty <strong>{q}</strong> → <strong>S${total.toFixed(2)}</strong>
+                  </span>
+                ))}
+              </div>
+              {previewBase > 0 && (
+                <div className="text-[9px] text-neutral-500">
+                  Preview assumes a S${previewBase} base from earlier steps. Actual base is set by prior charge steps or a pricing_table tier at run-time.
+                </div>
+              )}
             </div>
           )}
         </div>
