@@ -34,7 +34,13 @@ const ConfiguratorStepSchema = z.object({
     image_url: z.string().nullable().optional(),
     swatch: z.string().optional(),
   })).optional(),
-  show_if: z.object({ step: z.string(), value: z.string() }).nullable().optional(),
+  show_if: z
+    .union([
+      z.object({ step: z.string(), value: z.string() }),
+      z.array(z.object({ step: z.string(), value: z.string() })),
+    ])
+    .nullable()
+    .optional(),
   step_config: z.record(z.string(), z.any()).nullable().optional(),
 });
 const FaqSchema = z.array(z.object({ question: z.string(), answer: z.string() }));

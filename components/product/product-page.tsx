@@ -146,9 +146,31 @@ export function ProductPage({ product, productRoutes, features }: Props) {
 
 
   const visibleSteps = useMemo(
-    () => product.configurator.filter((step) => !step.show_if || cfgState[step.show_if.step] === step.show_if.value),
+    () =>
+      product.configurator.filter((step) => {
+        if (!step.show_if) return true;
+        const conds = Array.isArray(step.show_if) ? step.show_if : [step.show_if];
+        return conds.every((c) => cfgState[c.step] === c.value);
+      }),
     [product.configurator, cfgState]
   );
+
+  // Reset hidden steps to their first option so pricing lookups don't
+  // carry a stale axis value into an invalid combo key (e.g. picking
+  // Spot UV=double, then switching Paper to 310gsm which hides Spot UV —
+  // without this, the key would still read `310:matt:double:qty`).
+  useEffect(() => {
+    for (const step of product.configurator) {
+      if (!step.show_if) continue;
+      const conds = Array.isArray(step.show_if) ? step.show_if : [step.show_if];
+      const hidden = conds.some((c) => cfgState[c.step] !== c.value);
+      if (!hidden) continue;
+      const fallback = step.options?.[0]?.slug;
+      if (fallback && cfgState[step.step_id] !== fallback) {
+        setCfgState((prev) => ({ ...prev, [step.step_id]: fallback }));
+      }
+    }
+  }, [cfgState, product.configurator]);
 
   const qty = useMemo(() => {
     const qtyStep = visibleSteps.find((s) => s.type === 'qty');

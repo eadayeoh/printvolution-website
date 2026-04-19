@@ -36,7 +36,7 @@ export type ConfiguratorStep = {
   type: 'select' | 'swatch' | 'text' | 'qty' | 'number';
   required: boolean;
   options: Array<{ slug: string; label: string; note?: string; price_formula?: string; swatch?: string; image_url?: string }>;
-  show_if?: { step: string; value: string } | null;
+  show_if?: { step: string; value: string } | Array<{ step: string; value: string }> | null;
   step_config?: {
     presets?: number[] | null;
     min?: number | null;
