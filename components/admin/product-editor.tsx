@@ -734,24 +734,14 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  {(s.options ?? []).map((opt, oi) => (
-                    <OptionCard
-                      key={oi}
-                      option={opt}
-                      index={oi}
-                      inputCls={inputCls}
-                      otherSteps={steps.filter((_, idx) => idx !== i)}
-                      onChange={(patch) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, ...patch } as any : x) })}
-                      onRemove={() => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
-                    />
-                  ))}
-                  {(s.options ?? []).length === 0 && (
-                    <div className="rounded border border-dashed border-neutral-300 bg-white p-6 text-center text-xs text-neutral-500">
-                      No options yet. Click <strong>Add option</strong> above.
-                    </div>
-                  )}
-                </div>
+                <OptionList
+                  options={s.options ?? []}
+                  inputCls={inputCls}
+                  otherSteps={steps.filter((_, idx) => idx !== i)}
+                  onReorder={(next) => update(i, { options: next })}
+                  onChange={(oi, patch) => update(i, { options: (s.options ?? []).map((x, j) => j === oi ? { ...x, ...patch } as any : x) })}
+                  onRemove={(oi) => update(i, { options: (s.options ?? []).filter((_, j) => j !== oi) })}
+                />
               </div>
             )}
 
@@ -786,11 +776,77 @@ function ConfiguratorEditor({ steps, setSteps }: { steps: ProductDetail['configu
 }
 
 /** Collapsible option card with pricing preview */
+function OptionList({
+  options,
+  inputCls,
+  otherSteps,
+  onReorder,
+  onChange,
+  onRemove,
+}: {
+  options: ProductDetail['configurator'][0]['options'];
+  inputCls: string;
+  otherSteps: ProductDetail['configurator'];
+  onReorder: (next: ProductDetail['configurator'][0]['options']) => void;
+  onChange: (idx: number, patch: any) => void;
+  onRemove: (idx: number) => void;
+}) {
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  function move(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= options.length || to >= options.length) return;
+    const next = [...options];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onReorder(next);
+  }
+
+  return (
+    <div className="space-y-2">
+      {options.map((opt, oi) => (
+        <div
+          key={oi}
+          onDragOver={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== oi) setDragOverIdx(oi); }}
+          onDragLeave={() => { if (dragOverIdx === oi) setDragOverIdx(null); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIdx !== null) move(dragIdx, oi);
+            setDragIdx(null); setDragOverIdx(null);
+          }}
+          className={`rounded-lg transition-colors ${
+            dragOverIdx === oi ? 'ring-2 ring-pink/60' :
+            dragIdx === oi ? 'opacity-50' : ''
+          }`}
+        >
+          <OptionCard
+            option={opt}
+            index={oi}
+            inputCls={inputCls}
+            otherSteps={otherSteps}
+            onDragStart={() => setDragIdx(oi)}
+            onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+            onChange={(patch) => onChange(oi, patch)}
+            onRemove={() => onRemove(oi)}
+          />
+        </div>
+      ))}
+      {options.length === 0 && (
+        <div className="rounded border border-dashed border-neutral-300 bg-white p-6 text-center text-xs text-neutral-500">
+          No options yet. Click <strong>Add option</strong> above.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OptionCard({
   option,
   index,
   inputCls,
   otherSteps,
+  onDragStart,
+  onDragEnd,
   onChange,
   onRemove,
 }: {
@@ -798,6 +854,8 @@ function OptionCard({
   index: number;
   inputCls: string;
   otherSteps: ProductDetail['configurator'];
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
   onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null; show_if: { step: string; value: string } | null }>) => void;
   onRemove: () => void;
 }) {
@@ -805,11 +863,22 @@ function OptionCard({
 
   return (
     <div className={`rounded-lg border-2 bg-white transition-colors ${open ? 'border-ink' : 'border-neutral-200'}`}>
-      {/* Collapsed summary row */}
+      {/* Collapsed summary row — drag handle on the left activates
+          HTML5 drag for reordering options within this step. */}
+      <div className="flex items-stretch">
+        <div
+          draggable={!!onDragStart}
+          onDragStart={(e) => { onDragStart?.(); e.dataTransfer.effectAllowed = 'move'; }}
+          onDragEnd={onDragEnd}
+          className="flex cursor-grab items-center px-2 text-neutral-300 hover:text-neutral-600 active:cursor-grabbing"
+          title="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </div>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        className="flex flex-1 items-center justify-between gap-3 py-3 pr-4 text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${open ? 'bg-ink text-white' : 'bg-neutral-100 text-neutral-500'}`}>
@@ -835,6 +904,7 @@ function OptionCard({
           <div className={`text-neutral-400 transition-transform ${open ? 'rotate-90' : ''}`}>▸</div>
         </div>
       </button>
+      </div>
 
       {/* Expanded editor */}
       {open && (
