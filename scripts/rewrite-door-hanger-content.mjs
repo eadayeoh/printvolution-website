@@ -165,7 +165,7 @@ const seo_magazine = {
       title: 'Seven working days, and what that covers.',
       body: [
         `Seven working days is file-approved to ready-for-collection at Paya Lebar Square. Inside that: day 1 — preflight; day 2 — plate setup; days 3–5 — offset run on both faces; day 6 — lamination and/or spot UV; day 7 — die-cut the knob hole, bundle, quality check. Runs above 3000 pieces sometimes add a day for the cut stage; we flag that when you quote, not on the collection call.`,
-        `Files we prefer: **print-ready PDF, CMYK, 300dpi, 3mm bleed, fonts outlined**. If the hanger uses spot UV, send a separate 1-bit mask layer for the UV areas (we'll explain the template when you order). Free preflight is part of the seven-day window, so if your file needs a fix you hear from us inside the first day — not on day six.`,
+        `Files we prefer: **Adobe Illustrator (.AI), CMYK, 300dpi, 3mm bleed, fonts outlined**. If the hanger uses spot UV, your designer just needs to put the UV area on its own layer in the .AI file and name it "UV" — we take it from there. (We'll send you a template when you order so there's no guesswork.) Free file check is part of the seven-day window, so if anything needs a fix you hear from us inside the first day — not on day six.`,
       ],
       side: {
         kind: 'list',
@@ -232,7 +232,7 @@ const faqs = [
   },
   {
     question: 'Can I order a quantity between the tiers, like 250 or 1500 pieces?',
-    answer: 'Yes — enter the number you want. The calculator snaps to the nearest supplier tier at or below your number, so 250 pcs prices at the 200 tier, 1500 pcs prices at the 1000 tier. You receive the full quantity you ordered; you only pay the lower-tier rate.',
+    answer: 'Quantities lock to supplier tiers — what the calculator shows is what you order and what you receive. Type any number and the calculator snaps down to the nearest tier: 250 becomes 200 pcs, 1500 becomes 1000 pcs. If you specifically need an in-between number (exactly 250, not 200), drop a note in WhatsApp and we\'ll quote a custom run.',
   },
   {
     question: 'What is the lead time?',
@@ -240,7 +240,7 @@ const faqs = [
   },
   {
     question: 'What artwork format do you need?',
-    answer: 'Print-ready PDF, CMYK, 300 dpi, 3mm bleed on every edge, fonts outlined or embedded. Double-sided artwork as a two-page PDF (front + back). For spot UV, send a separate 1-bit mask layer marking the gloss areas — we\'ll share the template when you order. Free preflight inside 12 hours; if the file needs a fix you\'ll hear from us before plate setup begins.',
+    answer: 'Send an Adobe Illustrator (.AI) file — CMYK, 300 dpi, 3mm bleed on every edge, fonts outlined. Put the front and back on separate artboards (or separate files, labelled). If you\'re adding spot UV, put the UV area on its own layer in the .AI file and name the layer "UV" — that tells us which parts get the glossy finish. We\'ll share a ready-made template when you order so nothing is guesswork. Free file check inside 12 hours; if anything needs a fix you\'ll hear from us before plate setup begins.',
   },
 ];
 

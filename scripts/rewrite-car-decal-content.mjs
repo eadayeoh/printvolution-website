@@ -208,7 +208,7 @@ const faqs = [
   },
   {
     question: 'Can I order a quantity between the tiers, like 250 or 750 pieces?',
-    answer: 'Yes — just enter the number you want. The calculator snaps to the nearest supplier tier at or below your number, so 250 pcs prices at the 200 tier, 750 pcs prices at the 700 tier. You receive the full quantity you ordered.',
+    answer: 'Quantities lock to supplier tiers — what the calculator shows is what you order and what you receive. Type any number and the calculator snaps down to the nearest tier: 250 becomes 200 pcs, 750 becomes 700 pcs. If you specifically need an in-between number (exactly 250, not 200), drop a note in WhatsApp and we\'ll quote a custom run.',
   },
   {
     question: 'How long do the decals last outdoors?',
