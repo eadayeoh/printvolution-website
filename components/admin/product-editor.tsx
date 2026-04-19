@@ -209,6 +209,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             </div>
             <Field label="Tagline (1-line hook)">
               <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} />
+              <p className="mt-1 text-[10px] text-neutral-500">Drives shop listings, nav hover preview, and the hero-sub fallback when Short description is empty.</p>
             </Field>
             <Field label="Hero big text (watermark fallback)">
               <input value={heroBig} onChange={(e) => setHeroBig(e.target.value)} className={inputCls} placeholder="PVC CANVAS" />
@@ -216,11 +217,11 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             </Field>
           </Section>
 
-          {/* Short description — used in schema + hero fallback */}
-          <Section title="Product description" desc="Used in JSON-LD schema, meta description fallback, and as hero sub-copy when tagline is empty.">
+          {/* Short description — hero sub-copy + schema + meta fallback */}
+          <Section title="Product description" desc="Shown as the hero sub-copy on the product page, and used in JSON-LD schema + search-engine meta description fallback.">
             <Field label="Short description">
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
-              <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Also feeds the generated SEO Magazine lede.</p>
+              <p className="mt-1 text-[10px] text-neutral-500">One or two sentences. Shows on the product-page hero; also feeds the generated SEO Magazine lede. If left empty, the hero falls back to the Tagline above.</p>
             </Field>
           </Section>
 

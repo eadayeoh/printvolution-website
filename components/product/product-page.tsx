@@ -640,6 +640,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const heroBig = product.extras?.hero_big || product.name.split(' ').pop()?.toUpperCase() || '';
   const h1 = product.extras?.h1 ?? product.name;
   const h1em = product.extras?.h1em ?? '';
+  // Hero sub-copy precedence (most-specific wins): admin's short
+  // description > long-form intro (extras.intro) > tagline. This lets
+  // an admin edit "Short description" in the editor and see the change
+  // land on the hero — previously tagline always won and hid the edit.
+  // Tagline still drives shop listings + nav hover preview.
+  const heroSub =
+    product.description || product.extras?.intro || product.tagline || '';
   const intro = product.extras?.intro ?? product.description ?? '';
   const related = (product.related ?? []).slice(0, 4);
 
@@ -810,7 +817,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               )}
             </h1>
           </div>
-          {(intro || product.tagline) && (
+          {heroSub && (
             <p
               style={{
                 fontSize: 16,
@@ -821,7 +828,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 margin: 0,
               }}
             >
-              {product.tagline || intro}
+              {heroSub}
             </p>
           )}
           {((leadTimeDays ?? 0) > 0 || printMode) && (
