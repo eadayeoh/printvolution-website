@@ -6,6 +6,14 @@ import { getSiteSettings } from '@/lib/data/site-settings';
 import { ProductPage } from '@/components/product/product-page';
 import { BreadcrumbSchema, ProductSchema } from '@/components/seo/json-ld';
 
+// Product pages must read fresh on every request — admin edits
+// (description, tagline, configurator, pricing) need to land on the
+// customer page immediately without waiting for revalidatePath to
+// propagate or an ISR window to expire. Supabase query cost per render
+// is ~100ms, well worth it for edit-to-render consistency.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type PageProps = {
   params: { category: string; slug: string[] };
 };
