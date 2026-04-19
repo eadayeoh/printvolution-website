@@ -1,16 +1,12 @@
 // Life Size Standee — formula-driven pricing (no pricing_table).
 //
-//   Height      — 160cm (S$120/pc) or 180cm (S$150/pc) · per-unit flat
+//   Height      — 160cm (S$120/pc) or 180cm (S$150/pc) · per-unit price
+//                 WITH a built-in 5% bulk discount at qty 5+. The discount
+//                 is baked into each Height option's formula via the
+//                 `per_unit_with_bulk_discount` preset — no separate
+//                 discount step in the configurator.
 //   Finish      — Matt / Gloss · included (no charge)
-//   Volume disc — single auto-selected option: 5% off the whole line
-//                 at qty 5 and above (placed LAST so it sees the full
-//                 base from Height × Qty).
 //   Quantity    — integer, min 1, price scales linearly.
-//
-// Was mis-configured: the admin had put the bulk-discount formula
-// directly on the Height options, which meant there was no base price
-// for the discount to reduce — product page kept falling back to the
-// legacy matrix min ($120 "FROM") instead of computing a real total.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -47,36 +43,39 @@ function mergeOptionImages(newOptions, existingOptions) {
   });
 }
 
-// Bulk-% discount formula — matches the admin formula-builder preset
-// for `percent_bulk_discount`. -base × fraction × step-indicator.
-// The step-indicator is 0 below threshold, 1 at/above threshold.
-function bulkDiscountFormula({ percent, threshold }) {
-  const p = Math.max(0, Number(percent || 0));
+// Per-unit-with-bulk-discount formula — matches the admin
+// formula-builder preset `per_unit_with_bulk_discount`. Emits:
+//   qty * PRICE * (1 - FRAC * Math.min(1, Math.max(0, qty - SHIFT)))
+// which is PRICE/pc below threshold, (PRICE × (1 - FRAC))/pc at/above.
+function perUnitWithBulkDiscountFormula({ price, percent, threshold }) {
+  const p = Math.max(0, Number(price || 0));
+  const pct = Math.max(0, Number(percent || 0));
   const t = Math.max(1, Math.floor(Number(threshold || 1)));
   if (p <= 0) return '0';
+  if (pct <= 0) return `qty * ${p}`;
   const shift = t - 1;
-  const frac = p / 100;
-  return `-base * ${frac} * Math.min(1, Math.max(0, qty - ${shift}))`;
+  const frac = pct / 100;
+  return `qty * ${p} * (1 - ${frac} * Math.min(1, Math.max(0, qty - ${shift})))`;
 }
 
 const heightAxis = [
-  { slug: '160', label: '160cm (5\'3")', note: 'Standard',   price_formula: 'qty * 120' },
-  { slug: '180', label: '180cm (5\'11")',                     price_formula: 'qty * 150' },
+  {
+    slug: '160',
+    label: '160cm (5\'3")',
+    note: 'Standard · 5% off at qty 5+',
+    price_formula: perUnitWithBulkDiscountFormula({ price: 120, percent: 5, threshold: 5 }),
+  },
+  {
+    slug: '180',
+    label: '180cm (5\'11")',
+    note: '5% off at qty 5+',
+    price_formula: perUnitWithBulkDiscountFormula({ price: 150, percent: 5, threshold: 5 }),
+  },
 ];
 
 const finishAxis = [
   { slug: 'matt',  label: 'Matt Lamination',  note: 'Included', price_formula: '0' },
   { slug: 'gloss', label: 'Gloss Lamination', note: 'Included', price_formula: '0' },
-];
-
-// Single-option step so the discount is always-on once qty hits the
-// threshold. Admin can re-edit the % / threshold later via the editor.
-const volumeDiscountAxis = [
-  {
-    slug: 'auto',
-    label: 'Auto · 5% off at qty 5+',
-    price_formula: bulkDiscountFormula({ percent: 5, threshold: 5 }),
-  },
 ];
 
 try {
@@ -91,9 +90,8 @@ try {
   const existingByStep = new Map();
   for (const row of existingCfg) existingByStep.set(row.step_id, row.options);
 
-  const mergedHeight   = mergeOptionImages(heightAxis,          existingByStep.get('height'));
-  const mergedFinish   = mergeOptionImages(finishAxis,          existingByStep.get('finish'));
-  const mergedDiscount = mergeOptionImages(volumeDiscountAxis,  existingByStep.get('volume_discount'));
+  const mergedHeight = mergeOptionImages(heightAxis, existingByStep.get('height'));
+  const mergedFinish = mergeOptionImages(finishAxis, existingByStep.get('finish'));
 
   await sql`delete from public.product_configurator where product_id = ${prod.id}`;
   await sql`
@@ -113,16 +111,10 @@ try {
       (
         ${prod.id}, 'qty', 2, 'Quantity', 'qty', true,
         '[]'::jsonb, null,
-        ${sql.json({ presets: [1, 2, 5, 10, 20], min: 1, step: 1, note: 'Order 5 or more to auto-unlock the 5% volume discount.' })}
-      ),
-      (
-        ${prod.id}, 'volume_discount', 3, 'Volume discount', 'swatch', true,
-        ${sql.json(mergedDiscount)},
-        null,
-        ${sql.json({ note: 'Applied automatically when quantity is 5 or more.' })}
+        ${sql.json({ presets: [1, 2, 5, 10, 20], min: 1, step: 1, note: 'Order 5 or more to unlock the 5% bulk discount built into the Height price.' })}
       )
   `;
-  console.log('✓ configurator rebuilt — Height / Finish / Quantity / Volume discount');
+  console.log('✓ configurator rebuilt — Height / Finish / Quantity (discount baked into Height options)');
 
   // Drop the legacy matrix so it stops feeding the FROM fallback.
   await sql`delete from public.product_pricing where product_id = ${prod.id}`;

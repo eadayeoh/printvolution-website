@@ -12,7 +12,7 @@ type Props = {
  * Formula presets the admin can pick from without typing any code.
  * All outputs are SGD dollars (the product page multiplies by 100).
  */
-type PresetKey = 'none' | 'flat' | 'per_unit' | 'volume_discount' | 'bulk_tier' | 'percent_bulk_discount' | 'custom';
+type PresetKey = 'none' | 'flat' | 'per_unit' | 'per_unit_with_bulk_discount' | 'volume_discount' | 'bulk_tier' | 'percent_bulk_discount' | 'custom';
 
 type Preset = {
   key: PresetKey;
@@ -47,6 +47,30 @@ const PRESETS: Preset[] = [
       { id: 'price', label: 'Price per unit (S$)', type: 'number', defaultValue: '3' },
     ],
     build: ({ price }) => `qty * ${Number(price || 0)}`,
+  },
+  {
+    key: 'per_unit_with_bulk_discount',
+    label: 'Per-unit price with bulk % discount',
+    description:
+      'Per-unit price that drops by a percent once quantity hits a threshold. Example: S$120/pc, drops 5% to S$114/pc at qty 5 and above. Self-contained — no separate discount step needed.',
+    fields: [
+      { id: 'price', label: 'Price per unit (S$)', type: 'number', defaultValue: '120' },
+      { id: 'percent', label: 'Discount at threshold (%)', type: 'number', defaultValue: '5' },
+      { id: 'threshold', label: 'Discount kicks in at qty', type: 'number', defaultValue: '5' },
+    ],
+    build: ({ price, percent, threshold }) => {
+      const p = Math.max(0, Number(price || 0));
+      const pct = Math.max(0, Number(percent || 0));
+      const t = Math.max(1, Math.floor(Number(threshold || 1)));
+      if (p <= 0) return '0';
+      if (pct <= 0) return `qty * ${p}`;
+      const shift = t - 1;
+      const frac = pct / 100;
+      // qty * price * (1 - fraction × threshold-indicator)
+      // threshold-indicator = Math.min(1, Math.max(0, qty - shift))
+      // = 0 below threshold, 1 at/above threshold
+      return `qty * ${p} * (1 - ${frac} * Math.min(1, Math.max(0, qty - ${shift})))`;
+    },
   },
   {
     key: 'volume_discount',
@@ -132,6 +156,22 @@ function detectPreset(formula: string): { key: PresetKey; vars: Record<string, s
   // per_unit: qty*X
   const perUnit = /^qty\*(-?\d+(?:\.\d+)?)$/.exec(f);
   if (perUnit) return { key: 'per_unit', vars: { price: perUnit[1] } };
+
+  // per_unit_with_bulk_discount: qty*P*(1-FRAC*Math.min(1,Math.max(0,qty-SHIFT)))
+  const pubd = /^qty\*(-?\d+(?:\.\d+)?)\*\(1-(-?\d+(?:\.\d+)?)\*Math\.min\(1,Math\.max\(0,qty-(-?\d+(?:\.\d+)?)\)\)\)$/.exec(f);
+  if (pubd) {
+    const price = pubd[1];
+    const fraction = parseFloat(pubd[2]);
+    const shift = parseFloat(pubd[3]);
+    return {
+      key: 'per_unit_with_bulk_discount',
+      vars: {
+        price,
+        percent: String(Math.round(fraction * 10000) / 100),
+        threshold: String(shift + 1),
+      },
+    };
+  }
 
   // volume_discount / bulk_tier: qty*(BASE-Math.min(CAP,STEP*(qty-1)))
   const vd = /^qty\*\((-?\d+(?:\.\d+)?)-Math\.min\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\*\(qty-1\)\)\)$/.exec(f);
