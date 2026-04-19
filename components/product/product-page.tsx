@@ -206,37 +206,40 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let sum = 0;
 
-    // 1. Multi-axis pricing_table lookup wins if present (e.g. car decals
-    //    priced by size × view × qty).
+    // 1. Multi-axis pricing_table lookup wins if the current combo has
+    //    an entry (e.g. car decals, door hangers, flyers-offset). If the
+    //    combo has no entry (e.g. flyers-digital where digital pricing
+    //    stays on step formulas), we fall through to the formula path
+    //    below — letting one product mix tier-priced and formula-priced
+    //    methods without duplicating configs.
     if (product.pricing_table) {
       const pt = product.pricing_table;
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '');
       const axisPrefix = axisKeys.join(':');
-      // Filter to tiers the supplier actually priced for this combo —
-      // door-hanger finishes have different tier sets (e.g. 310gsm Art
-      // starts at 200, 310gsm + Matt Lam starts at 100).
       const comboTiers = pt.qty_tiers.filter(
         (t) => (pt.prices[`${axisPrefix}:${t}`] ?? 0) > 0,
       );
-      const tier = snapToTier(useQty, comboTiers);
-      const key = `${axisPrefix}:${tier}`;
-      const tablePrice = pt.prices[key] ?? 0;
-      if (tablePrice > 0) {
-        // Readable breakdown — "Size: 90mm × 54mm · Face In / Face Out View"
-        const parts: string[] = [];
-        for (const axis of pt.axis_order) {
-          const selectedSlug = cfgState[axis];
-          const opts = pt.axes[axis] ?? [];
-          const match = opts.find((o) => o.slug === selectedSlug);
-          if (match) parts.push(match.label);
+      if (comboTiers.length > 0) {
+        const tier = snapToTier(useQty, comboTiers);
+        const key = `${axisPrefix}:${tier}`;
+        const tablePrice = pt.prices[key] ?? 0;
+        if (tablePrice > 0) {
+          const parts: string[] = [];
+          for (const axis of pt.axis_order) {
+            const selectedSlug = cfgState[axis];
+            const opts = pt.axes[axis] ?? [];
+            const match = opts.find((o) => o.slug === selectedSlug);
+            if (match) parts.push(match.label);
+          }
+          breakdown.push({
+            label: `${parts.join(' · ')} × ${tier} pcs`,
+            amount: tablePrice,
+          });
+          sum = tablePrice;
+          return { total: sum, breakdown };
         }
-        breakdown.push({
-          label: `${parts.join(' · ')} × ${tier} pcs`,
-          amount: tablePrice,
-        });
-        sum = tablePrice;
       }
-      return { total: sum, breakdown };
+      // No entry for this combo — fall through to step formulas.
     }
 
     let anyFormula = false;
@@ -285,19 +288,22 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     if (product.pricing_table) {
       const pt = product.pricing_table;
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
-      // First tier available for THIS combo — not pt.qty_tiers[0], since
-      // combos with sparse coverage (e.g. 310gsm Art) start higher.
       const firstTier = pt.qty_tiers.find(
         (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
       );
-      const firstTierPrice = firstTier ? pt.prices[`${axisKeys}:${firstTier}`] ?? 0 : 0;
-      if (!firstTierPrice || !firstTier) return { savings: 0, undiscountedTotal: 0 };
-      const perPieceAtSmallestTier = firstTierPrice / firstTier;
-      const undiscounted = Math.round(perPieceAtSmallestTier * qty);
-      return {
-        savings: Math.max(0, undiscounted - lineTotal),
-        undiscountedTotal: undiscounted,
-      };
+      if (firstTier) {
+        const firstTierPrice = pt.prices[`${axisKeys}:${firstTier}`] ?? 0;
+        if (firstTierPrice > 0) {
+          const perPieceAtSmallestTier = firstTierPrice / firstTier;
+          const undiscounted = Math.round(perPieceAtSmallestTier * qty);
+          return {
+            savings: Math.max(0, undiscounted - lineTotal),
+            undiscountedTotal: undiscounted,
+          };
+        }
+      }
+      // No pricing_table entry for this combo — fall through to the
+      // formula-based "singleTotal × qty" baseline below.
     }
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
     const undiscounted = singleTotal * qty;
@@ -344,32 +350,36 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const priceLadder = useMemo(() => {
     const { total: singleTotal } = computeTotal(1, colIdx, 0);
 
-    // pricing_table: one ladder row per qty tier, for the
-    // currently-selected axes (size + view).
+    // pricing_table: one ladder row per qty tier, for the currently-
+    // selected axes. If no tier has an entry for this combo (e.g. the
+    // digital method on flyers), fall through to the formula-ladder
+    // path below.
     if (product.pricing_table) {
       const pt = product.pricing_table;
       const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
       const firstTier = pt.qty_tiers.find(
         (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
       );
-      const baselinePerPiece = firstTier
-        ? (pt.prices[`${axisKeys}:${firstTier}`] ?? 0) / firstTier
-        : 0;
-      return pt.qty_tiers
-        .map((q) => {
-          const total = pt.prices[`${axisKeys}:${q}`] ?? 0;
-          if (total <= 0) return null;
-          const perPiece = total / q;
-          const undiscounted = baselinePerPiece * q;
-          return {
-            qty: `${q} pcs`,
-            qtyNum: q,
-            total,
-            perPiece,
-            saves: Math.max(0, undiscounted - total),
-          };
-        })
-        .filter(Boolean) as Array<{ qty: string; qtyNum: number; total: number; perPiece: number; saves: number }>;
+      if (firstTier) {
+        const baselinePerPiece =
+          (pt.prices[`${axisKeys}:${firstTier}`] ?? 0) / firstTier;
+        return pt.qty_tiers
+          .map((q) => {
+            const total = pt.prices[`${axisKeys}:${q}`] ?? 0;
+            if (total <= 0) return null;
+            const perPiece = total / q;
+            const undiscounted = baselinePerPiece * q;
+            return {
+              qty: `${q} pcs`,
+              qtyNum: q,
+              total,
+              perPiece,
+              saves: Math.max(0, undiscounted - total),
+            };
+          })
+          .filter(Boolean) as Array<{ qty: string; qtyNum: number; total: number; perPiece: number; saves: number }>;
+      }
+      // No entries for this combo — fall through to formula-ladder below.
     }
 
     if (product.pricing && product.pricing.rows.length > 0) {
