@@ -348,7 +348,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
             );
             sum += valueCents;
-            if (valueCents > 0) {
+            // Show both charges (positive) and discounts (negative) in
+            // the breakdown — hiding negatives makes a % discount preset
+            // look invisible on the price summary.
+            if (valueCents !== 0) {
               breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
             }
           }
@@ -404,7 +407,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
               );
               sum += valueCents;
-              if (valueCents > 0) {
+              if (valueCents !== 0) {
                 breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
               }
             }
@@ -423,9 +426,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       const opt = step.options.find((o) => o.slug === selected);
       if (opt?.price_formula) {
         anyFormula = true;
-        const valueCents = Math.round(evaluateFormula(opt.price_formula, { qty: useQty, base: 0 }) * 100);
+        // Pass the running sum as `base` so later steps (e.g. a bulk
+        // % discount) can modify the total set by earlier steps.
+        const valueCents = Math.round(
+          evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+        );
         sum += valueCents;
-        if (valueCents > 0) breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
+        if (valueCents !== 0) breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
       }
     }
 
@@ -1318,12 +1325,25 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               </div>
 
               <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 12 }}>
-                {breakdown.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'rgba(255,255,255,0.75)' }}>
-                    <span>{b.label}</span>
-                    <span style={{ color: '#fff', fontWeight: 700 }}>{formatSGD(b.amount)}</span>
-                  </div>
-                ))}
+                {breakdown.map((b, i) => {
+                  const isDiscount = b.amount < 0;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '4px 0',
+                        color: isDiscount ? 'var(--pv-green)' : 'rgba(255,255,255,0.75)',
+                      }}
+                    >
+                      <span>{b.label}</span>
+                      <span style={{ color: isDiscount ? 'var(--pv-green)' : '#fff', fontWeight: 700 }}>
+                        {isDiscount ? '− ' : ''}{formatSGD(Math.abs(b.amount))}
+                      </span>
+                    </div>
+                  );
+                })}
                 {/* For pricing_table products the qty is already in the breakdown label. */}
                 {qty > 1 && !product.pricing_table && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'rgba(255,255,255,0.75)' }}>
