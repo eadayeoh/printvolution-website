@@ -220,6 +220,19 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return best;
   }
 
+  // Axis-order resolver — honours `axis_order_by_method` so one product
+  // can expose different axis sets per print method (flyers: Digital vs
+  // Offset use different step_ids for size/paper/sides).
+  function resolveAxisOrder(pt: NonNullable<typeof product.pricing_table>): string[] {
+    if (pt.axis_order_by_method) {
+      const methodVal = cfgState.method;
+      if (methodVal && pt.axis_order_by_method[methodVal]) {
+        return pt.axis_order_by_method[methodVal];
+      }
+    }
+    return pt.axis_order;
+  }
+
   function computeTotal(useQty: number, useColIdx: number, useRowIdx: number) {
     const breakdown: Array<{ label: string; amount: number }> = [];
     let sum = 0;
@@ -232,7 +245,8 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     //    methods without duplicating configs.
     if (product.pricing_table) {
       const pt = product.pricing_table;
-      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '');
+      const axisOrder = resolveAxisOrder(pt);
+      const axisKeys = axisOrder.map((axis) => cfgState[axis] ?? '');
       const axisPrefix = axisKeys.join(':');
       const comboTiers = pt.qty_tiers.filter(
         (t) => (pt.prices[`${axisPrefix}:${t}`] ?? 0) > 0,
@@ -243,7 +257,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         const tablePrice = pt.prices[key] ?? 0;
         if (tablePrice > 0) {
           const parts: string[] = [];
-          for (const axis of pt.axis_order) {
+          for (const axis of axisOrder) {
             const selectedSlug = cfgState[axis];
             const opts = pt.axes[axis] ?? [];
             const match = opts.find((o) => o.slug === selectedSlug);
@@ -254,6 +268,26 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             amount: tablePrice,
           });
           sum = tablePrice;
+          // Add-on formulas — any visible swatch step whose step_id is
+          // NOT in the axis_order acts as a modifier on top of the tier
+          // price (e.g. flyers digital Lamination step still adds its
+          // formula $ when tier pricing is in play).
+          const axisSet = new Set(axisOrder);
+          for (const step of visibleSteps) {
+            if (step.type !== 'swatch' && step.type !== 'select') continue;
+            if (axisSet.has(step.step_id)) continue;
+            const selected = cfgState[step.step_id];
+            const opt = step.options.find((o) => o.slug === selected);
+            if (opt?.price_formula) {
+              const valueCents = Math.round(
+                evaluateFormula(opt.price_formula, { qty: useQty, base: sum / 100 }) * 100,
+              );
+              sum += valueCents;
+              if (valueCents > 0) {
+                breakdown.push({ label: `${step.label}: ${opt.label}`, amount: valueCents });
+              }
+            }
+          }
           return { total: sum, breakdown };
         }
       }
@@ -305,7 +339,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     // smallest-tier per-piece price × qty as the "no discount" baseline.
     if (product.pricing_table) {
       const pt = product.pricing_table;
-      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
+      const axisKeys = resolveAxisOrder(pt).map((axis) => cfgState[axis] ?? '').join(':');
       const firstTier = pt.qty_tiers.find(
         (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
       );
@@ -374,7 +408,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     // path below.
     if (product.pricing_table) {
       const pt = product.pricing_table;
-      const axisKeys = pt.axis_order.map((axis) => cfgState[axis] ?? '').join(':');
+      const axisKeys = resolveAxisOrder(pt).map((axis) => cfgState[axis] ?? '').join(':');
       const firstTier = pt.qty_tiers.find(
         (t) => (pt.prices[`${axisKeys}:${t}`] ?? 0) > 0,
       );

@@ -22,7 +22,15 @@ export type PricingData = {
 
 export type PricingTable = {
   axes: Record<string, Array<{ slug: string; label: string }>>;
+  /** Default axis lookup order. Used when `axis_order_by_method` isn't
+   *  set or the current `method` value isn't in that map. */
   axis_order: string[];
+  /** Per-method axis_order — lets one product expose different axes
+   *  for different print methods (e.g. flyers: Digital uses
+   *  ['method','size','paper','sides'], Offset uses
+   *  ['method','size_offset','paper_offset','sides_offset']).
+   *  The dispatch key is always `cfgState.method`. */
+  axis_order_by_method?: Record<string, string[]>;
   qty_tiers: number[];
   prices: Record<string, number>; // key: "<axis1>:<axis2>:<qty>" → cents
 };

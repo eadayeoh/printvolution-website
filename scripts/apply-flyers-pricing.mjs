@@ -1,15 +1,18 @@
-// Flyers — hybrid Digital / Offset configurator.
+// Flyers — hybrid Digital + Offset pricing_table, pulled from pvpricelist.
 //
-// Digital: existing configurator step formulas stay authoritative
-//   (size/sides/paper/lamination/qty). No tier lookup.
-// Offset: supplier-accurate pricing_table on Method=Offset combos.
-//   Sizes: A5 only for now (A4/DL offset coming later).
-//   Papers: 128 / 157 gsm Art Paper · 260 / 310 gsm Art Card.
-//   Sides: 4C+0C (single sided) · 4C+4C (double sided).
+// DIGITAL (small runs 50 → 500 pcs):
+//   size × paper × sides → price computed from pvpricelist BM tiers
+//   (print unit × a3Qty with min-floor) + A4/A5 cut fee. Ports
+//   pvpricelist/src/calc/basicMaterials.ts computeBasicMaterials().
+//   Covers A4/A5 × 128gsm/157gsm Art Paper × Single/Double.
+//   Lamination is an add-on formula on top of the tier price (calculator
+//   handles this natively via the axis_order add-on sum).
 //
-// The calculator now falls through to step formulas when the pricing
-// table has no entry for the current combo, so Digital + Offset live
-// in one product without fighting each other.
+// OFFSET (bulk runs 300 → 200k pcs for paper, 600 → 10k for thicker card):
+//   A4 + A5 × 128/157gsm Art Paper → pvpricelist live prices (already
+//   have $150 min-invoice floor baked in for 300–2000 tiers).
+//   A5 × 260/310gsm Art Card → user's separate supplier screenshots.
+//   A5 paper extended tiers 40k–200k → user's separate screenshots.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -31,22 +34,136 @@ for (const raw of envFile.split('\n')) {
 const sql = postgres(process.env.SUPABASE_DB_URL, { max: 1, prepare: false });
 
 // ────────────────────────────────────────────────────────────────────
-// Axes (pricing_table)
+// Digital pricing — port of pvpricelist BM calc
+// ────────────────────────────────────────────────────────────────────
+
+// [minA3Qty, unitPrice] tiers, from pvpricelist basicMaterials.ts.
+// Keys: `${gsmGroup}${sides}`. gsmGroup 100 = 128gsm, 150 = 157gsm.
+const BM = {
+  '100ss': [[11,1.9],[20,1.7],[30,1.55],[40,1.45],[50,1.35],[60,1.3],[70,1.25],[80,1.2],[90,1.15],[100,1.1],[150,1.05],[200,1.0],[250,0.95],[300,0.9],[350,0.85],[400,0.8],[450,0.75]],
+  '100ds': [[11,3.2],[20,2.65],[30,2.25],[40,1.95],[50,1.8],[60,1.75],[70,1.7],[80,1.65],[90,1.6],[100,1.55],[150,1.5],[200,1.45],[250,1.4],[300,1.35],[350,1.3],[400,1.25],[450,1.2]],
+  '150ss': [[11,2.1],[20,1.85],[30,1.65],[40,1.5],[50,1.4],[60,1.35],[70,1.3],[80,1.25],[90,1.2],[100,1.15],[150,1.1],[200,1.05],[250,1.0],[300,0.95],[350,0.9],[400,0.85],[450,0.8]],
+  '150ds': [[11,3.3],[20,2.75],[30,2.35],[40,2.05],[50,1.9],[60,1.85],[70,1.8],[80,1.75],[90,1.7],[100,1.65],[150,1.6],[200,1.55],[250,1.5],[300,1.45],[350,1.4],[400,1.35],[450,1.3]],
+};
+
+const BM_PRINT_UPS = { a4: 2, a5: 4 };
+
+// Cutting fee by finished size + a3Qty column.
+// Columns: idx0=≤100, idx1=≤200, idx2=≤300, idx3=≤400, idx4=≤500
+const BM_CUT_TABLE = {
+  a4: [4, 7, 10, 13, 16],
+  a5: [10, 18, 25, 32, 40],
+};
+
+function cutCol(a3Qty) {
+  return a3Qty <= 100 ? 0 : a3Qty <= 200 ? 1 : a3Qty <= 300 ? 2 : a3Qty <= 400 ? 3 : 4;
+}
+
+// applyTierFloor — mirrors pvpricelist/tierFloor.ts exactly.
+function applyTierFloor(tiers, qty) {
+  let unitIdx = 0;
+  for (let i = 0; i < tiers.length; i++) {
+    if (qty >= tiers[i][0]) unitIdx = i;
+  }
+  const unit = tiers[unitIdx][1];
+  const raw = qty * unit;
+  let minFloor = 0;
+  if (unitIdx > 0) {
+    const prev = tiers[unitIdx - 1];
+    const prevUpper = tiers[unitIdx][0] - 1;
+    minFloor = prevUpper * prev[1];
+  }
+  return Math.max(raw, minFloor);
+}
+
+function computeDigital(size, gsmGroup, sides, qty) {
+  const ups = BM_PRINT_UPS[size];
+  const a3Qty = Math.ceil(qty / ups);
+  const tiers = BM[`${gsmGroup}${sides}`];
+  const print = applyTierFloor(tiers, a3Qty);
+  const cut = BM_CUT_TABLE[size][cutCol(a3Qty)];
+  return print + cut;
+}
+
+const digitalQtyTiers = [50, 100, 200, 300, 400, 500];
+
+// 128gsm Art = BM '100' group; 157gsm Art = BM '150' group.
+const digitalCombos = [
+  { size: 'a4', paper: '128art', paperGsm: '100', sides: '1', bmSides: 'ss' },
+  { size: 'a4', paper: '128art', paperGsm: '100', sides: '2', bmSides: 'ds' },
+  { size: 'a4', paper: '157art', paperGsm: '150', sides: '1', bmSides: 'ss' },
+  { size: 'a4', paper: '157art', paperGsm: '150', sides: '2', bmSides: 'ds' },
+  { size: 'a5', paper: '128art', paperGsm: '100', sides: '1', bmSides: 'ss' },
+  { size: 'a5', paper: '128art', paperGsm: '100', sides: '2', bmSides: 'ds' },
+  { size: 'a5', paper: '157art', paperGsm: '150', sides: '1', bmSides: 'ss' },
+  { size: 'a5', paper: '157art', paperGsm: '150', sides: '2', bmSides: 'ds' },
+];
+
+// ────────────────────────────────────────────────────────────────────
+// Offset pricing — pvpricelist live prices (already have $150 floor)
+// plus user's separate screenshots for 260/310gsm Art Card and
+// extended A5 paper tiers (40k–200k).
+// ────────────────────────────────────────────────────────────────────
+const RAW_OFFSET = {
+  // ─ A4 Art Paper (pvpricelist) ─
+  'a4:128art:4c0c': { 300:150, 500:150, 1000:150, 2000:150, 3000:183.9, 4000:229.1, 5000:279.2, 6000:323.4, 7000:367.7, 8000:412, 9000:451.4, 10000:490.9, 12000:585.2, 16000:778, 20000:912.3 },
+  'a4:128art:4c4c': { 300:150, 500:150, 1000:150, 2000:177.1, 3000:219.9, 4000:262.8, 5000:311.9, 6000:373.2, 7000:434.5, 8000:495.7, 9000:539, 10000:595, 12000:669, 16000:880, 20000:1077.4 },
+  'a4:157art:4c0c': { 300:150, 500:150, 1000:150, 2000:152.1, 3000:203.1, 4000:254.1, 5000:302.3, 6000:355.8, 7000:409.4, 8000:463, 9000:517.4, 10000:571.8, 12000:682.4, 16000:902.9, 20000:1056.6 },
+  'a4:157art:4c4c': { 300:150, 500:150, 1000:150, 2000:189.7, 3000:239.2, 4000:288.8, 5000:339.8, 6000:402.7, 7000:466.2, 8000:529.4, 9000:591, 10000:652.6, 12000:775.8, 16000:1070.7, 20000:1203.8 },
+
+  // ─ A5 Art Paper ($150 floor for 600–4000 per pvpricelist; 6000+ match
+  //   supplier; 60k/100k/200k are user's extended tiers from supplier
+  //   sheet — NOT in pvpricelist; kept per user's call) ─
+  'a5:128art:4c0c': { 600:150, 1000:150, 2000:150, 4000:150, 6000:195.9, 8000:249.3, 10000:285.9, 12000:339.5, 14000:393.1, 16000:446.6, 18000:470.1, 20000:494, 40000:1014.3, 60000:1512.4, 100000:2419.5, 200000:4826.7 },
+  'a5:128art:4c4c': { 600:150, 1000:150, 2000:150, 4000:189.7, 6000:233, 8000:276.3, 10000:329.2, 12000:387, 14000:444.7, 16000:502.5, 18000:531, 20000:561.5, 40000:1108.9, 60000:1651.3, 100000:2628.7, 200000:5241.2 },
+  'a5:157art:4c0c': { 600:150, 1000:150, 2000:150, 4000:160.8, 6000:216.1, 8000:271.5, 10000:323.4, 12000:380, 14000:435.7, 16000:491.9, 18000:520.8, 20000:560, 40000:1125, 60000:1654.2, 100000:2813.5, 200000:5613.6 },
+  'a5:157art:4c4c': { 600:150, 1000:150, 2000:150, 4000:207.9, 6000:254.1, 8000:300.3, 10000:368.7, 12000:431, 14000:494, 16000:555.4, 18000:587.7, 20000:636, 40000:1275, 60000:1832.4, 100000:3022.7, 200000:6028.1 },
+
+  // ─ A5 Art Card (thicker stock — user screenshots only, no pvpricelist
+  //   equivalent; kept per user's call) ─
+  'a5:260card:4c0c': { 600:120.6, 1000:130, 2000:190.6, 3000:217.6, 4000:263.8, 5000:313.8, 6000:380.2, 7000:440.9, 8000:501.5, 9000:562.1, 10000:622.8 },
+  'a5:260card:4c4c': { 600:159.7, 1000:173.3, 2000:221.7, 3000:273.4, 4000:322.5, 5000:369.6, 6000:431.2, 7000:481.3, 8000:526.5, 9000:589.1, 10000:651.7 },
+  'a5:310card:4c0c': { 600:144.8, 1000:156, 2000:228.8, 3000:261.2, 4000:316.6, 5000:376.6, 6000:456.3, 7000:529.1, 8000:601.8, 9000:674.6, 10000:747.4 },
+  'a5:310card:4c4c': { 600:191.7, 1000:208, 2000:256.5, 3000:328.1, 4000:387, 5000:443.6, 6000:517.5, 7000:577.6, 8000:631.8, 9000:707, 10000:782.1 },
+};
+
+// ────────────────────────────────────────────────────────────────────
+// Axes
 // ────────────────────────────────────────────────────────────────────
 const methodAxis = [
   { slug: 'digital', label: 'Digital' },
   { slug: 'offset',  label: 'Offset' },
 ];
 
+// DIGITAL axis options (step_ids: size, paper, sides)
+const sizeDigitalAxis = [
+  { slug: 'a4', label: 'A4 (210 × 297mm)', note: 'Most common' },
+  { slug: 'a5', label: 'A5 (148 × 210mm)' },
+  { slug: 'dl', label: 'DL (99 × 210mm)' },
+];
+
+const paperDigitalAxis = [
+  { slug: '115art', label: '115gsm Art Paper', note: 'Standard' },
+  { slug: '128art', label: '128gsm Art Paper' },
+  { slug: '157art', label: '157gsm Art Paper' },
+];
+
+const sidesDigitalAxis = [
+  { slug: '2', label: 'Double Sided', note: 'Recommended' },
+  { slug: '1', label: 'Single Sided' },
+];
+
+// OFFSET axis options (step_ids: size_offset, paper_offset, sides_offset)
 const sizeOffsetAxis = [
+  { slug: 'a4', label: 'A4 (210 × 297mm)' },
   { slug: 'a5', label: 'A5 (148 × 210mm)' },
 ];
 
 const paperOffsetAxis = [
   { slug: '128art', label: '128gsm Art Paper' },
   { slug: '157art', label: '157gsm Art Paper' },
-  { slug: '260card', label: '260gsm Art Card' },
-  { slug: '310card', label: '310gsm Art Card' },
+  { slug: '260card', label: '260gsm Art Card', note: 'A5 only' },
+  { slug: '310card', label: '310gsm Art Card', note: 'A5 only' },
 ];
 
 const sidesOffsetAxis = [
@@ -54,190 +171,119 @@ const sidesOffsetAxis = [
   { slug: '4c4c', label: 'Double Sided (4C + 4C)' },
 ];
 
-// Union of digital + offset tiers (sorted, deduped).
-// Digital = [500, 1000, 2000, 5000], offset card = up to 10k,
-// offset paper extends to 200k.
+// Union of all qty tiers used.
 const qtyTiers = [
-  500, 600, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,
-  12000, 14000, 16000, 18000, 20000, 40000, 60000, 100000, 200000,
+  50, 100, 200, 300, 400, 500, 600, 1000, 2000, 3000, 4000, 5000,
+  6000, 7000, 8000, 9000, 10000, 12000, 14000, 16000, 18000, 20000,
+  40000, 60000, 100000, 200000,
 ];
 
 // ────────────────────────────────────────────────────────────────────
-// Offset prices (RM treated 1:1 as SGD, cents in the table).
-// Key: offset:a5:<paper>:<sides>:<qty>
+// Build prices dictionary
 // ────────────────────────────────────────────────────────────────────
-const RAW_OFFSET = {
-  // 128gsm Art Paper — 16 tiers 600 → 200,000
-  '128art:4c0c': {
-    600: 68.40,   1000: 82.80,   2000: 110.70,  4000: 142.50,
-    6000: 195.90, 8000: 249.30,  10000: 285.90, 12000: 339.50,
-    14000: 393.10,16000: 446.60, 18000: 470.10, 20000: 494.00,
-    40000: 1014.30,60000: 1512.40,100000: 2419.50,200000: 4826.70,
-  },
-  '128art:4c4c': {
-    600: 103.00,  1000: 120.40,  2000: 133.80,  4000: 189.70,
-    6000: 233.00, 8000: 276.30,  10000: 329.20, 12000: 387.00,
-    14000: 444.70,16000: 502.50, 18000: 531.00, 20000: 561.50,
-    40000: 1108.90,60000: 1651.30,100000: 2628.70,200000: 5241.20,
-  },
-
-  // 157gsm Art Paper — 16 tiers 600 → 200,000
-  '157art:4c0c': {
-    600: 78.00,   1000: 95.30,   2000: 116.50,  4000: 160.80,
-    6000: 216.10, 8000: 271.50,  10000: 323.40, 12000: 380.00,
-    14000: 435.70,16000: 491.90, 18000: 520.80, 20000: 560.00,
-    40000: 1125.00,60000: 1654.20,100000: 2813.50,200000: 5613.60,
-  },
-  '157art:4c4c': {
-    600: 104.90,  1000: 127.10,  2000: 141.50,  4000: 207.90,
-    6000: 254.10, 8000: 300.30,  10000: 368.70, 12000: 431.00,
-    14000: 494.00,16000: 555.40, 18000: 587.70, 20000: 636.00,
-    40000: 1275.00,60000: 1832.40,100000: 3022.70,200000: 6028.10,
-  },
-
-  // 260gsm Art Card — 11 tiers 600 → 10,000 (thicker stock, shorter run range)
-  '260card:4c0c': {
-    600: 120.60, 1000: 130.00, 2000: 190.60, 3000: 217.60,
-    4000: 263.80,5000: 313.80, 6000: 380.20, 7000: 440.90,
-    8000: 501.50,9000: 562.10, 10000: 622.80,
-  },
-  '260card:4c4c': {
-    600: 159.70, 1000: 173.30, 2000: 221.70, 3000: 273.40,
-    4000: 322.50,5000: 369.60, 6000: 431.20, 7000: 481.30,
-    8000: 526.50,9000: 589.10, 10000: 651.70,
-  },
-
-  // 310gsm Art Card — 11 tiers 600 → 10,000
-  '310card:4c0c': {
-    600: 144.80, 1000: 156.00, 2000: 228.80, 3000: 261.20,
-    4000: 316.60,5000: 376.60, 6000: 456.30, 7000: 529.10,
-    8000: 601.80,9000: 674.60, 10000: 747.40,
-  },
-  '310card:4c4c': {
-    600: 191.70, 1000: 208.00, 2000: 256.50, 3000: 328.10,
-    4000: 387.00,5000: 443.60, 6000: 517.50, 7000: 577.60,
-    8000: 631.80,9000: 707.00, 10000: 782.10,
-  },
-};
-
 const prices = {};
-let priceCount = 0;
+let digitalPriceCount = 0;
+let offsetPriceCount = 0;
+
+// Digital entries: key = method:size:paper:sides:qty (digital step_ids)
+for (const c of digitalCombos) {
+  for (const qty of digitalQtyTiers) {
+    const dollars = computeDigital(c.size, c.paperGsm, c.bmSides, qty);
+    // Round up to the next whole cent to match pvpricelist behaviour
+    // (they round to whole dollar; we store cents so keep precision).
+    prices[`digital:${c.size}:${c.paper}:${c.sides}:${qty}`] = Math.round(dollars * 100);
+    digitalPriceCount++;
+  }
+}
+
+// Offset entries: key = method:size_offset:paper_offset:sides_offset:qty
 for (const [comboKey, tierMap] of Object.entries(RAW_OFFSET)) {
   for (const [qty, dollars] of Object.entries(tierMap)) {
-    // Key shape: method:size:paper:sides:qty
-    prices[`offset:a5:${comboKey}:${qty}`] = Math.round(dollars * 100);
-    priceCount++;
+    prices[`offset:${comboKey}:${qty}`] = Math.round(dollars * 100);
+    offsetPriceCount++;
   }
 }
 
 const pricingTable = {
   axes: {
     method: methodAxis,
+    size: sizeDigitalAxis,
+    paper: paperDigitalAxis,
+    sides: sidesDigitalAxis,
     size_offset: sizeOffsetAxis,
     paper_offset: paperOffsetAxis,
     sides_offset: sidesOffsetAxis,
   },
-  axis_order: ['method', 'size_offset', 'paper_offset', 'sides_offset'],
+  axis_order: ['method', 'size_offset', 'paper_offset', 'sides_offset'],  // default / fallback
+  axis_order_by_method: {
+    digital: ['method', 'size', 'paper', 'sides'],
+    offset:  ['method', 'size_offset', 'paper_offset', 'sides_offset'],
+  },
   qty_tiers: qtyTiers,
   prices,
 };
 
 // ────────────────────────────────────────────────────────────────────
-// Configurator steps — digital steps stay formula-driven, offset
-// steps exist for pricing_table lookup. show_if scopes each set to its
-// method.
+// Configurator — digital lam stays a formula add-on on top of tier price
 // ────────────────────────────────────────────────────────────────────
-
-// Digital formulas (preserved from the current setup — the existing
-// "pv pricing table" the user mentioned, expressed as per-step formulas).
-const digitalSizeOpts = [
-  { slug: 'a4', label: 'A4 (210 × 297mm)',  price_formula: '(qty/500)*(110-Math.min(10,(qty/500)-1))', note: 'Most common' },
-  { slug: 'a5', label: 'A5 (148 × 210mm)',  price_formula: '(qty/500)*(75-Math.min(10,(qty/500)-1))' },
-  { slug: 'dl', label: 'DL (99 × 210mm)',   price_formula: '(qty/500)*(65-Math.min(10,(qty/500)-1))' },
-];
-
-const digitalSidesOpts = [
-  { slug: '2', label: 'Double Sided', price_formula: '(qty/500)*(25-Math.min(5,(qty/500)-1))', note: 'Recommended' },
-  { slug: '1', label: 'Single Sided', price_formula: '0' },
-];
-
-const digitalPaperOpts = [
-  { slug: '115art', label: '115gsm Art Paper', price_formula: '0', note: 'Standard' },
-  { slug: '128art', label: '128gsm Art Paper', price_formula: '(qty/500)*10' },
-  { slug: '157art', label: '157gsm Art Paper', price_formula: '(qty/500)*20' },
-];
-
 const digitalLamOpts = [
   { slug: 'none',  label: 'No Lamination',    price_formula: '0' },
   { slug: 'matt',  label: 'Matt Lamination',  price_formula: '(qty/500)*20' },
   { slug: 'gloss', label: 'Gloss Lamination', price_formula: '(qty/500)*15' },
 ];
 
-const digitalShowIf  = { step: 'method', value: 'digital' };
-const offsetShowIf   = { step: 'method', value: 'offset' };
+const digitalShowIf = { step: 'method', value: 'digital' };
+const offsetShowIf  = { step: 'method', value: 'offset' };
 
-const offsetQtyTiers = [600, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 14000, 16000, 18000, 20000, 40000, 60000, 100000, 200000];
-const digitalQtyTiers = [500, 1000, 2000, 5000];
+const offsetQtyTiersForStep = [600, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 14000, 16000, 18000, 20000, 40000, 60000, 100000, 200000];
+const digitalQtyTiersForStep = digitalQtyTiers; // [50, 100, 200, 300, 400, 500]
 
 try {
   const [prod] = await sql`select id from public.products where slug='flyers'`;
   if (!prod) throw new Error('flyers product not found');
   console.log('✓ found flyers', prod.id);
 
-  // 1. Seed pricing_table (offset entries only; digital falls through
-  //    to formulas thanks to the calculator patch).
   await sql`update public.products set pricing_table = ${sql.json(pricingTable)} where id = ${prod.id}`;
-  console.log(`✓ pricing_table seeded — ${priceCount} offset price points (4 papers × 2 sides × 11–16 tiers)`);
+  console.log(`✓ pricing_table seeded — ${digitalPriceCount} digital + ${offsetPriceCount} offset = ${digitalPriceCount + offsetPriceCount} total prices`);
 
-  // 2. Wipe + rebuild configurator.
   await sql`delete from public.product_configurator where product_id = ${prod.id}`;
-
   await sql`
     insert into public.product_configurator
       (product_id, step_id, step_order, label, type, required, options, show_if, step_config)
     values
-      -- 0. Print Method — top of the configurator, drives everything else.
-      --    Per-option lead_time_days + print_mode let the page chips and
-      --    "Ready by" calendar swap when the customer flips Digital ↔ Offset.
       (
         ${prod.id}, 'method', 0, 'Print Method', 'swatch', true,
         ${sql.json([
-          { slug: 'digital', label: 'Digital', note: 'Short runs · 500 → 5,000 pcs', lead_time_days: 1, print_mode: 'Digital' },
-          { slug: 'offset',  label: 'Offset',  note: 'Bulk runs · 600 → 200,000 pcs', lead_time_days: 7, print_mode: 'Offset' },
+          { slug: 'digital', label: 'Digital', note: 'Short runs · 50 → 500 pcs', lead_time_days: 1, print_mode: 'Digital' },
+          { slug: 'offset',  label: 'Offset',  note: 'Bulk runs · 300 → 200,000 pcs', lead_time_days: 7, print_mode: 'Offset' },
         ])},
         null, null
       ),
-      -- 1. Digital size
       (
         ${prod.id}, 'size', 1, 'Size', 'swatch', true,
-        ${sql.json(digitalSizeOpts)},
+        ${sql.json(sizeDigitalAxis)},
         ${sql.json(digitalShowIf)}, null
       ),
-      -- 2. Offset size (A5 only for now)
       (
         ${prod.id}, 'size_offset', 2, 'Size', 'swatch', true,
         ${sql.json(sizeOffsetAxis)},
         ${sql.json(offsetShowIf)}, null
       ),
-      -- 3. Digital paper
       (
         ${prod.id}, 'paper', 3, 'Paper', 'swatch', true,
-        ${sql.json(digitalPaperOpts)},
+        ${sql.json(paperDigitalAxis)},
         ${sql.json(digitalShowIf)}, null
       ),
-      -- 4. Offset paper
       (
         ${prod.id}, 'paper_offset', 4, 'Paper', 'swatch', true,
         ${sql.json(paperOffsetAxis)},
         ${sql.json(offsetShowIf)}, null
       ),
-      -- 5. Digital sides
       (
         ${prod.id}, 'sides', 5, 'Printing Sides', 'swatch', true,
-        ${sql.json(digitalSidesOpts)},
+        ${sql.json(sidesDigitalAxis)},
         ${sql.json(digitalShowIf)}, null
       ),
-      -- 6. Offset sides
       (
         ${prod.id}, 'sides_offset', 6, 'Printing Sides', 'swatch', true,
         ${sql.json(sidesOffsetAxis.map((s) => ({
@@ -246,57 +292,52 @@ try {
         })))},
         ${sql.json(offsetShowIf)}, null
       ),
-      -- 7. Digital lamination (offset doesn't offer lamination on this sheet)
       (
         ${prod.id}, 'lamination', 7, 'Lamination', 'swatch', true,
         ${sql.json(digitalLamOpts)},
         ${sql.json(digitalShowIf)}, null
       ),
-      -- 8. Digital qty
       (
         ${prod.id}, 'qty', 8, 'Quantity', 'qty', true,
         '[]'::jsonb,
         ${sql.json(digitalShowIf)},
-        ${sql.json({ presets: digitalQtyTiers, min: 500, step: 500, note: '500-piece steps. Enter any multiple of 500 from 500 to 5,000.' })}
+        ${sql.json({ presets: digitalQtyTiersForStep, min: 50, step: 1, note: 'Supplier tiers — price snaps to nearest tier below.' })}
       ),
-      -- 9. Offset qty
       (
         ${prod.id}, 'qty_offset', 9, 'Quantity', 'qty', true,
         '[]'::jsonb,
         ${sql.json(offsetShowIf)},
-        ${sql.json({ presets: offsetQtyTiers, min: 600, step: 1, note: 'Supplier tiers — price snaps to nearest tier below.' })}
+        ${sql.json({ presets: offsetQtyTiersForStep, min: 300, step: 1, note: 'Supplier tiers — price snaps to nearest tier below.' })}
       )
   `;
-  console.log('✓ configurator rebuilt — method + 4 digital steps + 4 offset steps + 2 qty steps (10 total)');
+  console.log('✓ configurator rebuilt — method + 4 digital steps + 4 offset steps + 2 qty steps');
 
-  // 3. Lead time / print mode — flyers has BOTH methods, so a single
-  //    field can't describe both. Leave nulls so the chips don't show
-  //    stale info. (Future: method-aware lead_time display.)
-  await sql`update public.products set lead_time_days = null, print_mode = null where id = ${prod.id}`;
-  console.log('✓ lead_time_days / print_mode cleared (method-specific — set in UI copy instead)');
-
-  // 4. Drop the $0 legacy product_pricing stub — it's not doing anything.
   await sql`delete from public.product_pricing where product_id = ${prod.id}`;
-  console.log('✓ legacy product_pricing stub dropped');
 
-  // 5. Verify
+  // Verify
   const [check] = await sql`
-    select p.name, p.lead_time_days, p.print_mode,
+    select p.name,
            jsonb_array_length(p.pricing_table->'qty_tiers') as tiers,
-           (select count(*) from jsonb_object_keys(p.pricing_table->'prices')) as price_count
+           (select count(*) from jsonb_object_keys(p.pricing_table->'prices')) as price_count,
+           p.pricing_table->'axis_order_by_method' as axm
     from public.products p where p.id = ${prod.id}
   `;
   console.log('\nverify:', JSON.stringify(check, null, 2));
 
-  const steps = await sql`
-    select step_id, step_order, label, type, jsonb_array_length(options) as opt_count, show_if
-    from public.product_configurator where product_id = ${prod.id} order by step_order
-  `;
-  console.log('\nsteps:');
-  for (const s of steps) console.log(` ${s.step_order}. ${s.step_id} "${s.label}" [${s.type}] opts=${s.opt_count} show_if=${JSON.stringify(s.show_if)}`);
-
-  console.log(`\n✅ Digital: ${digitalQtyTiers.length} qty presets · formula-based pricing preserved`);
-  console.log(`✅ Offset: ${Object.keys(RAW_OFFSET).length} paper+sides combos × ${priceCount / Object.keys(RAW_OFFSET).length} avg tiers = ${priceCount} supplier prices`);
+  // Sample a few digital + offset prices
+  const samples = [
+    ['digital:a4:128art:2:100', 'A4 128gsm DS × 100 pcs (digital)'],
+    ['digital:a5:157art:1:200', 'A5 157gsm SS × 200 pcs (digital)'],
+    ['digital:a4:128art:1:500', 'A4 128gsm SS × 500 pcs (digital)'],
+    ['offset:a4:128art:4c4c:2000', 'A4 128gsm DS × 2000 pcs (offset · floor)'],
+    ['offset:a5:128art:4c0c:600', 'A5 128gsm SS × 600 pcs (offset · floor)'],
+    ['offset:a5:260card:4c4c:5000', 'A5 260gsm Card DS × 5000 pcs (offset)'],
+  ];
+  console.log('\nsample prices (SGD):');
+  for (const [key, label] of samples) {
+    const cents = prices[key] ?? 0;
+    console.log(`  ${label}: $${(cents / 100).toFixed(2)}`);
+  }
 } finally {
   await sql.end();
 }
