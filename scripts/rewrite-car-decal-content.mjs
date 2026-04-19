@@ -85,6 +85,10 @@ const matcher = {
 };
 
 const seo_magazine = {
+  issue_label: 'Issue · Car Decals',
+  title: 'Everything worth knowing,',
+  title_em: 'before you order.',
+  lede: 'Car decals are a **cheap way** to put a brand, a compliance label or a campaign on the move. Here is what actually matters when you pick the size, the view, and the run quantity.',
   articles: [
     {
       num: '01',
@@ -93,7 +97,13 @@ const seo_magazine = {
         `Digital prints are perfect for *under two hundred pieces* — no setup cost, fast turnaround, great for one-off designs. The second you cross into fleet quantities, offset flips the maths. The press plate is a one-time setup, but once it's running every additional sticker is pennies. That's why the 5000-piece tier lands at roughly one-fifth the per-piece cost of the 200 tier — the plate cost amortises across the whole run.`,
         `The other reason offset wins for vehicle use is **colour consistency**. A fleet of two hundred vans with the same logo sticker needs every decal in the same exact colour. Digital can drift across a long run; offset does not — the ink mix is set once and laid down identically on every sheet.`,
       ],
-      side: 'ink',
+      side: {
+        kind: 'stat',
+        label: 'Per-piece savings',
+        num: '−48',
+        suffix: '%',
+        caption: 'Unit cost at the 5000 tier vs the 200 tier on 90×54mm.',
+      },
     },
     {
       num: '02',
@@ -102,7 +112,18 @@ const seo_magazine = {
         `Car windows are **tinted**. Body panels are usually a dark colour. Regular CMYK ink is semi-transparent — lay it straight on dark glass and your logo dulls into the tint. That's why every size on the spec sheet says "4C + White Base": we print a solid white rectangle *underneath* the colour, so the colours read as bright on a tinted rear screen as they would on white paper.`,
         `If you pick **Both Side View (4C + White Base + 4C)**, we sandwich the white layer between two colour passes — the driver sees the design right-way-round from the cabin, the road sees it from the back. It's a menu option here, priced on the same tier sheet as the one-sided version; no custom quote dance.`,
       ],
-      side: 'offset',
+      side: {
+        kind: 'pills',
+        label: 'What the white base fixes',
+        items: [
+          { text: 'Tinted rear windscreen', pop: true },
+          { text: 'Dark body panels' },
+          { text: 'Washed-out CMYK colour' },
+          { text: 'Both-side legibility' },
+          { text: 'Ink-on-glass adhesion' },
+          { text: 'Night-time readability' },
+        ],
+      },
     },
     {
       num: '03',
@@ -111,7 +132,16 @@ const seo_magazine = {
         `The four sizes on this page are the ones our press is plated for — going off-menu means a custom plate quote. **90 × 54mm** is a name-card — it fits a vehicle-ID tab or a QR-only sticker. **115 × 120mm** is a square that suits badges, door-stickers, bumper campaigns. **130 × 170mm** is the standard door-panel rectangle; this is what most fleet jobs pick. **90 × 420mm** is the long strip — if you've ever seen a taxi windscreen header with URL + phone, that's this size.`,
         `For Both-Side applications the size choice matters more: the design has to read backwards from the *inside* face. Keep the text large and left-aligned on the original artwork — we'll flip the inside pass for you, but tiny reversed type gets illegible against road glare.`,
       ],
-      side: 'sizes',
+      side: {
+        kind: 'list',
+        label: 'Size cheat sheet',
+        rows: [
+          { text: '90 × 54mm', time: 'name-card' },
+          { text: '115 × 120mm', time: 'square' },
+          { text: '130 × 170mm', time: 'door panel' },
+          { text: '90 × 420mm', time: 'long strip' },
+        ],
+      },
     },
     {
       num: '04',
@@ -120,7 +150,16 @@ const seo_magazine = {
         `Seven working days is file-approved to ready-for-collection. Inside that: day 1 — file check and preflight; day 2 — plate setup; days 3–5 — print run; days 6–7 — cut, inspect, pack. Fleet runs of three thousand or more sometimes extend to nine days because the cutting stage is slow, but we'll flag that up front when you quote.`,
         `Files we prefer: **print-ready PDF, CMYK, 300dpi, 3mm bleed, fonts outlined**. If you're sending a JPG or a PowerPoint export, we'll bounce it before plate setup — the offset plates are too expensive to run on weak artwork. Free preflight is part of the lead time, so if your file needs a fix you hear from us within twelve hours, not the last Friday afternoon.`,
       ],
-      side: 'timeline',
+      side: {
+        kind: 'list',
+        label: 'Day-by-day',
+        rows: [
+          { text: 'File check + preflight', time: 'Day 1' },
+          { text: 'Plate setup', time: 'Day 2' },
+          { text: 'Print run', time: 'Days 3–5' },
+          { text: 'Cut, inspect, pack', time: 'Days 6–7' },
+        ],
+      },
     },
   ],
 };
