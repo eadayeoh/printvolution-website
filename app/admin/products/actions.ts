@@ -29,10 +29,13 @@ const ConfiguratorStepSchema = z.object({
   options: z.array(z.object({
     slug: z.string(),
     label: z.string(),
-    note: z.string().optional(),
-    price_formula: z.string().optional(),
+    // Note / price_formula / swatch historically stored as null when
+    // unset — accept null AND undefined so round-tripping a loaded
+    // option through the editor doesn't break validation.
+    note: z.string().nullable().optional(),
+    price_formula: z.string().nullable().optional(),
     image_url: z.string().nullable().optional(),
-    swatch: z.string().optional(),
+    swatch: z.string().nullable().optional(),
     // Per-option production overrides — lets a Print Method step carry
     // its own lead time + print mode per selectable option.
     lead_time_days: z.number().int().nullable().optional(),
