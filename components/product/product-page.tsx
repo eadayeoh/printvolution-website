@@ -1071,7 +1071,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 const qtyMin = Math.max(1, step.step_config?.min ?? 1);
                 const currentQty = parseInt(cfgState[step.step_id] || String(qtyMin), 10) || qtyMin;
                 const presets = step.step_config?.presets;
-                const hasTierPresets = Array.isArray(presets) && presets.length > 3;
+                // Show preset buttons whenever the admin has configured
+                // any — previously gated at 4+ which silently hid small
+                // preset lists (e.g. "1, 5") the admin explicitly typed.
+                const hasTierPresets = Array.isArray(presets) && presets.length >= 1;
                 return (
                   <div
                     key={step.step_id}

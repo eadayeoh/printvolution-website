@@ -862,7 +862,7 @@ function QtyStepConfig({
             className={inputCls}
           />
           <p className="mt-1 text-[10px] text-neutral-500">
-            Type the numbers separated by commas. Press Enter or click away to save. Leave blank for no buttons; buttons only render when there are 4 or more presets.
+            Type the numbers separated by commas. Press Enter or click away to save. Leave blank for no buttons — any non-empty list will show on the product page.
           </p>
         </label>
       </div>
