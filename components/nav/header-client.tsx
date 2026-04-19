@@ -412,21 +412,21 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
           color: var(--pv-magenta);
         }
         .pv-mega-grid {
-          column-count: 4;
-          column-gap: 32px;
+          column-count: 3;
+          column-gap: 40px;
           column-fill: balance;
         }
         .pv-mega-section {
           break-inside: avoid;
-          margin-bottom: 24px;
+          margin-bottom: 28px;
           display: inline-block;
           width: 100%;
         }
-        @media (max-width: 1200px) {
-          .pv-mega-grid { column-count: 3; }
-        }
         @media (max-width: 900px) {
           .pv-mega-grid { column-count: 2; }
+        }
+        @media (max-width: 600px) {
+          .pv-mega-grid { column-count: 1; }
         }
       `}</style>
     </>
