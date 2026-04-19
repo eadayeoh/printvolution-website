@@ -131,12 +131,12 @@ const seo_magazine = {
       ],
       side: {
         kind: 'list',
-        label: 'At a glance',
+        label: 'Which to pick',
         rows: [
-          { text: '260gsm Art Card', time: 'default' },
-          { text: '310gsm Art Card', time: '+20% thickness' },
-          { text: '260gsm tiers', time: '9' },
-          { text: '310gsm tiers', time: '15 full' },
+          { text: '260gsm', time: 'default' },
+          { text: '310gsm', time: '+20% thicker' },
+          { text: 'Under 1000 pcs', time: 'either works' },
+          { text: '5000+ pcs', time: '310gsm wins' },
         ],
       },
     },
