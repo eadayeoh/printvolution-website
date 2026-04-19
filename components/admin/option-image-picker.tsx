@@ -100,6 +100,7 @@ function OptionImageLibraryModal({
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function refresh() {
@@ -121,45 +122,96 @@ function OptionImageLibraryModal({
     refresh();
   }, []);
 
-  async function onUploadPicked(file: File) {
-    if (!file) return;
-    setError(null);
+  async function uploadOne(file: File): Promise<
+    { ok: true; row: OptionImageRow; url: string } | { ok: false; error: string }
+  > {
     if (file.size > 20 * 1024 * 1024) {
-      setError('File too large (max 20MB)');
+      return { ok: false, error: `"${file.name}" is over 20MB — skipped.` };
+    }
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('prefix', 'opt');
+    const upload = await uploadProductImage(fd);
+    if (!upload || !upload.ok || !upload.url) {
+      return { ok: false, error: upload?.error || `Upload failed for "${file.name}"` };
+    }
+    // Seed the library row label from the filename for batch uploads
+    // so admins can find each image later. (Single-file uploads still
+    // prefer the caller-supplied defaultLabel.)
+    const filenameLabel = file.name
+      .replace(/\.[^.]+$/, '')
+      .replace(/[-_]+/g, ' ')
+      .slice(0, 80);
+    const libLabel = filenameLabel || defaultLabel.trim() || 'Untitled';
+    const added = await createOptionImage({ url: upload.url, label: libLabel });
+    if (!added || !added.ok) {
+      return { ok: false, error: `"${file.name}" uploaded but library save failed: ${added?.error ?? 'no response'}` };
+    }
+    return { ok: true, row: added.row, url: upload.url };
+  }
+
+  async function onUploadPicked(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setError(null);
+
+    // Single-file path preserves the original behaviour: auto-select
+    // the uploaded image on the current option, label from defaultLabel.
+    if (list.length === 1) {
+      const file = list[0];
+      if (file.size > 20 * 1024 * 1024) { setError('File too large (max 20MB)'); return; }
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('prefix', 'opt');
+        const upload = await uploadProductImage(fd);
+        if (!upload || !upload.ok || !upload.url) {
+          setError(upload?.error || 'Upload failed (no response from server)');
+          setUploading(false);
+          return;
+        }
+        const libLabel =
+          defaultLabel.trim() ||
+          file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').slice(0, 80) ||
+          'Untitled';
+        const added = await createOptionImage({ url: upload.url, label: libLabel });
+        setUploading(false);
+        if (!added || !added.ok) {
+          setError(`Image uploaded, but library save failed: ${added?.error ?? 'no response from server'}`);
+          onPick(upload.url);
+          return;
+        }
+        setRows((prev) => [added.row, ...prev]);
+        onPick(upload.url);
+      } catch (e: any) {
+        setUploading(false);
+        setError(e?.message ?? 'Upload failed');
+      }
       return;
     }
+
+    // Bulk path — upload sequentially, append to the library, don't
+    // auto-select anything on the current option. Admin picks after.
     setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('prefix', 'opt');
-      const upload = await uploadProductImage(fd);
-      if (!upload || !upload.ok || !upload.url) {
-        setError(upload?.error || 'Upload failed (no response from server)');
-        setUploading(false);
-        return;
+    setUploadProgress({ done: 0, total: list.length });
+    const newRows: OptionImageRow[] = [];
+    const errors: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      try {
+        const r = await uploadOne(list[i]);
+        if (r.ok) newRows.push(r.row);
+        else errors.push(r.error);
+      } catch (e: any) {
+        errors.push(`"${list[i].name}": ${e?.message ?? 'upload failed'}`);
       }
-      // Save into the library so other products can reuse it. The
-      // admin can rename later if they want — we seed with the option
-      // label (or filename, if no label was given).
-      const libLabel =
-        defaultLabel.trim() ||
-        file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').slice(0, 80) ||
-        'Untitled';
-      const added = await createOptionImage({ url: upload.url, label: libLabel });
-      setUploading(false);
-      if (!added || !added.ok) {
-        // Still usable on this option even if library save failed.
-        setError(`Image uploaded, but library save failed: ${added?.error ?? 'no response from server'}`);
-        onPick(upload.url);
-        return;
-      }
-      // Prepend the new row and auto-select it
-      setRows((prev) => [added.row, ...prev]);
-      onPick(upload.url);
-    } catch (e: any) {
-      setUploading(false);
-      setError(e?.message ?? 'Upload failed');
+      setUploadProgress({ done: i + 1, total: list.length });
+    }
+    if (newRows.length > 0) setRows((prev) => [...newRows, ...prev]);
+    setUploadProgress(null);
+    setUploading(false);
+    if (errors.length > 0) {
+      setError(errors.join(' · '));
     }
   }
 
@@ -213,7 +265,7 @@ function OptionImageLibraryModal({
           <div>
             <div className="text-sm font-bold text-ink">Option image library</div>
             <div className="text-[11px] text-neutral-500">
-              Pick an existing image or upload a new one — uploads are saved here for reuse.
+              Pick an existing image, or upload one or many at once — uploads are saved here for reuse.
             </div>
           </div>
           <button
@@ -240,11 +292,12 @@ function OptionImageLibraryModal({
           <input
             ref={inputRef}
             type="file"
+            multiple
             accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/heic,image/heif"
             style={{ display: 'none' }}
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onUploadPicked(f);
+              const files = e.target.files;
+              if (files && files.length > 0) onUploadPicked(files);
               e.target.value = '';
             }}
           />
@@ -255,7 +308,11 @@ function OptionImageLibraryModal({
             className="inline-flex items-center gap-1.5 rounded bg-pink px-3 py-1.5 text-xs font-bold text-white hover:bg-pink-dark disabled:opacity-60"
           >
             {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            {uploading ? 'Uploading…' : 'Upload new'}
+            {uploading
+              ? uploadProgress
+                ? `Uploading ${uploadProgress.done}/${uploadProgress.total}…`
+                : 'Uploading…'
+              : 'Upload (1 or many)'}
           </button>
         </div>
 

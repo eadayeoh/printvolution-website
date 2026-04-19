@@ -341,7 +341,7 @@ try {
         ${prod.id}, 'qty', 8, 'Quantity', 'qty', true,
         '[]'::jsonb,
         ${sql.json(digitalShowIf)},
-        ${sql.json({ presets: digitalQtyTiersForStep, min: 1, step: 1, note: `Type any quantity from 1 to ${MAX_DIGITAL_FINISHED_QTY} pcs — price updates live.` })}
+        ${sql.json({ presets: digitalQtyTiersForStep, min: 50, step: 1, note: `Type any quantity from 50 to ${MAX_DIGITAL_FINISHED_QTY} pcs — price updates live.` })}
       ),
       (
         ${prod.id}, 'qty_offset', 9, 'Quantity', 'qty', true,

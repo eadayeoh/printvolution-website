@@ -275,10 +275,16 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     if (useQty < 1) return null;
     if (useQty > bm.max_finished_qty) return null;
 
-    const a3Qty = Math.ceil(useQty / ups);
     // Below the first tier's minQty there's no supplier rate — mirrors
-    // pvpricelist's "Minimum 11 A3 sheets" guard (11 A3 = 22 A4 = 44 A5).
-    if (a3Qty < tiers[0][0]) return null;
+    // pvpricelist's "Minimum 11 A3 sheets" guard (11 A3 = 22 A4 = 44 A5
+    // = 88 A6). When the typed qty is under the effective min, snap
+    // a3Qty UP to the tier floor so the calc returns a valid price
+    // instead of null (which would fall back to an unrelated global
+    // fromPrice across the entire pricing_table).
+    const minA3 = tiers[0][0];
+    const rawA3 = Math.ceil(useQty / ups);
+    const a3Qty = Math.max(rawA3, minA3);
+    const effFinished = a3Qty * ups;
     // applyTierFloor
     let unitIdx = 0;
     for (let i = 0; i < tiers.length; i++) if (a3Qty >= tiers[i][0]) unitIdx = i;
@@ -303,7 +309,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     const sidesLabel = product.pricing_table?.axes[bm.sides_key]?.find((o) => o.slug === sides)?.label ?? sides;
     return {
       cents: Math.round(total * 100),
-      breakdownLabel: `${sizeLabel} · ${paperLabel} · ${sidesLabel} × ${useQty} pcs`,
+      breakdownLabel: `${sizeLabel} · ${paperLabel} · ${sidesLabel} × ${effFinished} pcs`,
     };
   }
 
@@ -1033,7 +1039,8 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               }
               const stepNum = stepIdx + 1;
               if (step.type === 'qty') {
-                const currentQty = parseInt(cfgState[step.step_id] || '1', 10) || 1;
+                const qtyMin = Math.max(1, step.step_config?.min ?? 1);
+                const currentQty = parseInt(cfgState[step.step_id] || String(qtyMin), 10) || qtyMin;
                 const presets = step.step_config?.presets;
                 const hasTierPresets = Array.isArray(presets) && presets.length > 3;
                 return (
@@ -1077,7 +1084,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <button
                         type="button"
-                        onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: String(Math.max(1, currentQty - 1)) }))}
+                        onClick={() => setCfgState((s) => ({ ...s, [step.step_id]: String(Math.max(qtyMin, currentQty - 1)) }))}
                         style={{ width: 44, height: 44, border: '1.5px solid var(--pv-ink)', background: '#fff', cursor: 'pointer', fontSize: 18, fontWeight: 700 }}
                       >
                         −
@@ -1086,8 +1093,14 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                         type="number"
                         inputMode="numeric"
                         value={currentQty}
-                        min={1}
+                        min={qtyMin}
                         onChange={(e) => setCfgState((s) => ({ ...s, [step.step_id]: e.target.value }))}
+                        onBlur={(e) => {
+                          const n = parseInt(e.target.value || '0', 10);
+                          if (!n || n < qtyMin) {
+                            setCfgState((s) => ({ ...s, [step.step_id]: String(qtyMin) }));
+                          }
+                        }}
                         style={{ width: 96, height: 44, textAlign: 'center', border: '1.5px solid var(--pv-ink)', fontFamily: 'var(--pv-f-display)', fontSize: 18 }}
                       />
                       <button

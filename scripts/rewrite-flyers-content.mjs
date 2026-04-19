@@ -145,9 +145,6 @@ const seo_magazine = {
           { text: 'A4 = full menu / launch', pop: true },
           { text: 'A5 = door drop / handout' },
           { text: 'A6 = postcard / coupon' },
-          { text: 'A6 = 4-up on A4 sheet' },
-          { text: 'A5 = 2-up on A4 sheet' },
-          { text: 'A4 = flat, standalone' },
         ],
       },
     },
@@ -155,7 +152,7 @@ const seo_magazine = {
       num: '03',
       title: 'Paper weight vs card stock — the feel decision.',
       body: [
-        `**128gsm Art Paper** is standard flyer stock — solid, not flimsy, prints colour cleanly, and stacks light for bulk distribution. It's what you expect in your mailbox. **157gsm Art Paper** is a step heavier — the hand recognises the upgrade without knowing why. For launches, events and anything where the flyer should feel considered, 157 is worth the small upcharge. **250gsm and 300gsm Art Card** cross into postcard / invitation territory — stiff, landing-with-a-soft-thud on a table, holding up to a binder or a fridge magnet. Once you're on card, **matt or gloss lamination** is an option (not offered on paper stock) — matt for a tactile premium feel, gloss to make product photography pop.`,
+        `**128gsm Art Paper** is standard flyer stock — solid, not flimsy, prints colour cleanly, and stacks light for bulk distribution. It's what you expect in your mailbox. **157gsm Art Paper** is a step heavier — the hand recognises the upgrade without knowing why. For launches, events and anything where the flyer should feel considered, 157 is worth the small upcharge. **250gsm and 300gsm Art Card** is the heavier option when you want the flyer to feel closer to a card — good for fridge magnets, coupons, or anything that will live on a desk for weeks. On card stock, **matt or gloss lamination** is available (not offered on paper) — matt for a tactile premium feel, gloss to make product photography pop.`,
         `At the run quantity, the rule is: **heavier stock = higher per-piece cost, but diminishing gap at scale**. At 100 pieces, 300gsm card can be 2–3× the price of 128gsm paper. At 10,000 pieces, the gap narrows as the base printing cost dominates.`,
       ],
       side: {
@@ -164,8 +161,8 @@ const seo_magazine = {
         rows: [
           { text: '128gsm Art Paper', time: 'flyer' },
           { text: '157gsm Art Paper', time: 'premium flyer' },
-          { text: '250gsm Art Card', time: 'postcard' },
-          { text: '300gsm Art Card', time: 'stiff postcard' },
+          { text: '250gsm Art Card', time: 'card flyer' },
+          { text: '300gsm Art Card', time: 'heavy card flyer' },
         ],
       },
     },
