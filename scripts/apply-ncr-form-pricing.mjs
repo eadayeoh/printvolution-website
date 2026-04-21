@@ -229,16 +229,23 @@ const steps = [
   },
   // Ink colour picker steps — spec only, don't affect price. `ink_1` is
   // always shown; `ink_2` appears only when the customer picked the
-  // 2-colour price option.
+  // 2-colour price option. Customers can pick only from the 7 preset
+  // PT colours — custom Pantone / brand-specific inks are a custom
+  // quote handled off-configurator.
   {
     step_id: 'ink_1', step_order: 3, label: 'Ink Colour #1', type: 'swatch', required: true,
-    options: axes.ink, show_if: null, step_config: {},
+    options: axes.ink, show_if: null,
+    step_config: {
+      note: 'Pick from the 7 standard PT colours below. Custom colours (Pantone / brand-specific) need a separate quote — contact us before ordering.',
+    },
   },
   {
     step_id: 'ink_2', step_order: 4, label: 'Ink Colour #2', type: 'swatch', required: true,
     options: axes.ink,
     show_if: { step: 'colour', value: 'c2' },
-    step_config: {},
+    step_config: {
+      note: 'Pick from the 7 standard PT colours below. Custom colours (Pantone / brand-specific) need a separate quote — contact us before ordering.',
+    },
   },
   {
     step_id: 'qty', step_order: 5, label: 'Quantity (books)', type: 'qty', required: false,
