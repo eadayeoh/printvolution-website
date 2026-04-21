@@ -151,6 +151,8 @@ export async function deleteTemplate(id: string) {
 
 const PromptSchema = z.object({
   mode: z.enum(['laser', 'uv', 'embroidery']),
+  style: z.enum(['line-art', 'realistic']).default('line-art'),
+  pipeline_id: z.string().uuid().nullable().optional(),
   name: z.string().min(1),
   description: z.string().nullable().optional(),
   thumbnail_url: z.string().nullable().optional(),
