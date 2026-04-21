@@ -79,6 +79,16 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
     }))
   );
 
+  // Qty-tier markup — admin-editable multiplier per qty tier on the
+  // pricing_table. Stored as a percent string in UI ("100" = no change);
+  // converted to a float multiplier on save.
+  const initialMarkup: Record<string, string> = {};
+  for (const t of product.pricing_table?.qty_tiers ?? []) {
+    const m = product.pricing_table?.qty_markup?.[String(t)];
+    initialMarkup[String(t)] = m != null ? (m * 100).toString() : '100';
+  }
+  const [qtyMarkup, setQtyMarkup] = useState<Record<string, string>>(initialMarkup);
+
   // Configurator
   const [configurator, setConfigurator] = useState(product.configurator);
 
@@ -123,6 +133,20 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           step_config: c.step_config ?? null,
         })),
         faqs,
+        // Convert UI % strings → multiplier floats. Only include tiers
+        // the pricing_table already knows about so we don't create
+        // orphan keys.
+        qty_markup: (() => {
+          if (!product.pricing_table?.qty_tiers?.length) return null;
+          const out: Record<string, number> = {};
+          for (const t of product.pricing_table.qty_tiers) {
+            const raw = qtyMarkup[String(t)];
+            const pct = parseFloat(raw ?? '100');
+            if (!Number.isFinite(pct) || pct <= 0) continue;
+            out[String(t)] = pct / 100;
+          }
+          return out;
+        })(),
       };
       const result = await updateProduct(product.slug, input);
       if (result.ok) {
@@ -410,6 +434,66 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             <Plus size={12} /> Add row
           </button>
           </div>
+
+          {/* Section 1b: qty-tier markup — only when pricing_table has tiers */}
+          {product.pricing_table?.qty_tiers?.length ? (
+            <div className="rounded-lg border border-neutral-200 bg-white p-6">
+              <h3 className="mb-1 text-sm font-bold text-ink">1b. Qty tier markup</h3>
+              <p className="mb-4 text-xs text-neutral-500">
+                Multiplier applied on top of the base <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono">pricing_table</code> prices at each qty tier.
+                100% = no change. 110% = +10%. 90% = −10%. Scales the whole tier across every paper / material / finish combo.
+              </p>
+              <div className="overflow-x-auto rounded border border-neutral-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 text-[11px] font-bold uppercase text-neutral-500">
+                    <tr>
+                      <th className="p-2 text-left">Qty tier</th>
+                      <th className="p-2 text-right">Markup (%)</th>
+                      <th className="p-2 text-left" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {product.pricing_table.qty_tiers.map((t) => {
+                      const key = String(t);
+                      const raw = qtyMarkup[key] ?? '100';
+                      const pct = parseFloat(raw);
+                      const active = Number.isFinite(pct) && pct !== 100;
+                      return (
+                        <tr key={key} className={active ? 'bg-yellow-50' : ''}>
+                          <td className="p-2 font-mono text-xs">{t.toLocaleString()}</td>
+                          <td className="p-2">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                value={raw}
+                                onChange={(e) => setQtyMarkup({ ...qtyMarkup, [key]: e.target.value })}
+                                className={`${inputCls} w-20 text-right`}
+                                placeholder="100"
+                              />
+                              <span className="text-xs text-neutral-500">%</span>
+                            </div>
+                          </td>
+                          <td className="p-2 text-[11px] text-neutral-500">
+                            {active ? (pct > 100 ? `+${(pct - 100).toFixed(1)}%` : `${(pct - 100).toFixed(1)}%`) : 'no change'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const reset: Record<string, string> = {};
+                  for (const t of product.pricing_table?.qty_tiers ?? []) reset[String(t)] = '100';
+                  setQtyMarkup(reset);
+                }}
+                className="mt-3 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink"
+              >
+                Reset all to 100%
+              </button>
+            </div>
+          ) : null}
 
           {/* Section 2: configurator */}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">

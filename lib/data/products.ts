@@ -40,6 +40,12 @@ export type PricingTable = {
    *    computes `(tablePrice / tier) × useQty` so typing any integer
    *    between tier floors scales linearly (stickers). */
   qty_mode?: 'per_unit_at_tier_rate';
+  /** Admin-editable per-qty-tier multiplier. Key: String(qty), value:
+   *  multiplier (1 = no change, 1.1 = +10%, 0.9 = −10%). Applied to
+   *  tablePrice BEFORE per_unit_at_tier_rate scaling and the
+   *  monotonicity floor, so it works the same whether the product is
+   *  tier-locked or per-unit. Missing tier keys default to 1. */
+  qty_markup?: Record<string, number>;
 };
 
 /** Formula-driven pricing for products where tier snap-to-nearest
