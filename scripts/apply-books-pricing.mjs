@@ -75,8 +75,11 @@ const QTY_OFFSET = [50, 100, 200, 300, 500, 700, 1000, 2000, 3000, 4000, 5000];
 
 const axes = {
   method: [
-    { slug: 'digital', label: 'Digital', note: 'Small runs (3–300 books)' },
-    { slug: 'offset', label: 'Offset', note: 'Bulk runs (50+ books), lower unit cost at scale' },
+    // Per-option lead_time_days + print_mode overrides — matches the
+    // flyers pattern so the "Ready by" chip on the product page picks
+    // the right turnaround based on the customer's method choice.
+    { slug: 'digital', label: 'Digital', note: 'Small runs (3–300 books) · 1 working day', print_mode: 'Digital', lead_time_days: 1 },
+    { slug: 'offset', label: 'Offset', note: 'Bulk runs (50+ books) · 7 working days', print_mode: 'Offset', lead_time_days: 7 },
   ],
   binding: [
     { slug: 'saddle', label: 'Saddle Stitch', note: 'Stapled spine · up to ~68 pages' },
