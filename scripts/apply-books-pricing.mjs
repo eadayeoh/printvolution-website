@@ -149,8 +149,24 @@ const axes = {
       show_if: [{ step: 'cover', value: '260' }, { step: 'binding', value: 'perfect' }],
     },
   ],
+  // Page counts are constrained by cover choice on saddle binding —
+  // pvpricelist only prices 8pp with self-cover tables, and 68pp only
+  // with 260/310 cover tables. Option-level show_if enforces that so
+  // the customer can't land on a combo that has no price entry.
   pages: [
-    ...SADDLE_PAGES.map((p) => ({ slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'saddle' } })),
+    ...SADDLE_PAGES.map((p) => {
+      let show_if;
+      if (p === 8) {
+        // 8pp only with self-cover saddle
+        show_if = [{ step: 'binding', value: 'saddle' }, { step: 'cover', value: 'self' }];
+      } else if (p === 68) {
+        // 68pp only with bound cover (260 or 310) on saddle
+        show_if = [{ step: 'binding', value: 'saddle' }, { step: 'cover', value: ['260', '310'] }];
+      } else {
+        show_if = { step: 'binding', value: 'saddle' };
+      }
+      return { slug: String(p), label: `${p} pages`, show_if };
+    }),
     ...PERFECT_PAGES.map((p) => ({ slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'perfect' } })),
   ],
 };
@@ -378,7 +394,17 @@ async function main() {
     }),
   });
   if (!pRes.ok) throw new Error(`PATCH products: ${pRes.status} ${await pRes.text()}`);
-  console.log('[1/3] products.pricing_table updated.');
+  console.log('[1/4] products.pricing_table updated.');
+
+  // Clear the stale legacy product_pricing matrix (A4 10k/30k/50k/100k
+  // flyer-shaped data) — it was rendering the "Volume Pricing" ladder
+  // and driving a fake 99%-off discount when the configurator combo
+  // had no lookup hit.
+  const delPricing = await fetch(`${URL}/rest/v1/product_pricing?product_id=eq.${PRODUCT_ID}`, {
+    method: 'DELETE', headers: H,
+  });
+  if (!delPricing.ok) throw new Error(`DELETE product_pricing: ${delPricing.status} ${await delPricing.text()}`);
+  console.log('[2/4] Cleared legacy product_pricing matrix.');
 
   const delCfg = await fetch(`${URL}/rest/v1/product_configurator?product_id=eq.${PRODUCT_ID}`, {
     method: 'DELETE', headers: H,
@@ -391,7 +417,7 @@ async function main() {
   });
   if (!insCfg.ok) throw new Error(`INSERT configurator: ${insCfg.status} ${await insCfg.text()}`);
   const inserted = await insCfg.json();
-  console.log(`[2/3] Inserted ${inserted.length} configurator steps.`);
+  console.log(`[3/4] Inserted ${inserted.length} configurator steps.`);
 
   const spots = [
     { key: ['digital', 'saddle', 'a5', '100', 'self', 'none', 16, 10].join(':'),
@@ -413,7 +439,7 @@ async function main() {
     { key: ['offset', 'perfect', 'a5', 'standard', '260', 'suv', 80, 500].join(':'),
       desc: 'Offset perfect A5 260 Spot UV 80pp × 500' },
   ];
-  console.log('\n[3/3] Spot-check:');
+  console.log('\n[4/4] Spot-check:');
   for (const s of spots) {
     const cents = prices[s.key];
     console.log(`  ${s.desc}`);
