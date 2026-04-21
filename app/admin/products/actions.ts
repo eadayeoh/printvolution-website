@@ -91,6 +91,9 @@ const ProductUpdateSchema = z.object({
   pricing: PricingSchema.nullable(),
   configurator: z.array(ConfiguratorStepSchema),
   faqs: FaqSchema,
+  // pricing_table.qty_markup — Record<qty_tier_string, multiplier>.
+  // Omitted or null = leave existing pricing_table untouched.
+  qty_markup: z.record(z.string(), z.number().positive()).nullable().optional(),
 });
 
 export type ProductUpdateInput = z.input<typeof ProductUpdateSchema>;
@@ -123,6 +126,32 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
   if (pErr || !product) return { ok: false, error: 'Update failed: ' + pErr?.message };
 
   const id = product.id as string;
+
+  // 1b. Pricing-table qty_markup — surgical merge into existing
+  //     pricing_table jsonb so base prices + axes are never touched.
+  if (d.qty_markup !== undefined) {
+    const { data: row } = await sb
+      .from('products')
+      .select('pricing_table')
+      .eq('id', id)
+      .single();
+    const pt = row?.pricing_table as Record<string, unknown> | null;
+    if (pt) {
+      const next = { ...pt };
+      if (d.qty_markup && Object.keys(d.qty_markup).length > 0) {
+        // Drop entries that equal 1 (no-op) so we don't bloat the jsonb.
+        const clean: Record<string, number> = {};
+        for (const [k, v] of Object.entries(d.qty_markup)) {
+          if (v !== 1) clean[k] = v;
+        }
+        if (Object.keys(clean).length > 0) next.qty_markup = clean;
+        else delete next.qty_markup;
+      } else {
+        delete next.qty_markup;
+      }
+      await sb.from('products').update({ pricing_table: next }).eq('id', id);
+    }
+  }
 
   // 2. Extras
   await sb.from('product_extras').upsert({
