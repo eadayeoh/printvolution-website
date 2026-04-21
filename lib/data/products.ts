@@ -33,6 +33,13 @@ export type PricingTable = {
   axis_order_by_method?: Record<string, string[]>;
   qty_tiers: number[];
   prices: Record<string, number>; // key: "<axis1>:<axis2>:<qty>" → cents
+  /** Optional pricing behaviour.
+   *  - default (omitted): tier total. Typed qty snaps to the floor tier,
+   *    tablePrice is used as-is. Customer receives the tier qty.
+   *  - `per_unit_at_tier_rate`: tier gives a per-unit rate. Engine
+   *    computes `(tablePrice / tier) × useQty` so typing any integer
+   *    between tier floors scales linearly (stickers). */
+  qty_mode?: 'per_unit_at_tier_rate';
 };
 
 /** Formula-driven pricing for products where tier snap-to-nearest

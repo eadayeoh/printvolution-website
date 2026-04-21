@@ -403,6 +403,9 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         const key = `${axisPrefix}:${tier}`;
         const tablePrice = pt.prices[key] ?? 0;
         if (tablePrice > 0) {
+          const perUnit = pt.qty_mode === 'per_unit_at_tier_rate';
+          const lineQty = perUnit ? useQty : tier;
+          const lineCents = perUnit ? Math.round((tablePrice / tier) * useQty) : tablePrice;
           const parts: string[] = [];
           for (const axis of axisOrder) {
             const selectedSlug = cfgState[axis];
@@ -411,10 +414,10 @@ export function ProductPage({ product, productRoutes, features }: Props) {
             if (match) parts.push(match.label);
           }
           breakdown.push({
-            label: `${parts.join(' · ')} × ${tier} pcs`,
-            amount: tablePrice,
+            label: `${parts.join(' · ')} × ${lineQty} pcs`,
+            amount: lineCents,
           });
-          sum = tablePrice;
+          sum = lineCents;
           // Add-on formulas — any visible swatch step whose step_id is
           // NOT in the axis_order acts as a modifier on top of the tier
           // price (e.g. flyers digital Lamination step still adds its
