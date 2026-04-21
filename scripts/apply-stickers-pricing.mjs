@@ -89,6 +89,10 @@ const pricingTable = {
   axis_order: ['material'],
   qty_tiers: TIERS.map((t) => t.qty),
   prices,
+  // Per-sheet rate ×typed qty — typing 7 sheets at the 1-sheet tier rate
+  // ($15) = $105, instead of returning the tier's $15 total. The tiers
+  // now act as per-sheet rate breakpoints, not tier-locked bundles.
+  qty_mode: 'per_unit_at_tier_rate',
 };
 
 // ────────────────────────────────────────────────────────────────
