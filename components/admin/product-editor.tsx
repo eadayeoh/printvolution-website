@@ -502,24 +502,31 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
                 )}
               </p>
               <div className="overflow-x-auto rounded border border-neutral-200">
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-50 text-[11px] font-bold uppercase text-neutral-500">
+                <table className="min-w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead className="bg-neutral-50 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
                     <tr>
-                      <th className="p-2 text-left">Qty</th>
+                      <th className="sticky left-0 z-10 bg-neutral-50 p-3 text-left" style={{ minWidth: 100 }}>Qty</th>
                       {axisCombos.map((c) => (
-                        <th key={c.key} className="p-2 text-right">{c.label || 'Price'}</th>
+                        <th
+                          key={c.key}
+                          className="whitespace-nowrap p-3 text-right"
+                          style={{ minWidth: 160 }}
+                          title={c.label || 'Price'}
+                        >
+                          {c.label || 'Price'}
+                        </th>
                       ))}
-                      <th className="p-2" />
+                      <th className="p-3" style={{ minWidth: 40 }} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
                     {tierRows.map((row, ri) => (
                       <tr key={ri}>
-                        <td className="p-2">
+                        <td className="sticky left-0 z-10 bg-white p-2">
                           <input
                             value={row.qty}
                             onChange={(e) => setTierRows(tierRows.map((r, j) => j === ri ? { ...r, qty: e.target.value } : r))}
-                            className={`${inputCls} w-24`}
+                            className={`${inputCls} w-24 text-right font-mono`}
                             placeholder="10"
                           />
                         </td>
@@ -530,7 +537,7 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
                               <input
                                 value={row.prices[c.key] ?? ''}
                                 onChange={(e) => setTierRows(tierRows.map((r, j) => j === ri ? { ...r, prices: { ...r.prices, [c.key]: e.target.value } } : r))}
-                                className={`${inputCls} w-24 text-right`}
+                                className={`${inputCls} w-28 text-right font-mono`}
                                 placeholder="0.00"
                               />
                             </div>
