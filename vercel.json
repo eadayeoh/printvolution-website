@@ -10,5 +10,8 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/gift-purge", "schedule": "0 19 * * *" }
   ]
 }
