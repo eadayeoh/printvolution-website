@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { uploadProductImage } from '@/app/admin/upload/actions';
 import { ImageCropModal } from '@/components/admin/image-crop-modal';
@@ -19,6 +19,14 @@ type Props = {
    * cropping would chop meaningful content.
    */
   skipCrop?: boolean;
+  /**
+   * Lets the parent track in-flight uploads. We fire (true) when an
+   * upload starts and (false) when it finishes — including while the
+   * crop modal is open. The parent should disable its Save button
+   * while any upload is pending so the user can't save with a stale
+   * (empty) URL before onChange has propagated the new one.
+   */
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 export function ImageUpload({
@@ -29,12 +37,20 @@ export function ImageUpload({
   size = 'md',
   aspect = 1,
   skipCrop = false,
+  onUploadingChange,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Pending file awaiting crop confirmation
   const [pending, setPending] = useState<{ src: string; name: string; type: string } | null>(null);
+
+  // Report busy to the parent whenever we're either pushing bytes to
+  // the server (uploading) OR waiting on the user to confirm the crop
+  // (pending). Both states should block a Save click upstream.
+  useEffect(() => {
+    onUploadingChange?.(uploading || pending !== null);
+  }, [uploading, pending, onUploadingChange]);
 
   const dim = size === 'sm' ? 80 : size === 'lg' ? 160 : 120;
 
@@ -116,12 +132,18 @@ export function ImageUpload({
     fd.append('prefix', prefix);
     try {
       const result = await uploadProductImage(fd);
-      setUploading(false);
       if (!result || !result.ok) {
+        setUploading(false);
         setError((result && result.error) || 'Upload failed — try again');
         return;
       }
+      // Propagate the URL BEFORE clearing the uploading flag so any
+      // parent watching `onUploadingChange` doesn't briefly re-enable
+      // their save button on an empty value. React batches these in a
+      // single render, but the ordering protects against any effect
+      // that runs on uploading flipping to false.
       if (result.url) onChange(result.url);
+      setUploading(false);
     } catch (e: any) {
       setUploading(false);
       setError(e?.message ?? 'Upload failed — try again');
