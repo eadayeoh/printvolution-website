@@ -408,10 +408,38 @@ function SideWidget({ side }: { side: MagazineSide | undefined }) {
   return null;
 }
 
-export function SeoMagazine({ data }: { data?: SeoMagazineData | null }) {
+// Turn "NCR Form Printing Singapore | Carbonless Duplicate Books" into
+// "NCR FORM PRINTING · SINGAPORE". Falls back to the product name when
+// seo_title is missing.
+function deriveKeywordKicker(seoTitle?: string | null, name?: string | null): string | null {
+  const src = (seoTitle ?? '').trim();
+  if (src) {
+    const head = src.split('|')[0].trim();
+    const sgSplit = head.replace(/\s+Singapore$/i, ' · Singapore');
+    return sgSplit.toUpperCase();
+  }
+  if (name && name.trim()) return `${name.trim()} · Singapore`.toUpperCase();
+  return null;
+}
+
+export function SeoMagazine({
+  data,
+  seoTitle,
+  productName,
+}: {
+  data?: SeoMagazineData | null;
+  seoTitle?: string | null;
+  productName?: string | null;
+}) {
   const d = data ?? DEFAULT_NAME_CARD_MAGAZINE;
   const articles = d.articles ?? [];
   if (articles.length === 0) return null;
+
+  // Override any legacy "Issue №XX · ..." template with a keyword kicker.
+  const storedIsTemplate = !d.issue_label || /^Issue\b/i.test(d.issue_label);
+  const kicker = storedIsTemplate
+    ? deriveKeywordKicker(seoTitle, productName)
+    : d.issue_label;
 
   return (
     <section style={{ background: '#fff', padding: '72px 24px', borderTop: '2px solid var(--pv-ink)' }}>
@@ -428,7 +456,7 @@ export function SeoMagazine({ data }: { data?: SeoMagazineData | null }) {
             borderBottom: '2px solid var(--pv-ink)',
           }}
         >
-          {d.issue_label && (
+          {kicker && (
             <div
               style={{
                 fontFamily: 'var(--pv-f-mono)',
@@ -444,7 +472,7 @@ export function SeoMagazine({ data }: { data?: SeoMagazineData | null }) {
                 marginTop: 8,
               }}
             >
-              {d.issue_label}
+              {kicker}
             </div>
           )}
           {(d.title || d.title_em) && (

@@ -87,8 +87,8 @@ export function MagazineEditor({
             <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">Header</div>
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <span className={label}>Issue label (top-left chip)</span>
-                <input className={input} value={data.issue_label ?? ''} onChange={(e) => commit({ ...data, issue_label: e.target.value })} placeholder="Issue №01 · Name Cards" />
+                <span className={label}>Kicker chip (leave blank to auto-derive from SEO Title)</span>
+                <input className={input} value={data.issue_label ?? ''} onChange={(e) => commit({ ...data, issue_label: e.target.value })} placeholder="e.g. NAME CARD PRINTING · SINGAPORE" />
               </div>
               <div>
                 <span className={label}>Title (first line)</span>

@@ -1191,7 +1191,7 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
       )}
 
       {/* ---------- SEO MAGAZINE ---------- */}
-      <SeoMagazine data={seoMagazineData} />
+      <SeoMagazine data={seoMagazineData} seoTitle={product.seo_title} productName={product.name} />
 
       {/* ---------- FAQ ---------- */}
       <section
