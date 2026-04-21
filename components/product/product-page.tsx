@@ -1880,7 +1880,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                 description: product.description,
                 configurator: product.configurator,
               }));
-        return <SeoMagazine data={data} />;
+        return <SeoMagazine data={data} seoTitle={extras?.seo_title} productName={product.name} />;
       })()}
 
 
