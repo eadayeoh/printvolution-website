@@ -55,6 +55,9 @@ const GiftProductSchema = z.object({
     question: z.string(),
     answer: z.string(),
   })).nullable().optional(),
+  // Migration 0035 additions
+  pipeline_id: z.string().uuid().nullable().optional(),
+  source_retention_days: z.number().int().min(1).default(30),
 });
 
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {
@@ -306,4 +309,51 @@ export async function uploadTemplateAsset(formData: FormData): Promise<{ ok: boo
   } catch (e: any) {
     return { ok: false, error: e.message };
   }
+}
+
+// ---------------------------------------------------------------------------
+// GIFT PRODUCT VARIANTS (migration 0034) — per-product physical bases
+// ---------------------------------------------------------------------------
+
+const VariantSchema = z.object({
+  id: z.string().uuid().optional(),
+  gift_product_id: z.string().uuid(),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  name: z.string().min(1),
+  features: z.array(z.string()).default([]),
+  mockup_url: z.string().min(1),
+  mockup_area: z.object({
+    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+  }),
+  variant_thumbnail_url: z.string().nullable().optional(),
+  base_price_cents: z.number().int().min(0).default(0),
+  price_tiers: z.array(z.object({
+    qty: z.number().int().positive(), price_cents: z.number().int().min(0),
+  })).default([]),
+  display_order: z.number().int().default(0),
+  is_active: z.boolean().default(true),
+});
+
+export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
+  const sb = await requireAdmin();
+  const parsed = VariantSchema.parse(input);
+  const { id, ...row } = parsed as any;
+  if (id) {
+    const { error } = await sb.from('gift_product_variants').update(row).eq('id', id);
+    if (error) return { ok: false as const, error: error.message };
+  } else {
+    const { error } = await sb.from('gift_product_variants').insert(row);
+    if (error) return { ok: false as const, error: error.message };
+  }
+  revalidatePath(`/admin/gifts/${parsed.gift_product_id}`);
+  revalidatePath(`/gift/${parsed.gift_product_id}`);
+  return { ok: true as const };
+}
+
+export async function deleteGiftVariant(id: string) {
+  const sb = await requireAdmin();
+  const { error } = await sb.from('gift_product_variants').delete().eq('id', id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts');
+  return { ok: true as const };
 }

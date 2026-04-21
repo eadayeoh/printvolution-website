@@ -9,7 +9,8 @@ import { ImageUpload } from '@/components/admin/image-upload';
 import { GiftMockupEditor } from '@/components/admin/gift-mockup-editor';
 import { MagazineEditor, type MagValue } from '@/components/admin/product-magazine-editor';
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
-import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate } from '@/lib/gifts/types';
+import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant } from '@/lib/gifts/types';
+import { GiftVariantsPanel } from './gift-variants-panel';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -18,9 +19,11 @@ type Props = {
   categories: Cat[];
   allTemplates: GiftTemplate[];
   assignedTemplateIds: string[];
+  pipelines?: GiftPipeline[];
+  variants?: GiftProductVariant[];
 };
 
-type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'seo' | 'content';
+type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'variants' | 'seo' | 'content';
 
 const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: string }> = [
   { v: 'laser', label: 'Laser', desc: GIFT_MODE_DESCRIPTION['laser'], emoji: '🔥' },
@@ -29,7 +32,7 @@ const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: str
   { v: 'photo-resize', label: 'Photo Resize', desc: GIFT_MODE_DESCRIPTION['photo-resize'], emoji: '✂️' },
 ];
 
-export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds }: Props) {
+export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], variants = [] }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -47,6 +50,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [mode, setMode] = useState<GiftMode>(product?.mode ?? 'photo-resize');
   const [templateMode, setTemplateMode] = useState<GiftTemplateMode>(product?.template_mode ?? 'none');
   const [modeLocked] = useState(!!product?.first_ordered_at);
+  const [pipelineId, setPipelineId] = useState<string>(product?.pipeline_id ?? '');
+  const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
 
   const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
   const [heightMm, setHeightMm] = useState(product?.height_mm.toString() ?? '100');
@@ -116,6 +121,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       is_active: isActive,
       mockup_url: mockupUrl || null,
       mockup_area: mockupUrl ? mockupArea : null,
+      pipeline_id: pipelineId || null,
+      source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
     };
     if (!modeLocked) payload.mode = mode;
 
@@ -158,6 +165,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
     { v: 'mockup', label: 'Mockup' },
+    { v: 'variants', label: `Variants${variants.length > 0 ? ` (${variants.length})` : ''}` },
     { v: 'content', label: `Content${faqs.length > 0 ? ` (${faqs.length})` : ''}` },
     { v: 'seo', label: 'SEO' },
   ];
@@ -261,12 +269,45 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
           </div>
 
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Production pipeline</span>
+                <select value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} className={inputCls}>
+                  <option value="">Use mode default ({mode})</option>
+                  {pipelines.filter((p) => p.kind === mode).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Overrides which transform + params run for this product.{' '}
+                  <Link href="/admin/gifts/pipelines" className="underline">Manage pipelines →</Link>
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Delete uploads + production after</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={retentionDays}
+                    onChange={(e) => setRetentionDays(e.target.value)}
+                    className={`${inputCls} max-w-[120px]`}
+                  />
+                  <span className="text-xs text-neutral-600">days</span>
+                </div>
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  After this many days the customer&apos;s uploaded photo and the 300 DPI production file are purged. The watermarked preview stays.
+                </span>
+              </label>
+            </div>
+          </div>
+
           {mode !== 'photo-resize' && (
             <div className="rounded-lg border border-neutral-200 bg-white p-6">
               <div className="mb-1 text-xs font-bold text-ink">Transformation prompts</div>
               <p className="mb-3 text-[11px] text-neutral-500">
-                Prompts live at the <strong>mode level</strong> — every {GIFT_MODE_LABEL[mode]} product shares the same prompt library.
-                If 2+ are active, customers pick one (with thumbnails). If 1 is active, it&apos;s auto-applied.
+                Prompts live at the <strong>mode level</strong> (with optional per-pipeline override). Customers always see a <strong>Line Art</strong> and <strong>Realistic</strong> picker; admin fills the prompt text for each.
               </p>
               <Link
                 href={`/admin/gifts/prompts?mode=${mode}`}
@@ -461,6 +502,12 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
           setArea={setMockupArea}
           slug={slug}
         />
+      )}
+
+      {tab === 'variants' && (
+        product
+          ? <GiftVariantsPanel giftProductId={product.id} initialVariants={variants} />
+          : <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>
       )}
 
       {tab === 'seo' && (

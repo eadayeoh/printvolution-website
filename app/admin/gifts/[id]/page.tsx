@@ -1,14 +1,18 @@
 import { notFound } from 'next/navigation';
 import { GiftProductEditor } from '@/components/admin/gift-product-editor';
 import { getGiftProductByIdAdmin, listAllTemplatesAdmin, listCategoriesForGifts } from '@/lib/gifts/data';
+import { listActivePipelines } from '@/lib/gifts/pipelines';
+import { listAllVariantsAdmin } from '@/lib/gifts/variants';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditGiftProductPage({ params }: { params: { id: string } }) {
-  const [product, categories, allTemplates] = await Promise.all([
+  const [product, categories, allTemplates, pipelines, variants] = await Promise.all([
     getGiftProductByIdAdmin(params.id),
     listCategoriesForGifts(),
     listAllTemplatesAdmin(),
+    listActivePipelines(),
+    listAllVariantsAdmin(params.id),
   ]);
   if (!product) notFound();
   const assignedTemplateIds = await listAllAssignedForProduct(params.id);
@@ -18,6 +22,8 @@ export default async function EditGiftProductPage({ params }: { params: { id: st
       categories={categories as any}
       allTemplates={allTemplates}
       assignedTemplateIds={assignedTemplateIds}
+      pipelines={pipelines}
+      variants={variants}
     />
   );
 }
