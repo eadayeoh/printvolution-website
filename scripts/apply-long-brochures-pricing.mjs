@@ -1,16 +1,23 @@
-// Builds the Long Brochures product configurator + pricing_table.prices
-// from pvpricelist.rates.longBrochures (tab 11). All prices pulled
-// straight from upstream — no invented axes.
+// Builds the Long Brochures configurator + pricing_table.prices from
+// pvpricelist.rates.longBrochures (tab 11). All prices pulled directly
+// from upstream — strict mapping, no invented axes.
 //
-// Upstream structure:
-//   LB_PRINT_A[qty][paper] → single-sided (4C+0C) print cost
-//   LB_PRINT_B[qty][paper] → double-sided (4C+4C) print cost
-//   LB_LAM[qty][sides]     → lamination cost (sides = 1 or 2)
+// Upstream structure (corrected interpretation):
+//   LB_PRINT_A[qty][paper] → Type A sheet (A4×3, 630×297mm) print cost
+//   LB_PRINT_B[qty][paper] → Type B sheet (A4×4, 840×297mm) print cost
+//   LB_LAM[qty][1 or 2]    → lamination cost (1 = single-sided, 2 = both)
 //   LB_FOLD_ROWS           → per-qty-tier fold cost {std, plus}
-//   LB_QTYS                → [300, 500, 1000, 2000, ..., 10000]
+//   LB_QTYS                → [300, 500, 1000, 2000, 3000, ..., 10000]
 //
-// Paper axis: 128, 157, 260gsm (as priced upstream).
-// Final price = print + lam + fold, all in dollars, Math.ceil → cents.
+// Axes exposed to the customer:
+//   • Type (Type A / Type B)     — what pvpricelist calls A and B
+//   • Paper (128 / 157 / 260)
+//   • Fold Type (half / tri / z / gate / roll) mapped to std or plus tier
+//   • Lamination Finish (none / matt / gloss)
+//   • Lamination Sides (single / double) — hidden when finish = none
+//   • Quantity
+//
+// Final price = print + lam + fold, dollars, Math.ceil → cents.
 
 import fs from 'node:fs';
 
@@ -51,10 +58,6 @@ const lb = snap.rates.longBrochures;
 const QTYS = lb.LB_QTYS; // [300, 500, 1000, 2000, ..., 10000]
 const PAPERS = ['128', '157', '260'];
 
-// Every concrete fold option maps to one of the two upstream pricing
-// tiers — `std` (simpler fold: half or letter-fold tri) or `plus`
-// (more complex: zigzag, gate, roll). The customer sees the specific
-// fold name; the price comes out of the right tier.
 const FOLD_TIER = {
   half: 'std',
   tri: 'std',
@@ -63,7 +66,6 @@ const FOLD_TIER = {
   roll: 'plus',
 };
 
-/** Find the fold row whose upper bound matches the qty. */
 function foldCost(qty, tier /* 'std' | 'plus' */) {
   for (const row of lb.LB_FOLD_ROWS) {
     if (qty <= row.to) return row[tier];
@@ -76,35 +78,30 @@ function foldCost(qty, tier /* 'std' | 'plus' */) {
 // ────────────────────────────────────────────────────────────────
 
 const axes = {
-  // Base sheet size. Pvpricelist's longBrochures tab prices only one
-  // sheet size (A4 flat). Exposing it as a visible confirmation so
-  // customers can see what they're ordering; additional sheet sizes
-  // can be added when upstream prices them.
-  size: [
-    { slug: 'a4', label: 'A4 flat sheet (297 × 210mm)', note: 'Folds to A5 or DL depending on fold type' },
+  type: [
+    { slug: 'a', label: 'Type A — A4 × 3', note: '630 × 297mm flat · most common long brochure' },
+    { slug: 'b', label: 'Type B — A4 × 4', note: '840 × 297mm flat · bigger, more panels when folded' },
   ],
   paper: [
     { slug: '128', label: '128gsm Art Paper', note: 'Standard' },
     { slug: '157', label: '157gsm Art Paper', note: 'Heavier, more premium feel' },
     { slug: '260', label: '260gsm Art Card', note: 'Thick card stock — holds a crease without flaring' },
   ],
-  sides: [
-    { slug: 'ss', label: 'Single Sided (4C + 0C)', note: 'Print on one side only' },
-    { slug: 'ds', label: 'Double Sided (4C + 4C)', note: 'Print on both sides' },
-  ],
-  lam: [
-    { slug: 'none', label: 'No lamination' },
-    { slug: 'gloss_one', label: 'Gloss Lam · single-sided', note: 'Front face only · high-sheen finish' },
-    { slug: 'matt_one', label: 'Matt Lam · single-sided', note: 'Front face only · soft-touch finish' },
-    { slug: 'gloss_two', label: 'Gloss Lam · double-sided', note: 'Both faces · high-sheen finish' },
-    { slug: 'matt_two', label: 'Matt Lam · double-sided', note: 'Both faces · soft-touch finish' },
-  ],
   fold: [
-    { slug: 'half', label: 'Half Fold', note: 'One fold · finished A5 (148 × 210mm)' },
-    { slug: 'tri', label: 'Tri Fold', note: 'Two folds, letter-style · finished DL (99 × 210mm)' },
-    { slug: 'z', label: 'Z-Fold', note: 'Two folds, zigzag · finished DL (99 × 210mm)' },
-    { slug: 'gate', label: 'Gate Fold', note: 'Two folds, outer panels fold inward' },
-    { slug: 'roll', label: 'Roll Fold', note: 'Three folds, rolled inward · 4-panel finished' },
+    { slug: 'half', label: 'Half Fold', note: 'One fold · 2 panels' },
+    { slug: 'tri', label: 'Tri Fold', note: 'Two folds, letter-style · 3 panels' },
+    { slug: 'z', label: 'Z-Fold', note: 'Two folds, zigzag · 3 panels' },
+    { slug: 'gate', label: 'Gate Fold', note: 'Two folds, outer panels fold inward · 3 panels' },
+    { slug: 'roll', label: 'Roll Fold', note: 'Three folds, rolled inward · 4 panels' },
+  ],
+  lam_finish: [
+    { slug: 'none', label: 'No lamination' },
+    { slug: 'matt', label: 'Matt Lam', note: 'Soft-touch, subtle finish' },
+    { slug: 'gloss', label: 'Gloss Lam', note: 'High-sheen, vivid colour pop' },
+  ],
+  lam_sides: [
+    { slug: 'one', label: 'Single-sided', note: 'Front face only' },
+    { slug: 'two', label: 'Double-sided', note: 'Both faces' },
   ],
 };
 
@@ -112,40 +109,41 @@ const axes = {
 // PRICE GENERATION
 // ────────────────────────────────────────────────────────────────
 
-// Map lam slug → upstream LB_LAM side key. Gloss and Matt carry the
-// same upstream price at each side count — pvpricelist treats finish
-// as a customer-facing spec, not a price axis.
-const LAM_SIDE = {
-  none: null,
-  gloss_one: '1',
-  matt_one: '1',
-  gloss_two: '2',
-  matt_two: '2',
-};
-
-const SIZES = axes.size.map((o) => o.slug);
-const LAMS = axes.lam.map((o) => o.slug);
-const FOLDS = axes.fold.map((o) => o.slug);
-
 const prices = {};
 let count = 0;
-for (const size of SIZES) {
+
+for (const type of ['a', 'b']) {
+  const printTable = type === 'a' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
   for (const paper of PAPERS) {
-    for (const sidesSlug of ['ss', 'ds']) {
-      const printTable = sidesSlug === 'ss' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
-      for (const lamSlug of LAMS) {
-        const lamSideKey = LAM_SIDE[lamSlug];
-        for (const foldSlug of FOLDS) {
-          const foldTier = FOLD_TIER[foldSlug];
-          for (const qty of QTYS) {
-            const printCost = printTable[String(qty)]?.[paper];
-            if (printCost == null) continue;
-            const lamCost = lamSideKey ? lb.LB_LAM[String(qty)]?.[lamSideKey] ?? 0 : 0;
-            const fCost = foldCost(qty, foldTier);
-            // pvpricelist displays totals rounded UP to the next whole
-            // dollar — mirror that rounding convention.
+    for (const foldSlug of ['half', 'tri', 'z', 'gate', 'roll']) {
+      const foldTier = FOLD_TIER[foldSlug];
+      for (const qty of QTYS) {
+        const printCost = printTable[String(qty)]?.[paper];
+        if (printCost == null) continue;
+        const fCost = foldCost(qty, foldTier);
+
+        // Three lam-finish paths — each generates the right number of
+        // lam_sides variants:
+        //   none  → sides irrelevant, single placeholder key 'one'
+        //   matt  → two keys (one, two) at LB_LAM prices
+        //   gloss → two keys (one, two) — same upstream price as matt
+
+        // No lamination — single key with lam_sides='one' placeholder.
+        // (UI hides lam_sides step when finish=none, so cfgState resolves
+        // to 'one' via auto-reset.)
+        {
+          const cents = Math.ceil(printCost + 0 + fCost) * 100;
+          const key = [type, paper, 'none', 'one', foldSlug, qty].join(':');
+          prices[key] = cents;
+          count++;
+        }
+
+        // Matt and Gloss — both finishes price the same upstream.
+        for (const finish of ['matt', 'gloss']) {
+          for (const sides of ['one', 'two']) {
+            const lamCost = lb.LB_LAM[String(qty)]?.[sides === 'one' ? '1' : '2'] ?? 0;
             const cents = Math.ceil(printCost + lamCost + fCost) * 100;
-            const key = [size, paper, sidesSlug, lamSlug, foldSlug, qty].join(':');
+            const key = [type, paper, finish, sides, foldSlug, qty].join(':');
             prices[key] = cents;
             count++;
           }
@@ -162,7 +160,7 @@ console.log(`Computed ${count} prices.`);
 
 const pricingTable = {
   axes,
-  axis_order: ['size', 'paper', 'sides', 'lam', 'fold'],
+  axis_order: ['type', 'paper', 'lam_finish', 'lam_sides', 'fold'],
   qty_tiers: QTYS,
   prices,
 };
@@ -173,24 +171,28 @@ const pricingTable = {
 
 const steps = [
   {
-    step_id: 'size', step_order: 0, label: 'Base Sheet Size', type: 'swatch', required: true,
-    options: axes.size, show_if: null, step_config: {},
+    step_id: 'type', step_order: 0, label: 'Type', type: 'swatch', required: true,
+    options: axes.type, show_if: null, step_config: {},
   },
   {
     step_id: 'paper', step_order: 1, label: 'Paper', type: 'swatch', required: true,
     options: axes.paper, show_if: null, step_config: {},
   },
   {
-    step_id: 'sides', step_order: 2, label: 'Printing Sides', type: 'swatch', required: true,
-    options: axes.sides, show_if: null, step_config: {},
-  },
-  {
-    step_id: 'fold', step_order: 3, label: 'Fold Type', type: 'swatch', required: true,
+    step_id: 'fold', step_order: 2, label: 'Fold Type', type: 'swatch', required: true,
     options: axes.fold, show_if: null, step_config: {},
   },
   {
-    step_id: 'lam', step_order: 4, label: 'Lamination', type: 'swatch', required: true,
-    options: axes.lam, show_if: null, step_config: {},
+    step_id: 'lam_finish', step_order: 3, label: 'Lamination', type: 'swatch', required: true,
+    options: axes.lam_finish, show_if: null, step_config: {},
+  },
+  {
+    step_id: 'lam_sides', step_order: 4, label: 'Lamination Sides', type: 'swatch', required: true,
+    options: axes.lam_sides,
+    // Hidden when no lamination selected — cfgState auto-resets to 'one'
+    // (first option), matching the placeholder slot in the 'none' price keys.
+    show_if: { step: 'lam_finish', value: ['matt', 'gloss'] },
+    step_config: {},
   },
   {
     step_id: 'qty', step_order: 5, label: 'Quantity', type: 'qty', required: false,
@@ -204,7 +206,6 @@ const steps = [
 // ────────────────────────────────────────────────────────────────
 
 async function main() {
-  // Product row
   const pRes = await fetch(`${URL}/rest/v1/products?id=eq.${PRODUCT_ID}`, {
     method: 'PATCH', headers: H,
     body: JSON.stringify({
@@ -217,16 +218,12 @@ async function main() {
   if (!pRes.ok) throw new Error(`PATCH products: ${pRes.status} ${await pRes.text()}`);
   console.log('[1/4] products.pricing_table updated.');
 
-  // Wipe stale legacy matrix — prevents the fallback-to-legacy bug
-  // we hit on books where an empty lookup fell through to a
-  // flyer-shaped ladder.
   const delPricing = await fetch(`${URL}/rest/v1/product_pricing?product_id=eq.${PRODUCT_ID}`, {
     method: 'DELETE', headers: H,
   });
   if (!delPricing.ok) throw new Error(`DELETE product_pricing: ${delPricing.status} ${await delPricing.text()}`);
   console.log('[2/4] Cleared legacy product_pricing matrix.');
 
-  // Configurator — wipe + insert
   const delCfg = await fetch(`${URL}/rest/v1/product_configurator?product_id=eq.${PRODUCT_ID}`, {
     method: 'DELETE', headers: H,
   });
@@ -239,26 +236,24 @@ async function main() {
   const inserted = await insCfg.json();
   console.log(`[3/4] Inserted ${inserted.length} configurator steps.`);
 
-  // Spot checks — verify math against pvpricelist
   const spots = [
-    { size: 'a4', paper: '128', sides: 'ss', lam: 'none', fold: 'half', qty: 300 },
-    { size: 'a4', paper: '157', sides: 'ds', lam: 'gloss_one', fold: 'tri', qty: 1000 },
-    { size: 'a4', paper: '157', sides: 'ds', lam: 'matt_one', fold: 'tri', qty: 1000 }, // same price as gloss_one
-    { size: 'a4', paper: '260', sides: 'ds', lam: 'matt_two', fold: 'roll', qty: 5000 },
-    { size: 'a4', paper: '128', sides: 'ds', lam: 'none', fold: 'z', qty: 2000 },
+    { type: 'a', paper: '128', finish: 'none', sides: 'one', fold: 'half', qty: 300 },
+    { type: 'a', paper: '157', finish: 'gloss', sides: 'one', fold: 'tri', qty: 1000 },
+    { type: 'a', paper: '157', finish: 'matt', sides: 'one', fold: 'tri', qty: 1000 },
+    { type: 'b', paper: '260', finish: 'matt', sides: 'two', fold: 'roll', qty: 5000 },
+    { type: 'b', paper: '128', finish: 'none', sides: 'one', fold: 'z', qty: 2000 },
+    { type: 'b', paper: '260', finish: 'gloss', sides: 'two', fold: 'gate', qty: 10000 },
   ];
-  console.log('\n[4/4] Spot-check:');
+  console.log('\n[4/4] Spot-check (all \$ ceil-rounded from pvpricelist):');
   for (const s of spots) {
-    const key = [s.size, s.paper, s.sides, s.lam, s.fold, s.qty].join(':');
+    const key = [s.type, s.paper, s.finish, s.sides, s.fold, s.qty].join(':');
     const cents = prices[key];
-    const printTable = s.sides === 'ss' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
+    const printTable = s.type === 'a' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
     const pCost = printTable[String(s.qty)]?.[s.paper];
-    const lSide = LAM_SIDE[s.lam];
-    const lCost = lSide ? lb.LB_LAM[String(s.qty)]?.[lSide] : 0;
+    const lCost = s.finish === 'none' ? 0 : lb.LB_LAM[String(s.qty)]?.[s.sides === 'one' ? '1' : '2'];
     const fCost = foldCost(s.qty, FOLD_TIER[s.fold]);
     console.log(`  ${key}`);
-    console.log(`    print $${pCost} + lam $${lCost} + fold $${fCost} = $${(pCost + lCost + fCost).toFixed(2)}`);
-    console.log(`    stored: $${(cents / 100).toFixed(2)}`);
+    console.log(`    print $${pCost} + lam $${lCost} + fold $${fCost} = $${(pCost + lCost + fCost).toFixed(2)} → stored $${(cents / 100).toFixed(2)}`);
   }
 }
 
