@@ -124,7 +124,7 @@ const extras = {
         title: "Volume pricing — $15 to $10 per sheet, any qty you type.",
         body: [
           "Type any number of sheets from **1 to 50**. The per-sheet rate drops at each tier: **$15/sheet at qty 1**, **$14 at 10**, **$13 at 20**, **$12 at 30**, **$11 at 40**, **$10 at 50**. Between tiers the rate stays at the tier you fall into — so 7 sheets is 7 × $15 = $105, and 25 sheets is 25 × $13 = $325.",
-          "Every +1 on quantity raises the total; the calculator never drops the price when you add a sheet (if a new tier's per-sheet rate would dip the total below the previous qty's price, we hold at the higher of the two). For runs over 50 sheets the price becomes a custom quote — higher volumes move into roll-sticker production or gang-run economics which price differently. Planning a large merch run? Tell us the target qty and we'll route the job to the right process.",
+          "At every tier jump (20 / 30 / 40 / 50 sheets) **you effectively get 1 sheet free** — the total matches what the previous qty would have cost, so the extra sheet lands on the house. For runs over 50 sheets the price becomes a custom quote — higher volumes move into roll-sticker production or gang-run economics which price differently. Planning a large merch run? Tell us the target qty and we'll route the job to the right process.",
         ],
         side: {
           kind: "list",
@@ -132,10 +132,10 @@ const extras = {
           rows: [
             { text: "1 sheet", time: "$15/sheet" },
             { text: "10 sheets", time: "$14/sheet" },
-            { text: "20 sheets", time: "$13/sheet" },
-            { text: "30 sheets", time: "$12/sheet" },
-            { text: "40 sheets", time: "$11/sheet" },
-            { text: "50 sheets", time: "$10/sheet" },
+            { text: "20 sheets", time: "$13/sheet · +1 free" },
+            { text: "30 sheets", time: "$12/sheet · +1 free" },
+            { text: "40 sheets", time: "$11/sheet · +1 free" },
+            { text: "50 sheets", time: "$10/sheet · +1 free" },
           ],
         },
       },
@@ -183,9 +183,9 @@ const faqs = [
       "Type any qty from 1 to 50 sheets; the per-sheet rate drops at each tier: $15/sheet at qty 1, $14 at 10, $13 at 20, $12 at 30, $11 at 40, $10 at 50. Same price on all seven materials. Between tiers, the rate stays at the tier you're on — e.g. 7 sheets × $15 = $105, 25 sheets × $13 = $325. For 50+ sheets, contact us for a custom quote.",
   },
   {
-    question: "Why doesn't the price go down when I add a sheet that crosses a tier?",
+    question: "Do I get a bonus at the volume tiers?",
     answer:
-      "At tier boundaries (10, 20, 30, 40, 50) the per-sheet rate drops — but we never let adding a sheet make the total go DOWN. Example: 19 sheets × $14 = $266. At 20 sheets × $13 that'd be $260, which is less. So we hold the total at $266 until a higher qty × new rate exceeds it (21 × $13 = $273). Every +1 on qty either holds or raises the price.",
+      "Yes — at 20, 30, 40, and 50 sheets you effectively get one sheet on the house. The total holds at the previous tier's peak price while the new tier rate catches up, so the extra sheet is on us at the tier jump.",
   },
   {
     question: "What shape can the stickers be?",
