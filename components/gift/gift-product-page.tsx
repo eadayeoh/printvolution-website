@@ -7,20 +7,23 @@ import { uploadAndPreviewGift } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
-import type { GiftProduct, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
+import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
+import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
+import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
 import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
 
 type Props = {
   product: GiftProduct;
   templates: GiftTemplate[];
   prompts: GiftPrompt[];
+  variants?: GiftProductVariant[];
   relatedGifts?: Array<Pick<GiftProduct, 'slug' | 'name' | 'thumbnail_url' | 'base_price_cents' | 'price_tiers'>>;
 };
 
-export function GiftProductPage({ product, templates, prompts, relatedGifts = [] }: Props) {
+export function GiftProductPage({ product, templates, prompts, variants = [], relatedGifts = [] }: Props) {
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +31,10 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(
     prompts.length === 1 ? prompts[0].id : null,
   );
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    variants.length > 0 ? variants[0].id : null,
+  );
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -63,6 +70,7 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
     fd.append('product_slug', product.slug);
     if (selectedTemplateId) fd.append('template_id', selectedTemplateId);
     if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
+    if (selectedVariantId) fd.append('variant_id', selectedVariantId);
     if (cropRect) fd.append('crop_rect', JSON.stringify(cropRect));
     try {
       const r = await uploadAndPreviewGift(fd);
@@ -82,11 +90,14 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
 
   function handleAddToCart() {
     if (!preview) return;
-    const unit = product.base_price_cents;
+    const unit = selectedVariant?.base_price_cents || product.base_price_cents;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
     };
+    if (selectedVariant) {
+      config.Base = selectedVariant.name;
+    }
     if (selectedTemplateId) {
       config.Template = templates.find((t) => t.id === selectedTemplateId)?.name ?? '';
     }
@@ -372,12 +383,12 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                 )}
 
                 {preview ? (
-                  product.mockup_url && product.mockup_area ? (
+                  (selectedVariant?.mockup_url || product.mockup_url) && (selectedVariant?.mockup_area || product.mockup_area) ? (
                     <div style={{ width: '100%', maxWidth: 420 }}>
                       <GiftMockupPreview
-                        mockupUrl={product.mockup_url}
+                        mockupUrl={selectedVariant?.mockup_url || product.mockup_url!}
                         previewUrl={preview.previewUrl}
-                        area={product.mockup_area as any}
+                        area={(selectedVariant?.mockup_area as any) ?? (product.mockup_area as any)}
                       />
                     </div>
                   ) : (
@@ -636,9 +647,20 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                 </ComposeSection>
               )}
 
+              {/* Variant picker — shown only when product has 2+ variants */}
+              {variants.length >= 2 && (
+                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title="Pick your base">
+                  <GiftVariantPicker
+                    variants={variants}
+                    selectedId={selectedVariantId}
+                    onSelect={setSelectedVariantId}
+                  />
+                </ComposeSection>
+              )}
+
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (
-                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title="Pick art style">
+                <ComposeSection letter={hasTemplates ? (variants.length >= 2 ? 'D' : 'C') : (variants.length >= 2 ? 'C' : 'B')} title="Pick art style">
                   <div
                     style={{
                       display: 'grid',
@@ -875,9 +897,13 @@ export function GiftProductPage({ product, templates, prompts, relatedGifts = []
                       color: 'var(--pv-yellow)',
                     }}
                   >
-                    {formatSGD(product.base_price_cents * qty)}
+                    {formatSGD((selectedVariant?.base_price_cents || product.base_price_cents) * qty)}
                   </div>
                 </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <GiftRetentionNotice days={product.source_retention_days ?? 30} />
               </div>
 
               <button

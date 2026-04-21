@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { GiftProductPage } from '@/components/gift/gift-product-page';
 import { getGiftProductBySlug, listActiveGiftProducts, listTemplatesForProduct } from '@/lib/gifts/data';
 import { listPromptsForMode } from '@/lib/gifts/prompts';
+import { listActiveVariants } from '@/lib/gifts/variants';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +22,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function GiftPage({ params }: { params: { slug: string } }) {
   const product = await getGiftProductBySlug(params.slug);
   if (!product) notFound();
-  const [templates, prompts, allGifts] = await Promise.all([
+  const [templates, prompts, variants, allGifts] = await Promise.all([
     product.template_mode === 'none' ? Promise.resolve([]) : listTemplatesForProduct(product.id),
     product.mode === 'photo-resize' ? Promise.resolve([]) : listPromptsForMode(product.mode),
+    listActiveVariants(product.id),
     listActiveGiftProducts(),
   ]);
   // Related: prefer same mode, exclude current, cap at 4.
@@ -35,6 +37,7 @@ export default async function GiftPage({ params }: { params: { slug: string } })
       product={product}
       templates={templates}
       prompts={prompts}
+      variants={variants}
       relatedGifts={relatedGifts}
     />
   );
