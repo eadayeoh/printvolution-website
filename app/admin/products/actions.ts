@@ -91,9 +91,9 @@ const ProductUpdateSchema = z.object({
   pricing: PricingSchema.nullable(),
   configurator: z.array(ConfiguratorStepSchema),
   faqs: FaqSchema,
-  // pricing_table.qty_markup — Record<qty_tier_string, multiplier>.
+  // pricing_table.qty_adjust — Record<qty_tier_string, cents (signed)>.
   // Omitted or null = leave existing pricing_table untouched.
-  qty_markup: z.record(z.string(), z.number().positive()).nullable().optional(),
+  qty_adjust: z.record(z.string(), z.number().int()).nullable().optional(),
 });
 
 export type ProductUpdateInput = z.input<typeof ProductUpdateSchema>;
@@ -127,9 +127,10 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
 
   const id = product.id as string;
 
-  // 1b. Pricing-table qty_markup — surgical merge into existing
+  // 1b. Pricing-table qty_adjust — surgical merge into existing
   //     pricing_table jsonb so base prices + axes are never touched.
-  if (d.qty_markup !== undefined) {
+  //     Also strips any legacy qty_markup field from earlier iteration.
+  if (d.qty_adjust !== undefined) {
     const { data: row } = await sb
       .from('products')
       .select('pricing_table')
@@ -138,16 +139,17 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
     const pt = row?.pricing_table as Record<string, unknown> | null;
     if (pt) {
       const next = { ...pt };
-      if (d.qty_markup && Object.keys(d.qty_markup).length > 0) {
-        // Drop entries that equal 1 (no-op) so we don't bloat the jsonb.
+      delete next.qty_markup; // legacy cleanup
+      if (d.qty_adjust && Object.keys(d.qty_adjust).length > 0) {
+        // Drop entries equal to 0 (no-op) so the jsonb stays tight.
         const clean: Record<string, number> = {};
-        for (const [k, v] of Object.entries(d.qty_markup)) {
-          if (v !== 1) clean[k] = v;
+        for (const [k, v] of Object.entries(d.qty_adjust)) {
+          if (v !== 0) clean[k] = v;
         }
-        if (Object.keys(clean).length > 0) next.qty_markup = clean;
-        else delete next.qty_markup;
+        if (Object.keys(clean).length > 0) next.qty_adjust = clean;
+        else delete next.qty_adjust;
       } else {
-        delete next.qty_markup;
+        delete next.qty_adjust;
       }
       await sb.from('products').update({ pricing_table: next }).eq('id', id);
     }

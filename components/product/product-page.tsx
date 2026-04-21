@@ -402,13 +402,11 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         const tier = snapToTier(useQty, comboTiers);
         const key = `${axisPrefix}:${tier}`;
         const baseTablePrice = pt.prices[key] ?? 0;
-        // Admin-editable per-tier markup (multiplier). Applied BEFORE
-        // per-unit scaling + monotonicity floor so all downstream maths
-        // use the adjusted price.
-        const markup = pt.qty_markup?.[String(tier)];
-        const tablePrice = markup && markup > 0
-          ? Math.round(baseTablePrice * markup)
-          : baseTablePrice;
+        // Admin-editable per-tier $ offset (cents, signed). Applied
+        // BEFORE per-unit scaling + monotonicity floor so all downstream
+        // maths use the adjusted price. Never drops below 0.
+        const adjustCents = pt.qty_adjust?.[String(tier)] ?? 0;
+        const tablePrice = Math.max(0, baseTablePrice + adjustCents);
         if (tablePrice > 0) {
           const perUnit = pt.qty_mode === 'per_unit_at_tier_rate';
           const lineQty = perUnit ? useQty : tier;
@@ -426,11 +424,9 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               const nextT = comboTiers[i + 1];
               if (nextT == null) continue;
               const priorBase = pt.prices[`${axisPrefix}:${t}`] ?? 0;
-              const priorMarkup = pt.qty_markup?.[String(t)];
-              const priorAdj = priorMarkup && priorMarkup > 0
-                ? priorBase * priorMarkup
-                : priorBase;
-              const ratePerUnit = priorAdj / t;
+              const priorAdjCents = pt.qty_adjust?.[String(t)] ?? 0;
+              const priorTotal = Math.max(0, priorBase + priorAdjCents);
+              const ratePerUnit = priorTotal / t;
               floorCents = Math.max(
                 floorCents,
                 Math.round(ratePerUnit * (nextT - 1)),
