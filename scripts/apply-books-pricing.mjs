@@ -200,7 +200,11 @@ for (const size of ['a5', 'a4']) {
           if (perBook == null) continue;
           const content = sheetsPerBook * rate * effQty;
           const bind = perBook * qty;
-          const cents = Math.round((content + bind) * 100);
+          // pvpricelist rounds displayed prices UP to the next whole
+          // dollar (e.g. $912.30 → $913). Mirror that rounding here so
+          // the site price matches the price sheet the customer is
+          // quoted from.
+          const cents = Math.ceil(content + bind) * 100;
           // Digital key: method:binding:size:paper:cover:lam:pages:qty
           //   cover + lam are placeholders ('self'/'none') on digital —
           //   the cover/lam steps are hidden for method=digital so the
@@ -239,7 +243,7 @@ for (const size of ['a5', 'a4']) {
         const pages = parseInt(pageStr, 10);
         row.forEach((dollars, idx) => {
           const qty = OSS_QTYS[idx];
-          const cents = Math.round(dollars * 100);
+          const cents = Math.ceil(dollars) * 100;
           for (const lam of lams) {
             const key = ['offset', 'saddle', size, content, cover, lam, pages, qty].join(':');
             prices[key] = cents;
@@ -271,7 +275,7 @@ for (const size of ['a5', 'a4']) {
       const qty = parseInt(qtyStr, 10);
       for (const [pageStr, dollars] of Object.entries(row)) {
         const pages = parseInt(pageStr, 10);
-        const cents = Math.round(dollars * 100);
+        const cents = Math.ceil(dollars) * 100;
         for (const lam of lams) {
           // Perfect binding has no content-paper choice; use 'standard' placeholder.
           const key = ['offset', 'perfect', size, 'standard', '260', lam, pages, qty].join(':');
