@@ -187,3 +187,73 @@ export async function removeBundleGiftItem(bundleId: string, giftProductId: stri
   revalidatePath(`/bundle/[slug]`, 'layout');
   return { ok: true as const };
 }
+
+// ---------------------------------------------------------------------------
+// Materialise a bundle's gift components into gift_order_items for a given
+// order. Used by staff when converting a WhatsApp bundle order into fulfilment
+// rows (or by a future cart flow). Each entry links a pre-uploaded source +
+// preview asset to the corresponding bundle_gift_items row.
+// ---------------------------------------------------------------------------
+
+const MaterialiseSchema = z.object({
+  order_id: z.string().uuid(),
+  bundle_id: z.string().uuid(),
+  uploads: z.array(z.object({
+    gift_product_id: z.string().uuid(),
+    source_asset_id: z.string().uuid().nullable(),
+    preview_asset_id: z.string().uuid().nullable(),
+  })),
+});
+
+export async function materialiseBundleGiftOrderItems(input: z.input<typeof MaterialiseSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false as const, error: e?.message ?? 'Forbidden' }; }
+  const parsed = MaterialiseSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0].message };
+  const sb = adminClient();
+
+  // Load the bundle's gift items + referenced gift products
+  const { data: items, error: liErr } = await sb
+    .from('bundle_gift_items')
+    .select(`
+      gift_product_id, variant_id, prompt_id, template_id, pipeline_id, override_qty,
+      gift_product:gift_products(id, mode),
+      variant:gift_product_variants(name, base_price_cents)
+    `)
+    .eq('bundle_id', parsed.data.bundle_id);
+  if (liErr) return { ok: false as const, error: liErr.message };
+
+  const uploadsByGift = new Map(parsed.data.uploads.map((u) => [u.gift_product_id, u]));
+  const rowsToInsert: any[] = [];
+
+  for (const it of (items ?? []) as any[]) {
+    const up = uploadsByGift.get(it.gift_product_id);
+    const gp = Array.isArray(it.gift_product) ? it.gift_product[0] : it.gift_product;
+    const v = Array.isArray(it.variant) ? it.variant[0] : it.variant;
+    rowsToInsert.push({
+      order_id: parsed.data.order_id,
+      gift_product_id: it.gift_product_id,
+      variant_id: it.variant_id,
+      prompt_id: it.prompt_id,
+      template_id: it.template_id,
+      pipeline_id: it.pipeline_id,
+      bundle_id: parsed.data.bundle_id,
+      qty: it.override_qty ?? 1,
+      unit_price_cents: 0,
+      line_total_cents: 0,
+      source_asset_id: up?.source_asset_id ?? null,
+      preview_asset_id: up?.preview_asset_id ?? null,
+      mode: gp?.mode ?? 'photo-resize',
+      variant_name_snapshot: v?.name ?? null,
+      variant_price_snapshot_cents: 0,
+      production_status: 'pending',
+    });
+  }
+
+  if (rowsToInsert.length === 0) return { ok: true as const, inserted: 0 };
+
+  const { error: insErr } = await sb.from('gift_order_items').insert(rowsToInsert);
+  if (insErr) return { ok: false as const, error: insErr.message };
+
+  revalidatePath('/admin/gifts/orders');
+  return { ok: true as const, inserted: rowsToInsert.length };
+}
