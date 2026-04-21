@@ -478,36 +478,54 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
 }
 
 /** Configurator editor — redesigned for clarity */
-/** show_if in the DB can be a single clause or an array of clauses (AND).
- *  The admin UI works in array form; we normalize on load and collapse
- *  back to the simpler shape on save so a single-condition rule keeps
- *  its compact on-disk form. `value` can also be a string[] (OR-match);
- *  the admin only edits the first item but preserves the array on pass-
- *  through saves of arrays it didn't touch. */
-type ShowIfClause = { step: string; value: string };
-function normalizeShowIf(raw: unknown): ShowIfClause[] {
+/** show_if in the DB supports two axes:
+ *    • multiple clauses — AND across different steps (all must match).
+ *    • `value` as string[] — OR within a single step's options.
+ *
+ *  The admin UI models each row as one step + N selected values (OR),
+ *  and each row is AND-combined. Because AND-ing two clauses on the
+ *  *same* step is logically impossible (a step only takes one value),
+ *  normalizeShowIf merges same-step clauses into one OR clause on load
+ *  — this auto-heals rules that were saved as multiple same-step rows
+ *  before the multi-value UI existed. On save we collapse back to the
+ *  smallest on-disk shape (scalar vs array, object vs array of objects).
+ */
+type ShowIfClauseDb = { step: string; value: string | string[] };
+type ShowIfEditorClause = { step: string; values: string[] };
+function normalizeShowIf(raw: unknown): ShowIfEditorClause[] {
   if (!raw) return [];
   const arr = Array.isArray(raw) ? raw : [raw];
-  const out: ShowIfClause[] = [];
+  const byStep = new Map<string, string[]>();
+  const order: string[] = [];
   for (const c of arr) {
     if (!c || typeof c !== 'object') continue;
     const step = (c as any).step;
-    const rawVal = (c as any).value;
     if (typeof step !== 'string') continue;
-    const value = Array.isArray(rawVal) ? (rawVal[0] ?? '') : rawVal;
-    if (typeof value !== 'string') continue;
-    out.push({ step, value });
+    const rawVal = (c as any).value;
+    const vals = Array.isArray(rawVal)
+      ? rawVal.filter((v): v is string => typeof v === 'string')
+      : typeof rawVal === 'string' ? [rawVal] : [];
+    if (vals.length === 0) continue;
+    if (!byStep.has(step)) {
+      byStep.set(step, []);
+      order.push(step);
+    }
+    const existing = byStep.get(step)!;
+    for (const v of vals) if (!existing.includes(v)) existing.push(v);
   }
-  return out;
+  return order.map((step) => ({ step, values: byStep.get(step)! }));
 }
 /** Collapse editor state back to the smallest DB-friendly shape. */
 function denormalizeShowIf(
-  clauses: ShowIfClause[],
-): ShowIfClause | ShowIfClause[] | null {
-  const valid = clauses.filter((c) => c.step && c.value);
+  clauses: ShowIfEditorClause[],
+): ShowIfClauseDb | ShowIfClauseDb[] | null {
+  const valid = clauses.filter((c) => c.step && c.values.length > 0);
   if (valid.length === 0) return null;
-  if (valid.length === 1) return valid[0];
-  return valid;
+  const db: ShowIfClauseDb[] = valid.map((c) => ({
+    step: c.step,
+    value: c.values.length === 1 ? c.values[0] : c.values,
+  }));
+  return db.length === 1 ? db[0] : db;
 }
 
 function ShowIfEditor({
@@ -519,30 +537,43 @@ function ShowIfEditor({
 }: {
   label: string;
   hint: string;
-  value: ShowIfClause[];
+  value: ShowIfEditorClause[];
   otherSteps: ProductDetail['configurator'];
-  onChange: (next: ShowIfClause | ShowIfClause[] | null) => void;
+  onChange: (next: ShowIfClauseDb | ShowIfClauseDb[] | null) => void;
 }) {
   // Only swatch/select steps can be gated on — they're the ones with
   // pickable option slugs that make sense as a show_if value.
   const candidateSteps = otherSteps.filter((s) => s.type === 'swatch' || s.type === 'select');
   const clauses = value;
 
-  function commit(next: ShowIfClause[]) {
+  function commit(next: ShowIfEditorClause[]) {
     onChange(denormalizeShowIf(next));
   }
-  function updateClause(i: number, patch: Partial<ShowIfClause>) {
+  function updateClause(i: number, patch: Partial<ShowIfEditorClause>) {
     commit(clauses.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   }
   function removeClause(i: number) {
     commit(clauses.filter((_, j) => j !== i));
   }
+  function toggleValue(i: number, slug: string) {
+    const clause = clauses[i];
+    if (!clause) return;
+    const next = clause.values.includes(slug)
+      ? clause.values.filter((v) => v !== slug)
+      : [...clause.values, slug];
+    updateClause(i, { values: next });
+  }
   function addClause() {
-    const target = candidateSteps[0];
+    // Pick the first step not already used, so two rows can't target
+    // the same step (that combo is AND-impossible; use multi-value
+    // within one row instead).
+    const usedSteps = new Set(clauses.map((c) => c.step));
+    const target = candidateSteps.find((s) => !usedSteps.has(s.step_id));
     if (!target) return;
     const firstOptSlug = target.options?.[0]?.slug ?? '';
-    commit([...clauses, { step: target.step_id, value: firstOptSlug }]);
+    commit([...clauses, { step: target.step_id, values: firstOptSlug ? [firstOptSlug] : [] }]);
   }
+  const allStepsUsed = clauses.length >= candidateSteps.length;
 
   return (
     <div className="rounded-md border border-dashed border-neutral-300 bg-neutral-50 p-3">
@@ -552,7 +583,7 @@ function ShowIfEditor({
       <p className="mb-3 text-[11px] leading-snug text-neutral-500">
         {hint}
         {clauses.length > 1 && (
-          <span className="ml-1 font-semibold text-neutral-700">All conditions must match (AND).</span>
+          <span className="ml-1 font-semibold text-neutral-700">Different rows = AND. Multiple values in a row = OR.</span>
         )}
       </p>
 
@@ -569,57 +600,86 @@ function ShowIfEditor({
         <div className="space-y-2">
           {clauses.map((clause, i) => {
             const picked = candidateSteps.find((s) => s.step_id === clause.step);
+            // For the step dropdown, offer this row's current step plus
+            // any others not already used by another row.
+            const usedElsewhere = new Set(
+              clauses.filter((_, j) => j !== i).map((c) => c.step),
+            );
+            const availableSteps = candidateSteps.filter(
+              (s) => s.step_id === clause.step || !usedElsewhere.has(s.step_id),
+            );
             return (
-              <div key={i} className="flex items-end gap-2 rounded-md bg-white p-2 ring-1 ring-neutral-200">
-                <label className="block flex-1">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
-                    Depends on step
-                  </span>
-                  <select
-                    value={clause.step}
-                    onChange={(e) => {
-                      const step = e.target.value;
-                      const target = candidateSteps.find((s) => s.step_id === step);
-                      const firstOptSlug = target?.options?.[0]?.slug ?? '';
-                      updateClause(i, { step, value: firstOptSlug });
-                    }}
-                    className={inputCls}
+              <div key={i} className="rounded-md bg-white p-2 ring-1 ring-neutral-200">
+                <div className="flex items-start gap-2">
+                  <label className="block flex-1">
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                      Depends on step
+                    </span>
+                    <select
+                      value={clause.step}
+                      onChange={(e) => {
+                        const step = e.target.value;
+                        const target = candidateSteps.find((s) => s.step_id === step);
+                        const firstOptSlug = target?.options?.[0]?.slug ?? '';
+                        updateClause(i, { step, values: firstOptSlug ? [firstOptSlug] : [] });
+                      }}
+                      className={inputCls}
+                    >
+                      {availableSteps.map((s) => (
+                        <option key={s.step_id} value={s.step_id}>{s.label || s.step_id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeClause(i)}
+                    className="mt-4 shrink-0 rounded-md border border-neutral-300 bg-white px-2 py-2 text-neutral-500 hover:border-red-400 hover:text-red-600"
+                    title="Remove condition"
+                    aria-label="Remove condition"
                   >
-                    {candidateSteps.map((s) => (
-                      <option key={s.step_id} value={s.step_id}>{s.label || s.step_id}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block flex-1">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-neutral-600">
-                    When value is
-                  </span>
-                  <select
-                    value={clause.value}
-                    onChange={(e) => updateClause(i, { value: e.target.value })}
-                    className={inputCls}
-                  >
-                    {(picked?.options ?? []).map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.label || o.slug}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeClause(i)}
-                  className="shrink-0 rounded-md border border-neutral-300 bg-white px-2 py-2 text-neutral-500 hover:border-red-400 hover:text-red-600"
-                  title="Remove condition"
-                  aria-label="Remove condition"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <div className="mb-1 flex items-baseline justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-600">
+                      When value is
+                    </span>
+                    {clause.values.length > 1 && (
+                      <span className="text-[10px] font-semibold text-neutral-500">OR — any selected</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(picked?.options ?? []).map((o) => {
+                      const active = clause.values.includes(o.slug);
+                      return (
+                        <button
+                          key={o.slug}
+                          type="button"
+                          onClick={() => toggleValue(i, o.slug)}
+                          className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                            active
+                              ? 'border-ink bg-ink text-white'
+                              : 'border-neutral-300 bg-white text-neutral-700 hover:border-neutral-500'
+                          }`}
+                        >
+                          {o.label || o.slug}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {clause.values.length === 0 && (
+                    <p className="mt-1 text-[10px] italic text-red-600">Pick at least one value.</p>
+                  )}
+                </div>
               </div>
             );
           })}
           <button
             type="button"
             onClick={addClause}
-            disabled={candidateSteps.length === 0}
+            disabled={allStepsUsed}
+            title={allStepsUsed ? 'All available steps are already used — add more values within an existing row instead.' : undefined}
             className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             + Add condition
@@ -1019,7 +1079,7 @@ function OptionCard({
   otherSteps: ProductDetail['configurator'];
   onDragStart?: () => void;
   onDragEnd?: () => void;
-  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null; show_if: ShowIfClause | ShowIfClause[] | null }>) => void;
+  onChange: (patch: Partial<{ slug: string; label: string; note: string | null; price_formula: string | null; image_url: string | null; lead_time_days: number | null; print_mode: string | null; show_if: ShowIfClauseDb | ShowIfClauseDb[] | null }>) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(!option.label || option.label === 'New option');
