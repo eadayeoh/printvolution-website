@@ -57,6 +57,9 @@ export type GiftProduct = {
   seo_body?: string | null;
   seo_magazine?: unknown;
   faqs?: Array<{ question: string; answer: string }> | null;
+  // Migration 0035 additions
+  pipeline_id?: string | null;
+  source_retention_days?: number;
 };
 
 export type GiftTemplateZoneBase = {
@@ -137,6 +140,62 @@ export type GiftCropRect = {
 export function giftFromPrice(p: Pick<GiftProduct, 'base_price_cents' | 'price_tiers'>): number {
   let min = p.base_price_cents;
   for (const t of p.price_tiers ?? []) {
+    if (typeof t.price_cents === 'number' && (min === 0 || t.price_cents < min)) min = t.price_cents;
+  }
+  return min;
+}
+
+// ---------------------------------------------------------------------------
+// Pipelines (migration 0033) + product/prompt extensions (migration 0035)
+// ---------------------------------------------------------------------------
+
+export type GiftPipelineKind = GiftMode;
+
+export type GiftPipeline = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  kind: GiftPipelineKind;
+  ai_endpoint_url: string | null;
+  ai_model_slug: string | null;
+  default_params: Record<string, unknown>;
+  thumbnail_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GiftStyle = 'line-art' | 'realistic';
+
+export const GIFT_STYLE_LABEL: Record<GiftStyle, string> = {
+  'line-art': 'Line Art',
+  'realistic': 'Realistic',
+};
+
+// ---------------------------------------------------------------------------
+// Variants (migration 0034) — per-product physical bases
+// ---------------------------------------------------------------------------
+
+export type GiftProductVariant = {
+  id: string;
+  gift_product_id: string;
+  slug: string;
+  name: string;
+  features: string[];
+  mockup_url: string;
+  mockup_area: { x: number; y: number; width: number; height: number };
+  variant_thumbnail_url: string | null;
+  base_price_cents: number;
+  price_tiers: GiftPriceTier[];
+  display_order: number;
+  is_active: boolean;
+};
+
+/** Minimum price display for a variant (parallels giftFromPrice). */
+export function variantFromPrice(v: Pick<GiftProductVariant, 'base_price_cents' | 'price_tiers'>): number {
+  let min = v.base_price_cents;
+  for (const t of v.price_tiers ?? []) {
     if (typeof t.price_cents === 'number' && (min === 0 || t.price_cents < min)) min = t.price_cents;
   }
   return min;
