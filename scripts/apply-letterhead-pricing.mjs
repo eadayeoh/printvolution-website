@@ -39,6 +39,11 @@ const H = {
 const PRODUCT_ID = '82cc01ba-a489-40cd-bf68-29b209a9d81a'; // letterhead
 
 // Price table from the user — qty → dollars (identical for both gsms).
+//
+// 6,000 tier overridden from the source list's \$287.80 (which produced
+// a strange \$0.05/sheet unit price, higher than both 5,000 and 7,000
+// neighbours) to \$240 flat — user correction so the 6k tier lines up
+// at \$0.04/sheet like the rest of the mid-volume tiers.
 const PRICE_BY_QTY = {
   300: 59.50,
   500: 65.10,
@@ -47,7 +52,7 @@ const PRICE_BY_QTY = {
   3000: 147.20,
   4000: 173.60,
   5000: 211.40,
-  6000: 287.80,
+  6000: 240.00,   // was 287.80 — adjusted per user: 6k unit = $0.04
   7000: 302.90,
   8000: 318.00,
   9000: 354.80,
