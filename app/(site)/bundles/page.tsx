@@ -38,9 +38,17 @@ export default async function BundlesPage() {
                 href={`/bundle/${b.slug}`}
                 className="group rounded-lg border-2 border-ink bg-white p-8 shadow-brand transition-all hover:shadow-brand-lg"
               >
-                {b.tagline && (
-                  <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">{b.tagline}</div>
-                )}
+                <div className="mb-2 flex items-center gap-2">
+                  {b.tagline && (
+                    <div className="text-xs font-bold uppercase tracking-wider text-pink">{b.tagline}</div>
+                  )}
+                  {b.type_badge === 'gifts' && (
+                    <span className="rounded bg-pink/10 px-2 py-0.5 text-[10px] font-bold uppercase text-pink">● Gifts</span>
+                  )}
+                  {b.type_badge === 'mixed' && (
+                    <span className="rounded bg-yellow-brand px-2 py-0.5 text-[10px] font-bold uppercase text-ink">● Mixed</span>
+                  )}
+                </div>
                 <h3 className="mb-3 text-2xl font-black text-ink group-hover:text-pink">{b.name}</h3>
                 {b.description && <p className="mb-6 text-sm text-neutral-600">{b.description}</p>}
 

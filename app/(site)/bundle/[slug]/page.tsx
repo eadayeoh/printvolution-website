@@ -5,6 +5,7 @@ import { getBundleBySlug } from '@/lib/data/bundles';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { formatSGD } from '@/lib/utils';
 import { BundleFAQ } from '@/components/product/bundle-faq';
+import { BundleGiftConfig } from '@/components/bundle/bundle-gift-config';
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const bundle = await getBundleBySlug(params.slug);
@@ -94,7 +95,7 @@ export default async function BundlePage({ params }: { params: { slug: string } 
         <div className="mx-auto max-w-5xl">
           <div className="mb-10">
             <div className="mb-2 text-xs font-bold uppercase tracking-wider text-pink">● What you get</div>
-            <h2 className="text-3xl font-black text-ink lg:text-4xl">{bundle.products.length} products, one price</h2>
+            <h2 className="text-3xl font-black text-ink lg:text-4xl">{bundle.products.length + bundle.giftComponents.length} items, one price</h2>
           </div>
 
           <div className="space-y-4">
@@ -139,6 +140,35 @@ export default async function BundlePage({ params }: { params: { slug: string } 
                 </div>
               </div>
             ))}
+
+            {/* Gift components rendered as cards too */}
+            {bundle.giftComponents.map((g, i) => (
+              <div
+                key={`gift-${g.gift_product_id}`}
+                className="flex flex-col gap-6 rounded-lg border-2 border-pink bg-white p-6 shadow-brand md:flex-row md:items-start lg:p-8"
+              >
+                <div className="flex items-center gap-4 md:flex-col md:items-start">
+                  <div className="text-xs font-black text-pink">{String(bundle.products.length + i + 1).padStart(2, '0')}</div>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-pink/10 text-3xl md:h-28 md:w-28 md:text-5xl">
+                    🎨
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <h3 className="text-xl font-black text-ink lg:text-2xl">{g.gift_product_name}</h3>
+                    {g.variant_name && (
+                      <span className="rounded bg-neutral-100 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-700">{g.variant_name}</span>
+                    )}
+                    <span className="rounded bg-pink/10 px-2 py-0.5 text-[10px] font-bold uppercase text-pink">× {g.override_qty}</span>
+                    <span className="rounded bg-yellow-brand px-2 py-0.5 text-[10px] font-bold uppercase text-ink">Personalised</span>
+                  </div>
+                  <p className="mb-3 text-sm text-neutral-700">
+                    We personalise this with your photo. {g.prompt_name && <>Pre-set style: <strong>{g.prompt_name}</strong>.</>}{' '}
+                    Scroll down to upload and preview.
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Total recap */}
@@ -161,6 +191,15 @@ export default async function BundlePage({ params }: { params: { slug: string } 
           </div>
         </div>
       </section>
+
+      {/* Gift components — per-gift upload + live preview */}
+      {bundle.giftComponents.length > 0 && (
+        <section className="px-6 pb-8 lg:px-12">
+          <div className="mx-auto max-w-5xl">
+            <BundleGiftConfig bundleName={bundle.name} giftComponents={bundle.giftComponents} />
+          </div>
+        </section>
+      )}
 
       {/* Why */}
       {bundle.whys.length > 0 && (
