@@ -160,8 +160,20 @@ const axes = {
     { slug: '5ply', label: '5 Ply', note: 'Original + 4 copies' },
   ],
   colour: [
-    { slug: 'c1', label: '1 Standard Colour', note: 'Single side printing' },
-    { slug: 'c2', label: '2 Standard Colour', note: 'Single side printing' },
+    { slug: 'c1', label: '1 Standard Colour', note: 'Single side printing · pick 1 ink colour below' },
+    { slug: 'c2', label: '2 Standard Colour', note: 'Single side printing · pick 2 ink colours below' },
+  ],
+  // e-print NCR standard ink colours. These are specification-only —
+  // they don't affect the price, only tell the pressroom which ink
+  // to load. PT4/PT5/PT7 are the most commonly picked.
+  ink: [
+    { slug: 'pt1', label: 'PT1 — Royal Blue', swatch: '#2a2a8a' },
+    { slug: 'pt2', label: 'PT2 — Cyan',       swatch: '#4fb7e8' },
+    { slug: 'pt3', label: 'PT3 — Bronze Red', swatch: '#d3382a' },
+    { slug: 'pt4', label: 'PT4 — Magenta',    swatch: '#d93e86' },
+    { slug: 'pt5', label: 'PT5 — Orange 021', swatch: '#e88a3a' },
+    { slug: 'pt6', label: 'PT6 — Green',      swatch: '#3b9f5e' },
+    { slug: 'pt7', label: 'PT7 — Black',      swatch: '#111111' },
   ],
 };
 
@@ -215,8 +227,21 @@ const steps = [
     step_id: 'colour', step_order: 2, label: 'Print Colour', type: 'swatch', required: true,
     options: axes.colour, show_if: null, step_config: {},
   },
+  // Ink colour picker steps — spec only, don't affect price. `ink_1` is
+  // always shown; `ink_2` appears only when the customer picked the
+  // 2-colour price option.
   {
-    step_id: 'qty', step_order: 3, label: 'Quantity (books)', type: 'qty', required: false,
+    step_id: 'ink_1', step_order: 3, label: 'Ink Colour #1', type: 'swatch', required: true,
+    options: axes.ink, show_if: null, step_config: {},
+  },
+  {
+    step_id: 'ink_2', step_order: 4, label: 'Ink Colour #2', type: 'swatch', required: true,
+    options: axes.ink,
+    show_if: { step: 'colour', value: 'c2' },
+    step_config: {},
+  },
+  {
+    step_id: 'qty', step_order: 5, label: 'Quantity (books)', type: 'qty', required: false,
     options: [], show_if: null,
     step_config: { min: 10, step: 1, presets: [10, 50, 100, 200, 500], note: 'Each book contains 50 numbered sets. Numbering is included.', discount_note: null, labelMultiplier: null },
   },
