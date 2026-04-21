@@ -1,27 +1,21 @@
 // Builds the Books product configurator + pricing_table.prices from the
-// pvpricelist snapshot. Follows the flyers pattern: a `method` toggle
-// (Digital / Offset) with parallel step_id paths gated via show_if,
-// using `axis_order_by_method` for per-path price key composition.
+// pvpricelist snapshot. Strict mapping — only the axes that pvpricelist
+// actually exposes, no invented options.
 //
 // Sources (pvpricelist):
-//   • Digital    → `books` tab: BM (mono) and PM (colour) per-sheet
-//                  rate tiers + SADDLE_TIERS / PERFECT_TIERS binding
-//                  cost tiers.
+//   • Digital    → `books` tab: PM (colour) per-sheet rate tiers
+//                  + SADDLE_TIERS / PERFECT_TIERS binding cost tiers.
+//                  Customer picks paper gsm (100/150/200/250/300/350);
+//                  ink is colour-only (no mono axis upstream), cover
+//                  isn't separately priced so no cover/lam step on
+//                  digital (price key falls back to `self:none`).
 //   • Offset SS  → `saddleStitch` tab: OSS_TABLES keyed
 //                  `${size}-${content}-${cover}` → {pages: [qty-tier prices]}.
+//                  Covers: self / 260 / 310. Lamination on 260/310
+//                  bundled as "Gloss or Matt Lam" (single price point).
 //   • Offset PB  → `perfectBinding` tab: PB_${size}_${finish}_260 →
-//                  {qty: {pages: dollars}}.  Only 260GSM covers exist
-//                  upstream (310GSM omitted).
-//
-// Cover and lamination are separate steps — customer picks the cover
-// paper first, then the finish. Steps appear before inner-paper so the
-// form reads top-down in the natural "outside-in" book anatomy order:
-// method → binding → size → cover → lamination → inner paper → pages → qty.
-//
-// Two '260' cover slugs (`260_pb`, `260_ss`) exist because perfect and
-// saddle price 260gsm cover differently upstream; the customer sees
-// identical labels ("260gsm Art Card") — only one is ever visible
-// depending on their binding choice.
+//                  {qty: {pages: dollars}}. Only 260GSM cover, two
+//                  finishes (Gloss/Matt Lam vs Matt Lam + Spot UV).
 
 import fs from 'node:fs';
 
@@ -60,14 +54,21 @@ const snap = JSON.parse(
 const pvp = snap.rates;
 
 // ────────────────────────────────────────────────────────────────
-// CONSTANTS
+// CONSTANTS — sourced directly from pvpricelist
 // ────────────────────────────────────────────────────────────────
 
-const SADDLE_PAGES = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68];
-const PERFECT_PAGES = [32, 48, 64, 80, 96, 128, 160, 200];
-
-const QTY_DIGITAL = [3, 5, 10, 20, 30, 50, 100, 200, 300];
-const QTY_OFFSET = [50, 100, 200, 300, 500, 700, 1000, 2000, 3000, 4000, 5000];
+const SADDLE_PAGES = pvp.saddleStitch.OSS_PP_OPTIONS; // [8, 12, ..., 68]
+const PERFECT_PAGES = pvp.perfectBinding.PB_PP_COLS;   // [32, 48, ..., 200]
+const DIGITAL_GSMS = ['100', '150', '200', '250', '300', '350']; // PM keys
+const OSS_QTYS = pvp.saddleStitch.OSS_QTYS;            // [100, 300, ..., 5000]
+const PB_QTYS = pvp.perfectBinding.PB_QTY_OPTIONS;     // [50, 100, ..., 5000]
+// Digital qty limits from the binding tier tables themselves.
+const DIGITAL_SADDLE_MAX = Math.max(
+  ...pvp.books.SADDLE_TIERS.map((t) => t.toBooks),
+); // 300
+const DIGITAL_PERFECT_MAX = Math.max(
+  ...pvp.books.PERFECT_TIERS.map((t) => t.toBooks),
+); // 50
 
 // ────────────────────────────────────────────────────────────────
 // AXES
@@ -75,14 +76,11 @@ const QTY_OFFSET = [50, 100, 200, 300, 500, 700, 1000, 2000, 3000, 4000, 5000];
 
 const axes = {
   method: [
-    // Per-option lead_time_days + print_mode overrides — matches the
-    // flyers pattern so the "Ready by" chip on the product page picks
-    // the right turnaround based on the customer's method choice.
-    { slug: 'digital', label: 'Digital', note: 'Small runs (3–300 books) · 1 working day', print_mode: 'Digital', lead_time_days: 1 },
+    { slug: 'digital', label: 'Digital', note: 'Small runs · 1 working day', print_mode: 'Digital', lead_time_days: 1 },
     { slug: 'offset', label: 'Offset', note: 'Bulk runs (50+ books) · 7 working days', print_mode: 'Offset', lead_time_days: 7 },
   ],
   binding: [
-    { slug: 'saddle', label: 'Saddle Stitch', note: 'Stapled spine · up to ~68 pages' },
+    { slug: 'saddle', label: 'Saddle Stitch', note: 'Stapled spine · up to 68 pages' },
     { slug: 'perfect', label: 'Perfect Bound', note: 'Glued square spine · 32–200 pages' },
   ],
   size: [
@@ -93,81 +91,54 @@ const axes = {
     { slug: 'a5', label: 'A5 (148 × 210mm)', note: 'A4 open · most common' },
     { slug: 'a4', label: 'A4 (210 × 297mm)', note: 'A3 open' },
   ],
-  cover: [
-    {
-      slug: 'self',
-      label: 'Self-cover',
-      note: 'Same paper as inner pages',
-      show_if: { step: 'binding', value: 'saddle' },
-    },
-    {
-      slug: '260_pb',
-      label: '260gsm Art Card',
-      note: 'Laminated cover — the standard perfect-bound look',
-      show_if: { step: 'binding', value: 'perfect' },
-    },
-    {
-      slug: '260_ss',
-      label: '260gsm Art Card',
-      note: 'Laminated cover',
-      show_if: [{ step: 'binding', value: 'saddle' }, { step: 'method', value: 'offset' }],
-    },
-    {
-      slug: '310_ss',
-      label: '310gsm Art Card',
-      note: 'Heaviest cover option',
-      show_if: [{ step: 'binding', value: 'saddle' }, { step: 'method', value: 'offset' }],
-    },
-  ],
-  lamination: [
-    {
-      slug: 'none',
-      label: 'None',
-      note: 'No lamination — only for self-cover',
-      show_if: { step: 'cover', value: 'self' },
-    },
-    {
-      slug: 'gloss_matt',
-      label: 'Gloss or Matt Lam',
-      note: 'Standard lamination · same price either finish',
-      show_if: { step: 'cover', value: ['260_pb', '260_ss', '310_ss'] },
-    },
-    {
-      slug: 'matt_spot_uv',
-      label: 'Matt Lam + Spot UV',
-      note: 'Matt base with gloss highlights on artwork areas',
-      // Only offered on perfect-bound offset (the only combo priced
-      // upstream with Spot UV).
-      show_if: [
-        { step: 'cover', value: '260_pb' },
-        { step: 'method', value: 'offset' },
-      ],
-    },
-  ],
-  paper_digital: [
-    { slug: '100', label: '100gsm · standard text stock' },
-    { slug: '150', label: '150gsm · heavier, less show-through' },
-  ],
+  // Digital inner paper — all 6 gsms priced in pvpricelist's PM (colour) table.
+  paper_digital: DIGITAL_GSMS.map((g) => ({
+    slug: g,
+    label: `${g}gsm`,
+    note: g === '100' ? 'Standard text stock' : g === '150' ? 'Heavier, less show-through' : undefined,
+  })),
+  // Offset saddle content — matches OSS_TABLES key middle segment.
+  // The 'standard' slug is the key placeholder for offset perfect (no
+  // content choice exists upstream) so the axis key slot is populated.
   content: [
     { slug: '128', label: '128gsm Art Paper', note: 'Standard', show_if: { step: 'binding', value: 'saddle' } },
     { slug: '157', label: '157gsm Art Paper', note: 'Heavier, more premium feel', show_if: { step: 'binding', value: 'saddle' } },
     { slug: 'standard', label: 'Standard book paper', note: 'Included in perfect-bound runs', show_if: { step: 'binding', value: 'perfect' } },
   ],
+  // Cover step is offset-only; digital has no cover axis in pvpricelist.
+  cover: [
+    { slug: 'self', label: 'Self-cover', note: 'Same paper as inner pages', show_if: { step: 'binding', value: 'saddle' } },
+    { slug: '260', label: '260gsm Art Card' },
+    { slug: '310', label: '310gsm Art Card', note: 'Heaviest cover option', show_if: { step: 'binding', value: 'saddle' } },
+  ],
+  // Lamination step is offset-only. Saddle offers only "Gloss or Matt
+  // Lam" (same price on both finishes per pvpricelist). Perfect adds
+  // Spot UV as a second option.
+  lamination: [
+    { slug: 'none', label: 'None', note: 'No lamination on self-cover', show_if: { step: 'cover', value: 'self' } },
+    {
+      slug: 'lam',
+      label: 'Gloss or Matt Lam',
+      note: 'Standard lamination · same price either finish',
+      show_if: { step: 'cover', value: ['260', '310'] },
+    },
+    {
+      slug: 'suv',
+      label: 'Matt Lam + Spot UV',
+      note: 'Matt base with gloss highlights on artwork',
+      show_if: [{ step: 'cover', value: '260' }, { step: 'binding', value: 'perfect' }],
+    },
+  ],
   pages: [
-    ...SADDLE_PAGES.map((p) => ({
-      slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'saddle' },
-    })),
-    ...PERFECT_PAGES.map((p) => ({
-      slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'perfect' },
-    })),
+    ...SADDLE_PAGES.map((p) => ({ slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'saddle' } })),
+    ...PERFECT_PAGES.map((p) => ({ slug: String(p), label: `${p} pages`, show_if: { step: 'binding', value: 'perfect' } })),
   ],
 };
 
 // ────────────────────────────────────────────────────────────────
-// DIGITAL PRICING
+// DIGITAL PRICING — colour-only (PM), no cover/lamination axis.
 // ────────────────────────────────────────────────────────────────
 
-const bm = pvp.books.BM;
 const pm = pvp.books.PM;
 const saddleTiers = pvp.books.SADDLE_TIERS;
 const perfectTiers = pvp.books.PERFECT_TIERS;
@@ -184,12 +155,13 @@ function bindingPerBook(tiers, qty) {
   return null;
 }
 
-const prices = {};
+// Digital qty presets — union of everything <=300 for saddle + <=50 for
+// perfect. The snap-to-tier logic filters to valid combos at runtime.
+const QTY_DIGITAL = [3, 5, 10, 20, 30, 50, 100, 200, 300];
 
-// Digital is always full-colour — customer has no mono option on the
-// pvpricelist UI, so expose PM tiers only. BM is ignored.
+const prices = {};
 for (const size of ['a5', 'a4']) {
-  for (const gsm of ['100', '150']) {
+  for (const gsm of DIGITAL_GSMS) {
     const paperKey = `r${gsm}d`; // PM colour double-sided
     const paperTiers = pm[paperKey];
     if (!paperTiers) continue;
@@ -197,12 +169,12 @@ for (const size of ['a5', 'a4']) {
     for (const binding of ['saddle', 'perfect']) {
       const pagesList = binding === 'saddle' ? SADDLE_PAGES : PERFECT_PAGES;
       const bindingTiers = binding === 'saddle' ? saddleTiers : perfectTiers;
-      const cover = binding === 'saddle' ? 'self' : '260_pb';
-      const lam = binding === 'saddle' ? 'none' : 'gloss_matt';
+      const qtyCap = binding === 'saddle' ? DIGITAL_SADDLE_MAX : DIGITAL_PERFECT_MAX;
 
       for (const pages of pagesList) {
         const sheetsPerBook = pages / 2;
         for (const qty of QTY_DIGITAL) {
+          if (qty > qtyCap) continue;
           const { rate, effQty } = tierRate(paperTiers, qty);
           const perBook = bindingPerBook(bindingTiers, qty);
           if (perBook == null) continue;
@@ -210,7 +182,10 @@ for (const size of ['a5', 'a4']) {
           const bind = perBook * qty;
           const cents = Math.round((content + bind) * 100);
           // Digital key: method:binding:size:paper:cover:lam:pages:qty
-          const key = ['digital', binding, size, gsm, cover, lam, pages, qty].join(':');
+          //   cover + lam are placeholders ('self'/'none') on digital —
+          //   the cover/lam steps are hidden for method=digital so the
+          //   auto-reset picks the first option as each step's value.
+          const key = ['digital', binding, size, gsm, 'self', 'none', pages, qty].join(':');
           prices[key] = cents;
         }
       }
@@ -223,14 +198,12 @@ console.log(`Computed ${Object.keys(prices).length} digital prices.`);
 // OFFSET SADDLE
 // ────────────────────────────────────────────────────────────────
 
-const ossQtys = pvp.saddleStitch.OSS_QTYS;
 const ossTables = pvp.saddleStitch.OSS_TABLES;
-
-// Map from OSS table cover suffix → (cover_slug, lam_slug)
+// pvpricelist cover slug → (our cover, our lam)
 const SADDLE_COVER_MAP = {
   self: { cover: 'self', lam: 'none' },
-  '260': { cover: '260_ss', lam: 'gloss_matt' },
-  '310': { cover: '310_ss', lam: 'gloss_matt' },
+  '260': { cover: '260', lam: 'lam' },
+  '310': { cover: '310', lam: 'lam' },
 };
 
 let offsetSaddleCount = 0;
@@ -243,9 +216,8 @@ for (const size of ['a5', 'a4']) {
       for (const [pageStr, row] of Object.entries(tbl)) {
         const pages = parseInt(pageStr, 10);
         row.forEach((dollars, idx) => {
-          const qty = ossQtys[idx];
+          const qty = OSS_QTYS[idx];
           const cents = Math.round(dollars * 100);
-          // Offset key: method:binding:size:content:cover:lam:pages:qty
           const key = ['offset', 'saddle', size, content, cover, lam, pages, qty].join(':');
           prices[key] = cents;
           offsetSaddleCount++;
@@ -260,7 +232,7 @@ console.log(`Copied ${offsetSaddleCount} offset saddle prices.`);
 // OFFSET PERFECT
 // ────────────────────────────────────────────────────────────────
 
-const PERFECT_FINISH_MAP = { lam: 'gloss_matt', suv: 'matt_spot_uv' };
+const PERFECT_FINISH_MAP = { lam: 'lam', suv: 'suv' };
 
 let offsetPerfectCount = 0;
 for (const size of ['a5', 'a4']) {
@@ -273,7 +245,8 @@ for (const size of ['a5', 'a4']) {
       for (const [pageStr, dollars] of Object.entries(row)) {
         const pages = parseInt(pageStr, 10);
         const cents = Math.round(dollars * 100);
-        const key = ['offset', 'perfect', size, 'standard', '260_pb', lam, pages, qty].join(':');
+        // Perfect binding has no content-paper choice; use 'standard' placeholder.
+        const key = ['offset', 'perfect', size, 'standard', '260', lam, pages, qty].join(':');
         prices[key] = cents;
         offsetPerfectCount++;
       }
@@ -283,7 +256,7 @@ for (const size of ['a5', 'a4']) {
 console.log(`Copied ${offsetPerfectCount} offset perfect prices.`);
 console.log(`Total prices: ${Object.keys(prices).length}`);
 
-const qty_tiers = Array.from(new Set([...QTY_DIGITAL, ...QTY_OFFSET])).sort((a, b) => a - b);
+const qty_tiers = Array.from(new Set([...QTY_DIGITAL, ...OSS_QTYS, ...PB_QTYS])).sort((a, b) => a - b);
 
 // ────────────────────────────────────────────────────────────────
 // pricing_table
@@ -293,6 +266,9 @@ const pricingTable = {
   axes,
   axis_order: ['method', 'binding', 'size', 'paper_digital', 'cover', 'lamination', 'pages'],
   axis_order_by_method: {
+    // Cover/lam included in digital's axis_order too — they'll always
+    // read as 'self'/'none' from the hidden steps' auto-reset defaults,
+    // matching the placeholder slots in the generated digital keys.
     digital: ['method', 'binding', 'size', 'paper_digital', 'cover', 'lamination', 'pages'],
     offset: ['method', 'binding', 'size_offset', 'content', 'cover', 'lamination', 'pages'],
   },
@@ -324,11 +300,14 @@ const steps = [
   },
   {
     step_id: 'cover', step_order: 4, label: 'Cover', type: 'swatch', required: true,
-    options: axes.cover, show_if: null, step_config: {},
+    options: axes.cover,
+    // Hidden on digital — pvpricelist doesn't separately price a digital cover.
+    show_if: { step: 'method', value: 'offset' }, step_config: {},
   },
   {
     step_id: 'lamination', step_order: 5, label: 'Lamination', type: 'swatch', required: true,
-    options: axes.lamination, show_if: null, step_config: {},
+    options: axes.lamination,
+    show_if: { step: 'method', value: 'offset' }, step_config: {},
   },
   {
     step_id: 'paper_digital', step_order: 6, label: 'Inner Paper', type: 'swatch', required: true,
@@ -345,12 +324,12 @@ const steps = [
   {
     step_id: 'qty_digital', step_order: 9, label: 'Quantity (books)', type: 'qty', required: false,
     options: [], show_if: { step: 'method', value: 'digital' },
-    step_config: { min: 3, step: 1, presets: [3, 5, 10, 20, 50, 100], note: null, discount_note: null, labelMultiplier: null },
+    step_config: { min: 3, step: 1, presets: [3, 5, 10, 20, 50, 100], note: 'Max 50 for perfect bound, 300 for saddle stitch', discount_note: null, labelMultiplier: null },
   },
   {
     step_id: 'qty_offset', step_order: 10, label: 'Quantity (books)', type: 'qty', required: false,
     options: [], show_if: { step: 'method', value: 'offset' },
-    step_config: { min: 50, step: 1, presets: [50, 100, 300, 500, 1000, 2000], note: null, discount_note: null, labelMultiplier: null },
+    step_config: { min: 50, step: 1, presets: [100, 300, 500, 1000, 2000], note: null, discount_note: null, labelMultiplier: null },
   },
 ];
 
@@ -386,17 +365,19 @@ async function main() {
 
   const spots = [
     { key: ['digital', 'saddle', 'a5', '100', 'self', 'none', 16, 10].join(':'),
-      desc: 'Digital saddle A5 100gsm self 16pp × 10' },
-    { key: ['digital', 'perfect', 'a4', '150', '260_pb', 'gloss_matt', 128, 50].join(':'),
-      desc: 'Digital perfect A4 150gsm 260 lam 128pp × 50' },
+      desc: 'Digital saddle A5 100gsm 16pp × 10' },
+    { key: ['digital', 'saddle', 'a4', '300', 'self', 'none', 32, 50].join(':'),
+      desc: 'Digital saddle A4 300gsm 32pp × 50' },
+    { key: ['digital', 'perfect', 'a4', '150', 'self', 'none', 128, 50].join(':'),
+      desc: 'Digital perfect A4 150gsm 128pp × 50' },
     { key: ['offset', 'saddle', 'a5', '128', 'self', 'none', 16, 500].join(':'),
       desc: 'Offset saddle A5 128gsm self 16pp × 500' },
-    { key: ['offset', 'saddle', 'a4', '128', '260_ss', 'gloss_matt', 32, 1000].join(':'),
+    { key: ['offset', 'saddle', 'a4', '128', '260', 'lam', 32, 1000].join(':'),
       desc: 'Offset saddle A4 128gsm 260 lam 32pp × 1000' },
-    { key: ['offset', 'perfect', 'a4', 'standard', '260_pb', 'gloss_matt', 128, 1000].join(':'),
+    { key: ['offset', 'perfect', 'a4', 'standard', '260', 'lam', 128, 1000].join(':'),
       desc: 'Offset perfect A4 260 lam 128pp × 1000' },
-    { key: ['offset', 'perfect', 'a4', 'standard', '260_pb', 'matt_spot_uv', 200, 5000].join(':'),
-      desc: 'Offset perfect A4 260 Spot UV 200pp × 5000' },
+    { key: ['offset', 'perfect', 'a5', 'standard', '260', 'suv', 80, 500].join(':'),
+      desc: 'Offset perfect A5 260 Spot UV 80pp × 500' },
   ];
   console.log('\n[3/3] Spot-check:');
   for (const s of spots) {
