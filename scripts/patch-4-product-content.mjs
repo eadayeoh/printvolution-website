@@ -65,8 +65,8 @@ const ncr = {
   extras: {
     seo_title: 'NCR Form Printing Singapore | Carbonless Duplicate Books',
     seo_desc: "Custom NCR book printing in Singapore — 4×8 / 8×9 / A5 / A4 sizes, 2 to 5 ply, 1 or 2 standard colour print (PT1–PT7), numbering included. 10 to 500 books per run.",
-    seo_body: `NCR form printing Singapore — carbonless duplicate books for invoices, delivery orders, job sheets, receipts. 4×8 (107×196mm) / 8×9 (196×222mm) / A5 (146×222mm) / A4 (222×298mm). 2 / 3 / 4 / 5 ply. 1 or 2 standard PT colour inks (Royal Blue, Cyan, Bronze Red, Magenta, Orange, Green, Black) with numbering included. 10 to 500 books per run, 5 working days offset. Logistics, field service, F&B, workshops, tradespeople.`,
-    intro: `An NCR book solves the one thing digital still can't: a signed duplicate you hand to the customer on the spot, no power, no printer, no app crashes. We print in four sizes (4×8, 8×9, A5, A4), 2 to 5 ply sets, with 1 or 2 standard ink colours from the PT range (Royal Blue, Cyan, Bronze Red, Magenta, Orange 021, Green, Black). Every book ships with sequential numbering included. Single-sided print, carbonless paper (no messy carbon sheets), 5 working days offset. Minimum 10 books per run.`,
+    seo_body: `NCR form printing Singapore — carbonless duplicate books for invoices, delivery orders, job sheets, receipts. 4×8 (107×196mm) / 8×9 (196×222mm) / A5 (146×222mm) / A4 (222×298mm). 2 / 3 / 4 / 5 ply. 1 or 2 standard PT colour inks (Royal Blue, Cyan, Bronze Red, Magenta, Orange, Green, Black) with numbering included. 10 to 500 books per run, 7 working days min offset. Logistics, field service, F&B, workshops, tradespeople.`,
+    intro: `An NCR book solves the one thing digital still can't: a signed duplicate you hand to the customer on the spot, no power, no printer, no app crashes. We print in four sizes (4×8, 8×9, A5, A4), 2 to 5 ply sets, with 1 or 2 standard ink colours from the PT range (Royal Blue, Cyan, Bronze Red, Magenta, Orange 021, Green, Black). Every book ships with sequential numbering included. Single-sided print, carbonless paper (no messy carbon sheets), 7 working days min offset. Minimum 10 books per run.`,
     matcher: {
       rows: [
         {
@@ -192,7 +192,7 @@ const ncr = {
     { question: "How many sets per book?", answer: "Each book contains 50 numbered sets. A \"set\" is one complete multi-ply unit (e.g. one 3-ply set = one white + one yellow + one pink). So 100 books × 50 sets = 5,000 total usable sets." },
     { question: "How much does an NCR book cost in Singapore?", answer: "Starts from S$80.40 for 10 books of 4×8 2-ply 1-colour. Typical A5 3-ply 1-colour at 50 books runs S$310.40. Large A4 4-ply 2-colour at 200 books reaches S$2,657. Use the configurator for an exact quote on your combo." },
     { question: "What file format do you need?", answer: "Print-ready PDF at the exact book size (not paper size — include any margin you want in the PDF itself). Set spot colours to the PT numbers in your design. Leave space at the bottom-right corner for the sequential numbering (we'll position it clear of your content). Fonts embedded, CMYK or spot, 3mm bleed." },
-    { question: "How long does production take?", answer: "5 working days from approved digital proof. Carbonless stock cutting, 1 or 2 colour offset print, numbering, binding into books — all in-house, no middleman delays." },
+    { question: "How long does production take?", answer: "Minimum 7 working days from approved digital proof. Carbonless stock cutting, 1 or 2 colour offset print, numbering, binding into books — all in-house, no middleman delays." },
   ],
 };
 
