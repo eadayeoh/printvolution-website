@@ -316,13 +316,28 @@ function SideWidget({ side }: { side: MagazineSide | undefined }) {
   }
 
   if (side.kind === 'stat') {
+    // Scale the display size down for longer num strings (e.g. "0001→9999")
+    // so they don't overflow the sidebar. 1-3 chars stay at the full 54px;
+    // each extra char shrinks proportionally with a 22px floor.
+    const numLen = String(side.num ?? '').length;
+    const numFontSize = numLen <= 3 ? 54 : Math.max(22, Math.round(54 * (3 / numLen)));
+    const supFontSize = Math.max(12, Math.round(numFontSize * 0.37));
     return (
       <aside style={commonBox}>
         <div style={label}>{side.label}</div>
-        <div style={{ textAlign: 'center', padding: '6px 0' }}>
-          <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 54, lineHeight: 0.9, letterSpacing: '-0.04em', color: 'var(--pv-ink)', marginBottom: 6 }}>
+        <div style={{ textAlign: 'center', padding: '6px 0', minWidth: 0 }}>
+          <div style={{
+            fontFamily: 'var(--pv-f-display)',
+            fontSize: numFontSize,
+            lineHeight: 0.95,
+            letterSpacing: '-0.04em',
+            color: 'var(--pv-ink)',
+            marginBottom: 6,
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+          }}>
             {side.num}
-            {side.suffix && <sup style={{ fontSize: 20, color: 'var(--pv-magenta)', marginLeft: 2 }}>{side.suffix}</sup>}
+            {side.suffix && <sup style={{ fontSize: supFontSize, color: 'var(--pv-magenta)', marginLeft: 2 }}>{side.suffix}</sup>}
           </div>
           {side.caption && (
             <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
