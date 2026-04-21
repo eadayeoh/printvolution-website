@@ -105,21 +105,41 @@ const axes = {
     { slug: '157', label: '157gsm Art Paper', note: 'Heavier, more premium feel', show_if: { step: 'binding', value: 'saddle' } },
     { slug: 'standard', label: 'Standard book paper', note: 'Included in perfect-bound runs', show_if: { step: 'binding', value: 'perfect' } },
   ],
-  // Cover step is offset-only; digital has no cover axis in pvpricelist.
+  // Cover step is visible on every path. On digital it's a single-option
+  // confirmation — pvpricelist doesn't separately price a digital cover,
+  // so the slug 'self' is reused but with different labels so digital-
+  // saddle and digital-perfect customers see accurate wording.
   cover: [
     { slug: 'self', label: 'Self-cover', note: 'Same paper as inner pages', show_if: { step: 'binding', value: 'saddle' } },
-    { slug: '260', label: '260gsm Art Card' },
-    { slug: '310', label: '310gsm Art Card', note: 'Heaviest cover option', show_if: { step: 'binding', value: 'saddle' } },
+    {
+      slug: 'self',
+      label: 'Standard cover included',
+      note: 'Cover bundled with the perfect-bound binding price',
+      show_if: [{ step: 'method', value: 'digital' }, { step: 'binding', value: 'perfect' }],
+    },
+    { slug: '260', label: '260gsm Art Card', show_if: { step: 'method', value: 'offset' } },
+    {
+      slug: '310',
+      label: '310gsm Art Card',
+      note: 'Heaviest cover option',
+      show_if: [{ step: 'method', value: 'offset' }, { step: 'binding', value: 'saddle' }],
+    },
   ],
-  // Lamination step is offset-only. Saddle offers only "Gloss or Matt
-  // Lam" (same price on both finishes per pvpricelist). Perfect adds
-  // Spot UV as a second option.
+  // Lamination step is offset-only. Pvpricelist prices Gloss Lam and
+  // Matt Lam the same, but customers want to pick the finish — so we
+  // expose them as two separate selections that resolve to the same
+  // price upstream. Matt Lam + Spot UV is an extra finish on perfect
+  // bound offset only (separate price table).
   lamination: [
     { slug: 'none', label: 'None', note: 'No lamination on self-cover', show_if: { step: 'cover', value: 'self' } },
     {
-      slug: 'lam',
-      label: 'Gloss or Matt Lam',
-      note: 'Standard lamination · same price either finish',
+      slug: 'gloss_lam',
+      label: 'Gloss Lam',
+      show_if: { step: 'cover', value: ['260', '310'] },
+    },
+    {
+      slug: 'matt_lam',
+      label: 'Matt Lam',
       show_if: { step: 'cover', value: ['260', '310'] },
     },
     {
@@ -199,11 +219,13 @@ console.log(`Computed ${Object.keys(prices).length} digital prices.`);
 // ────────────────────────────────────────────────────────────────
 
 const ossTables = pvp.saddleStitch.OSS_TABLES;
-// pvpricelist cover slug → (our cover, our lam)
+// pvpricelist cover slug → (our cover, valid lam slugs)
+// Gloss Lam and Matt Lam both carry the same upstream price — we emit
+// both keys from the single source row so either customer pick resolves.
 const SADDLE_COVER_MAP = {
-  self: { cover: 'self', lam: 'none' },
-  '260': { cover: '260', lam: 'lam' },
-  '310': { cover: '310', lam: 'lam' },
+  self: { cover: 'self', lams: ['none'] },
+  '260': { cover: '260', lams: ['gloss_lam', 'matt_lam'] },
+  '310': { cover: '310', lams: ['gloss_lam', 'matt_lam'] },
 };
 
 let offsetSaddleCount = 0;
@@ -212,15 +234,17 @@ for (const size of ['a5', 'a4']) {
     for (const ossCover of ['self', '260', '310']) {
       const tbl = ossTables[`${size}-${content}-${ossCover}`];
       if (!tbl) continue;
-      const { cover, lam } = SADDLE_COVER_MAP[ossCover];
+      const { cover, lams } = SADDLE_COVER_MAP[ossCover];
       for (const [pageStr, row] of Object.entries(tbl)) {
         const pages = parseInt(pageStr, 10);
         row.forEach((dollars, idx) => {
           const qty = OSS_QTYS[idx];
           const cents = Math.round(dollars * 100);
-          const key = ['offset', 'saddle', size, content, cover, lam, pages, qty].join(':');
-          prices[key] = cents;
-          offsetSaddleCount++;
+          for (const lam of lams) {
+            const key = ['offset', 'saddle', size, content, cover, lam, pages, qty].join(':');
+            prices[key] = cents;
+            offsetSaddleCount++;
+          }
         });
       }
     }
@@ -232,23 +256,28 @@ console.log(`Copied ${offsetSaddleCount} offset saddle prices.`);
 // OFFSET PERFECT
 // ────────────────────────────────────────────────────────────────
 
-const PERFECT_FINISH_MAP = { lam: 'lam', suv: 'suv' };
+// Each upstream finish maps to the lam slug(s) it prices. The 'lam'
+// upstream finish (Gloss or Matt Lam) emits both gloss_lam and
+// matt_lam keys so customer finish choice resolves at the same price.
+const PERFECT_FINISH_MAP = { lam: ['gloss_lam', 'matt_lam'], suv: ['suv'] };
 
 let offsetPerfectCount = 0;
 for (const size of ['a5', 'a4']) {
   for (const finish of ['lam', 'suv']) {
     const tbl = pvp.perfectBinding[`PB_${size.toUpperCase()}_${finish.toUpperCase()}_260`];
     if (!tbl) continue;
-    const lam = PERFECT_FINISH_MAP[finish];
+    const lams = PERFECT_FINISH_MAP[finish];
     for (const [qtyStr, row] of Object.entries(tbl)) {
       const qty = parseInt(qtyStr, 10);
       for (const [pageStr, dollars] of Object.entries(row)) {
         const pages = parseInt(pageStr, 10);
         const cents = Math.round(dollars * 100);
-        // Perfect binding has no content-paper choice; use 'standard' placeholder.
-        const key = ['offset', 'perfect', size, 'standard', '260', lam, pages, qty].join(':');
-        prices[key] = cents;
-        offsetPerfectCount++;
+        for (const lam of lams) {
+          // Perfect binding has no content-paper choice; use 'standard' placeholder.
+          const key = ['offset', 'perfect', size, 'standard', '260', lam, pages, qty].join(':');
+          prices[key] = cents;
+          offsetPerfectCount++;
+        }
       }
     }
   }
@@ -300,14 +329,11 @@ const steps = [
   },
   {
     step_id: 'cover', step_order: 4, label: 'Cover', type: 'swatch', required: true,
-    options: axes.cover,
-    // Hidden on digital — pvpricelist doesn't separately price a digital cover.
-    show_if: { step: 'method', value: 'offset' }, step_config: {},
+    options: axes.cover, show_if: null, step_config: {},
   },
   {
     step_id: 'lamination', step_order: 5, label: 'Lamination', type: 'swatch', required: true,
-    options: axes.lamination,
-    show_if: { step: 'method', value: 'offset' }, step_config: {},
+    options: axes.lamination, show_if: null, step_config: {},
   },
   {
     step_id: 'paper_digital', step_order: 6, label: 'Inner Paper', type: 'swatch', required: true,
@@ -372,10 +398,14 @@ async function main() {
       desc: 'Digital perfect A4 150gsm 128pp × 50' },
     { key: ['offset', 'saddle', 'a5', '128', 'self', 'none', 16, 500].join(':'),
       desc: 'Offset saddle A5 128gsm self 16pp × 500' },
-    { key: ['offset', 'saddle', 'a4', '128', '260', 'lam', 32, 1000].join(':'),
-      desc: 'Offset saddle A4 128gsm 260 lam 32pp × 1000' },
-    { key: ['offset', 'perfect', 'a4', 'standard', '260', 'lam', 128, 1000].join(':'),
-      desc: 'Offset perfect A4 260 lam 128pp × 1000' },
+    { key: ['offset', 'saddle', 'a4', '128', '260', 'gloss_lam', 32, 1000].join(':'),
+      desc: 'Offset saddle A4 128gsm 260 gloss lam 32pp × 1000' },
+    { key: ['offset', 'saddle', 'a4', '128', '260', 'matt_lam', 32, 1000].join(':'),
+      desc: 'Offset saddle A4 128gsm 260 matt lam 32pp × 1000 (same price)' },
+    { key: ['offset', 'perfect', 'a4', 'standard', '260', 'gloss_lam', 128, 1000].join(':'),
+      desc: 'Offset perfect A4 260 gloss lam 128pp × 1000' },
+    { key: ['offset', 'perfect', 'a4', 'standard', '260', 'matt_lam', 128, 1000].join(':'),
+      desc: 'Offset perfect A4 260 matt lam 128pp × 1000 (same price)' },
     { key: ['offset', 'perfect', 'a5', 'standard', '260', 'suv', 80, 500].join(':'),
       desc: 'Offset perfect A5 260 Spot UV 80pp × 500' },
   ];
