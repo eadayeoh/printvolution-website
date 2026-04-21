@@ -94,6 +94,15 @@ const ProductUpdateSchema = z.object({
   // pricing_table.qty_adjust — Record<qty_tier_string, cents (signed)>.
   // Omitted or null = leave existing pricing_table untouched.
   qty_adjust: z.record(z.string(), z.number().int()).nullable().optional(),
+  // pricing_table.qty_tiers + prices — full tier ladder from the admin
+  // "Qty tier prices" editor. Omitted = leave untouched.
+  qty_tier_prices: z
+    .object({
+      qty_tiers: z.array(z.number().int().positive()),
+      prices: z.record(z.string(), z.number().int().nonnegative()),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type ProductUpdateInput = z.input<typeof ProductUpdateSchema>;
@@ -127,10 +136,10 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
 
   const id = product.id as string;
 
-  // 1b. Pricing-table qty_adjust — surgical merge into existing
-  //     pricing_table jsonb so base prices + axes are never touched.
-  //     Also strips any legacy qty_markup field from earlier iteration.
-  if (d.qty_adjust !== undefined) {
+  // 1b. Pricing-table qty_adjust + qty_tier_prices — surgical merge
+  //     into existing pricing_table jsonb so axes are never touched.
+  //     Strips any legacy qty_markup field from earlier iteration.
+  if (d.qty_adjust !== undefined || d.qty_tier_prices !== undefined) {
     const { data: row } = await sb
       .from('products')
       .select('pricing_table')
@@ -140,17 +149,31 @@ export async function updateProduct(slug: string, input: ProductUpdateInput) {
     if (pt) {
       const next = { ...pt };
       delete next.qty_markup; // legacy cleanup
-      if (d.qty_adjust && Object.keys(d.qty_adjust).length > 0) {
-        // Drop entries equal to 0 (no-op) so the jsonb stays tight.
-        const clean: Record<string, number> = {};
-        for (const [k, v] of Object.entries(d.qty_adjust)) {
-          if (v !== 0) clean[k] = v;
+
+      if (d.qty_adjust !== undefined) {
+        if (d.qty_adjust && Object.keys(d.qty_adjust).length > 0) {
+          // Drop entries equal to 0 (no-op) so the jsonb stays tight.
+          const clean: Record<string, number> = {};
+          for (const [k, v] of Object.entries(d.qty_adjust)) {
+            if (v !== 0) clean[k] = v;
+          }
+          if (Object.keys(clean).length > 0) next.qty_adjust = clean;
+          else delete next.qty_adjust;
+        } else {
+          delete next.qty_adjust;
         }
-        if (Object.keys(clean).length > 0) next.qty_adjust = clean;
-        else delete next.qty_adjust;
-      } else {
-        delete next.qty_adjust;
       }
+
+      if (d.qty_tier_prices !== undefined) {
+        if (d.qty_tier_prices) {
+          // Replace both qty_tiers and prices — the editor owns the
+          // full ladder. Sort tiers ascending so the engine's
+          // snap-to-tier walks them in order.
+          next.qty_tiers = [...d.qty_tier_prices.qty_tiers].sort((a, b) => a - b);
+          next.prices = d.qty_tier_prices.prices;
+        }
+      }
+
       await sb.from('products').update({ pricing_table: next }).eq('id', id);
     }
   }
