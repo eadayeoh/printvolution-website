@@ -46,33 +46,39 @@ const PRODUCT_ID = '0b27c40f-79de-410d-afe5-06c74c92200d';
 // Format: [slug, df_code, label (H × W mm or diameter), price $, +1 day?]
 // ────────────────────────────────────────────────────────────────
 
-// Standard rectangular / square stamps — 1 working day
+// Stamps grouped by shape so the customer narrows the list via a
+// first-step "Shape" picker, then only sees relevant sizes. Without
+// the group filter it's a wall of 20 SKUs.
+//
+// shape: 'small'  — compact rectangles, ≤28mm height (8 SKUs)
+//        'medium' — 39-49mm height (6 SKUs)
+//        'round'  — circular (2 SKUs)
+//        'large'  — 62mm+ height, all +1 day (4 SKUs)
 const STAMPS = [
   // Small rectangles
-  { slug: 'df1370', code: 'DF 1370', label: '9 × 66mm',   price: 24, plus1: false },
-  { slug: 'df1767', code: 'DF 1767', label: '13 × 63mm',  price: 26, plus1: false },
-  { slug: 'df2267', code: 'DF 2267', label: '18 × 63mm',  price: 28, plus1: false },
-  { slug: 'df2278', code: 'DF 2278', label: '18 × 74mm',  price: 30, plus1: false },
-  { slug: 'df2855', code: 'DF 2855', label: '24 × 51mm',  price: 28, plus1: false },
-  { slug: 'df2867', code: 'DF 2867', label: '24 × 63mm',  price: 30, plus1: false },
-  { slug: 'df2878', code: 'DF 2878', label: '24 × 74mm',  price: 32, plus1: false },
-  { slug: 'df3255', code: 'DF 3255', label: '28 × 51mm',  price: 30, plus1: false },
-  // Medium rectangles — 49mm height row
-  { slug: 'df5355',  code: 'DF 5355',  label: '49 × 51mm',  price: 36, plus1: false },
-  { slug: 'df5367',  code: 'DF 5367',  label: '49 × 63mm',  price: 38, plus1: false },
-  { slug: 'df5378',  code: 'DF 5378',  label: '49 × 74mm',  price: 40, plus1: false },
-  { slug: 'df5391',  code: 'DF 5391',  label: '49 × 87mm',  price: 44, plus1: false },
-  { slug: 'df53103', code: 'DF 53103', label: '49 × 98mm',  price: 48, plus1: true  },
-  // 39mm height
-  { slug: 'df43103', code: 'DF 43103', label: '39 × 98mm',  price: 40, plus1: true  },
+  { slug: 'df1370', code: 'DF 1370', label: '9 × 66mm',   price: 24, plus1: false, shape: 'small' },
+  { slug: 'df1767', code: 'DF 1767', label: '13 × 63mm',  price: 26, plus1: false, shape: 'small' },
+  { slug: 'df2267', code: 'DF 2267', label: '18 × 63mm',  price: 28, plus1: false, shape: 'small' },
+  { slug: 'df2278', code: 'DF 2278', label: '18 × 74mm',  price: 30, plus1: false, shape: 'small' },
+  { slug: 'df2855', code: 'DF 2855', label: '24 × 51mm',  price: 28, plus1: false, shape: 'small' },
+  { slug: 'df2867', code: 'DF 2867', label: '24 × 63mm',  price: 30, plus1: false, shape: 'small' },
+  { slug: 'df2878', code: 'DF 2878', label: '24 × 74mm',  price: 32, plus1: false, shape: 'small' },
+  { slug: 'df3255', code: 'DF 3255', label: '28 × 51mm',  price: 30, plus1: false, shape: 'small' },
+  // Medium rectangles — 39–49mm height
+  { slug: 'df43103', code: 'DF 43103', label: '39 × 98mm',  price: 40, plus1: true,  shape: 'medium' },
+  { slug: 'df5355',  code: 'DF 5355',  label: '49 × 51mm',  price: 36, plus1: false, shape: 'medium' },
+  { slug: 'df5367',  code: 'DF 5367',  label: '49 × 63mm',  price: 38, plus1: false, shape: 'medium' },
+  { slug: 'df5378',  code: 'DF 5378',  label: '49 × 74mm',  price: 40, plus1: false, shape: 'medium' },
+  { slug: 'df5391',  code: 'DF 5391',  label: '49 × 87mm',  price: 44, plus1: false, shape: 'medium' },
+  { slug: 'df53103', code: 'DF 53103', label: '49 × 98mm',  price: 48, plus1: true,  shape: 'medium' },
   // Round stamps
-  { slug: 'df26', code: 'DF 26', label: 'Ø22mm · round',  price: 24, plus1: false },
-  { slug: 'df35', code: 'DF 35', label: 'Ø35mm · round',  price: 28, plus1: false },
+  { slug: 'df26', code: 'DF 26', label: 'Ø22mm',  price: 24, plus1: false, shape: 'round' },
+  { slug: 'df35', code: 'DF 35', label: 'Ø35mm',  price: 28, plus1: false, shape: 'round' },
   // Large rectangles — all +1 day
-  { slug: 'df6785',  code: 'DF 6785',  label: '62 × 80mm',   price: 45, plus1: true },
-  { slug: 'df67103', code: 'DF 67103', label: '62 × 98mm',   price: 56, plus1: true },
-  { slug: 'df78103', code: 'DF 78103', label: '73 × 98mm',   price: 60, plus1: true },
-  { slug: 'df90130', code: 'DF 90130', label: '85 × 125mm',  price: 80, plus1: true },
+  { slug: 'df6785',  code: 'DF 6785',  label: '62 × 80mm',   price: 45, plus1: true, shape: 'large' },
+  { slug: 'df67103', code: 'DF 67103', label: '62 × 98mm',   price: 56, plus1: true, shape: 'large' },
+  { slug: 'df78103', code: 'DF 78103', label: '73 × 98mm',   price: 60, plus1: true, shape: 'large' },
+  { slug: 'df90130', code: 'DF 90130', label: '85 × 125mm',  price: 80, plus1: true, shape: 'large' },
 ];
 
 // ────────────────────────────────────────────────────────────────
@@ -80,15 +86,25 @@ const STAMPS = [
 // ────────────────────────────────────────────────────────────────
 
 const axes = {
-  // Stamp model. Each option carries its own flat price (as a `qty * X`
-  // formula so qty multiplies the per-stamp cost) and a per-option
-  // lead_time_days override (1 for standard, 2 for +1-day items).
+  // First-step filter — narrows the stamp list by shape/size category
+  // so the customer doesn't face 20 SKUs at once.
+  shape: [
+    { slug: 'small',  label: 'Small rectangle',  note: 'Up to 28mm height · $24–$32' },
+    { slug: 'medium', label: 'Medium rectangle', note: '39–49mm height · $36–$48' },
+    { slug: 'round',  label: 'Round',            note: 'Ø22mm or Ø35mm · $24–$28' },
+    { slug: 'large',  label: 'Large rectangle',  note: '62mm+ height · $45–$80 · +1 day production' },
+  ],
+  // Stamp model. Each carries its own flat price (as a `qty * X` formula
+  // so qty multiplies) and a per-option lead_time_days override
+  // (1 day standard, 2 for the +1-day items). Options filter by the
+  // selected shape via option-level show_if.
   stamp: STAMPS.map((s) => ({
     slug: s.slug,
     label: `${s.code} — ${s.label}`,
     note: s.plus1 ? `$${s.price} · +1 working day` : `$${s.price} · next working day`,
     price_formula: `qty*${s.price}`,
     lead_time_days: s.plus1 ? 2 : 1,
+    show_if: { step: 'shape', value: s.shape },
   })),
   ink: [
     { slug: 'black', label: 'Black', note: 'Standard · default office ink', swatch: '#111111' },
@@ -103,15 +119,19 @@ const axes = {
 
 const steps = [
   {
-    step_id: 'stamp', step_order: 0, label: 'Stamp Model', type: 'swatch', required: true,
+    step_id: 'shape', step_order: 0, label: 'Shape', type: 'swatch', required: true,
+    options: axes.shape, show_if: null, step_config: {},
+  },
+  {
+    step_id: 'stamp', step_order: 1, label: 'Stamp Model', type: 'swatch', required: true,
     options: axes.stamp, show_if: null, step_config: {},
   },
   {
-    step_id: 'ink', step_order: 1, label: 'Ink Colour', type: 'swatch', required: true,
+    step_id: 'ink', step_order: 2, label: 'Ink Colour', type: 'swatch', required: true,
     options: axes.ink, show_if: null, step_config: {},
   },
   {
-    step_id: 'qty', step_order: 2, label: 'Quantity (stamps)', type: 'qty', required: false,
+    step_id: 'qty', step_order: 3, label: 'Quantity (stamps)', type: 'qty', required: false,
     options: [], show_if: null,
     step_config: { min: 1, step: 1, presets: [1, 2, 5, 10], note: 'Each stamp is pre-inked with your chosen colour.', discount_note: null, labelMultiplier: null },
   },

@@ -1206,6 +1206,15 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                           ? Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100)
                           : null;
                         const hasImage = !!opt.image_url;
+                        // Colour swatch — a hex string on opt.swatch renders
+                        // as a small filled circle before the label. Used by
+                        // NCR ink colour picker, or any option where the
+                        // pick IS a colour (not the option label text).
+                        const swatchHex =
+                          typeof (opt as { swatch?: unknown }).swatch === 'string'
+                          && /^#[0-9a-f]{3,8}$/i.test((opt as { swatch: string }).swatch)
+                            ? (opt as { swatch: string }).swatch
+                            : null;
                         return (
                           <button
                             key={opt.slug}
@@ -1246,6 +1255,20 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                 />
                               </span>
+                            )}
+                            {swatchHex && (
+                              <span
+                                aria-hidden
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '50%',
+                                  background: swatchHex,
+                                  border: active ? '1px solid rgba(255,255,255,0.5)' : '1px solid var(--pv-rule)',
+                                  flexShrink: 0,
+                                  display: 'inline-block',
+                                }}
+                              />
                             )}
                             {opt.label}
                             {optCents !== null && optCents > 0 && (
@@ -1354,6 +1377,58 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               }
               return null;
             })}
+
+            {/* STICKERS — live per-sheet yield calc. Sheet is 320 × 450mm
+                with a 10mm gutter between stickers for die-cut bleed.
+                Tries both orientations and picks the one that fits more. */}
+            {product.slug === 'stickers' && (() => {
+              const w = parseFloat(cfgState.width ?? '');
+              const h = parseFloat(cfgState.height ?? '');
+              if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+              const SHEET_W = 320, SHEET_H = 450, GUTTER = 10;
+              const yieldA = Math.floor(SHEET_W / (w + GUTTER)) * Math.floor(SHEET_H / (h + GUTTER));
+              const yieldB = Math.floor(SHEET_W / (h + GUTTER)) * Math.floor(SHEET_H / (w + GUTTER));
+              const perSheet = Math.max(yieldA, yieldB, 0);
+              const totalStickers = perSheet * qty;
+              const overflow = w > SHEET_W - GUTTER || h > SHEET_H - GUTTER
+                ? (w <= SHEET_H - GUTTER && h <= SHEET_W - GUTTER ? false : true)
+                : false;
+              return (
+                <div
+                  style={{
+                    background: perSheet === 0 ? '#fef2f2' : '#fef9c3',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '6px 6px 0 var(--pv-ink)',
+                    padding: '18px 22px',
+                    marginBottom: 14,
+                    fontFamily: 'var(--pv-f-body)',
+                    fontSize: 14,
+                    color: 'var(--pv-ink)',
+                  }}
+                >
+                  <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--pv-muted)', marginBottom: 6 }}>
+                    Stickers per sheet
+                  </div>
+                  {perSheet === 0 || overflow ? (
+                    <div>
+                      <strong>Too big to fit.</strong> Your {w} × {h}mm sticker doesn't fit on a 320 × 450mm sheet
+                      with the 10mm die-cut gutter. Shrink the size or contact us for a larger custom quote.
+                    </div>
+                  ) : (
+                    <div>
+                      <strong style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22 }}>
+                        {perSheet} sticker{perSheet === 1 ? '' : 's'}
+                      </strong>
+                      {' '}per sheet at {w} × {h}mm ·{' '}
+                      <strong>{totalStickers.toLocaleString()} total</strong> across {qty} sheet{qty === 1 ? '' : 's'}.
+                      <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)', marginTop: 6 }}>
+                        Sheet: 320 × 450mm · 10mm gutter between stickers for die-cut bleed.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* PRICE BOX */}
             <div
