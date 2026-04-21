@@ -15,6 +15,8 @@ export type BundleListItem = {
   discount_type: 'pct' | 'flat' | null;
   discount_value: number; // percent (0-100) or cents
   discount_cents: number; // actual dollar saving
+  /** 'services' when only bundle_products, 'gifts' when only bundle_gift_items, 'mixed' when both. null when empty. */
+  type_badge: 'services' | 'gifts' | 'mixed' | null;
 };
 
 export type BundleProduct = {
@@ -31,8 +33,34 @@ export type BundleProduct = {
   line_price_cents: number | null;
 };
 
+export type BundleGiftComponent = {
+  gift_product_id: string;
+  gift_product_slug: string;
+  gift_product_name: string;
+  gift_product_mode: string;
+  width_mm: number;
+  height_mm: number;
+  bleed_mm: number;
+  min_source_px: number;
+  source_retention_days: number;
+  variant_id: string | null;
+  variant_name: string | null;
+  variant_mockup_url: string | null;
+  variant_mockup_area: { x: number; y: number; width: number; height: number } | null;
+  prompt_id: string | null;
+  prompt_name: string | null;
+  prompt_style: string | null;
+  template_id: string | null;
+  template_name: string | null;
+  pipeline_id: string | null;
+  pipeline_slug: string | null;
+  override_qty: number;
+  display_order: number;
+};
+
 export type BundleDetail = BundleListItem & {
   products: BundleProduct[];
+  giftComponents: BundleGiftComponent[];
   whys: string[];
   faqs: Array<{ question: string; answer: string }>;
 };
@@ -72,6 +100,11 @@ export const listBundles = cache(async (): Promise<BundleListItem[]> => {
         product:products(
           product_pricing(rows)
         )
+      ),
+      bundle_gift_items(
+        override_qty,
+        gift_product_id,
+        variant:gift_product_variants(base_price_cents)
       )
     `)
     .eq('status', 'active')
@@ -86,7 +119,21 @@ export const listBundles = cache(async (): Promise<BundleListItem[]> => {
       const unit = minPriceCents(rows) ?? 0;
       subtotal += unit * (bp.override_qty ?? 1);
     }
+    for (const gi of (b.bundle_gift_items ?? [])) {
+      const variant = Array.isArray(gi.variant) ? gi.variant[0] : gi.variant;
+      const unit = variant?.base_price_cents ?? 0;
+      subtotal += unit * (gi.override_qty ?? 1);
+    }
     const { price, discount } = applyDiscount(subtotal, b.discount_type, b.discount_value ?? 0);
+
+    const services = (b.bundle_products ?? []).length;
+    const gifts = (b.bundle_gift_items ?? []).length;
+    const type_badge: BundleListItem['type_badge'] =
+      services > 0 && gifts > 0 ? 'mixed'
+      : gifts > 0 ? 'gifts'
+      : services > 0 ? 'services'
+      : null;
+
     return {
       id: b.id,
       slug: b.slug,
@@ -98,6 +145,7 @@ export const listBundles = cache(async (): Promise<BundleListItem[]> => {
       discount_type: b.discount_type,
       discount_value: b.discount_value ?? 0,
       discount_cents: discount,
+      type_badge,
     };
   });
 });
@@ -117,6 +165,14 @@ export const getBundleBySlug = cache(async (slug: string): Promise<BundleDetail 
           subcategory:categories!products_subcategory_id_fkey(slug),
           product_pricing(rows)
         )
+      ),
+      bundle_gift_items(
+        override_qty, display_order, prompt_id, template_id, pipeline_id, variant_id,
+        gift_product:gift_products(id, slug, name, mode, width_mm, height_mm, bleed_mm, min_source_px, source_retention_days),
+        variant:gift_product_variants(id, name, mockup_url, mockup_area),
+        prompt:gift_prompts(id, name, style),
+        template:gift_templates(id, name),
+        pipeline:gift_pipelines(id, slug)
       ),
       bundle_whys(text, display_order),
       bundle_faqs(question, answer, display_order)
@@ -153,6 +209,42 @@ export const getBundleBySlug = cache(async (slug: string): Promise<BundleDetail 
     })
     .filter(Boolean) as BundleProduct[];
 
+  const giftComponents: BundleGiftComponent[] = ((d.bundle_gift_items ?? []) as any[])
+    .sort((a: any, b: any) => a.display_order - b.display_order)
+    .map((bi: any) => {
+      const gp = Array.isArray(bi.gift_product) ? bi.gift_product[0] : bi.gift_product;
+      const v = Array.isArray(bi.variant) ? bi.variant[0] : bi.variant;
+      const pr = Array.isArray(bi.prompt) ? bi.prompt[0] : bi.prompt;
+      const tp = Array.isArray(bi.template) ? bi.template[0] : bi.template;
+      const pl = Array.isArray(bi.pipeline) ? bi.pipeline[0] : bi.pipeline;
+      if (!gp) return null;
+      return {
+        gift_product_id: gp.id,
+        gift_product_slug: gp.slug,
+        gift_product_name: gp.name,
+        gift_product_mode: gp.mode,
+        width_mm: gp.width_mm,
+        height_mm: gp.height_mm,
+        bleed_mm: gp.bleed_mm,
+        min_source_px: gp.min_source_px,
+        source_retention_days: gp.source_retention_days ?? 30,
+        variant_id: v?.id ?? null,
+        variant_name: v?.name ?? null,
+        variant_mockup_url: v?.mockup_url ?? null,
+        variant_mockup_area: v?.mockup_area ?? null,
+        prompt_id: pr?.id ?? null,
+        prompt_name: pr?.name ?? null,
+        prompt_style: pr?.style ?? null,
+        template_id: tp?.id ?? null,
+        template_name: tp?.name ?? null,
+        pipeline_id: pl?.id ?? null,
+        pipeline_slug: pl?.slug ?? null,
+        override_qty: bi.override_qty ?? 1,
+        display_order: bi.display_order ?? 0,
+      };
+    })
+    .filter(Boolean) as BundleGiftComponent[];
+
   const subtotal = products.reduce((s, p) => s + (p.line_price_cents ?? 0), 0);
   const { price, discount } = applyDiscount(subtotal, d.discount_type, d.discount_value ?? 0);
 
@@ -163,6 +255,12 @@ export const getBundleBySlug = cache(async (slug: string): Promise<BundleDetail 
   const faqs = ((d.bundle_faqs ?? []) as any[])
     .sort((a: any, b: any) => a.display_order - b.display_order)
     .map((f: any) => ({ question: f.question as string, answer: f.answer as string }));
+
+  const type_badge: BundleListItem['type_badge'] =
+    products.length > 0 && giftComponents.length > 0 ? 'mixed'
+    : giftComponents.length > 0 ? 'gifts'
+    : products.length > 0 ? 'services'
+    : null;
 
   return {
     id: d.id,
@@ -176,7 +274,9 @@ export const getBundleBySlug = cache(async (slug: string): Promise<BundleDetail 
     discount_value: d.discount_value ?? 0,
     discount_cents: discount,
     products,
+    giftComponents,
     whys,
     faqs,
+    type_badge,
   };
 });

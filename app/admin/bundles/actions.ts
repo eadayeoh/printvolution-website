@@ -131,3 +131,59 @@ export async function deleteBundle(slug: string) {
   revalidatePath('/');
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// BUNDLE GIFT ITEMS — (migration 0037) gift SKUs inside a bundle
+// ---------------------------------------------------------------------------
+
+const BundleGiftItemSchema = z.object({
+  bundle_id: z.string().uuid(),
+  gift_product_id: z.string().uuid(),
+  variant_id: z.string().uuid().nullable().optional(),
+  prompt_id: z.string().uuid().nullable().optional(),
+  template_id: z.string().uuid().nullable().optional(),
+  pipeline_id: z.string().uuid().nullable().optional(),
+  override_qty: z.number().int().positive().default(1),
+  display_order: z.number().int().default(0),
+});
+
+export async function addBundleGiftItem(input: z.input<typeof BundleGiftItemSchema>) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false as const, error: e?.message ?? 'Forbidden' }; }
+  const parsed = BundleGiftItemSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0].message };
+  const sb = adminClient();
+  const { error } = await sb.from('bundle_gift_items').insert(parsed.data as any);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/bundles');
+  revalidatePath('/bundles');
+  revalidatePath(`/bundle/[slug]`, 'layout');
+  return { ok: true as const };
+}
+
+export async function updateBundleGiftItem(
+  bundleId: string,
+  giftProductId: string,
+  input: Partial<z.input<typeof BundleGiftItemSchema>>,
+) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false as const, error: e?.message ?? 'Forbidden' }; }
+  const sb = adminClient();
+  const { error } = await sb.from('bundle_gift_items').update(input as any)
+    .eq('bundle_id', bundleId).eq('gift_product_id', giftProductId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/bundles');
+  revalidatePath('/bundles');
+  revalidatePath(`/bundle/[slug]`, 'layout');
+  return { ok: true as const };
+}
+
+export async function removeBundleGiftItem(bundleId: string, giftProductId: string) {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false as const, error: e?.message ?? 'Forbidden' }; }
+  const sb = adminClient();
+  const { error } = await sb.from('bundle_gift_items').delete()
+    .eq('bundle_id', bundleId).eq('gift_product_id', giftProductId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/bundles');
+  revalidatePath('/bundles');
+  revalidatePath(`/bundle/[slug]`, 'layout');
+  return { ok: true as const };
+}
