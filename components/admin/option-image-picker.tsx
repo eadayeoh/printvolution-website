@@ -9,12 +9,13 @@
 // library plumbing is invisible to the caller.
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Search, Trash2, Upload, X } from 'lucide-react';
+import { Check, Loader2, Pencil, Search, Trash2, Upload, X } from 'lucide-react';
 import { uploadProductImage } from '@/app/admin/upload/actions';
 import {
   createOptionImage,
   deleteOptionImage,
   listOptionImages,
+  renameOptionImage,
   type OptionImageRow,
 } from '@/app/admin/upload/option-images';
 
@@ -227,6 +228,40 @@ function OptionImageLibraryModal({
     }
   }
 
+  // Inline rename — admin clicks the pencil, types a new label, saves
+  // via Enter or the check button. Cancel via Esc or the X.
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [renameSaving, setRenameSaving] = useState(false);
+
+  function startRename(row: OptionImageRow) {
+    setRenamingId(row.id);
+    setRenameDraft(row.label);
+  }
+  function cancelRename() {
+    setRenamingId(null);
+    setRenameDraft('');
+  }
+  async function saveRename() {
+    if (!renamingId) return;
+    const trimmed = renameDraft.trim();
+    if (!trimmed) { cancelRename(); return; }
+    // No-op if unchanged.
+    const current = rows.find((r) => r.id === renamingId);
+    if (current && current.label === trimmed) { cancelRename(); return; }
+    setRenameSaving(true);
+    try {
+      const res = await renameOptionImage({ id: renamingId, label: trimmed });
+      setRenameSaving(false);
+      if (!res || !res.ok) { alert(res?.error ?? 'Rename failed'); return; }
+      setRows((prev) => prev.map((r) => r.id === renamingId ? { ...r, label: trimmed } : r));
+      cancelRename();
+    } catch (e: any) {
+      setRenameSaving(false);
+      alert(e?.message ?? 'Rename failed');
+    }
+  }
+
   const filtered = query.trim()
     ? rows.filter((r) => r.label.toLowerCase().includes(query.trim().toLowerCase()))
     : rows;
@@ -336,15 +371,18 @@ function OptionImageLibraryModal({
             <div className="grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-5">
               {filtered.map((row) => {
                 const selected = row.url === currentUrl;
+                const isRenaming = renamingId === row.id;
                 return (
                   <div
                     key={row.id}
                     className={`group relative overflow-hidden rounded border-2 bg-white transition-colors ${selected ? 'border-pink' : 'border-neutral-200 hover:border-ink'}`}
                   >
+                    {/* Thumbnail — clickable to pick unless currently renaming. */}
                     <button
                       type="button"
-                      onClick={() => onPick(row.url)}
-                      className="block w-full text-left"
+                      onClick={() => { if (!isRenaming) onPick(row.url); }}
+                      disabled={isRenaming}
+                      className="block w-full text-left disabled:cursor-default"
                     >
                       <div className="aspect-square bg-neutral-50">
                         <img
@@ -354,20 +392,69 @@ function OptionImageLibraryModal({
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       </div>
-                      <div className="px-2 py-1.5">
-                        <div className="truncate text-[11px] font-bold text-ink" title={row.label}>
-                          {row.label}
-                        </div>
-                      </div>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(row.id)}
-                      className="absolute right-1 top-1 rounded bg-white/90 p-1 text-neutral-500 opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
-                      aria-label="Delete from library"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {/* Label row — shows filename, with inline edit mode. */}
+                    <div className="flex items-center gap-1 px-2 py-1.5">
+                      {isRenaming ? (
+                        <>
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            onChange={(e) => setRenameDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+                              else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+                            }}
+                            disabled={renameSaving}
+                            className="w-full min-w-0 flex-1 rounded border border-neutral-300 bg-white px-1 py-0.5 text-[11px] font-bold text-ink outline-none focus:border-ink"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveRename}
+                            disabled={renameSaving}
+                            className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                            aria-label="Save label"
+                          >
+                            {renameSaving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelRename}
+                            disabled={renameSaving}
+                            className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-50"
+                            aria-label="Cancel rename"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="min-w-0 flex-1 truncate text-[11px] font-bold text-ink" title={row.label}>
+                            {row.label}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); startRename(row); }}
+                            className="rounded p-1 text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-100 hover:text-ink group-hover:opacity-100"
+                            aria-label="Rename"
+                            title="Rename"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {/* Trash icon — hidden while renaming to avoid accidents. */}
+                    {!isRenaming && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onDelete(row.id); }}
+                        className="absolute right-1 top-1 rounded bg-white/90 p-1 text-neutral-500 opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                        aria-label="Delete from library"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
