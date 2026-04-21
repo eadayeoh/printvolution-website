@@ -17,7 +17,22 @@
  */
 
 import { GIFT_BUCKETS, putObject, makeKey } from './storage';
-import type { GiftCropRect, GiftProduct } from './types';
+import { getPipelineByIdAdmin, getDefaultPipelineForMode } from './pipelines';
+import type { GiftCropRect, GiftProduct, GiftPipeline } from './types';
+
+/**
+ * Resolve the pipeline for a product: honour product.pipeline_id if set,
+ * else fall back to the default pipeline for the product's mode. This
+ * decouples the *style* choice (prompt) from the *infrastructure* choice
+ * (AI endpoint + params).
+ */
+async function resolvePipeline(product: GiftProduct): Promise<GiftPipeline | null> {
+  if (product.pipeline_id) {
+    const p = await getPipelineByIdAdmin(product.pipeline_id);
+    if (p) return p;
+  }
+  return getDefaultPipelineForMode(product.mode);
+}
 
 // sharp is loaded lazily because it's a native dependency and we only want it
 // on the server in production (not in edge runtimes or bundled builds).
@@ -50,19 +65,21 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
   const { product } = input;
   const sharp = await loadSharp();
   if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
+  const pipeline = await resolvePipeline(product);
+  const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(input.sourceBytes);
 
   // Normalise: auto-orient via EXIF, drop alpha where not needed
   buf = await sharp(buf).rotate().jpeg({ quality: 80 }).toBuffer();
 
-  switch (product.mode) {
+  switch (kind) {
     case 'photo-resize':
       buf = await renderPhotoResize(buf, product, input.cropRect ?? null, /*preview=*/true);
       break;
     case 'laser':
     case 'uv':
     case 'embroidery':
-      buf = await runAiTransform(buf, product, /*preview=*/true);
+      buf = await runAiTransform(buf, product, pipeline, /*preview=*/true);
       break;
   }
 
@@ -112,19 +129,21 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   const { product } = input;
   const sharp = await loadSharp();
   if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
+  const pipeline = await resolvePipeline(product);
+  const kind = pipeline?.kind ?? product.mode;
   const { getObject } = await import('./storage');
   const src = await getObject(GIFT_BUCKETS.sources, input.sourcePath);
   let buf: Buffer = Buffer.from(src);
   buf = await sharp(buf).rotate().toBuffer();
 
-  switch (product.mode) {
+  switch (kind) {
     case 'photo-resize':
       buf = await renderPhotoResize(buf, product, input.cropRect ?? null, /*preview=*/false);
       break;
     case 'laser':
     case 'uv':
     case 'embroidery':
-      buf = await runAiTransform(buf, product, /*preview=*/false);
+      buf = await runAiTransform(buf, product, pipeline, /*preview=*/false);
       break;
   }
 
@@ -213,13 +232,20 @@ async function renderPhotoResize(
  * REPLACE THIS FUNCTION when we wire up Replicate — the input/output shape
  * stays the same.
  */
-async function runAiTransform(input: Buffer, product: GiftProduct, preview: boolean): Promise<Buffer> {
+async function runAiTransform(
+  input: Buffer,
+  product: GiftProduct,
+  pipeline: GiftPipeline | null,
+  preview: boolean,
+): Promise<Buffer> {
   const sharp = await loadSharp();
   let img = sharp(input).rotate();
 
-  // Approximate each mode's visual effect in the preview so the customer
-  // sees something mode-appropriate until the real AI call is wired in.
-  switch (product.mode) {
+  // Approximate each pipeline kind's visual effect in the preview so the
+  // customer sees something appropriate until the real AI call (Replicate
+  // via pipeline.ai_endpoint_url) is wired in.
+  const kind = pipeline?.kind ?? product.mode;
+  switch (kind) {
     case 'laser':
       img = img.greyscale().normalise().linear(1.8, -40).threshold(128);
       break;
