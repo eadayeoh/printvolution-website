@@ -114,9 +114,16 @@ const steps = [
     step_id: 'qty', step_order: 3, label: 'Number of Sheets', type: 'qty', required: false,
     options: [], show_if: null,
     step_config: {
-      min: 1, step: 1, presets: [1, 10, 20, 30, 40, 50],
-      note: 'Sheet is 320 × 450mm · one design per sheet. For 50+ sheets, contact us for a custom quote.',
-      discount_note: 'Tier discount: 1 sheet $15 / 10 sheets $14 ea / 20 sheets $13 ea / 30 sheets $12 ea / 40 sheets $11 ea / 50 sheets $10 ea',
+      min: 1, step: 1,
+      // No preset chips — customer types any number. `force_show: true`
+      // overrides the default hide-qty-when-pricing_table behaviour, and
+      // the ladder UI is suppressed for this product so the only qty
+      // input is this typed field. Tier discount auto-applies via the
+      // engine's snap-to-tier logic against the pricing_table.qty_tiers.
+      presets: null,
+      force_show: true,
+      note: 'Type any number of sheets (1–50). Discount auto-applies: $15 → $10 per sheet as volume increases. 50+ sheets? Contact us for a custom quote.',
+      discount_note: null,
       labelMultiplier: null,
     },
   },

@@ -1100,7 +1100,12 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   product.pricing_compute?.bm &&
                   pricingComputeMatches(product.pricing_compute.bm.match)
                 );
-                if (!bmActive) return null;
+                // `force_show: true` on the step_config overrides the
+                // hide — used by stickers where the customer types the
+                // sheet count and the tier discount auto-applies via
+                // snap-to-tier instead of picking from a ladder.
+                const forceShow = !!(step.step_config as { force_show?: boolean } | null | undefined)?.force_show;
+                if (!bmActive && !forceShow) return null;
               }
               const stepNum = stepIdx + 1;
               if (step.type === 'qty') {
@@ -1569,8 +1574,9 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               </div>
             </div>
 
-            {/* PRICE LADDER */}
-            {priceLadder.length > 1 && (
+            {/* PRICE LADDER — hidden for stickers, which use a typed
+                qty with auto-computed tier discount (no ladder UI). */}
+            {priceLadder.length > 1 && product.slug !== 'stickers' && (
               <div style={{ marginTop: 28 }}>
                 <div
                   style={{
