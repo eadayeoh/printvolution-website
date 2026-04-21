@@ -89,6 +89,42 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   }
   const [qtyAdjust, setQtyAdjust] = useState<Record<string, string>>(initialAdjust);
 
+  // Qty tier prices editor — lets admin add / remove qty tiers and set
+  // dollar prices per axis combo. Shape: rows = qty tiers, columns =
+  // cartesian product of axes. UI stores dollars as strings.
+  const axisOrder = product.pricing_table?.axis_order ?? [];
+  const axes = product.pricing_table?.axes ?? {};
+  const axisCombos: Array<{ key: string; label: string }> = (() => {
+    if (axisOrder.length === 0) return [];
+    const combos: Array<{ key: string; label: string }> = [{ key: '', label: '' }];
+    for (const axisName of axisOrder) {
+      const opts = axes[axisName] ?? [];
+      const next: Array<{ key: string; label: string }> = [];
+      for (const c of combos) {
+        for (const o of opts) {
+          next.push({
+            key: c.key ? `${c.key}:${o.slug}` : o.slug,
+            label: c.label ? `${c.label} · ${o.label}` : o.label,
+          });
+        }
+      }
+      combos.splice(0, combos.length, ...next);
+    }
+    return combos;
+  })();
+  type TierRow = { qty: string; prices: Record<string, string> };
+  const initialTierRows: TierRow[] = (product.pricing_table?.qty_tiers ?? []).map((t) => {
+    const prices: Record<string, string> = {};
+    for (const c of axisCombos) {
+      const key = `${c.key}:${t}`;
+      const cents = product.pricing_table?.prices?.[key];
+      prices[c.key] = cents != null ? (cents / 100).toFixed(2) : '';
+    }
+    return { qty: String(t), prices };
+  });
+  const [tierRows, setTierRows] = useState<TierRow[]>(initialTierRows);
+  const [newTierQty, setNewTierQty] = useState('');
+
   // Configurator
   const [configurator, setConfigurator] = useState(product.configurator);
 
@@ -146,6 +182,24 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
             out[String(t)] = Math.round(dollars * 100);
           }
           return out;
+        })(),
+        // Rebuild qty_tiers + prices from the tier-price editor rows.
+        // Null = don't touch (product without a pricing_table).
+        qty_tier_prices: (() => {
+          if (!product.pricing_table) return null;
+          const tiers: number[] = [];
+          const prices: Record<string, number> = {};
+          for (const row of tierRows) {
+            const qty = parseInt(row.qty, 10);
+            if (!Number.isFinite(qty) || qty <= 0) continue;
+            tiers.push(qty);
+            for (const c of axisCombos) {
+              const dollars = parseFloat(row.prices[c.key] ?? '');
+              if (!Number.isFinite(dollars) || dollars < 0) continue;
+              prices[`${c.key}:${qty}`] = Math.round(dollars * 100);
+            }
+          }
+          return { qty_tiers: tiers, prices };
         })(),
       };
       const result = await updateProduct(product.slug, input);
@@ -435,10 +489,100 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           </button>
           </div>
 
-          {/* Section 1b: qty-tier $ offset — only when pricing_table has tiers */}
+          {/* Section 1b-prime: qty tier prices editor — lets admin add / remove
+              tiers and set a dollar price per axis combo. */}
+          {product.pricing_table ? (
+            <div className="rounded-lg border border-neutral-200 bg-white p-6">
+              <h3 className="mb-1 text-sm font-bold text-ink">1b. Qty tier prices</h3>
+              <p className="mb-4 text-xs text-neutral-500">
+                Pricing ladder used by the customer-facing calculator. Each row is a qty tier; each column is an axis combo (e.g. size, finish, material).
+                Add rows for every qty/price point you want to offer. Prices in S$.
+                {product.pricing_table.qty_mode === 'per_unit_at_tier_rate' && (
+                  <> Mode: <strong>per-sheet rate at tier</strong> — typed qty scales linearly using the per-sheet rate of the nearest tier floor.</>
+                )}
+              </p>
+              <div className="overflow-x-auto rounded border border-neutral-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-neutral-50 text-[11px] font-bold uppercase text-neutral-500">
+                    <tr>
+                      <th className="p-2 text-left">Qty</th>
+                      {axisCombos.map((c) => (
+                        <th key={c.key} className="p-2 text-right">{c.label || 'Price'}</th>
+                      ))}
+                      <th className="p-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {tierRows.map((row, ri) => (
+                      <tr key={ri}>
+                        <td className="p-2">
+                          <input
+                            value={row.qty}
+                            onChange={(e) => setTierRows(tierRows.map((r, j) => j === ri ? { ...r, qty: e.target.value } : r))}
+                            className={`${inputCls} w-24`}
+                            placeholder="10"
+                          />
+                        </td>
+                        {axisCombos.map((c) => (
+                          <td key={c.key} className="p-2">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-xs text-neutral-500">S$</span>
+                              <input
+                                value={row.prices[c.key] ?? ''}
+                                onChange={(e) => setTierRows(tierRows.map((r, j) => j === ri ? { ...r, prices: { ...r.prices, [c.key]: e.target.value } } : r))}
+                                className={`${inputCls} w-24 text-right`}
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </td>
+                        ))}
+                        <td className="p-2">
+                          <button
+                            type="button"
+                            onClick={() => setTierRows(tierRows.filter((_, j) => j !== ri))}
+                            className="text-red-600 hover:text-red-700"
+                            title="Remove tier"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  value={newTierQty}
+                  onChange={(e) => setNewTierQty(e.target.value)}
+                  placeholder="New qty (e.g. 10)"
+                  className={`${inputCls} w-40`}
+                  type="number"
+                  min={1}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const q = parseInt(newTierQty, 10);
+                    if (!Number.isFinite(q) || q <= 0) return;
+                    if (tierRows.some((r) => parseInt(r.qty, 10) === q)) return;
+                    const blank: Record<string, string> = {};
+                    for (const c of axisCombos) blank[c.key] = '';
+                    setTierRows([...tierRows, { qty: String(q), prices: blank }].sort((a, b) => parseInt(a.qty, 10) - parseInt(b.qty, 10)));
+                    setNewTierQty('');
+                  }}
+                  className="flex items-center gap-1 rounded border border-neutral-200 px-3 py-1 text-xs font-bold text-ink hover:border-ink"
+                >
+                  <Plus size={12} /> Add tier
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Section 1c: qty-tier $ offset — only when pricing_table has tiers */}
           {product.pricing_table?.qty_tiers?.length ? (
             <div className="rounded-lg border border-neutral-200 bg-white p-6">
-              <h3 className="mb-1 text-sm font-bold text-ink">1b. Qty tier $ adjustment</h3>
+              <h3 className="mb-1 text-sm font-bold text-ink">1c. Qty tier $ adjustment</h3>
               <p className="mb-4 text-xs text-neutral-500">
                 Signed dollar offset added to the base <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono">pricing_table</code> price at each qty tier.
                 <strong> 0 = no change</strong>, <strong>−20</strong> = $20 off, <strong>15</strong> = +$15. Applied to the tier across every paper / material / finish combo. Minimum final price is $0.

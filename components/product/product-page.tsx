@@ -178,12 +178,25 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   // Ready-by calendar. Deferred until after mount so SSR vs client
   // date drift can't cause a hydration mismatch. Recomputes when the
   // effective lead time changes (e.g. customer flips Digital ↔ Offset).
+  //
+  // SGT 13:00 cutoff: if the shopper is viewing past 1pm Singapore time
+  // (GMT+8), their order is treated as placed the next working day, so
+  // the job start rolls one day forward. Not shown to the customer.
   const [readyBy, setReadyBy] = useState<{ today: Date; ready: Date } | null>(null);
   useEffect(() => {
     if (!leadTimeDays || leadTimeDays <= 0) { setReadyBy(null); return; }
     const today = new Date();
+    const sgHour = parseInt(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Singapore',
+        hour: 'numeric',
+        hour12: false,
+      }).format(today),
+      10,
+    );
+    const pastCutoff = sgHour >= 13;
     const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setDate(tomorrow.getDate() + (pastCutoff ? 2 : 1));
     const jobStart = nextBusinessDay(tomorrow);
     const ready = addBusinessDays(jobStart, leadTimeDays - 1);
     setReadyBy({ today, ready });
