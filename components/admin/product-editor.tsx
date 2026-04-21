@@ -131,6 +131,13 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
   // FAQs
   const [faqs, setFaqs] = useState(product.faqs);
 
+  // Hero-banner upload is async: if the admin clicked Save while the
+  // upload was still in flight, the save payload captured an empty
+  // imageUrl and overwrote the DB — they thought the upload "didn't
+  // save" and had to upload again. This flag blocks Save until the
+  // upload completes (and the onChange propagates the URL into state).
+  const [imageUploading, setImageUploading] = useState(false);
+
   async function handleSave() {
     setErr(null);
     startTransition(async () => {
@@ -271,7 +278,15 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
           {/* Hero — first section customers see */}
           <Section title="Hero section" desc="The top of the product page — H1, tagline, banner, CTAs.">
             <Field label="Hero banner image (landscape)">
-              <ImageUpload value={imageUrl} onChange={setImageUrl} prefix={`hero-${product.slug}`} aspect={16 / 9} label="Hero banner" size="lg" />
+              <ImageUpload
+                value={imageUrl}
+                onChange={setImageUrl}
+                onUploadingChange={setImageUploading}
+                prefix={`hero-${product.slug}`}
+                aspect={16 / 9}
+                label="Hero banner"
+                size="lg"
+              />
               <p className="mt-1 text-[10px] text-neutral-500">
                 Cropped to 16:9. Also used as the thumbnail on shop grid cards, cart, related products, and admin orders.
               </p>
@@ -698,14 +713,18 @@ export function ProductEditor({ product, categories, defaultSeoBody }: { product
         <div className="text-xs text-neutral-500">
           {err && <span className="font-bold text-red-600">{err}</span>}
           {savedFlash && <span className="font-bold text-green-600">✓ Saved</span>}
-          {!err && !savedFlash && <span>Changes are saved per-product.</span>}
+          {imageUploading && !err && !savedFlash && (
+            <span className="font-bold text-amber-600">Hero image upload in progress — wait before saving.</span>
+          )}
+          {!err && !savedFlash && !imageUploading && <span>Changes are saved per-product.</span>}
         </div>
         <button
           onClick={handleSave}
-          disabled={isPending}
+          disabled={isPending || imageUploading}
           className="rounded-full bg-pink px-6 py-2 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
+          title={imageUploading ? 'Waiting for hero image upload to finish' : undefined}
         >
-          {isPending ? 'Saving…' : 'Save Changes'}
+          {isPending ? 'Saving…' : imageUploading ? 'Uploading…' : 'Save Changes'}
         </button>
       </div>
     </div>
