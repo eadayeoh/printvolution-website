@@ -405,7 +405,27 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         if (tablePrice > 0) {
           const perUnit = pt.qty_mode === 'per_unit_at_tier_rate';
           const lineQty = perUnit ? useQty : tier;
-          const lineCents = perUnit ? Math.round((tablePrice / tier) * useQty) : tablePrice;
+          let lineCents = perUnit ? Math.round((tablePrice / tier) * useQty) : tablePrice;
+          if (perUnit) {
+            // Monotonicity floor. Without it, crossing into a cheaper
+            // per-unit tier makes the total DROP (e.g. 19 sheets × \$14
+            // = \$266 vs 20 sheets × \$13 = \$260). Floor the total at
+            // the highest "top-of-prior-tier" amount so +1 on qty never
+            // lowers the price.
+            let floorCents = 0;
+            for (let i = 0; i < comboTiers.length; i++) {
+              const t = comboTiers[i];
+              if (t >= tier) break;
+              const nextT = comboTiers[i + 1];
+              if (nextT == null) continue;
+              const ratePerUnit = (pt.prices[`${axisPrefix}:${t}`] ?? 0) / t;
+              floorCents = Math.max(
+                floorCents,
+                Math.round(ratePerUnit * (nextT - 1)),
+              );
+            }
+            if (lineCents < floorCents) lineCents = floorCents;
+          }
           const parts: string[] = [];
           for (const axis of axisOrder) {
             const selectedSlug = cfgState[axis];
