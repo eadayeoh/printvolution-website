@@ -12,7 +12,8 @@
 // Axes exposed to the customer:
 //   • Type (Type A / Type B)     — what pvpricelist calls A and B
 //   • Paper (128 / 157 / 260)
-//   • Fold Type (half / tri / z / gate / roll) mapped to std or plus tier
+//   • Fold Type — 11 options (6 for Type A, 5 for Type B), each gated
+//     to its Type via per-option show_if. Mapped to std or plus tier.
 //   • Lamination Finish (none / matt / gloss)
 //   • Lamination Sides (single / double) — hidden when finish = none
 //   • Quantity
@@ -58,13 +59,25 @@ const lb = snap.rates.longBrochures;
 const QTYS = lb.LB_QTYS; // [300, 500, 1000, 2000, ..., 10000]
 const PAPERS = ['128', '157', '260'];
 
-const FOLD_TIER = {
-  half: 'std',
-  tri: 'std',
-  z: 'plus',
-  gate: 'plus',
-  roll: 'plus',
-};
+// 11 fold options — 6 for Type A (A4×3), 5 for Type B (A4×4). Each is
+// gated to its Type via per-option show_if on the fold configurator step.
+// std tier = letter/tri-style 2-fold (simpler on the folding machine);
+// plus tier = zigzag, gate, roll, or any compound (cross) fold.
+const FOLDS = [
+  // Type A (A4 × 3, 297 × 630mm)
+  { slug: 'letter-a',          label: 'Letter Fold',                  note: '2 folds · letter-style (C-shape) · 297 × 630mm · 3 panels',   tier: 'std',  forType: 'a' },
+  { slug: 'accordion-2-a',     label: 'Accordion Fold 2 (Z fold 2)',  note: '2 folds · zigzag · 297 × 630mm · 3 panels',                   tier: 'plus', forType: 'a' },
+  { slug: 'roll-3-a',          label: 'Roll fold 3',                  note: '3 folds · rolled inward · 297 × 630mm · 4 panels',            tier: 'plus', forType: 'a' },
+  { slug: 'accordion-3-a',     label: 'Accordion Fold 3 (Z fold 3)',  note: '3 folds · zigzag · 297 × 630mm · 4 panels',                   tier: 'plus', forType: 'a' },
+  { slug: 'letter-half-a',     label: 'Letter Fold + Half Fold',      note: 'Letter fold then cross-fold in half · compound fold',         tier: 'plus', forType: 'a' },
+  { slug: 'accordion-2-half-a',label: 'Accordion Fold 2 + Half Fold', note: 'Accordion-2 then cross-fold in half · compound fold',         tier: 'plus', forType: 'a' },
+  // Type B (A4 × 4, 297 × 840mm)
+  { slug: 'gate-b',            label: 'Gate Fold',                    note: '2 folds · outer panels fold inward · 297 × 840mm · 3 panels', tier: 'plus', forType: 'b' },
+  { slug: 'accordion-3-b',     label: 'Accordion Fold 3 (Z fold 3)',  note: '3 folds · zigzag · 297 × 840mm · 4 panels',                   tier: 'plus', forType: 'b' },
+  { slug: 'double-gate-b',     label: 'Double Gate Fold',             note: '3 folds · gate then fold in half · 297 × 840mm · 4 panels',   tier: 'plus', forType: 'b' },
+  { slug: 'accordion-4-b',     label: 'Accordion Fold 4 (Z fold 4)',  note: '4 folds · zigzag · 297 × 840mm · 5 panels',                   tier: 'plus', forType: 'b' },
+  { slug: 'accordion-3-half-b',label: 'Accordion Fold 3 + Half Fold', note: 'Accordion-3 then cross-fold in half · compound fold',         tier: 'plus', forType: 'b' },
+];
 
 function foldCost(qty, tier /* 'std' | 'plus' */) {
   for (const row of lb.LB_FOLD_ROWS) {
@@ -87,13 +100,7 @@ const axes = {
     { slug: '157', label: '157gsm Art Paper', note: 'Heavier, more premium feel' },
     { slug: '260', label: '260gsm Art Card', note: 'Thick card stock — holds a crease without flaring' },
   ],
-  fold: [
-    { slug: 'half', label: 'Half Fold', note: 'One fold · 2 panels' },
-    { slug: 'tri', label: 'Tri Fold', note: 'Two folds, letter-style · 3 panels' },
-    { slug: 'z', label: 'Z-Fold', note: 'Two folds, zigzag · 3 panels' },
-    { slug: 'gate', label: 'Gate Fold', note: 'Two folds, outer panels fold inward · 3 panels' },
-    { slug: 'roll', label: 'Roll Fold', note: 'Three folds, rolled inward · 4 panels' },
-  ],
+  fold: FOLDS.map((f) => ({ slug: f.slug, label: f.label, note: f.note })),
   lam_finish: [
     { slug: 'none', label: 'No lamination' },
     { slug: 'matt', label: 'Matt Lam', note: 'Soft-touch, subtle finish' },
@@ -112,47 +119,48 @@ const axes = {
 const prices = {};
 let count = 0;
 
-for (const type of ['a', 'b']) {
+// Only generate price keys for (fold ∈ valid-for-type) combinations so
+// the matrix stays tight (no orphan entries for type B × type-A-only
+// folds, and vice versa).
+for (const fold of FOLDS) {
+  const type = fold.forType;
   const printTable = type === 'a' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
   for (const paper of PAPERS) {
-    for (const foldSlug of ['half', 'tri', 'z', 'gate', 'roll']) {
-      const foldTier = FOLD_TIER[foldSlug];
-      for (const qty of QTYS) {
-        const printCost = printTable[String(qty)]?.[paper];
-        if (printCost == null) continue;
-        const fCost = foldCost(qty, foldTier);
+    for (const qty of QTYS) {
+      const printCost = printTable[String(qty)]?.[paper];
+      if (printCost == null) continue;
+      const fCost = foldCost(qty, fold.tier);
 
-        // Three lam-finish paths — each generates the right number of
-        // lam_sides variants:
-        //   none  → sides irrelevant, single placeholder key 'one'
-        //   matt  → two keys (one, two) at LB_LAM prices
-        //   gloss → two keys (one, two) — same upstream price as matt
+      // Three lam-finish paths — each generates the right number of
+      // lam_sides variants:
+      //   none  → sides irrelevant, single placeholder key 'one'
+      //   matt  → two keys (one, two) at LB_LAM prices
+      //   gloss → two keys (one, two) — same upstream price as matt
 
-        // No lamination — single key with lam_sides='one' placeholder.
-        // (UI hides lam_sides step when finish=none, so cfgState resolves
-        // to 'one' via auto-reset.)
-        {
-          const cents = Math.ceil(printCost + 0 + fCost) * 100;
-          const key = [type, paper, 'none', 'one', foldSlug, qty].join(':');
+      // No lamination — single key with lam_sides='one' placeholder.
+      // (UI hides lam_sides step when finish=none, so cfgState resolves
+      // to 'one' via auto-reset.)
+      {
+        const cents = Math.ceil(printCost + 0 + fCost) * 100;
+        const key = [type, paper, 'none', 'one', fold.slug, qty].join(':');
+        prices[key] = cents;
+        count++;
+      }
+
+      // Matt and Gloss — both finishes price the same upstream.
+      for (const finish of ['matt', 'gloss']) {
+        for (const sides of ['one', 'two']) {
+          const lamCost = lb.LB_LAM[String(qty)]?.[sides === 'one' ? '1' : '2'] ?? 0;
+          const cents = Math.ceil(printCost + lamCost + fCost) * 100;
+          const key = [type, paper, finish, sides, fold.slug, qty].join(':');
           prices[key] = cents;
           count++;
-        }
-
-        // Matt and Gloss — both finishes price the same upstream.
-        for (const finish of ['matt', 'gloss']) {
-          for (const sides of ['one', 'two']) {
-            const lamCost = lb.LB_LAM[String(qty)]?.[sides === 'one' ? '1' : '2'] ?? 0;
-            const cents = Math.ceil(printCost + lamCost + fCost) * 100;
-            const key = [type, paper, finish, sides, foldSlug, qty].join(':');
-            prices[key] = cents;
-            count++;
-          }
         }
       }
     }
   }
 }
-console.log(`Computed ${count} prices.`);
+console.log(`Computed ${count} prices across ${FOLDS.length} fold options.`);
 
 // ────────────────────────────────────────────────────────────────
 // pricing_table
@@ -180,7 +188,16 @@ const steps = [
   },
   {
     step_id: 'fold', step_order: 2, label: 'Fold Type', type: 'swatch', required: true,
-    options: axes.fold, show_if: null, step_config: {},
+    // Per-option show_if gates each fold to its Type. When the customer
+    // switches Type, auto-reset in product-page.tsx picks the first
+    // visible fold automatically.
+    options: FOLDS.map((f) => ({
+      slug: f.slug,
+      label: f.label,
+      note: f.note,
+      show_if: { step: 'type', value: f.forType },
+    })),
+    show_if: null, step_config: {},
   },
   {
     step_id: 'lam_finish', step_order: 3, label: 'Lamination', type: 'swatch', required: true,
@@ -237,13 +254,14 @@ async function main() {
   console.log(`[3/4] Inserted ${inserted.length} configurator steps.`);
 
   const spots = [
-    { type: 'a', paper: '128', finish: 'none', sides: 'one', fold: 'half', qty: 300 },
-    { type: 'a', paper: '157', finish: 'gloss', sides: 'one', fold: 'tri', qty: 1000 },
-    { type: 'a', paper: '157', finish: 'matt', sides: 'one', fold: 'tri', qty: 1000 },
-    { type: 'b', paper: '260', finish: 'matt', sides: 'two', fold: 'roll', qty: 5000 },
-    { type: 'b', paper: '128', finish: 'none', sides: 'one', fold: 'z', qty: 2000 },
-    { type: 'b', paper: '260', finish: 'gloss', sides: 'two', fold: 'gate', qty: 10000 },
+    { type: 'a', paper: '128', finish: 'none', sides: 'one', fold: 'letter-a', qty: 300 },
+    { type: 'a', paper: '157', finish: 'gloss', sides: 'one', fold: 'accordion-2-a', qty: 1000 },
+    { type: 'a', paper: '260', finish: 'matt', sides: 'two', fold: 'roll-3-a', qty: 2000 },
+    { type: 'b', paper: '128', finish: 'none', sides: 'one', fold: 'gate-b', qty: 300 },
+    { type: 'b', paper: '260', finish: 'matt', sides: 'two', fold: 'double-gate-b', qty: 5000 },
+    { type: 'b', paper: '260', finish: 'gloss', sides: 'two', fold: 'accordion-4-b', qty: 10000 },
   ];
+  const FOLD_BY_SLUG = Object.fromEntries(FOLDS.map((f) => [f.slug, f]));
   console.log('\n[4/4] Spot-check (all \$ ceil-rounded from pvpricelist):');
   for (const s of spots) {
     const key = [s.type, s.paper, s.finish, s.sides, s.fold, s.qty].join(':');
@@ -251,7 +269,7 @@ async function main() {
     const printTable = s.type === 'a' ? lb.LB_PRINT_A : lb.LB_PRINT_B;
     const pCost = printTable[String(s.qty)]?.[s.paper];
     const lCost = s.finish === 'none' ? 0 : lb.LB_LAM[String(s.qty)]?.[s.sides === 'one' ? '1' : '2'];
-    const fCost = foldCost(s.qty, FOLD_TIER[s.fold]);
+    const fCost = foldCost(s.qty, FOLD_BY_SLUG[s.fold].tier);
     console.log(`  ${key}`);
     console.log(`    print $${pCost} + lam $${lCost} + fold $${fCost} = $${(pCost + lCost + fCost).toFixed(2)} → stored $${(cents / 100).toFixed(2)}`);
   }
