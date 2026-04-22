@@ -8,6 +8,7 @@ import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
+import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
@@ -87,6 +88,52 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       setUploading(false);
     }
   }
+
+  async function doMultiSlotUpload(payload: {
+    files: Record<string, File>;
+    texts: Record<string, string>;
+  }) {
+    setErr(null);
+    setUploading(true);
+    const fd = new FormData();
+    fd.append('product_slug', product.slug);
+    if (selectedTemplateId) fd.append('template_id', selectedTemplateId);
+    if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
+    if (selectedVariantId) fd.append('variant_id', selectedVariantId);
+    // Per-zone files: `file_<zone_id>`. Also emit the first file as
+    // the legacy `file` key so the server action can register a primary
+    // source asset for cart-tracking regardless of zone layout.
+    let primaryAttached = false;
+    for (const [zoneId, file] of Object.entries(payload.files)) {
+      fd.append(`file_${zoneId}`, file);
+      if (!primaryAttached) {
+        fd.append('file', file);
+        primaryAttached = true;
+      }
+    }
+    for (const [zoneId, text] of Object.entries(payload.texts)) {
+      fd.append(`text_${zoneId}`, text);
+    }
+    try {
+      const r = await uploadAndPreviewGift(fd);
+      if (!r || typeof r !== 'object') {
+        setErr('Server returned no response. Please try again.');
+      } else if (r.ok === true) {
+        setPreview(r);
+      } else {
+        setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
+      }
+    } catch (e: any) {
+      setErr(e?.message || e?.toString?.() || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // Active template, if the customer has picked one.
+  const activeTemplate = selectedTemplateId
+    ? templates.find((t) => t.id === selectedTemplateId) ?? null
+    : null;
 
   function handleAddToCart() {
     if (!preview) return;
@@ -461,7 +508,34 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 boxShadow: '5px 5px 0 var(--pv-ink)',
               }}
             >
-              {/* Step A: Upload */}
+              {/* Step A: Multi-slot upload (template) or single-file upload (legacy) */}
+              {activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                <ComposeSection letter="A" title="Fill the template">
+                  <TemplateMultiSlotForm
+                    template={activeTemplate}
+                    isWorking={uploading}
+                    currentPreviewUrl={preview?.previewUrl ?? null}
+                    onReset={() => setPreview(null)}
+                    onGeneratePreview={doMultiSlotUpload}
+                  />
+                  {err && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: 12,
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        fontSize: 13,
+                        color: '#991b1b',
+                        display: 'flex',
+                        gap: 8,
+                      }}
+                    >
+                      <AlertCircle size={16} /> {err}
+                    </div>
+                  )}
+                </ComposeSection>
+              ) : (
               <ComposeSection letter="A" title="Upload your photo">
                 {!preview && !uploading && (
                   <div
@@ -588,6 +662,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
               </ComposeSection>
+              )}
 
               {/* Step B: Template picker (if applicable) */}
               {hasTemplates && (

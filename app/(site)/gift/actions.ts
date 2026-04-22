@@ -64,6 +64,27 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   if (file.size > MAX_BYTES) return { ok: false, error: 'File too large (max 20 MB)' };
   if (!productSlug) return { ok: false, error: 'Product slug missing' };
 
+  // Multi-slot: pull any per-zone files + texts out of the form. Keys
+  // are 'file_<zone_id>' and 'text_<zone_id>'. Empty/invalid files are
+  // skipped. Texts pass through as-is (sanitised downstream via SVG
+  // escape in the composite renderer).
+  const zoneFilesBytes: Record<string, Uint8Array> = {};
+  const zoneFileMetas: Record<string, { mime: string; size: number; key?: string }> = {};
+  const zoneTexts: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) {
+    if (k.startsWith('file_') && v instanceof File && v.size > 0 && v.size <= MAX_BYTES) {
+      const zoneId = k.slice('file_'.length);
+      const b = new Uint8Array(await v.arrayBuffer());
+      const det = detectImage(b);
+      if (det?.mime && ALLOWED_MIME.has(det.mime)) {
+        zoneFilesBytes[zoneId] = b;
+        zoneFileMetas[zoneId] = { mime: det.mime, size: v.size };
+      }
+    } else if (k.startsWith('text_') && typeof v === 'string') {
+      zoneTexts[k.slice('text_'.length)] = v.slice(0, 500); // hard cap
+    }
+  }
+
   // Magic-byte sniff. file.type is browser-supplied and spoofable; if
   // the real bytes don't match a supported image format, reject.
   const bytesForSniff = new Uint8Array(await file.arrayBuffer());
@@ -133,6 +154,28 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     .upload(sourceKey, bytes, { contentType: actualMime, upsert: false, cacheControl: '3600' });
   if (upErr) return { ok: false, error: 'upload failed' };
 
+  // Multi-slot: persist every per-zone source under its own storage key
+  // so admin can purge them independently. Gracefully skip on failure —
+  // the primary file above still drives a valid preview.
+  for (const [zoneId, meta] of Object.entries(zoneFileMetas)) {
+    const zoneExt = EXT_FOR_MIME[meta.mime] ?? 'bin';
+    const zoneKey = makeKey(`src-${productSlug}-${zoneId}`, zoneExt);
+    const zbytes = zoneFilesBytes[zoneId];
+    const { error: zUpErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .upload(zoneKey, zbytes, { contentType: meta.mime, upsert: false, cacheControl: '3600' });
+    if (!zUpErr) {
+      meta.key = zoneKey;
+      await service.from('gift_assets').insert({
+        role: 'source',
+        bucket: GIFT_BUCKETS.sources,
+        path: zoneKey,
+        mime_type: meta.mime,
+        size_bytes: meta.size,
+      });
+    }
+  }
+
   // 2. Register source asset row
   const { data: sourceAsset, error: srcErr } = await service
     .from('gift_assets')
@@ -168,6 +211,8 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       sourceMime: file.type,
       cropRect: cropRect ?? null,
       templateId,
+      imagesByZoneId: Object.keys(zoneFilesBytes).length > 0 ? zoneFilesBytes : undefined,
+      textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
     });
   } catch (e: any) {
     return { ok: false, error: `preview failed: ${e.message}` };

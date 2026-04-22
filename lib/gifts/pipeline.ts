@@ -60,6 +60,13 @@ export type PreviewInput = {
   sourceMime: string;
   cropRect?: GiftCropRect | null;   // required for photo-resize
   templateId?: string | null;
+  /** Per-zone image bytes (multi-slot uploads) keyed by zone_id.
+   *  Any image zone without an entry here falls back to sourceBytes
+   *  inside the composite renderer. */
+  imagesByZoneId?: Record<string, Uint8Array>;
+  /** Per-zone text overrides keyed by zone_id. Defaults to the
+   *  template zone's default_text when a key is absent. */
+  textByZoneId?: Record<string, string>;
 };
 
 export type PreviewOutput = {
@@ -85,6 +92,8 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
     const out = await renderTemplateComposite(sharp, {
       template,
       sourceBytes: input.sourceBytes,
+      imagesByZoneId: input.imagesByZoneId,
+      textByZoneId:   input.textByZoneId,
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,
       kind: 'preview',
