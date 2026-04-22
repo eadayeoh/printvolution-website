@@ -21,7 +21,10 @@ export async function getPipelineByIdAdmin(id: string): Promise<GiftPipeline | n
   return data as GiftPipeline | null;
 }
 
-/** Default pipeline for a mode, used when product.pipeline_id is null. */
+/** Default pipeline for a mode, used when product.pipeline_id is null.
+ *  New modes (eco-solvent / digital / uv-dtf) don't have a dedicated
+ *  default yet — admin picks explicitly via product.pipeline_id, or we
+ *  fall back to photo-resize (no AI transform, just crop + bleed). */
 export async function getDefaultPipelineForMode(mode: GiftMode): Promise<GiftPipeline | null> {
   const sb = createClient();
   const DEFAULT_SLUGS: Record<GiftMode, string> = {
@@ -29,6 +32,9 @@ export async function getDefaultPipelineForMode(mode: GiftMode): Promise<GiftPip
     uv: 'uv-flat-v1',
     embroidery: 'embroidery-4c-v1',
     'photo-resize': 'photo-resize-v1',
+    'eco-solvent': 'photo-resize-v1',
+    'digital':     'photo-resize-v1',
+    'uv-dtf':      'photo-resize-v1',
   };
   const { data } = await sb.from('gift_pipelines').select('*').eq('slug', DEFAULT_SLUGS[mode]).maybeSingle();
   return data as GiftPipeline | null;

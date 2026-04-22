@@ -1,6 +1,6 @@
 import type { GiftPipeline } from '@/lib/gifts/types';
 
-const KINDS = ['laser', 'uv', 'embroidery', 'photo-resize'] as const;
+const KINDS = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'] as const;
 
 export function PipelineForm({
   pipeline,

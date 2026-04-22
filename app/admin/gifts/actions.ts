@@ -32,7 +32,7 @@ const GiftProductSchema = z.object({
   bleed_mm: z.number().min(0).default(2),
   safe_zone_mm: z.number().min(0).default(3),
   min_source_px: z.number().int().min(300).default(1200),
-  mode: z.enum(['laser', 'uv', 'embroidery', 'photo-resize']),
+  mode: z.enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf']),
   template_mode: z.enum(['none', 'optional', 'required']).default('none'),
   ai_prompt: z.string().nullable().optional(),
   ai_negative_prompt: z.string().nullable().optional(),

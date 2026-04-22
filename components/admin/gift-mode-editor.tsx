@@ -61,27 +61,15 @@ export function GiftModeEditor({ mode }: { mode: GiftModeMeta }) {
           </span>
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Icon (emoji)</span>
-            <input
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              className={inp}
-              placeholder="e.g. 🔥"
-              maxLength={8}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Display order</span>
-            <input
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(e.target.value)}
-              className={inp}
-            />
-          </label>
-        </div>
+        <label className="block">
+          <span className="mb-1 block text-xs font-bold text-ink">Display order</span>
+          <input
+            type="number"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(e.target.value)}
+            className={inp}
+          />
+        </label>
 
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />

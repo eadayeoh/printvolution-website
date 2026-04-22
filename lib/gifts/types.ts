@@ -1,13 +1,25 @@
-export type GiftMode = 'laser' | 'uv' | 'embroidery' | 'photo-resize';
+export type GiftMode =
+  | 'laser'
+  | 'uv'
+  | 'embroidery'
+  | 'photo-resize'
+  | 'eco-solvent'
+  | 'digital'
+  | 'uv-dtf';
 export type GiftTemplateMode = 'none' | 'optional' | 'required';
 export type GiftAssetRole = 'source' | 'preview' | 'production' | 'production-pdf';
 export type GiftProductionStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
+// Fallback labels/descriptions used when the gift_modes metadata table
+// is unavailable. Admin can override every row at /admin/gifts/modes.
 export const GIFT_MODE_LABEL: Record<GiftMode, string> = {
-  'laser': 'Laser',
-  'uv': 'UV Print',
+  'laser': 'Laser Engraving',
+  'uv': 'UV Printing',
   'embroidery': 'Embroidery',
   'photo-resize': 'Photo Resize',
+  'eco-solvent': 'Eco Solvent',
+  'digital': 'Digital Printing',
+  'uv-dtf': 'UV DTF',
 };
 
 export const GIFT_MODE_DESCRIPTION: Record<GiftMode, string> = {
@@ -15,6 +27,9 @@ export const GIFT_MODE_DESCRIPTION: Record<GiftMode, string> = {
   'uv': 'AI-stylises the photo for UV flatbed printing (flat, saturated colours).',
   'embroidery': 'AI-stylises + posterises the photo for embroidery (limited colour palette).',
   'photo-resize': 'No AI. Customer crops to exact dimensions; system adds bleed automatically.',
+  'eco-solvent': 'Large-format eco-solvent printing on banner vinyl, poster paper, and adhesive rolls.',
+  'digital': 'High-resolution digital press — paper, card, sticker rolls. No AI transform.',
+  'uv-dtf': 'UV DTF transfer film for curved and irregular surfaces. Customer uploads artwork.',
 };
 
 export type GiftPriceTier = {

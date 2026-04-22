@@ -26,7 +26,6 @@ export default async function AdminGiftModesPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-neutral-100">
             <tr>
-              <th className="border-b p-2 text-left">Icon</th>
               <th className="border-b p-2 text-left">Slug</th>
               <th className="border-b p-2 text-left">Label</th>
               <th className="border-b p-2 text-left">Description</th>
@@ -38,7 +37,6 @@ export default async function AdminGiftModesPage() {
           <tbody>
             {modes.map((m) => (
               <tr key={m.slug} className={m.is_active ? '' : 'opacity-50'}>
-                <td className="border-b p-2 text-xl">{m.icon ?? '—'}</td>
                 <td className="border-b p-2 font-mono text-xs">{m.slug}</td>
                 <td className="border-b p-2 font-bold">{m.label}</td>
                 <td className="border-b p-2 text-xs text-neutral-600">{m.description ?? ''}</td>

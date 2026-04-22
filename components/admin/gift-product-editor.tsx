@@ -29,10 +29,13 @@ type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup'
 
 // Fallback used only if the /admin/gifts/modes DB hasn't been seeded yet.
 const FALLBACK_MODES: GiftModeMeta[] = [
-  { slug: 'laser',        label: 'Laser',        description: GIFT_MODE_DESCRIPTION['laser'],        icon: '🔥', display_order: 1, is_active: true },
-  { slug: 'uv',           label: 'UV Print',     description: GIFT_MODE_DESCRIPTION['uv'],           icon: '🎨', display_order: 2, is_active: true },
-  { slug: 'embroidery',   label: 'Embroidery',   description: GIFT_MODE_DESCRIPTION['embroidery'],   icon: '🧵', display_order: 3, is_active: true },
-  { slug: 'photo-resize', label: 'Photo Resize', description: GIFT_MODE_DESCRIPTION['photo-resize'], icon: '✂️', display_order: 4, is_active: true },
+  { slug: 'laser',        label: 'Laser Engraving',  description: GIFT_MODE_DESCRIPTION['laser'],        icon: null, display_order: 1, is_active: true },
+  { slug: 'uv',           label: 'UV Printing',      description: GIFT_MODE_DESCRIPTION['uv'],           icon: null, display_order: 2, is_active: true },
+  { slug: 'embroidery',   label: 'Embroidery',       description: GIFT_MODE_DESCRIPTION['embroidery'],   icon: null, display_order: 3, is_active: true },
+  { slug: 'photo-resize', label: 'Photo Resize',     description: GIFT_MODE_DESCRIPTION['photo-resize'], icon: null, display_order: 4, is_active: true },
+  { slug: 'eco-solvent',  label: 'Eco Solvent',      description: GIFT_MODE_DESCRIPTION['eco-solvent'],  icon: null, display_order: 5, is_active: true },
+  { slug: 'digital',      label: 'Digital Printing', description: GIFT_MODE_DESCRIPTION['digital'],      icon: null, display_order: 6, is_active: true },
+  { slug: 'uv-dtf',       label: 'UV DTF',           description: GIFT_MODE_DESCRIPTION['uv-dtf'],       icon: null, display_order: 7, is_active: true },
 ];
 
 export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [] }: Props) {
@@ -270,10 +273,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                       active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
                     }`}
                   >
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="text-xl">{m.icon ?? ''}</span>
-                      <span className="font-bold text-ink">{m.label}</span>
-                    </div>
+                    <div className="mb-1 font-bold text-ink">{m.label}</div>
                     <div className="text-[11px] leading-relaxed text-neutral-600">{m.description ?? ''}</div>
                   </button>
                 );
