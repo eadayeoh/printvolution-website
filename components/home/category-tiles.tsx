@@ -157,15 +157,14 @@ export function CategoryTiles({ tabs, header }: { tabs: CategoryTab[]; header?: 
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: 360,
                 transition: 'transform 0.15s, box-shadow 0.15s',
                 color: 'inherit',
               }}
             >
               <div
                 style={{
-                  flex: 1,
-                  minHeight: 200,
+                  height: 220,
+                  flexShrink: 0,
                   borderBottom: '3px solid var(--pv-ink)',
                   backgroundImage: t.image_url ? `url(${t.image_url})` : undefined,
                   backgroundSize: 'cover',
