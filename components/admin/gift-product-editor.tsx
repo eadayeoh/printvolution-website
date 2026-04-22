@@ -120,7 +120,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         : null,
       is_active: isActive,
       mockup_url: mockupUrl || null,
-      mockup_area: mockupUrl ? mockupArea : null,
+      // mockup_area is a NOT NULL column at the DB level, so always send
+      // the current value. When there's no mockup URL the coordinates
+      // are ignored anyway — we keep them parked at the default.
+      mockup_area: mockupArea,
       pipeline_id: pipelineId || null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
     };
