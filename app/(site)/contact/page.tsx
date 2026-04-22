@@ -380,14 +380,30 @@ export default async function ContactPage() {
                     )}
                   </>
                 </LocRow>
-                {location.phone_label && (
-                  <LocRow k="Phone">
-                    {location.phone_href ? (
-                      <a href={String(location.phone_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
-                        {location.phone_label}
+                {location.landline_label && (
+                  <LocRow k="Landline">
+                    {location.landline_href ? (
+                      <a href={String(location.landline_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
+                        {location.landline_label}
                       </a>
                     ) : (
-                      <>{location.phone_label}</>
+                      <>{location.landline_label}</>
+                    )}
+                  </LocRow>
+                )}
+                {location.phone_label && (
+                  <LocRow k="WhatsApp">
+                    {location.phone_href ? (
+                      <a
+                        href={String(location.phone_href)}
+                        target={String(location.phone_href).startsWith('http') ? '_blank' : undefined}
+                        rel={String(location.phone_href).startsWith('http') ? 'noopener noreferrer' : undefined}
+                        style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}
+                      >
+                        {String(location.phone_label).replace(/^WhatsApp · /, '')}
+                      </a>
+                    ) : (
+                      <>{String(location.phone_label).replace(/^WhatsApp · /, '')}</>
                     )}
                   </LocRow>
                 )}
@@ -438,19 +454,6 @@ export default async function ContactPage() {
                         <>
                           <br />
                           {location.mrt_detail}
-                        </>
-                      )}
-                    </>
-                  </LocRow>
-                )}
-                {(location.parking_label || location.parking_detail) && (
-                  <LocRow k="Parking">
-                    <>
-                      {location.parking_label}
-                      {location.parking_detail && (
-                        <>
-                          <br />
-                          {location.parking_detail}
                         </>
                       )}
                     </>
