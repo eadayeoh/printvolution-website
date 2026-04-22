@@ -116,6 +116,8 @@ const TemplateSchema = z.object({
   zones_json: z.array(z.record(z.string(), z.unknown())).default([]),
   display_order: z.number().int().default(0),
   is_active: z.boolean().default(true),
+  reference_width_mm:  z.number().positive().nullable().optional(),
+  reference_height_mm: z.number().positive().nullable().optional(),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {

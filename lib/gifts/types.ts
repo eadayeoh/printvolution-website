@@ -127,6 +127,8 @@ export type GiftTemplate = {
   zones_json: GiftTemplateZone[];
   display_order: number;
   is_active: boolean;
+  reference_width_mm: number | null;
+  reference_height_mm: number | null;
 };
 
 export type GiftCropRect = {

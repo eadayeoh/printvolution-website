@@ -85,6 +85,20 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
   const [foreground, setForeground] = useState(template?.foreground_url ?? '');
   const [displayOrder, setDisplayOrder] = useState(template?.display_order?.toString() ?? '0');
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
+  const [refWidthMm, setRefWidthMm] = useState(
+    template?.reference_width_mm ? String(template.reference_width_mm) : '',
+  );
+  const [refHeightMm, setRefHeightMm] = useState(
+    template?.reference_height_mm ? String(template.reference_height_mm) : '',
+  );
+  // Preview aspect: if both reference dims are set, honour them;
+  // otherwise fall back to the editor's legacy square canvas.
+  const previewAspect = (() => {
+    const w = parseFloat(refWidthMm);
+    const h = parseFloat(refHeightMm);
+    if (!w || !h || w <= 0 || h <= 0) return '1 / 1';
+    return `${w} / ${h}`;
+  })();
   const [zones, setZones] = useState<GiftTemplateZone[]>(
     ((template?.zones_json as GiftTemplateZone[]) ?? []).map((z) => ({
       ...z,
@@ -170,6 +184,8 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
   function save() {
     setErr(null);
     if (!name.trim()) { setErr('Name required'); return; }
+    const refWParsed = parseFloat(refWidthMm);
+    const refHParsed = parseFloat(refHeightMm);
     const payload: any = {
       name: name.trim(),
       description: description.trim() || null,
@@ -179,6 +195,8 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
       zones_json: zones,
       display_order: parseInt(displayOrder, 10) || 0,
       is_active: isActive,
+      reference_width_mm:  Number.isFinite(refWParsed) && refWParsed > 0 ? refWParsed : null,
+      reference_height_mm: Number.isFinite(refHParsed) && refHParsed > 0 ? refHParsed : null,
     };
     startTransition(async () => {
       if (template) {
@@ -227,6 +245,62 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
               <span className="mb-1 block text-xs font-bold text-ink">Description</span>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} placeholder="Shown to customers under the thumbnail" />
             </label>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
+            <div>
+              <div className="text-xs font-bold text-ink">Canvas aspect (reference dimensions)</div>
+              <div className="text-[11px] text-neutral-500">
+                The real-world dimensions the layout was authored for. Sets the preview aspect ratio here and lets the
+                render pipeline scale zones to different product sizes. Leave blank for a square preview.
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-bold text-ink">Reference width (mm)</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={0.1}
+                  value={refWidthMm}
+                  onChange={(e) => setRefWidthMm(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. 297 (A3 width)"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-bold text-ink">Reference height (mm)</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={0.1}
+                  value={refHeightMm}
+                  onChange={(e) => setRefHeightMm(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. 420 (A3 height)"
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {[
+                { label: 'A3 portrait',  w: 297,  h: 420 },
+                { label: 'A4 portrait',  w: 210,  h: 297 },
+                { label: 'A5 portrait',  w: 148,  h: 210 },
+                { label: 'A3 landscape', w: 420,  h: 297 },
+                { label: 'A4 landscape', w: 297,  h: 210 },
+                { label: 'Square',       w: 200,  h: 200 },
+                { label: '4:5 portrait', w: 200,  h: 250 },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => { setRefWidthMm(String(p.w)); setRefHeightMm(String(p.h)); }}
+                  className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-700 hover:border-pink hover:text-pink"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-4">
@@ -366,11 +440,11 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
             </div>
             <div
               ref={canvasRef}
-              className="relative mx-auto my-6 aspect-square w-full max-w-xl select-none overflow-hidden rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-100"
+              className="relative mx-auto my-6 w-full max-w-xl select-none overflow-hidden rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-100"
               onPointerMove={onCanvasPointerMove}
               onPointerUp={endDrag}
               onPointerLeave={endDrag}
-              style={{ touchAction: 'none' }}
+              style={{ touchAction: 'none', aspectRatio: previewAspect }}
             >
               {background && (
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
