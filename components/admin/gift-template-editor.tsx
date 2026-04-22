@@ -464,12 +464,16 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
               )}
 
-              {/* Render image zones with their content */}
+              {/* Render image zones with their content. Every image
+                  zone gets SOMETHING when Show-sample is on: the
+                  admin-set default_image_url if present, else a
+                  deterministic picsum placeholder seeded by zone id
+                  so the layout is always inspectable at a glance. */}
               {showSample && zones.map((z, i) => {
                 if (isTextZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
-                const content = img.default_image_url || (activeZoneIdx === i ? SAMPLE_TEST : null);
-                if (!content) return null;
+                const fallback = `https://picsum.photos/seed/pv-zone-${encodeURIComponent(img.id)}/600/450`;
+                const content = img.default_image_url || fallback;
                 const fit = img.fit_mode ?? 'cover';
                 return (
                   <div

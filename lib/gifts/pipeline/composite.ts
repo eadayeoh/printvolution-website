@@ -113,7 +113,17 @@ export async function renderTemplateComposite(
       const svgBuf: Buffer = resvgBuf ?? await sharp(Buffer.from(svg)).png().toBuffer();
       overlays.push({ input: svgBuf, top: zy, left: zx });
     } else {
-      const img = await prepImageZone(sharp, zone, zw, zh, imagesByZoneId?.[zone.id] ?? sourceBytes);
+      // Prefer customer upload for this zone. Fall back to the zone's
+      // admin-set default_image_url (so templates can ship with
+      // thematic placeholders and render even when the customer only
+      // uploaded one photo). Final fallback is the primary source.
+      const imgZone = zone as GiftTemplateImageZone;
+      let zoneBytes: Uint8Array | undefined = imagesByZoneId?.[zone.id];
+      if (!zoneBytes && imgZone.default_image_url) {
+        const fetched = await fetchAsBuffer(imgZone.default_image_url);
+        if (fetched) zoneBytes = fetched;
+      }
+      const img = await prepImageZone(sharp, imgZone, zw, zh, zoneBytes ?? sourceBytes);
       if (img) overlays.push({ input: img, top: zy, left: zx });
     }
   }
