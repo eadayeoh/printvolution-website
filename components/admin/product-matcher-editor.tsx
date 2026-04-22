@@ -162,7 +162,7 @@ export function MatcherEditor({
                       next[ri] = { ...next[ri], pick_detail: e.target.value };
                       commit({ ...data, rows: next });
                     }}
-                    placeholder="From S$22 · same-day collection if before 4pm"
+                    placeholder="From S$22 · same-day collection if before 1pm"
                   />
                 </div>
                 <div>

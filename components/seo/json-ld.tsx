@@ -18,11 +18,11 @@ export function LocalBusinessSchema() {
         name: 'Printvolution',
         url: 'https://printvolution.sg',
         telephone: '+65-6969-3837',
-        email: 'hello@printvolution.sg',
+        email: 'enquiry@printvolution.sg',
         image: 'https://printvolution.sg/images/hero-home-print.png',
         address: {
           '@type': 'PostalAddress',
-          streetAddress: '60 Paya Lebar Road #B1-35',
+          streetAddress: 'Paya Lebar Square, 60 Paya Lebar Road, #B1-35',
           addressLocality: 'Singapore',
           postalCode: '409051',
           addressCountry: 'SG',
@@ -30,9 +30,15 @@ export function LocalBusinessSchema() {
         openingHoursSpecification: [
           {
             '@type': 'OpeningHoursSpecification',
-            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
             opens: '10:00',
             closes: '19:30',
+          },
+          {
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: ['Saturday', 'Sunday'],
+            opens: '10:00',
+            closes: '19:00',
           },
         ],
         priceRange: 'S$$',

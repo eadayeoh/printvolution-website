@@ -75,7 +75,7 @@ export const DEFAULT_NAME_CARD_MAGAZINE: SeoMagazineData = {
       num: '03',
       title: "Fast when you need it, careful when you don't.",
       body: [
-        "Our standard offset turnaround is **3 working days** from approved preflight. Orders with spot UV or foil stamp add 1–2 days for curing — rushing that step means the finish peels, so we don't. If you need something today, **same-day digital printing** is available for orders submitted before 4pm at our Paya Lebar Square location.",
+        "Our standard offset turnaround is **3 working days** from approved preflight. Orders with spot UV or foil stamp add 1–2 days for curing — rushing that step means the finish peels, so we don't. If you need something today, **same-day digital printing** is available for orders submitted before 1pm at our Paya Lebar Square location.",
         "We offer **islandwide next-day delivery** across Singapore, free on orders over S$150. Or you can collect in person from our Paya Lebar shop — 2 minutes from the MRT.",
       ],
       side: {
@@ -213,7 +213,7 @@ export function buildDefaultMagazine(input: {
         num: '03',
         title: "Fast when you need it, careful when you don't.",
         body: [
-          'Our standard turnaround is **3 working days** from approved preflight. Orders with speciality finishes (spot UV, foil, embossing) add 1–2 days for curing — rushing that step means the finish peels, so we don\'t. If you need something today, **same-day digital printing** is available for orders submitted before 4pm at our Paya Lebar Square location.',
+          'Our standard turnaround is **3 working days** from approved preflight. Orders with speciality finishes (spot UV, foil, embossing) add 1–2 days for curing — rushing that step means the finish peels, so we don\'t. If you need something today, **same-day digital printing** is available for orders submitted before 1pm at our Paya Lebar Square location.',
           'We offer **islandwide next-day delivery** across Singapore, free on orders over S$150. Or collect in person from Paya Lebar Square — 2 minutes from the MRT.',
         ],
         side: {

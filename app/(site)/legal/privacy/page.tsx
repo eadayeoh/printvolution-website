@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <h1 className="mb-6 text-4xl font-black text-ink lg:text-6xl">Privacy &amp; data retention.</h1>
       <p className="mb-10 text-neutral-600">
         Short, plain-English version of what we keep and for how long. If anything here is unclear,{' '}
-        <a href="mailto:hello@printvolution.com" className="underline">email us</a>.
+        <a href="mailto:enquiry@printvolution.sg" className="underline">email us</a>.
       </p>
 
       <section id="gift-retention" className="mb-10 scroll-mt-24 rounded-lg border-2 border-ink bg-white p-6">
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <h2 className="mb-3 text-xl font-bold">Questions?</h2>
         <p className="text-sm text-neutral-700">
           Email{' '}
-          <a href="mailto:hello@printvolution.com" className="underline">hello@printvolution.com</a>{' '}
+          <a href="mailto:enquiry@printvolution.sg" className="underline">enquiry@printvolution.sg</a>{' '}
           — we respond within a working day.
         </p>
       </section>

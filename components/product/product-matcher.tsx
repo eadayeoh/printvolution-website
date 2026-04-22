@@ -43,7 +43,7 @@ export const DEFAULT_MATCHER: MatcherData = {
     {
       need: 'You need cards by *tomorrow*',
       pick_title: 'Digital, Matt Art 300gsm',
-      pick_detail: 'From S$22 · same-day collection if before 4pm',
+      pick_detail: 'From S$22 · same-day collection if before 1pm',
       preset: 'digital-fast',
     },
     {

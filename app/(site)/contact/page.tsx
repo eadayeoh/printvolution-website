@@ -1,6 +1,13 @@
 import { getPageContent } from '@/lib/data/page_content';
 import { ContactForm } from '@/components/contact/contact-form';
 import { HoursGrid } from '@/components/contact/hours-grid';
+import { SafeEmail } from '@/components/contact/safe-email';
+
+function splitMailto(href: string | undefined): { user: string; domain: string } | null {
+  if (!href) return null;
+  const m = href.match(/^mailto:([^@]+)@(.+)$/i);
+  return m ? { user: m[1], domain: m[2] } : null;
+}
 
 export const metadata = {
   title: 'Contact Printvolution | Paya Lebar Square, Singapore',
@@ -112,12 +119,17 @@ export default async function ContactPage() {
           >
             {methods.map((m, i) => {
               const tone = String(m.tone ?? 'magenta');
+              // For email tiles we drop the outer mailto on the server
+              // HTML so harvesters scraping static markup don't see the
+              // address; the inner SafeEmail still renders a working
+              // mailto link after hydration.
+              const isEmail = splitMailto(m.href) !== null;
               return (
                 <a
                   key={i}
-                  href={m.href ?? '#'}
-                  target={String(m.href ?? '').startsWith('http') ? '_blank' : undefined}
-                  rel={String(m.href ?? '').startsWith('http') ? 'noopener noreferrer' : undefined}
+                  href={isEmail ? '#email' : (m.href ?? '#')}
+                  target={!isEmail && String(m.href ?? '').startsWith('http') ? '_blank' : undefined}
+                  rel={!isEmail && String(m.href ?? '').startsWith('http') ? 'noopener noreferrer' : undefined}
                   className="pv-method-tile"
                   style={{
                     background: '#fff',
@@ -186,7 +198,11 @@ export default async function ContactPage() {
                         letterSpacing: '0.02em',
                       }}
                     >
-                      {m.value}
+                      {splitMailto(m.href) ? (
+                        <SafeEmail {...splitMailto(m.href)!} style={{ color: 'inherit' }} />
+                      ) : (
+                        m.value
+                      )}
                     </div>
                   )}
                 </a>
@@ -377,12 +393,40 @@ export default async function ContactPage() {
                 )}
                 {location.email_label && (
                   <LocRow k="Email">
-                    {location.email_href ? (
-                      <a href={String(location.email_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
-                        {location.email_label}
+                    {(() => {
+                      const parsed = splitMailto(String(location.email_href ?? ''));
+                      if (parsed) {
+                        return (
+                          <SafeEmail
+                            user={parsed.user}
+                            domain={parsed.domain}
+                            style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}
+                          />
+                        );
+                      }
+                      return location.email_href ? (
+                        <a href={String(location.email_href)} style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}>
+                          {location.email_label}
+                        </a>
+                      ) : (
+                        <>{location.email_label}</>
+                      );
+                    })()}
+                  </LocRow>
+                )}
+                {location.telegram_label && (
+                  <LocRow k="Telegram">
+                    {location.telegram_href ? (
+                      <a
+                        href={String(location.telegram_href)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--pv-magenta)', fontWeight: 700 }}
+                      >
+                        {location.telegram_label}
                       </a>
                     ) : (
-                      <>{location.email_label}</>
+                      <>{location.telegram_label}</>
                     )}
                   </LocRow>
                 )}

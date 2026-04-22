@@ -1,5 +1,12 @@
 import Link from 'next/link';
 import { getGlobalSection } from '@/lib/data/page_content';
+import { SafeEmail } from '@/components/contact/safe-email';
+
+function footerMailto(href: string | undefined): { user: string; domain: string } | null {
+  if (!href) return null;
+  const m = href.match(/^mailto:([^@]+)@(.+)$/i);
+  return m ? { user: m[1], domain: m[2] } : null;
+}
 
 type BrandItem = { tagline?: string };
 type LinkItem = { label?: string; href?: string };
@@ -125,18 +132,30 @@ export async function Footer() {
                   lineHeight: 1.5,
                 }}
               >
-                {v.href ? (
-                  <a
-                    href={v.href}
-                    target={v.href.startsWith('http') ? '_blank' : undefined}
-                    rel={v.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    style={{ color: '#fff', fontWeight: 600 }}
-                  >
-                    {v.label}
-                  </a>
-                ) : (
-                  <b style={{ color: '#fff', fontWeight: 600 }}>{v.label}</b>
-                )}
+                {(() => {
+                  const email = footerMailto(v.href);
+                  if (email) {
+                    return (
+                      <SafeEmail
+                        user={email.user}
+                        domain={email.domain}
+                        style={{ color: '#fff', fontWeight: 600 }}
+                      />
+                    );
+                  }
+                  return v.href ? (
+                    <a
+                      href={v.href}
+                      target={v.href.startsWith('http') ? '_blank' : undefined}
+                      rel={v.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                      style={{ color: '#fff', fontWeight: 600 }}
+                    >
+                      {v.label}
+                    </a>
+                  ) : (
+                    <b style={{ color: '#fff', fontWeight: 600 }}>{v.label}</b>
+                  );
+                })()}
                 {v.detail && (
                   <>
                     <br />
