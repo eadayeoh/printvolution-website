@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Turnstile } from '@/components/common/turnstile';
 
 type Props = {
   whatsappNumber: string;
@@ -77,11 +78,15 @@ export function ContactForm({ whatsappNumber, enquiryTabs }: Props) {
   const tabs = enquiryTabs && enquiryTabs.length > 0 ? enquiryTabs : DEFAULT_TABS;
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [sent, setSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const spec = useMemo(() => specFor(activeTab), [activeTab]);
   const has = (f: FieldKey) => spec.fields.includes(f);
 
-  function submitForm(e: React.FormEvent) {
+  async function submitForm(e: React.FormEvent) {
     e.preventDefault();
+    setCaptchaError(null);
     const form = new FormData(e.target as HTMLFormElement);
     const get = (k: string) => (form.get(k) || '').toString().trim();
 
@@ -89,6 +94,29 @@ export function ContactForm({ whatsappNumber, enquiryTabs }: Props) {
     const email = get('email');
     const message = get('message');
     if (!name || !email || !message) return;
+
+    if (!captchaToken) {
+      setCaptchaError('Please complete the captcha.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const verify = await fetch('/api/verify-captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: captchaToken }),
+      });
+      if (!verify.ok) {
+        const data = (await verify.json().catch(() => ({}))) as { error?: string };
+        setCaptchaError(data.error ?? 'Captcha failed — please retry.');
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setCaptchaError('Could not reach captcha server — please retry.');
+      setSubmitting(false);
+      return;
+    }
 
     const rawRows: Array<[string, string]> = [
       ['Name',          name],
@@ -118,6 +146,8 @@ export function ContactForm({ whatsappNumber, enquiryTabs }: Props) {
     window.open(`https://wa.me/${waNumber}?text=${text}`, '_blank');
     setSent(true);
     (e.target as HTMLFormElement).reset();
+    setCaptchaToken(null);
+    setSubmitting(false);
     setTimeout(() => setSent(false), 6000);
   }
 
@@ -326,12 +356,33 @@ export function ContactForm({ whatsappNumber, enquiryTabs }: Props) {
           />
         </Field>
 
+        <div style={{ marginTop: 22, marginBottom: 4 }}>
+          <Turnstile
+            onVerify={(token) => { setCaptchaToken(token); setCaptchaError(null); }}
+            onExpire={() => setCaptchaToken(null)}
+            onError={() => setCaptchaError('Captcha failed to load — please refresh.')}
+          />
+          {captchaError && (
+            <div
+              style={{
+                marginTop: 8,
+                fontFamily: 'var(--pv-f-mono)',
+                fontSize: 12,
+                color: 'var(--pv-magenta)',
+                fontWeight: 700,
+              }}
+            >
+              ✗ {captchaError}
+            </div>
+          )}
+        </div>
+
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 24,
+            marginTop: 18,
             paddingTop: 20,
             borderTop: '2px dashed var(--pv-rule)',
             flexWrap: 'wrap',
@@ -341,8 +392,13 @@ export function ContactForm({ whatsappNumber, enquiryTabs }: Props) {
           <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
             Reply within 2 working hours · Mon–Fri 10–7:30 · Sat–Sun 10–7 · Closed on PH
           </div>
-          <button type="submit" className="pv-btn pv-btn-primary" style={{ padding: '14px 24px', fontSize: 13 }}>
-            {spec.submitLabel}
+          <button
+            type="submit"
+            className="pv-btn pv-btn-primary"
+            disabled={submitting || !captchaToken}
+            style={{ padding: '14px 24px', fontSize: 13, opacity: submitting || !captchaToken ? 0.5 : 1 }}
+          >
+            {submitting ? 'Verifying…' : spec.submitLabel}
           </button>
         </div>
       </form>

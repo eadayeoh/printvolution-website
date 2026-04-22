@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/auth/require-admin';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { verifyTurnstile } from '@/lib/captcha';
 
 /**
  * Rate-limited login + signup.
@@ -21,7 +22,7 @@ const LOGIN_EMAIL_MAX = 6;
 const SIGNUP_IP_WINDOW = 3600;  // 1 h
 const SIGNUP_IP_MAX = 6;
 
-export async function loginWithPassword(input: { email: string; password: string }) {
+export async function loginWithPassword(input: { email: string; password: string; captchaToken?: string | null }) {
   const email = (input.email ?? '').trim().toLowerCase();
   const password = input.password ?? '';
   if (!email || !password) return { ok: false as const, error: 'Email and password required' };
@@ -30,6 +31,11 @@ export async function loginWithPassword(input: { email: string; password: string
   }
 
   const ip = getClientIp();
+  const captcha = await verifyTurnstile(input.captchaToken ?? null, ip);
+  if (!captcha.ok) {
+    return { ok: false as const, error: captcha.error ?? 'Captcha check failed' };
+  }
+
   const ipRl = await checkRateLimit(`login-ip:${ip}`, { max: LOGIN_IP_MAX, windowSeconds: LOGIN_IP_WINDOW });
   if (!ipRl.allowed) {
     return { ok: false as const, error: `Too many attempts. Try again in ${ipRl.retryAfterSeconds}s.` };
@@ -49,7 +55,7 @@ export async function loginWithPassword(input: { email: string; password: string
   return { ok: true as const };
 }
 
-export async function signUpWithPassword(input: { email: string; password: string; name?: string | null }) {
+export async function signUpWithPassword(input: { email: string; password: string; name?: string | null; captchaToken?: string | null }) {
   const email = (input.email ?? '').trim().toLowerCase();
   const password = input.password ?? '';
   const name = (input.name ?? '').trim().slice(0, 100) || null;
@@ -60,6 +66,11 @@ export async function signUpWithPassword(input: { email: string; password: strin
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false as const, error: 'Invalid email' };
 
   const ip = getClientIp();
+  const captcha = await verifyTurnstile(input.captchaToken ?? null, ip);
+  if (!captcha.ok) {
+    return { ok: false as const, error: captcha.error ?? 'Captcha check failed' };
+  }
+
   const rl = await checkRateLimit(`signup-ip:${ip}`, { max: SIGNUP_IP_MAX, windowSeconds: SIGNUP_IP_WINDOW });
   if (!rl.allowed) {
     return { ok: false as const, error: `Too many signups. Try again in ${rl.retryAfterSeconds}s.` };
