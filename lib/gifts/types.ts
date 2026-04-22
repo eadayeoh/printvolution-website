@@ -70,6 +70,9 @@ export type GiftTemplateZoneBase = {
   width_mm: number;
   height_mm: number;
   rotation_deg?: number;
+  /** When true the zone is not draggable/resizable in the editor.
+   *  Customer-facing render ignores this — locking is editor-only. */
+  locked?: boolean;
 };
 
 export type GiftTemplateImageZone = GiftTemplateZoneBase & {

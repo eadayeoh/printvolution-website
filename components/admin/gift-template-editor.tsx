@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, Eye, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, RotateCw } from 'lucide-react';
+import { Trash2, Eye, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import {
@@ -346,13 +346,13 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                   const active = activeZoneIdx === i;
                   const isText = isTextZone(z);
                   return (
-                    <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'}`}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveZoneIdx(active ? null : i)}
-                        className="flex w-full items-center justify-between gap-2 p-3 text-left"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
+                    <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''}`}>
+                      <div className="flex w-full items-center justify-between gap-2 p-3">
+                        <button
+                          type="button"
+                          onClick={() => setActiveZoneIdx(active ? null : i)}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        >
                           <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isText ? 'bg-ink text-white' : 'bg-pink text-white'}`}>
                             {isText ? <Type size={12} /> : <ImageIcon size={12} />}
                           </span>
@@ -360,11 +360,25 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                           {isText && (z as GiftTemplateTextZone).editable === false && (
                             <Lock size={11} className="shrink-0 text-neutral-400" />
                           )}
+                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] text-neutral-500">
+                            {Math.round(z.width_mm)}×{Math.round(z.height_mm)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateZone(i, { locked: !z.locked }); }}
+                            title={z.locked ? 'Unlock — allow drag/resize' : 'Lock — prevent drag/resize'}
+                            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
+                              z.locked
+                                ? 'border-pink bg-pink text-white'
+                                : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
+                            }`}
+                          >
+                            {z.locked ? <Lock size={11} /> : <Unlock size={11} />}
+                          </button>
                         </div>
-                        <span className="text-[10px] text-neutral-500 shrink-0">
-                          {Math.round(z.width_mm)}×{Math.round(z.height_mm)}
-                        </span>
-                      </button>
+                      </div>
                       {active && (
                         <div className="space-y-3 border-t border-neutral-200 p-3">
                           {isText
@@ -549,7 +563,7 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                       width: `${width}%`, height: `${height}%`,
                       transform: `rotate(${z.rotation_deg ?? 0}deg)`,
                       transformOrigin: 'center',
-                      cursor: 'move',
+                      cursor: z.locked ? 'default' : 'move',
                       border: active ? `2px solid ${accent}` : '2px dashed rgba(0,0,0,0.25)',
                       background: active ? `${accent}1a` : 'transparent',
                       boxShadow: active ? `0 0 0 3px ${accent}33` : 'none',
@@ -557,6 +571,7 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                     onPointerDown={(e) => {
                       e.preventDefault();
                       setActiveZoneIdx(i);
+                      if (z.locked) return; // locked zones can be selected but not dragged
                       setDrag({ type: 'move', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
                     }}
                   >
@@ -566,15 +581,17 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                     >
                       {isText ? 'T' : 'I'} · {z.label}
                     </div>
-                    <div
-                      onPointerDown={(e) => {
-                        e.preventDefault(); e.stopPropagation();
-                        setActiveZoneIdx(i);
-                        setDrag({ type: 'resize', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
-                      }}
-                      className="absolute -bottom-1 -right-1 h-3 w-3 cursor-nwse-resize rounded-full border-2 bg-white"
-                      style={{ borderColor: accent }}
-                    />
+                    {!z.locked && (
+                      <div
+                        onPointerDown={(e) => {
+                          e.preventDefault(); e.stopPropagation();
+                          setActiveZoneIdx(i);
+                          setDrag({ type: 'resize', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
+                        }}
+                        className="absolute -bottom-1 -right-1 h-3 w-3 cursor-nwse-resize rounded-full border-2 bg-white"
+                        style={{ borderColor: accent }}
+                      />
+                    )}
                   </div>
                 );
               })}
