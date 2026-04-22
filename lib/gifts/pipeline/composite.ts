@@ -22,6 +22,7 @@
 //     piece of infra work.
 
 import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone } from '@/lib/gifts/types';
+import { renderSvgWithFonts } from './fonts';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
 const DEFAULT_DPI_PREVIEW = 150;
@@ -105,7 +106,11 @@ export async function renderTemplateComposite(
 
     if (isText(zone)) {
       const svg = textZoneSvg(zone, zw, zh, textByZoneId?.[zone.id]);
-      const svgBuf = await sharp(Buffer.from(svg)).png().toBuffer();
+      // Prefer resvg-with-fonts so Playfair / Inter etc. resolve
+      // against the .ttf files in public/fonts/. Falls back to sharp's
+      // librsvg path (generic families) when fonts aren't installed.
+      const resvgBuf = await renderSvgWithFonts(svg);
+      const svgBuf: Buffer = resvgBuf ?? await sharp(Buffer.from(svg)).png().toBuffer();
       overlays.push({ input: svgBuf, top: zy, left: zx });
     } else {
       const img = await prepImageZone(sharp, zone, zw, zh, imagesByZoneId?.[zone.id] ?? sourceBytes);
