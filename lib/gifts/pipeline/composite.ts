@@ -1,0 +1,221 @@
+// Template composite renderer.
+//
+// Renders a GiftTemplate (zones_json + optional background / foreground
+// images) at a target physical size, compositing every image zone with
+// a source photo and painting every text zone via an SVG overlay.
+//
+// Scope for v1 (this file ships a working path end-to-end; deeper
+// multi-slot authoring is a follow-up):
+//
+//   • Every image zone uses the SAME customer-uploaded photo. When the
+//     multi-slot upload UI lands later, we'll thread per-zone source
+//     files through this function via the `imagesByZoneId` map.
+//
+//   • Every text zone renders with its default_text from the template.
+//     Customer text capture is a later UI addition; `textByZoneId`
+//     already accepts overrides for when that happens.
+//
+//   • Font rendering uses librsvg (via sharp SVG composite). Fonts
+//     from our design system (inter / playfair / etc.) aren't bundled,
+//     so librsvg falls back to a generic family. Good enough for
+//     preview; final fidelity needs a TTF bundle which is a separate
+//     piece of infra work.
+
+import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone } from '@/lib/gifts/types';
+
+const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
+const DEFAULT_DPI_PREVIEW = 150;
+const DEFAULT_DPI_PRODUCTION = 300;
+
+type SharpModule = any;
+
+export type CompositeInput = {
+  template: GiftTemplate;
+  sourceBytes: Uint8Array;
+  /** Mapping of zone_id → customer-uploaded image bytes. When absent
+   *  for an image zone, the fallback is the single sourceBytes above. */
+  imagesByZoneId?: Record<string, Uint8Array | undefined>;
+  /** Mapping of zone_id → customer text. When absent, the zone's
+   *  default_text is used. */
+  textByZoneId?: Record<string, string | undefined>;
+  /** Physical size to render at (in mm). When null, use the template's
+   *  reference_width_mm / reference_height_mm. */
+  targetWidthMm: number;
+  targetHeightMm: number;
+  /** 'preview' = 150 DPI, max 1200px long edge; 'production' = 300 DPI */
+  kind: 'preview' | 'production';
+};
+
+export type CompositeOutput = {
+  buffer: Buffer;
+  widthPx: number;
+  heightPx: number;
+};
+
+export async function renderTemplateComposite(
+  sharp: SharpModule,
+  input: CompositeInput,
+): Promise<CompositeOutput> {
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, targetWidthMm, targetHeightMm, kind } = input;
+
+  // Compute output pixel size from mm + DPI. Preview caps at 1200px
+  // long edge to keep the file small and the upload fast.
+  const dpi = kind === 'preview' ? DEFAULT_DPI_PREVIEW : DEFAULT_DPI_PRODUCTION;
+  const mmToPx = (mm: number) => Math.round((mm / 25.4) * dpi);
+  let outW = mmToPx(targetWidthMm);
+  let outH = mmToPx(targetHeightMm);
+  if (kind === 'preview') {
+    const longEdge = Math.max(outW, outH);
+    if (longEdge > 1200) {
+      const scale = 1200 / longEdge;
+      outW = Math.round(outW * scale);
+      outH = Math.round(outH * scale);
+    }
+  }
+
+  // Zones are on a 0..200 canvas — translate to output pixels.
+  const zoneToPx = (v: number, axis: 'x' | 'y') =>
+    Math.round((v / CANVAS_UNITS) * (axis === 'x' ? outW : outH));
+
+  // Base canvas — white by default. The template's background_url, if
+  // set, is laid down first.
+  let base: Buffer = await sharp({
+    create: { width: outW, height: outH, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+  }).png().toBuffer();
+
+  if (template.background_url) {
+    const bgBytes = await fetchAsBuffer(template.background_url);
+    if (bgBytes) {
+      const bgResized = await sharp(bgBytes)
+        .resize(outW, outH, { fit: 'cover' })
+        .toBuffer();
+      base = await sharp(base).composite([{ input: bgResized, top: 0, left: 0 }]).toBuffer();
+    }
+  }
+
+  // Walk zones in array order — array order = z-order.
+  const overlays: Array<{ input: Buffer; top: number; left: number }> = [];
+
+  for (const zone of (template.zones_json ?? [])) {
+    const zx = zoneToPx(zone.x_mm, 'x');
+    const zy = zoneToPx(zone.y_mm, 'y');
+    const zw = zoneToPx(zone.width_mm, 'x');
+    const zh = zoneToPx(zone.height_mm, 'y');
+    if (zw <= 0 || zh <= 0) continue;
+
+    if (isText(zone)) {
+      const svg = textZoneSvg(zone, zw, zh, textByZoneId?.[zone.id]);
+      const svgBuf = await sharp(Buffer.from(svg)).png().toBuffer();
+      overlays.push({ input: svgBuf, top: zy, left: zx });
+    } else {
+      const img = await prepImageZone(sharp, zone, zw, zh, imagesByZoneId?.[zone.id] ?? sourceBytes);
+      if (img) overlays.push({ input: img, top: zy, left: zx });
+    }
+  }
+
+  if (overlays.length > 0) {
+    base = await sharp(base).composite(overlays).png().toBuffer();
+  }
+
+  // Foreground overlay (Netflix N logo + nav + gradient) painted last.
+  if (template.foreground_url) {
+    const fgBytes = await fetchAsBuffer(template.foreground_url);
+    if (fgBytes) {
+      const fgResized = await sharp(fgBytes)
+        .resize(outW, outH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .toBuffer();
+      base = await sharp(base).composite([{ input: fgResized, top: 0, left: 0 }]).png().toBuffer();
+    }
+  }
+
+  const finalBuf = await sharp(base).jpeg({ quality: kind === 'preview' ? 82 : 92 }).toBuffer();
+  const meta = await sharp(finalBuf).metadata();
+  return { buffer: finalBuf, widthPx: meta.width ?? outW, heightPx: meta.height ?? outH };
+}
+
+function isText(z: GiftTemplateZone): z is GiftTemplateTextZone {
+  return (z as GiftTemplateTextZone).type === 'text';
+}
+
+async function prepImageZone(
+  sharp: SharpModule,
+  zone: GiftTemplateImageZone,
+  zw: number,
+  zh: number,
+  bytes: Uint8Array,
+): Promise<Buffer | null> {
+  try {
+    let img = sharp(Buffer.from(bytes))
+      .rotate() // auto-orient via EXIF
+      .resize(zw, zh, { fit: zone.fit_mode === 'contain' ? 'contain' : 'cover' });
+
+    // Border radius via SVG mask.
+    const radiusPxX = Math.round(((zone.border_radius_mm ?? 0) / CANVAS_UNITS) * zw);
+    const radiusPx = Math.max(0, Math.min(radiusPxX, Math.floor(Math.min(zw, zh) / 2)));
+    if (radiusPx > 0) {
+      const maskSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
+        <rect x="0" y="0" width="${zw}" height="${zh}" rx="${radiusPx}" ry="${radiusPx}" fill="#fff"/>
+      </svg>`;
+      const maskBuf = await sharp(Buffer.from(maskSvg)).png().toBuffer();
+      img = img.composite([{ input: maskBuf, blend: 'dest-in' }]).png();
+    }
+
+    return await img.toBuffer();
+  } catch {
+    return null;
+  }
+}
+
+const FONT_STACK: Record<string, string> = {
+  inter:     'Inter, ui-sans-serif, system-ui, sans-serif',
+  fraunces:  'Fraunces, Georgia, serif',
+  cormorant: '"Cormorant Garamond", Georgia, serif',
+  playfair:  '"Playfair Display", Georgia, serif',
+  caveat:    'Caveat, cursive',
+  bebas:     '"Bebas Neue", Impact, sans-serif',
+  mono:      '"JetBrains Mono", ui-monospace, monospace',
+};
+
+function textZoneSvg(zone: GiftTemplateTextZone, zw: number, zh: number, override?: string): string {
+  const text = (override ?? zone.default_text ?? '').trim() || (zone.placeholder ?? '');
+  const fontFamily = FONT_STACK[zone.font_family ?? 'inter'] ?? FONT_STACK.inter;
+  const fontSizePx = Math.max(8, Math.round(((zone.font_size_mm ?? 6) / CANVAS_UNITS) * Math.max(zw, zh)));
+  const color = zone.color ?? '#000';
+  const align = zone.align ?? 'center';
+  const vAlign = zone.vertical_align ?? 'middle';
+  const weight = zone.font_weight ?? '400';
+  const style = zone.font_style ?? 'normal';
+  const transform = zone.text_transform === 'uppercase' ? 'text-transform:uppercase;' :
+                    zone.text_transform === 'lowercase' ? 'text-transform:lowercase;' :
+                    zone.text_transform === 'capitalize' ? 'text-transform:capitalize;' : '';
+  const letterSpacing = zone.letter_spacing_em ? `letter-spacing:${zone.letter_spacing_em}em;` : '';
+
+  const anchor = align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle';
+  const xAttr = align === 'left' ? 0 : align === 'right' ? zw : zw / 2;
+  const yAttr = vAlign === 'top' ? fontSizePx : vAlign === 'bottom' ? zh : zh / 2;
+  const dominantBaseline =
+    vAlign === 'top' ? 'hanging' :
+    vAlign === 'bottom' ? 'text-top' :
+    'middle';
+
+  const safe = (text ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
+    <style>
+      text { font-family: ${fontFamily}; font-weight: ${weight}; font-style: ${style}; ${transform}${letterSpacing} }
+    </style>
+    <text x="${xAttr}" y="${yAttr}" fill="${color}" font-size="${fontSizePx}" text-anchor="${anchor}" dominant-baseline="${dominantBaseline}">${safe}</text>
+  </svg>`;
+}
+
+async function fetchAsBuffer(url: string): Promise<Uint8Array | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const ab = await r.arrayBuffer();
+    return new Uint8Array(ab);
+  } catch {
+    return null;
+  }
+}

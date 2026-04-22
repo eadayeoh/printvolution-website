@@ -18,7 +18,16 @@
 
 import { GIFT_BUCKETS, putObject, makeKey } from './storage';
 import { getPipelineByIdAdmin, getDefaultPipelineForMode } from './pipelines';
-import type { GiftCropRect, GiftProduct, GiftPipeline } from './types';
+import type { GiftCropRect, GiftProduct, GiftPipeline, GiftTemplate } from './types';
+import { renderTemplateComposite } from './pipeline/composite';
+import { createClient } from '@/lib/supabase/server';
+
+async function loadTemplate(templateId: string | null): Promise<GiftTemplate | null> {
+  if (!templateId) return null;
+  const sb = createClient();
+  const { data } = await sb.from('gift_templates').select('*').eq('id', templateId).maybeSingle();
+  return (data as GiftTemplate | null) ?? null;
+}
 
 /**
  * Resolve the pipeline for a product: honour product.pipeline_id if set,
@@ -65,6 +74,34 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
   const { product } = input;
   const sharp = await loadSharp();
   if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
+
+  // Template composite path: if a template is selected on this order,
+  // the composite engine does the rendering (zones + text + bg/fg).
+  // Honours variant dim overrides threaded in via product.width_mm /
+  // product.height_mm (the upload action patches those in place for
+  // size variants).
+  const template = await loadTemplate(input.templateId ?? null);
+  if (template) {
+    const out = await renderTemplateComposite(sharp, {
+      template,
+      sourceBytes: input.sourceBytes,
+      targetWidthMm:  product.width_mm,
+      targetHeightMm: product.height_mm,
+      kind: 'preview',
+    });
+    let buf = out.buffer;
+    buf = await applyWatermark(buf);
+    const key = makeKey(`pv-${product.slug}`, 'jpg');
+    const { path, publicUrl } = await putObject(GIFT_BUCKETS.previews, key, buf, 'image/jpeg');
+    return {
+      previewPath: path,
+      previewPublicUrl: publicUrl!,
+      previewMime: 'image/jpeg',
+      widthPx: out.widthPx,
+      heightPx: out.heightPx,
+    };
+  }
+
   const pipeline = await resolvePipeline(product);
   const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(input.sourceBytes);
@@ -74,6 +111,9 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
 
   switch (kind) {
     case 'photo-resize':
+    case 'eco-solvent':
+    case 'digital':
+    case 'uv-dtf':
       buf = await renderPhotoResize(buf, product, input.cropRect ?? null, /*preview=*/true);
       break;
     case 'laser':
@@ -129,15 +169,52 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   const { product } = input;
   const sharp = await loadSharp();
   if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
-  const pipeline = await resolvePipeline(product);
-  const kind = pipeline?.kind ?? product.mode;
   const { getObject } = await import('./storage');
   const src = await getObject(GIFT_BUCKETS.sources, input.sourcePath);
+
+  // Template composite path — same dispatch rule as preview.
+  const template = await loadTemplate(input.templateId ?? null);
+  if (template) {
+    const out = await renderTemplateComposite(sharp, {
+      template,
+      sourceBytes: src,
+      targetWidthMm:  product.width_mm,
+      targetHeightMm: product.height_mm,
+      kind: 'production',
+    });
+    const pngKey = makeKey(`prod-${product.slug}`, 'png');
+    const pngBuf = await sharp(out.buffer).png({ compressionLevel: 6 }).toBuffer();
+    const pngMeta = await sharp(pngBuf).metadata();
+    await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
+    const pdfKey = makeKey(`prod-${product.slug}`, 'pdf');
+    const pdfBuf = await wrapPdf(pngBuf, {
+      trimWidthMm:  product.width_mm,
+      trimHeightMm: product.height_mm,
+      bleedMm:      product.bleed_mm,
+    });
+    await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+    const dpi = computeDpiForDimensions(pngMeta.width ?? 0, product.width_mm);
+    return {
+      productionPath: pngKey,
+      productionMime: 'image/png',
+      productionPdfPath: pdfKey,
+      productionPdfMime: 'application/pdf',
+      widthPx: pngMeta.width ?? out.widthPx,
+      heightPx: pngMeta.height ?? out.heightPx,
+      dpi,
+    };
+  }
+
+  const pipeline = await resolvePipeline(product);
+  const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(src);
   buf = await sharp(buf).rotate().toBuffer();
 
   switch (kind) {
     case 'photo-resize':
+    case 'eco-solvent':
+    case 'digital':
+    case 'uv-dtf':
       buf = await renderPhotoResize(buf, product, input.cropRect ?? null, /*preview=*/false);
       break;
     case 'laser':
