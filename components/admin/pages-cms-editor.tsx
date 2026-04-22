@@ -292,25 +292,27 @@ export function PagesCmsEditor({
             pageKey="global"
             sectionKey="footer.visit"
             title="Footer — Visit the shop column"
-            hint="Address, hours, email, phone."
+            hint="Address, hours, and contact channels (phone / telegram / email). Channel items accept an icon_url — upload a custom icon or leave blank to use the default SVG."
             initial={sections['global:footer.visit'] ?? []}
             fields={[
-              { key: 'kind', label: 'Kind (address|hours|email|phone)', type: 'text' },
+              { key: 'kind', label: 'Kind (address | hours | phone | telegram | email)', type: 'text' },
               { key: 'label', label: 'Label / heading', type: 'text' },
               { key: 'detail', label: 'Detail (supports \\n)', type: 'textarea' },
               { key: 'href', label: 'Optional link (tel: / mailto: / https:)', type: 'text' },
+              { key: 'icon_url', label: 'Channel icon (upload or URL — ignored for address/hours)', type: 'image', aspect: 1 },
             ]}
           />
           <SectionEditor
             pageKey="global"
             sectionKey="footer.social"
-            title="Footer — Socials"
-            hint="2-letter label + URL for each social pill."
+            title="Footer — Socials (brand column)"
+            hint="Social pills in the brand column (Facebook, Instagram, TikTok, …). Upload an icon to replace the 2-letter text fallback."
             initial={sections['global:footer.social'] ?? []}
             fields={[
-              { key: 'label', label: 'Pill label e.g. IG, WA', type: 'text' },
+              { key: 'label', label: 'Fallback pill label (e.g. FB, IG, TT)', type: 'text' },
               { key: 'href', label: 'Link URL', type: 'text' },
-              { key: 'aria', label: 'Aria label', type: 'text' },
+              { key: 'aria', label: 'Aria label (Facebook / Instagram / TikTok)', type: 'text' },
+              { key: 'icon_url', label: 'Social icon (upload or URL)', type: 'image', aspect: 1 },
             ]}
           />
         </div>
