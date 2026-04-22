@@ -647,16 +647,29 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
 
-              {/* Variant picker — shown only when product has 2+ variants */}
-              {variants.length >= 2 && (
-                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title="Pick your base">
-                  <GiftVariantPicker
-                    variants={variants}
-                    selectedId={selectedVariantId}
-                    onSelect={setSelectedVariantId}
-                  />
-                </ComposeSection>
-              )}
+              {/* Variant picker — label adapts to the variants' kind.
+                  If all variants share the same kind, use that kind's
+                  picker phrase; otherwise fall back to the generic
+                  "Choose an option". */}
+              {variants.length >= 2 && (() => {
+                const kinds = new Set(variants.map((v) => v.variant_kind || 'base'));
+                const singleKind = kinds.size === 1 ? [...kinds][0] : null;
+                const title =
+                  singleKind === 'size'     ? 'Pick your size' :
+                  singleKind === 'colour'   ? 'Pick your colour' :
+                  singleKind === 'material' ? 'Pick your material' :
+                  singleKind === 'base'     ? 'Pick your base' :
+                                              'Choose an option';
+                return (
+                  <ComposeSection letter={hasTemplates ? 'C' : 'B'} title={title}>
+                    <GiftVariantPicker
+                      variants={variants}
+                      selectedId={selectedVariantId}
+                      onSelect={setSelectedVariantId}
+                    />
+                  </ComposeSection>
+                );
+              })()}
 
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (

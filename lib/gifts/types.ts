@@ -197,6 +197,22 @@ export const GIFT_STYLE_LABEL: Record<GiftStyle, string> = {
 // Variants (migration 0034) — per-product physical bases
 // ---------------------------------------------------------------------------
 
+export type GiftVariantKind = 'base' | 'size' | 'colour' | 'material';
+
+export const GIFT_VARIANT_KIND_LABEL: Record<GiftVariantKind, string> = {
+  base:     'Base',
+  size:     'Size',
+  colour:   'Colour',
+  material: 'Material',
+};
+
+export const GIFT_VARIANT_PICKER_LABEL: Record<GiftVariantKind, string> = {
+  base:     'Choose a base',
+  size:     'Choose a size',
+  colour:   'Choose a colour',
+  material: 'Choose a material',
+};
+
 export type GiftProductVariant = {
   id: string;
   gift_product_id: string;
@@ -210,6 +226,11 @@ export type GiftProductVariant = {
   price_tiers: GiftPriceTier[];
   display_order: number;
   is_active: boolean;
+  variant_kind: GiftVariantKind;
+  /** Print width override (mm) for size variants. Null → fallback to gift_products.width_mm. */
+  width_mm: number | null;
+  /** Print height override (mm) for size variants. */
+  height_mm: number | null;
 };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */

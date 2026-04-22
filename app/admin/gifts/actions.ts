@@ -350,7 +350,10 @@ const VariantSchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
   name: z.string().min(1),
   features: z.array(z.string()).default([]),
-  mockup_url: z.string().min(1),
+  // Mockup image is only meaningful for base variants (LED stand A / B / C).
+  // Size / colour / material variants typically reuse the product's
+  // mockup, so these are relaxed to allow an empty string.
+  mockup_url: z.string().default(''),
   mockup_area: z.object({
     x: z.number(), y: z.number(), width: z.number(), height: z.number(),
   }),
@@ -361,6 +364,9 @@ const VariantSchema = z.object({
   })).default([]),
   display_order: z.number().int().default(0),
   is_active: z.boolean().default(true),
+  variant_kind: z.enum(['base', 'size', 'colour', 'material']).default('base'),
+  width_mm:  z.number().positive().nullable().optional(),
+  height_mm: z.number().positive().nullable().optional(),
 });
 
 export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {

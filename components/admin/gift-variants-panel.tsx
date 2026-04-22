@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantKind } from '@/lib/gifts/types';
 
 type Draft = {
   id?: string;
@@ -18,6 +18,9 @@ type Draft = {
   base_price: string; // dollars
   display_order: string;
   is_active: boolean;
+  variant_kind: GiftVariantKind;
+  width_mm: string;  // mm for size variants, blank otherwise
+  height_mm: string;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -32,8 +35,21 @@ function toDraft(v?: GiftProductVariant): Draft {
     base_price: ((v?.base_price_cents ?? 0) / 100).toFixed(2),
     display_order: String(v?.display_order ?? 0),
     is_active: v?.is_active ?? true,
+    variant_kind: v?.variant_kind ?? 'base',
+    width_mm:  v?.width_mm  != null ? String(v.width_mm)  : '',
+    height_mm: v?.height_mm != null ? String(v.height_mm) : '',
   };
 }
+
+const A_SERIES_PRESETS: Array<{ label: string; w: number; h: number }> = [
+  { label: 'A3 portrait', w: 297, h: 420 },
+  { label: 'A4 portrait', w: 210, h: 297 },
+  { label: 'A5 portrait', w: 148, h: 210 },
+  { label: 'A6 portrait', w: 105, h: 148 },
+  { label: 'A3 landscape', w: 420, h: 297 },
+  { label: 'A4 landscape', w: 297, h: 210 },
+  { label: 'A5 landscape', w: 210, h: 148 },
+];
 
 export function GiftVariantsPanel({
   giftProductId,
@@ -73,9 +89,24 @@ export function GiftVariantsPanel({
   function saveRow(i: number) {
     setErr(null);
     const d = drafts[i];
-    if (!d.name.trim() || !d.slug.trim() || !d.mockup_url) {
-      setErr('Name, slug, and mockup image are required for each variant');
+    if (!d.name.trim() || !d.slug.trim()) {
+      setErr('Name and slug are required for each variant');
       return;
+    }
+    // Base variants still need a mockup image (old LED-stand behaviour);
+    // size / colour / material variants reuse the product's mockup so
+    // the mockup_url is optional for them.
+    if (d.variant_kind === 'base' && !d.mockup_url) {
+      setErr('Base variants still need a mockup image (upload one or switch the kind to size / colour / material).');
+      return;
+    }
+    if (d.variant_kind === 'size') {
+      const w = parseFloat(d.width_mm);
+      const h = parseFloat(d.height_mm);
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+        setErr('Size variants need positive width and height in mm.');
+        return;
+      }
     }
     const payload = {
       id: d.id,
@@ -89,6 +120,9 @@ export function GiftVariantsPanel({
       base_price_cents: Math.round((parseFloat(d.base_price) || 0) * 100),
       display_order: parseInt(d.display_order, 10) || 0,
       is_active: d.is_active,
+      variant_kind: d.variant_kind,
+      width_mm:  d.variant_kind === 'size' && d.width_mm  ? parseFloat(d.width_mm)  : null,
+      height_mm: d.variant_kind === 'size' && d.height_mm ? parseFloat(d.height_mm) : null,
     };
     startTransition(async () => {
       const r = await upsertGiftVariant(payload);
@@ -117,9 +151,10 @@ export function GiftVariantsPanel({
       <div className="rounded-lg border border-neutral-200 bg-white p-6">
         <div className="mb-3 flex items-center justify-between gap-4">
           <div>
-            <div className="text-xs font-bold text-ink">Variants (physical bases)</div>
+            <div className="text-xs font-bold text-ink">Variants</div>
             <div className="text-[11px] text-neutral-500">
-              Each variant has its own mockup + features + price. The customer&apos;s design is the same across variants — the compositor swaps only the mockup.
+              Pick a kind per variant — <b>Base</b> (different physical mockup, e.g. LED stand A/B/C),{' '}
+              <b>Size</b> (A3/A4/A5/A6 — sets the print dimensions), <b>Colour</b>, or <b>Material</b>. Mix kinds freely.
             </div>
           </div>
           <button
@@ -145,7 +180,20 @@ export function GiftVariantsPanel({
                 </div>
                 <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
                   <div className="space-y-3">
-                    <div className="grid grid-cols-[2fr_1fr] gap-2">
+                    <div className="grid grid-cols-[1fr_2fr_1fr] gap-2">
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-bold text-ink">Kind</span>
+                        <select
+                          value={d.variant_kind}
+                          onChange={(e) => updateDraft(i, { variant_kind: e.target.value as GiftVariantKind })}
+                          className={inputCls}
+                        >
+                          <option value="base">Base (mockup)</option>
+                          <option value="size">Size (dimensions)</option>
+                          <option value="colour">Colour</option>
+                          <option value="material">Material</option>
+                        </select>
+                      </label>
                       <label className="block">
                         <span className="mb-1 block text-xs font-bold text-ink">Name</span>
                         <input
@@ -153,7 +201,12 @@ export function GiftVariantsPanel({
                           onBlur={() => autoSlug(i)}
                           onChange={(e) => updateDraft(i, { name: e.target.value })}
                           className={inputCls}
-                          placeholder="Oak Round"
+                          placeholder={
+                            d.variant_kind === 'size' ? 'A4 portrait' :
+                            d.variant_kind === 'colour' ? 'Warm White' :
+                            d.variant_kind === 'material' ? 'Oak' :
+                            'Oak Round'
+                          }
                         />
                       </label>
                       <label className="block">
@@ -166,6 +219,47 @@ export function GiftVariantsPanel({
                         />
                       </label>
                     </div>
+                    {d.variant_kind === 'size' && (
+                      <div className="rounded border border-pink-200 bg-pink-50/50 p-3">
+                        <div className="mb-2 text-[11px] font-bold text-ink">
+                          Print dimensions (overrides the product&apos;s default when a customer picks this variant)
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width (mm)</span>
+                            <input
+                              type="number" min={1} step={0.1}
+                              value={d.width_mm}
+                              onChange={(e) => updateDraft(i, { width_mm: e.target.value })}
+                              className={inputCls}
+                              placeholder="210"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height (mm)</span>
+                            <input
+                              type="number" min={1} step={0.1}
+                              value={d.height_mm}
+                              onChange={(e) => updateDraft(i, { height_mm: e.target.value })}
+                              className={inputCls}
+                              placeholder="297"
+                            />
+                          </label>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {A_SERIES_PRESETS.map((p) => (
+                            <button
+                              key={p.label}
+                              type="button"
+                              onClick={() => updateDraft(i, { width_mm: String(p.w), height_mm: String(p.h) })}
+                              className="rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-neutral-700 hover:border-pink hover:text-pink"
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <label className="block">
                       <span className="mb-1 block text-xs font-bold text-ink">Features (one per line)</span>
                       <textarea
@@ -199,45 +293,52 @@ export function GiftVariantsPanel({
                         <span>Active</span>
                       </label>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 text-[11px]">
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area x %</span>
-                        <input type="number" value={d.mockup_area.x}
-                          onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, x: parseFloat(e.target.value) || 0 } })}
-                          className={inputCls} />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area y %</span>
-                        <input type="number" value={d.mockup_area.y}
-                          onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, y: parseFloat(e.target.value) || 0 } })}
-                          className={inputCls} />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width %</span>
-                        <input type="number" value={d.mockup_area.width}
-                          onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, width: parseFloat(e.target.value) || 0 } })}
-                          className={inputCls} />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height %</span>
-                        <input type="number" value={d.mockup_area.height}
-                          onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, height: parseFloat(e.target.value) || 0 } })}
-                          className={inputCls} />
-                      </label>
-                    </div>
+                    {d.variant_kind === 'base' && (
+                      <div>
+                        <div className="mb-1 text-[11px] font-bold text-neutral-500">Mockup area (% of mockup image)</div>
+                        <div className="grid grid-cols-4 gap-2 text-[11px]">
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area x %</span>
+                            <input type="number" value={d.mockup_area.x}
+                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, x: parseFloat(e.target.value) || 0 } })}
+                              className={inputCls} />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area y %</span>
+                            <input type="number" value={d.mockup_area.y}
+                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, y: parseFloat(e.target.value) || 0 } })}
+                              className={inputCls} />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width %</span>
+                            <input type="number" value={d.mockup_area.width}
+                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, width: parseFloat(e.target.value) || 0 } })}
+                              className={inputCls} />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height %</span>
+                            <input type="number" value={d.mockup_area.height}
+                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, height: parseFloat(e.target.value) || 0 } })}
+                              className={inputCls} />
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3">
-                    <div>
-                      <span className="mb-1 block text-xs font-bold text-ink">Mockup image</span>
-                      <ImageUpload
-                        value={d.mockup_url}
-                        onChange={(url) => updateDraft(i, { mockup_url: url })}
-                        prefix={`variant-${d.slug || 'mockup'}`}
-                        aspect={1}
-                        size="md"
-                        label="Mockup"
-                      />
-                    </div>
+                    {d.variant_kind === 'base' && (
+                      <div>
+                        <span className="mb-1 block text-xs font-bold text-ink">Mockup image</span>
+                        <ImageUpload
+                          value={d.mockup_url}
+                          onChange={(url) => updateDraft(i, { mockup_url: url })}
+                          prefix={`variant-${d.slug || 'mockup'}`}
+                          aspect={1}
+                          size="md"
+                          label="Mockup"
+                        />
+                      </div>
+                    )}
                     <div>
                       <span className="mb-1 block text-xs font-bold text-ink">Variant thumbnail</span>
                       <ImageUpload

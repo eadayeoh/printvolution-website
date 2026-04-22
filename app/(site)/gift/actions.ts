@@ -57,6 +57,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   const productSlug = (formData.get('product_slug') || '').toString();
   const templateId = (formData.get('template_id') || '').toString() || null;
   const promptId = (formData.get('prompt_id') || '').toString() || null;
+  const variantId = (formData.get('variant_id') || '').toString() || null;
   const cropRaw = (formData.get('crop_rect') || '').toString();
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
@@ -83,6 +84,26 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   if (!product) return { ok: false, error: 'Product not found' };
 
   const cropRect = cropRaw ? CropSchema.parse(JSON.parse(cropRaw)) : null;
+
+  // Resolve the variant (if any) so size variants can override the
+  // product's print dimensions. Only trusted when active + belonging
+  // to this product.
+  let variantDims: { width_mm: number; height_mm: number } | null = null;
+  if (variantId) {
+    const { data: v } = await sb
+      .from('gift_product_variants')
+      .select('width_mm, height_mm, variant_kind, is_active, gift_product_id')
+      .eq('id', variantId)
+      .maybeSingle();
+    if (
+      v && v.is_active
+      && v.gift_product_id === product.id
+      && v.variant_kind === 'size'
+      && v.width_mm && v.height_mm
+    ) {
+      variantDims = { width_mm: Number(v.width_mm), height_mm: Number(v.height_mm) };
+    }
+  }
 
   // Resolve the prompt (if AI mode and a prompt_id was supplied or there is
   // exactly one active prompt for this mode).
@@ -137,6 +158,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
         ai_prompt: prompt?.transformation_prompt ?? (product as any).ai_prompt ?? null,
         ai_negative_prompt: prompt?.negative_prompt ?? null,
         ai_params: (prompt?.params ?? {}) as Record<string, unknown>,
+        // Size-variant override: if the customer picked an A-series
+        // size variant, the print target is the variant's dimensions,
+        // not the product's defaults. The pipeline reads width_mm /
+        // height_mm off this product shape.
+        ...(variantDims ? { width_mm: variantDims.width_mm, height_mm: variantDims.height_mm } : {}),
       },
       sourceBytes: bytes,
       sourceMime: file.type,
