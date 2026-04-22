@@ -10,6 +10,7 @@ import { GiftMockupEditor } from '@/components/admin/gift-mockup-editor';
 import { MagazineEditor, type MagValue } from '@/components/admin/product-magazine-editor';
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
 import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant } from '@/lib/gifts/types';
+import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { GiftVariantsPanel } from './gift-variants-panel';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
@@ -20,19 +21,22 @@ type Props = {
   allTemplates: GiftTemplate[];
   assignedTemplateIds: string[];
   pipelines?: GiftPipeline[];
+  modes?: GiftModeMeta[];
   variants?: GiftProductVariant[];
 };
 
 type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'variants' | 'seo' | 'content';
 
-const MODE_OPTIONS: Array<{ v: GiftMode; label: string; desc: string; emoji: string }> = [
-  { v: 'laser', label: 'Laser', desc: GIFT_MODE_DESCRIPTION['laser'], emoji: '🔥' },
-  { v: 'uv', label: 'UV Print', desc: GIFT_MODE_DESCRIPTION['uv'], emoji: '🎨' },
-  { v: 'embroidery', label: 'Embroidery', desc: GIFT_MODE_DESCRIPTION['embroidery'], emoji: '🧵' },
-  { v: 'photo-resize', label: 'Photo Resize', desc: GIFT_MODE_DESCRIPTION['photo-resize'], emoji: '✂️' },
+// Fallback used only if the /admin/gifts/modes DB hasn't been seeded yet.
+const FALLBACK_MODES: GiftModeMeta[] = [
+  { slug: 'laser',        label: 'Laser',        description: GIFT_MODE_DESCRIPTION['laser'],        icon: '🔥', display_order: 1, is_active: true },
+  { slug: 'uv',           label: 'UV Print',     description: GIFT_MODE_DESCRIPTION['uv'],           icon: '🎨', display_order: 2, is_active: true },
+  { slug: 'embroidery',   label: 'Embroidery',   description: GIFT_MODE_DESCRIPTION['embroidery'],   icon: '🧵', display_order: 3, is_active: true },
+  { slug: 'photo-resize', label: 'Photo Resize', description: GIFT_MODE_DESCRIPTION['photo-resize'], icon: '✂️', display_order: 4, is_active: true },
 ];
 
-export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], variants = [] }: Props) {
+export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [] }: Props) {
+  const MODE_OPTIONS = (modes && modes.length > 0 ? modes : FALLBACK_MODES);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -247,25 +251,30 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
           )}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <div className="mb-3 text-xs font-bold text-ink">Processing mode</div>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-xs font-bold text-ink">Processing mode</div>
+              <Link href="/admin/gifts/modes" className="text-[11px] text-pink underline hover:text-pink-dark">
+                Manage modes →
+              </Link>
+            </div>
             <div className="grid gap-3 md:grid-cols-2">
               {MODE_OPTIONS.map((m) => {
-                const active = mode === m.v;
+                const active = mode === m.slug;
                 return (
                   <button
-                    key={m.v}
+                    key={m.slug}
                     type="button"
                     disabled={modeLocked}
-                    onClick={() => setMode(m.v)}
+                    onClick={() => setMode(m.slug)}
                     className={`rounded-lg border-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
                     }`}
                   >
                     <div className="mb-1 flex items-center gap-2">
-                      <span className="text-xl">{m.emoji}</span>
+                      <span className="text-xl">{m.icon ?? ''}</span>
                       <span className="font-bold text-ink">{m.label}</span>
                     </div>
-                    <div className="text-[11px] leading-relaxed text-neutral-600">{m.desc}</div>
+                    <div className="text-[11px] leading-relaxed text-neutral-600">{m.description ?? ''}</div>
                   </button>
                 );
               })}

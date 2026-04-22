@@ -107,6 +107,33 @@ export async function setProductTemplates(productId: string, templateIds: string
 // TEMPLATES CRUD
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// GIFT MODES metadata (label / description / icon / order / active)
+// ---------------------------------------------------------------------------
+// Slug is the Postgres gift_mode enum value — NOT editable (each enum
+// value has a distinct render strategy wired into lib/gifts/pipeline.ts).
+// Everything else on the row is admin-editable from /admin/gifts/modes.
+
+const ModeSchema = z.object({
+  label: z.string().min(1),
+  description: z.string().nullable().optional(),
+  icon: z.string().nullable().optional(),
+  display_order: z.number().int().default(0),
+  is_active: z.boolean().default(true),
+});
+
+export async function updateGiftMode(slug: string, input: z.input<typeof ModeSchema>) {
+  const sb = await requireAdmin();
+  const parsed = ModeSchema.parse(input);
+  const { error } = await sb.from('gift_modes').update(parsed).eq('slug', slug);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/modes');
+  revalidatePath('/admin/gifts');
+  return { ok: true as const };
+}
+
+// ---------------------------------------------------------------------------
+
 const TemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().nullable().optional(),
