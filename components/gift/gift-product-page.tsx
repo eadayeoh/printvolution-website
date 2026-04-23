@@ -462,6 +462,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       template={activeTemplate}
                       thumbs={templateThumbs}
                       texts={templateTexts}
+                      widthMm={selectedVariant?.width_mm || product.width_mm}
+                      heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
                   </div>
                 ) : (

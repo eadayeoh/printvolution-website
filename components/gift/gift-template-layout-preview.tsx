@@ -27,9 +27,14 @@ type Props = {
   template: GiftTemplate;
   thumbs: Record<string, string>;
   texts: Record<string, string>;
+  /** Real-world canvas dimensions (from the product / variant) so the
+   *  preview matches the print aspect — NOT the zones_json 0..200 grid,
+   *  which is just percentage coordinates. */
+  widthMm: number;
+  heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -56,7 +61,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts }: Props) {
       style={{
         position: 'relative',
         width: '100%',
-        aspectRatio: '1 / 1',
+        aspectRatio: `${widthMm} / ${heightMm}`,
         background: '#fafaf7',
         border: '2px solid var(--pv-ink)',
         overflow: 'hidden',
