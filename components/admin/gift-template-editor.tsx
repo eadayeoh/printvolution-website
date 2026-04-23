@@ -8,12 +8,16 @@ import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gift
 import { ImageUpload } from '@/components/admin/image-upload';
 import {
   GIFT_FONT_FAMILIES,
+  GIFT_MODE_LABEL,
   giftFontStack,
   type GiftTemplate,
   type GiftTemplateZone,
   type GiftTemplateImageZone,
   type GiftTemplateTextZone,
+  type GiftMode,
 } from '@/lib/gifts/types';
+
+const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
 const SAMPLE_TEST = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
@@ -391,6 +395,23 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
                             <NumField label="W" value={z.width_mm} onChange={(v) => updateZone(i, { width_mm: v })} />
                             <NumField label="H" value={z.height_mm} onChange={(v) => updateZone(i, { height_mm: v })} />
                           </div>
+                          <div>
+                            <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Production mode</div>
+                            <select
+                              value={z.mode ?? ''}
+                              onChange={(e) => updateZone(i, { mode: (e.target.value || null) as GiftMode | null })}
+                              className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="">Inherit from product</option>
+                              {GIFT_MODES.map((m) => (
+                                <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
+                              ))}
+                            </select>
+                            <div className="mt-1 text-[9px] text-neutral-400">
+                              Override the product&apos;s mode for this zone. Use for dual-mode templates (e.g. UV photo + laser-engraved border text). Leave blank on single-mode templates.
+                            </div>
+                          </div>
+
                           <div>
                             <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Rotation</div>
                             <div className="flex items-center gap-2">

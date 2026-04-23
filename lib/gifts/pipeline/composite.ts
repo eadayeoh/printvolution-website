@@ -21,7 +21,7 @@
 //     preview; final fidelity needs a TTF bundle which is a separate
 //     piece of infra work.
 
-import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone } from '@/lib/gifts/types';
+import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftMode } from '@/lib/gifts/types';
 import { renderSvgWithFonts } from './fonts';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
@@ -45,6 +45,23 @@ export type CompositeInput = {
   targetHeightMm: number;
   /** 'preview' = 150 DPI, max 1200px long edge; 'production' = 300 DPI */
   kind: 'preview' | 'production';
+  /** Product's primary mode. Zones with `mode: null` inherit this.
+   *  Required for dual-mode templates; when omitted, zone modes are
+   *  treated as inherited but no filtering happens. */
+  productMode?: GiftMode;
+  /** When set, ONLY zones whose effective mode matches this are
+   *  rendered — other zones + the decorative background / foreground
+   *  are skipped. Used by the production fan-out to build one file
+   *  per mode for dual-mode templates. Omit for the preview composite
+   *  (everything renders). */
+  onlyMode?: GiftMode | null;
+  /** Per-zone transform hook. Invoked on every image zone's bytes
+   *  before compositing, with the zone's effective mode (zone.mode
+   *  ?? productMode). Lets the caller inject AI stylisation, photo
+   *  resize, etc. without creating a cycle between pipeline.ts and
+   *  this file. Return the transformed bytes (same dimensions are
+   *  fine — the composite resizes to fit the zone anyway). */
+  transformZone?: (bytes: Uint8Array, mode: GiftMode) => Promise<Uint8Array>;
 };
 
 export type CompositeOutput = {
@@ -57,7 +74,10 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, targetWidthMm, targetHeightMm, kind } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  // Effective zone mode: zone.mode wins, fall back to productMode, else null.
+  const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
+    (z.mode ?? productMode ?? null) as GiftMode | null;
 
   // Compute output pixel size from mm + DPI. Preview caps at 1200px
   // long edge to keep the file small and the upload fast.
@@ -84,7 +104,11 @@ export async function renderTemplateComposite(
     create: { width: outW, height: outH, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
   }).png().toBuffer();
 
-  if (template.background_url) {
+  // Decorative background/foreground only apply to the preview
+  // composite. Fan-out passes (onlyMode set) skip them — production
+  // passes should carry only the content that THIS mode's machine
+  // will reproduce.
+  if (!onlyMode && template.background_url) {
     const bgBytes = await fetchAsBuffer(template.background_url);
     if (bgBytes) {
       const bgResized = await sharp(bgBytes)
@@ -98,6 +122,10 @@ export async function renderTemplateComposite(
   const overlays: Array<{ input: Buffer; top: number; left: number }> = [];
 
   for (const zone of (template.zones_json ?? [])) {
+    const zoneMode = effectiveMode(zone);
+    // Fan-out: skip zones whose mode doesn't match this pass.
+    if (onlyMode && zoneMode !== onlyMode) continue;
+
     const zx = zoneToPx(zone.x_mm, 'x');
     const zy = zoneToPx(zone.y_mm, 'y');
     const zw = zoneToPx(zone.width_mm, 'x');
@@ -123,7 +151,21 @@ export async function renderTemplateComposite(
         const fetched = await fetchAsBuffer(imgZone.default_image_url);
         if (fetched) zoneBytes = fetched;
       }
-      const img = await prepImageZone(sharp, imgZone, zw, zh, zoneBytes ?? sourceBytes);
+      let finalBytes = zoneBytes ?? sourceBytes;
+      // Per-zone transform: when a mode is resolved AND a transform
+      // hook is provided, run it before compositing. Lets the caller
+      // inject AI stylisation (laser → line art, uv → saturation,
+      // embroidery → posterise) per zone based on that zone's mode.
+      if (zoneMode && transformZone) {
+        try {
+          finalBytes = await transformZone(finalBytes, zoneMode);
+        } catch {
+          // Transform failure shouldn't abort the whole composite —
+          // the zone renders with the raw source as a best-effort
+          // fallback so the preview still works.
+        }
+      }
+      const img = await prepImageZone(sharp, imgZone, zw, zh, finalBytes);
       if (img) overlays.push({ input: img, top: zy, left: zx });
     }
   }
@@ -133,7 +175,8 @@ export async function renderTemplateComposite(
   }
 
   // Foreground overlay (Netflix N logo + nav + gradient) painted last.
-  if (template.foreground_url) {
+  // Fan-out: skip — production files don't carry decorative overlays.
+  if (!onlyMode && template.foreground_url) {
     const fgBytes = await fetchAsBuffer(template.foreground_url);
     if (fgBytes) {
       const fgResized = await sharp(fgBytes)

@@ -18,8 +18,9 @@
 
 import { GIFT_BUCKETS, putObject, makeKey } from './storage';
 import { getPipelineByIdAdmin, getDefaultPipelineForMode } from './pipelines';
-import type { GiftCropRect, GiftProduct, GiftPipeline, GiftTemplate } from './types';
+import type { GiftCropRect, GiftProduct, GiftPipeline, GiftTemplate, GiftMode } from './types';
 import { renderTemplateComposite } from './pipeline/composite';
+import { renderPhotoResize, runAiTransform, transformBytesForMode } from './pipeline/transforms';
 import { createClient } from '@/lib/supabase/server';
 
 async function loadTemplate(templateId: string | null): Promise<GiftTemplate | null> {
@@ -121,6 +122,14 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,
       kind: 'preview',
+      productMode: product.mode,
+      // Preview: run each zone's transform so the customer sees the
+      // real output on every zone (line-art in laser zones, saturated
+      // colour in UV zones, etc.) — not just the raw uploaded photo.
+      transformZone: async (bytes, mode) => {
+        const p = await resolvePipelineForMode(product, mode);
+        return transformBytesForMode(bytes, mode, product, p, /*preview=*/true);
+      },
     });
     let buf = out.buffer;
     buf = await applyWatermark(buf);
@@ -196,6 +205,20 @@ export type ProductionOutput = {
   widthPx: number;
   heightPx: number;
   dpi: number;
+  /** For dual-mode templates: one file per distinct mode used across
+   *  the template's zones. Empty on single-mode templates + legacy
+   *  flows — the single productionPath / productionPdfPath above is
+   *  authoritative in those cases. */
+  files?: Array<{
+    mode: GiftMode;
+    pngPath: string;
+    pngMime: 'image/png';
+    pdfPath: string;
+    pdfMime: 'application/pdf';
+    widthPx: number;
+    heightPx: number;
+    dpi: number;
+  }>;
 };
 
 export async function runProductionPipeline(input: ProductionInput): Promise<ProductionOutput> {
@@ -208,33 +231,93 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   // Template composite path — same dispatch rule as preview.
   const template = await loadTemplate(input.templateId ?? null);
   if (template) {
-    const out = await renderTemplateComposite(sharp, {
-      template,
-      sourceBytes: src,
-      targetWidthMm:  product.width_mm,
-      targetHeightMm: product.height_mm,
-      kind: 'production',
-    });
-    const pngKey = makeKey(`prod-${product.slug}`, 'png');
-    const pngBuf = await sharp(out.buffer).png({ compressionLevel: 6 }).toBuffer();
-    const pngMeta = await sharp(pngBuf).metadata();
-    await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
-    const pdfKey = makeKey(`prod-${product.slug}`, 'pdf');
-    const pdfBuf = await wrapPdf(pngBuf, {
-      trimWidthMm:  product.width_mm,
-      trimHeightMm: product.height_mm,
-      bleedMm:      product.bleed_mm,
-    });
-    await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
-    const dpi = computeDpiForDimensions(pngMeta.width ?? 0, product.width_mm);
+    // Work out the distinct set of modes the template's zones use.
+    // Each zone's effective mode = zone.mode ?? product.mode. If the
+    // set has more than one mode the template is "dual-mode" and we
+    // fan out — produce one production file per mode.
+    const zoneModes = new Set<GiftMode>();
+    for (const z of (template.zones_json ?? [])) {
+      zoneModes.add((z.mode ?? product.mode) as GiftMode);
+    }
+    const distinctModes = Array.from(zoneModes);
+
+    // Shared callback — runs the right transform on each zone's bytes.
+    const transformZone = async (bytes: Uint8Array, mode: GiftMode) => {
+      const p = await resolvePipelineForMode(product, mode);
+      return transformBytesForMode(bytes, mode, product, p, /*preview=*/false);
+    };
+
+    // Helper: produce one PNG + PDF pair and upload them, returning
+    // keys + image metadata.
+    const renderOnePass = async (onlyMode: GiftMode | null, slugSuffix: string) => {
+      const out = await renderTemplateComposite(sharp, {
+        template,
+        sourceBytes: src,
+        targetWidthMm:  product.width_mm,
+        targetHeightMm: product.height_mm,
+        kind: 'production',
+        productMode: product.mode,
+        onlyMode,
+        transformZone,
+      });
+      const pngKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'png');
+      const pngBuf = await sharp(out.buffer).png({ compressionLevel: 6 }).toBuffer();
+      const pngMeta = await sharp(pngBuf).metadata();
+      await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
+      const pdfKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'pdf');
+      const pdfBuf = await wrapPdf(pngBuf, {
+        trimWidthMm:  product.width_mm,
+        trimHeightMm: product.height_mm,
+        bleedMm:      product.bleed_mm,
+      });
+      await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+      return {
+        pngKey, pdfKey,
+        widthPx:  pngMeta.width ?? 0,
+        heightPx: pngMeta.height ?? 0,
+        dpi: computeDpiForDimensions(pngMeta.width ?? 0, product.width_mm),
+      };
+    };
+
+    if (distinctModes.length > 1) {
+      // Dual-mode template: fan out — one file per mode.
+      const files: NonNullable<ProductionOutput['files']> = [];
+      for (const m of distinctModes) {
+        const r = await renderOnePass(m, m);
+        files.push({
+          mode: m,
+          pngPath: r.pngKey, pngMime: 'image/png',
+          pdfPath: r.pdfKey, pdfMime: 'application/pdf',
+          widthPx: r.widthPx, heightPx: r.heightPx, dpi: r.dpi,
+        });
+      }
+      // The single-file columns still get populated with the primary
+      // mode's output so the legacy admin queue row shows something,
+      // but the `files` array is the authoritative source.
+      const primary = files.find((f) => f.mode === product.mode) ?? files[0];
+      return {
+        productionPath: primary.pngPath,
+        productionMime: 'image/png',
+        productionPdfPath: primary.pdfPath,
+        productionPdfMime: 'application/pdf',
+        widthPx: primary.widthPx,
+        heightPx: primary.heightPx,
+        dpi: primary.dpi,
+        files,
+      };
+    }
+
+    // Single-mode template: one file, same as before but now with
+    // the transform callback so zones with AI modes render properly.
+    const r = await renderOnePass(null, 'main');
     return {
-      productionPath: pngKey,
+      productionPath: r.pngKey,
       productionMime: 'image/png',
-      productionPdfPath: pdfKey,
+      productionPdfPath: r.pdfKey,
       productionPdfMime: 'application/pdf',
-      widthPx: pngMeta.width ?? out.widthPx,
-      heightPx: pngMeta.height ?? out.heightPx,
-      dpi,
+      widthPx: r.widthPx,
+      heightPx: r.heightPx,
+      dpi: r.dpi,
     };
   }
 
@@ -426,95 +509,8 @@ async function renderTextAsImage(
 // Mode implementations
 // ---------------------------------------------------------------------------
 
-/**
- * Photo Resize — apply cropRect and pad with bleed.
- * cropRect is in SOURCE image pixel coordinates (x, y, width, height).
- */
-async function renderPhotoResize(
-  input: Buffer,
-  product: GiftProduct,
-  cropRect: GiftCropRect | null,
-  preview: boolean
-): Promise<Buffer> {
-  const sharp = await loadSharp();
-  let img = sharp(input);
-  const meta = await img.metadata();
-  const srcW = meta.width ?? 0;
-  const srcH = meta.height ?? 0;
-
-  const trimW = product.width_mm;
-  const trimH = product.height_mm;
-  const bleed = product.bleed_mm;
-  const totalW = trimW + bleed * 2;
-  const totalH = trimH + bleed * 2;
-
-  // Apply crop if provided
-  if (cropRect && cropRect.width > 0 && cropRect.height > 0) {
-    const x = Math.max(0, Math.round(cropRect.x));
-    const y = Math.max(0, Math.round(cropRect.y));
-    const w = Math.min(srcW - x, Math.round(cropRect.width));
-    const h = Math.min(srcH - y, Math.round(cropRect.height));
-    img = img.extract({ left: x, top: y, width: w, height: h });
-  }
-
-  // Target pixel dimensions: 300 DPI production, 150 DPI preview
-  const dpi = preview ? 150 : 300;
-  const targetW = Math.round((totalW / 25.4) * dpi);
-  const targetH = Math.round((totalH / 25.4) * dpi);
-
-  return img
-    .resize({ width: targetW, height: targetH, fit: 'cover' })
-    .jpeg({ quality: preview ? 80 : 92 })
-    .toBuffer();
-}
-
-/**
- * AI transform stub.
- *
- * This currently produces a "pending AI processing" preview overlay on top
- * of the source so the customer sees something reasonable. Admins receive
- * the raw source + the stored prompt snapshot and can process it via the
- * external tool of choice.
- *
- * REPLACE THIS FUNCTION when we wire up Replicate — the input/output shape
- * stays the same.
- */
-async function runAiTransform(
-  input: Buffer,
-  product: GiftProduct,
-  pipeline: GiftPipeline | null,
-  preview: boolean,
-): Promise<Buffer> {
-  const sharp = await loadSharp();
-  let img = sharp(input).rotate();
-
-  // Approximate each pipeline kind's visual effect in the preview so the
-  // customer sees something appropriate until the real AI call (Replicate
-  // via pipeline.ai_endpoint_url) is wired in.
-  const kind = pipeline?.kind ?? product.mode;
-  switch (kind) {
-    case 'laser':
-      img = img.greyscale().normalise().linear(1.8, -40).threshold(128);
-      break;
-    case 'uv':
-      img = img.modulate({ saturation: 1.4 }).sharpen();
-      break;
-    case 'embroidery':
-      img = img.modulate({ saturation: 1.1 }).median(3).posterise(4);
-      break;
-  }
-
-  // For production, scale up to 300 DPI at product dimensions
-  if (!preview) {
-    const totalW = product.width_mm + product.bleed_mm * 2;
-    const totalH = product.height_mm + product.bleed_mm * 2;
-    const targetW = Math.round((totalW / 25.4) * 300);
-    const targetH = Math.round((totalH / 25.4) * 300);
-    img = img.resize({ width: targetW, height: targetH, fit: 'cover' });
-  }
-
-  return img.png().toBuffer();
-}
+// Mode-specific transforms now live in ./pipeline/transforms.ts so
+// composite.ts can reach them without a dependency cycle.
 
 // ---------------------------------------------------------------------------
 // Watermark

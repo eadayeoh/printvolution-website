@@ -32,6 +32,16 @@ type Row = {
     prod_asset: { bucket: string; path: string } | null;
     pdf_asset: { bucket: string; path: string } | null;
   }>;
+  /** Dual-mode template fan-out: per-mode production files. Empty on
+   *  single-mode template / non-template lines. */
+  production_files: Array<{
+    mode: string;
+    png_path: string;
+    pdf_path: string;
+    width_px?: number;
+    height_px?: number;
+    dpi?: number;
+  }>;
 };
 
 export default async function AdminGiftOrdersPage({
@@ -43,7 +53,7 @@ export default async function AdminGiftOrdersPage({
 
   let q = sb.from('gift_order_items').select(`
     id, production_status, admin_notes, created_at, variant_name_snapshot,
-    source_purged_at, production_purged_at, bundle_id,
+    source_purged_at, production_purged_at, bundle_id, production_files,
     order:orders!inner(order_number, customer_email, created_at, shipping_name, shipping_address_1, shipping_city, shipping_postal_code),
     product:gift_products(name, slug, source_retention_days),
     bundle:bundles(id, slug, name),
@@ -167,8 +177,22 @@ export default async function AdminGiftOrdersPage({
                       <a href={`/api/admin/gift-download?bucket=${it.production_pdf.bucket}&path=${encodeURIComponent(it.production_pdf.path)}`}
                          className="inline-block rounded border border-ink bg-pink px-1.5 py-0.5 text-[10px] font-bold text-white">PDF</a>
                     )}
-                    {srcGone && prodGone && pdfGone && (it.surfaces?.length ?? 0) === 0 && (
+                    {srcGone && prodGone && pdfGone && (it.surfaces?.length ?? 0) === 0 && (it.production_files?.length ?? 0) === 0 && (
                       <span className="text-[10px] text-neutral-400">purged</span>
+                    )}
+                    {(it.production_files?.length ?? 0) > 0 && (
+                      <div className="mt-2 space-y-1 border-t border-neutral-200 pt-2">
+                        <div className="text-[9px] font-bold uppercase text-neutral-500 tracking-wider">Per-mode files (dual-mode template)</div>
+                        {it.production_files.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-20 flex-shrink-0 text-[10px] font-bold uppercase text-neutral-600">{f.mode}</div>
+                            <a href={`/api/admin/gift-download?bucket=gift-production&path=${encodeURIComponent(f.png_path)}`}
+                               className="rounded border border-ink bg-ink px-1.5 py-0.5 text-[10px] font-bold text-white">PNG {f.dpi ? `${f.dpi}` : ''}</a>
+                            <a href={`/api/admin/gift-download?bucket=gift-production&path=${encodeURIComponent(f.pdf_path)}`}
+                               className="rounded border border-ink bg-pink px-1.5 py-0.5 text-[10px] font-bold text-white">PDF</a>
+                          </div>
+                        ))}
+                      </div>
                     )}
                     {(it.surfaces?.length ?? 0) > 0 && (
                       <div className="mt-2 space-y-1 border-t border-neutral-200 pt-2">

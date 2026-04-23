@@ -37,7 +37,9 @@ async function runOne(line: { id: string; gift_product_id: string; source_asset_
       sourceMime: source.mime_type ?? 'image/jpeg',
     });
 
-    // Register the two production assets
+    // Register the primary production assets (always populated —
+    // dual-mode runs still write the primary-mode file here so the
+    // legacy queue row shows something).
     const { data: prodAsset } = await sb.from('gift_assets').insert({
       role: 'production',
       bucket: GIFT_BUCKETS.production,
@@ -54,9 +56,22 @@ async function runOne(line: { id: string; gift_product_id: string; source_asset_
       mime_type: out.productionPdfMime,
     }).select('id').single();
 
+    // Dual-mode template fan-out: persist the full per-mode set in
+    // production_files so the admin order view can surface each file
+    // with its mode label. Empty array when single-mode.
+    const productionFiles = out.files?.map((f) => ({
+      mode: f.mode,
+      png_path: f.pngPath,
+      pdf_path: f.pdfPath,
+      width_px: f.widthPx,
+      height_px: f.heightPx,
+      dpi: f.dpi,
+    })) ?? [];
+
     await sb.from('gift_order_items').update({
       production_asset_id: prodAsset?.id ?? null,
       production_pdf_id: pdfAsset?.id ?? null,
+      production_files: productionFiles,
       production_status: 'ready',
     }).eq('id', line.id);
   } catch (e: any) {

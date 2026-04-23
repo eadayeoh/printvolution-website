@@ -104,6 +104,12 @@ export type GiftTemplateZoneBase = {
   /** When true the zone is not draggable/resizable in the editor.
    *  Customer-facing render ignores this — locking is editor-only. */
   locked?: boolean;
+  /** Production method for THIS zone. Overrides the product's mode
+   *  when set. A template with 2 distinct modes across its zones is a
+   *  "dual-mode template" and fans out to 2 production files (one per
+   *  mode). Null → inherit the product's primary mode. Validated at
+   *  assignment time: must be in {product.mode, product.secondary_mode}. */
+  mode?: GiftMode | null;
 };
 
 export type GiftTemplateImageZone = GiftTemplateZoneBase & {
