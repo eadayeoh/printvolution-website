@@ -147,7 +147,9 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
                   backgroundImage: item.image_url ? `url(${item.image_url})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  background: item.image_url ? undefined : 'var(--pv-cream)',
+                  // backgroundColor (longhand), not `background` shorthand —
+                  // shorthand wipes backgroundImage on React re-render.
+                  backgroundColor: item.image_url ? undefined : 'var(--pv-cream)',
                 }}
               />
             </div>

@@ -169,7 +169,12 @@ export function CategoryTiles({ tabs, header }: { tabs: CategoryTab[]; header?: 
                   backgroundImage: t.image_url ? `url(${t.image_url})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  background: t.image_url ? undefined : 'var(--pv-cream)',
+                  // NOTE: use backgroundColor (longhand), NOT `background`.
+                  // Mixing the shorthand with backgroundImage in the same
+                  // style object causes React's style reconciler to wipe
+                  // background-image on re-render — manifests as blank
+                  // tiles after client-side nav back to the homepage.
+                  backgroundColor: t.image_url ? undefined : 'var(--pv-cream)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
