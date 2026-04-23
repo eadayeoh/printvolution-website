@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { runProductionPipeline } from '@/lib/gifts/pipeline';
+import { runProductionPipeline, runSurfaceProductionPipeline } from '@/lib/gifts/pipeline';
 import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
 
@@ -67,6 +67,122 @@ async function runOne(line: { id: string; gift_product_id: string; source_asset_
   }
 }
 
+/** Fan-out producer for surfaces-driven gift lines. Loads every
+ *  pending surface on the given lines, runs the per-surface production
+ *  pipeline, and updates each row with the produced asset IDs + status.
+ *  Runs non-blocking — checkout returns before this finishes. */
+async function queueSurfaceProduction(
+  items: Array<{ lineId: string; gift_product_id: string }>,
+) {
+  for (const it of items) {
+    void runOneLineSurfaces(it).catch(() =>
+      console.error('[gift surface production] line failed', it.lineId),
+    );
+  }
+}
+
+async function runOneLineSurfaces(it: { lineId: string; gift_product_id: string }) {
+  const sb = serviceClient();
+  const [{ data: product }, { data: surfaces }] = await Promise.all([
+    sb.from('gift_products').select('*').eq('id', it.gift_product_id).maybeSingle(),
+    sb.from('gift_order_item_surfaces').select('*').eq('order_item_id', it.lineId).order('display_order'),
+  ]);
+  if (!product || !surfaces) return;
+
+  // Load variant so we can honour its per-surface area dimensions. The
+  // cart stores gift_variant_id on the order item — reach it via the
+  // gift_order_items row.
+  const { data: orderItem } = await sb
+    .from('gift_order_items')
+    .select('variant_id')
+    .eq('id', it.lineId)
+    .maybeSingle();
+  const variantId = (orderItem as any)?.variant_id ?? null;
+  const { data: variant } = variantId
+    ? await sb.from('gift_product_variants').select('surfaces, width_mm, height_mm').eq('id', variantId).maybeSingle()
+    : { data: null };
+
+  for (const row of surfaces) {
+    await sb.from('gift_order_item_surfaces').update({ production_status: 'processing' }).eq('id', row.id);
+    try {
+      // Resolve this surface's areaMm from the variant config. The
+      // surface.mockup_area is in percent; combine with the variant's
+      // (or product's) physical dims to get mm.
+      let areaMm: { widthMm: number; heightMm: number } | null = null;
+      const variantSurfaces = Array.isArray(variant?.surfaces) ? variant!.surfaces : [];
+      const surfCfg = variantSurfaces.find((s: any) => s.id === row.surface_id);
+      const physW = Number(variant?.width_mm ?? product.width_mm);
+      const physH = Number(variant?.height_mm ?? product.height_mm);
+      if (surfCfg?.mockup_area && Number.isFinite(physW) && Number.isFinite(physH)) {
+        areaMm = {
+          widthMm:  (Number(surfCfg.mockup_area.width)  / 100) * physW,
+          heightMm: (Number(surfCfg.mockup_area.height) / 100) * physH,
+        };
+      }
+
+      let sourcePath: string | null = null;
+      let sourceMime: string | null = null;
+      if (row.source_asset_id) {
+        const { data: src } = await sb.from('gift_assets').select('path, mime_type').eq('id', row.source_asset_id).maybeSingle();
+        sourcePath = (src as any)?.path ?? null;
+        sourceMime = (src as any)?.mime_type ?? null;
+      }
+
+      const out = await runSurfaceProductionPipeline({
+        product: product as any,
+        mode: row.mode,
+        text: row.text ?? undefined,
+        sourcePath,
+        sourceMime,
+        surfaceLabel: row.surface_label,
+        areaMm,
+      });
+
+      const { data: prodAsset } = await sb.from('gift_assets').insert({
+        role: 'production',
+        bucket: GIFT_BUCKETS.production,
+        path: out.productionPath,
+        mime_type: out.productionMime,
+        width_px: out.widthPx,
+        height_px: out.heightPx,
+        dpi: out.dpi,
+      }).select('id').single();
+      const { data: pdfAsset } = await sb.from('gift_assets').insert({
+        role: 'production-pdf',
+        bucket: GIFT_BUCKETS.production,
+        path: out.productionPdfPath,
+        mime_type: out.productionPdfMime,
+      }).select('id').single();
+
+      await sb.from('gift_order_item_surfaces').update({
+        production_asset_id: prodAsset?.id ?? null,
+        production_pdf_id: pdfAsset?.id ?? null,
+        production_status: 'ready',
+      }).eq('id', row.id);
+    } catch (e: any) {
+      await sb.from('gift_order_item_surfaces').update({
+        production_status: 'failed',
+        production_error: e?.message ?? 'unknown',
+      }).eq('id', row.id);
+    }
+  }
+
+  // Roll up to the parent gift_order_items.production_status so the
+  // admin orders queue reflects surface results without having to
+  // join. "ready" only if every surface succeeded; "failed" if any.
+  const { data: final } = await sb
+    .from('gift_order_item_surfaces')
+    .select('production_status')
+    .eq('order_item_id', it.lineId);
+  const statuses = (final ?? []).map((r: any) => r.production_status);
+  const rollup = statuses.every((s: string) => s === 'ready')
+    ? 'ready'
+    : statuses.some((s: string) => s === 'failed')
+      ? 'failed'
+      : 'processing';
+  await sb.from('gift_order_items').update({ production_status: rollup }).eq('id', it.lineId);
+}
+
 const OrderSchema = z.object({
   customer_name: z.string().min(2).max(100),
   email: z.string().email(),
@@ -87,6 +203,14 @@ const OrderSchema = z.object({
       line_total_cents: z.number().int().nonnegative(),
       personalisation_notes: z.string().optional(),
       gift_image_url: z.string().optional(),
+      gift_variant_id: z.string().uuid().optional(),
+      surfaces: z.array(z.object({
+        id: z.string().min(1),
+        label: z.string().min(1),
+        text: z.string().max(500).optional(),
+        source_asset_id: z.string().uuid().optional(),
+        mode: z.enum(['laser','uv','embroidery','photo-resize','eco-solvent','digital','uv-dtf']),
+      })).optional(),
     })
   ).min(1),
 });
@@ -282,6 +406,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       return {
         order_id: order.id,
         gift_product_id: info.id,
+        variant_id: i.gift_variant_id ?? null,
         qty: i.qty,
         unit_price_cents: i.unit_price_cents,
         line_total_cents: i.line_total_cents,
@@ -302,10 +427,45 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       return { ok: false, error: 'Gift items failed: ' + giErr.message };
     }
 
+    // Fan out per-surface rows for any gift line that carried surfaces
+    // from the cart. Line items without surfaces fall back to the
+    // original single-mode production runner below.
+    const itemsWithSurfaces: Array<{ lineId: string; gift_product_id: string; surfaces: NonNullable<OrderInput['items'][0]['surfaces']> }> = [];
+    for (let idx = 0; idx < giftItems.length; idx++) {
+      const raw = giftItems[idx];
+      if (!raw.surfaces || raw.surfaces.length === 0) continue;
+      const insertedRow = insertedGifts?.[idx];
+      if (!insertedRow) continue;
+      const rows = raw.surfaces.map((s, sIdx) => ({
+        order_item_id: insertedRow.id,
+        surface_id: s.id,
+        surface_label: s.label,
+        text: s.text ?? null,
+        source_asset_id: s.source_asset_id ?? null,
+        mode: s.mode,
+        display_order: sIdx,
+        production_status: 'pending' as const,
+      }));
+      const { error: sErr } = await sb.from('gift_order_item_surfaces').insert(rows);
+      if (sErr) {
+        console.error('[gift surfaces] insert failed', sErr.message);
+      } else {
+        itemsWithSurfaces.push({
+          lineId: insertedRow.id,
+          gift_product_id: insertedRow.gift_product_id,
+          surfaces: raw.surfaces,
+        });
+      }
+    }
+
     // Mark the gift products as "ordered" so the mode becomes locked.
     // Kick off production in the background — don't block checkout on it.
     // Production updates gift_order_items.production_status when it lands.
-    void queueGiftProduction(insertedGifts ?? []);
+    const singleProductionLines = (insertedGifts ?? []).filter(
+      (l: any) => !itemsWithSurfaces.some((s) => s.lineId === l.id),
+    );
+    void queueGiftProduction(singleProductionLines);
+    void queueSurfaceProduction(itemsWithSurfaces);
     const giftProductIds = Array.from(new Set(giftRows.map((r) => r.gift_product_id)));
     if (giftProductIds.length > 0) {
       // Use upsert-like filter: only set first_ordered_at if null

@@ -61,6 +61,8 @@ export function CheckoutForm() {
           line_total_cents: i.line_total_cents,
           personalisation_notes: i.personalisation_notes,
           gift_image_url: i.gift_image_url,
+          gift_variant_id: i.gift_variant_id,
+          surfaces: i.surfaces,
         })),
       });
       if (result.ok) {

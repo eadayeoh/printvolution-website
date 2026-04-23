@@ -1,6 +1,8 @@
 import { listProducts } from '@/lib/data/products';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { getHomePageContent, homeItems, homeFirst } from '@/lib/data/home';
+import { listActiveGiftProducts } from '@/lib/gifts/data';
+import { giftFromPrice } from '@/lib/gifts/types';
 import { LocalBusinessSchema, FAQPageSchema } from '@/components/seo/json-ld';
 import { SplitHero, type SplitHeroItem } from '@/components/home/split-hero';
 import { WhyCards, type WhyItem, type WhyHeader } from '@/components/home/why-cards';
@@ -26,13 +28,29 @@ type CategoryTabSection = {
 };
 
 export default async function HomePage() {
-  const [sections, products, routes] = await Promise.all([
+  const [sections, products, routes, giftProducts] = await Promise.all([
     getHomePageContent(),
     listProducts(),
     getProductRoutes(),
+    listActiveGiftProducts(),
   ]);
 
+  // Merge print + gift catalogues into one slug → tile-shape map so the
+  // homepage category tabs can reference either kind transparently.
   const bySlug = new Map(products.map((p) => [p.slug, p]));
+  for (const g of giftProducts) {
+    if (bySlug.has(g.slug)) continue;
+    bySlug.set(g.slug, {
+      id: g.id,
+      slug: g.slug,
+      name: g.name,
+      image_url: g.thumbnail_url ?? null,
+      tagline: g.tagline,
+      min_price: giftFromPrice(g),
+      // Fields required by the ProductListItem shape but unused in the
+      // homepage tiles — kept permissively typed via the `as any` below.
+    } as any);
+  }
 
   const heroItems = homeItems(sections, 'hero.split') as SplitHeroItem[];
   const whyItems = homeItems(sections, 'why.cards') as WhyItem[];

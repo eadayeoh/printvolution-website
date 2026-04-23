@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { uploadAndPreviewGift } from '@/app/(site)/gift/actions';
+import { uploadAndPreviewGift, uploadGiftSurfacePhoto } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
@@ -171,9 +171,54 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const requiredSurfaceCount = hasSurfaces ? selectedVariant!.surfaces.length : 0;
   const surfacesReady = hasSurfaces && filledSurfaceCount === requiredSurfaceCount;
 
-  function handleAddToCart() {
+  async function handleAddToCart() {
     if (!hasSurfaces && !preview) return;
     if (hasSurfaces && !surfacesReady) return;
+
+    // Surfaces flow: before adding to cart, upload each photo-surface
+    // to storage so the cart line carries asset IDs. Text surfaces
+    // just pass their string through — no upload.
+    let surfacesPayload: Array<{
+      id: string;
+      label: string;
+      text?: string;
+      source_asset_id?: string;
+      mode: 'laser' | 'uv' | 'embroidery' | 'photo-resize' | 'eco-solvent' | 'digital' | 'uv-dtf';
+    }> | undefined;
+    if (hasSurfaces && selectedVariant) {
+      setUploading(true);
+      try {
+        surfacesPayload = [];
+        for (const s of selectedVariant.surfaces) {
+          const fill = surfaceFills[s.id];
+          if (!fill) continue;
+          const txt = (fill.text ?? '').trim();
+          let sourceAssetId: string | undefined;
+          if (fill.photoFile) {
+            const fd = new FormData();
+            fd.append('file', fill.photoFile);
+            fd.append('product_slug', product.slug);
+            fd.append('surface_id', s.id);
+            const r = await uploadGiftSurfacePhoto(fd);
+            if (!r.ok) { setErr(r.error); setUploading(false); return; }
+            sourceAssetId = r.sourceAssetId;
+          }
+          surfacesPayload.push({
+            id: s.id,
+            label: s.label,
+            text: txt || undefined,
+            source_asset_id: sourceAssetId,
+            mode: s.mode ?? product.mode,
+          });
+        }
+      } catch (e: any) {
+        setErr(e?.message ?? 'Surface upload failed');
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     const unit = selectedVariant?.base_price_cents || product.base_price_cents;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
@@ -243,6 +288,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         product.thumbnail_url ??
         undefined,
       personalisation_notes: notes,
+      surfaces: surfacesPayload,
+      gift_variant_id: selectedVariant?.id,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);

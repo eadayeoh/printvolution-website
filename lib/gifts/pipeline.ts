@@ -262,6 +262,143 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
 }
 
 // ---------------------------------------------------------------------------
+// SURFACE PRODUCTION PIPELINE
+// ---------------------------------------------------------------------------
+//
+// Per-face production runner. Invoked once per gift_order_item_surfaces
+// row at fulfilment. Mirrors runProductionPipeline for the single-mode
+// case, but:
+//   - text-only surfaces get their string rasterised first (via SVG +
+//     sharp) — the downstream photo-resize / AI transforms all accept
+//     a bitmap, so rendering text to bitmap here is enough to unify the
+//     two input paths.
+//   - mode comes from the surface row (already snapshotted at checkout),
+//     not the product.
+
+export type SurfaceProductionInput = {
+  product: GiftProduct;
+  mode: string;                 // snapshot from gift_order_item_surfaces.mode
+  text?: string | null;         // for text surfaces
+  sourcePath?: string | null;   // for photo surfaces (bucket = GIFT_BUCKETS.sources)
+  sourceMime?: string | null;
+  surfaceLabel: string;         // for storage key naming only
+  // Engraving zone on the variant's mockup (mm-normalised via
+  // product.width_mm / height_mm). If present, the produced file fits
+  // into this zone instead of the whole product canvas — matters for
+  // multi-surface pieces where each face covers only part of the item.
+  areaMm?: { widthMm: number; heightMm: number } | null;
+};
+
+export async function runSurfaceProductionPipeline(input: SurfaceProductionInput): Promise<ProductionOutput> {
+  const sharp = await loadSharp();
+  if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
+
+  // 1. Resolve source bytes. Text surfaces: rasterise the string.
+  //    Photo surfaces: pull from Supabase storage.
+  let srcBytes: Buffer;
+  if (input.sourcePath) {
+    const { getObject } = await import('./storage');
+    srcBytes = Buffer.from(await getObject(GIFT_BUCKETS.sources, input.sourcePath));
+  } else if (input.text?.trim()) {
+    srcBytes = await renderTextAsImage(input.text.trim(), input.areaMm ?? null);
+  } else {
+    throw new Error(`Surface "${input.surfaceLabel}" has neither text nor source asset`);
+  }
+
+  // 2. Route by snapshot mode. Each branch produces the final
+  //    production bitmap. Re-use the single-mode renderers so future
+  //    improvements land in both code paths.
+  const fakeProduct = {
+    ...input.product,
+    // The fake product's physical dimensions collapse to the surface's
+    // area (when known). This keeps the produced file correctly sized
+    // for a single face rather than the whole piece.
+    width_mm:  input.areaMm?.widthMm  ?? input.product.width_mm,
+    height_mm: input.areaMm?.heightMm ?? input.product.height_mm,
+  };
+  let productionBuf: Buffer;
+  switch (input.mode) {
+    case 'photo-resize':
+    case 'eco-solvent':
+    case 'digital':
+    case 'uv-dtf':
+      productionBuf = await renderPhotoResize(srcBytes, fakeProduct, null, /*preview=*/false);
+      break;
+    case 'laser':
+    case 'uv':
+    case 'embroidery': {
+      const pipeline = await resolvePipeline(fakeProduct);
+      productionBuf = await runAiTransform(srcBytes, fakeProduct, pipeline, /*preview=*/false);
+      break;
+    }
+    default:
+      throw new Error(`Unknown production mode: ${input.mode}`);
+  }
+
+  // 3. Store the production PNG + wrap to PDF (trim/bleed markers from
+  //    the variant's area dimensions, not the whole product).
+  const slugSafe = `${input.product.slug}-${input.surfaceLabel.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+  const pngKey = makeKey(`prod-${slugSafe}`, 'png');
+  const pngBuf = await sharp(productionBuf).png({ compressionLevel: 6 }).toBuffer();
+  const pngMeta = await sharp(pngBuf).metadata();
+  await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
+
+  const pdfKey = makeKey(`prod-${slugSafe}`, 'pdf');
+  const pdfBuf = await wrapPdf(pngBuf, {
+    trimWidthMm:  fakeProduct.width_mm,
+    trimHeightMm: fakeProduct.height_mm,
+    bleedMm:      input.product.bleed_mm,
+  });
+  await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+
+  const dpi = computeDpiForDimensions(pngMeta.width ?? 0, fakeProduct.width_mm);
+  return {
+    productionPath: pngKey,
+    productionMime: 'image/png',
+    productionPdfPath: pdfKey,
+    productionPdfMime: 'application/pdf',
+    widthPx: pngMeta.width ?? 0,
+    heightPx: pngMeta.height ?? 0,
+    dpi,
+  };
+}
+
+/** Render a short engraving string to a bitmap at ~300 DPI so the
+ *  downstream pipeline can treat it the same way as an uploaded photo.
+ *  Uses an SVG so the text stays crisp at any resolution; sharp
+ *  rasterises it at the target pixel size. */
+async function renderTextAsImage(
+  text: string,
+  areaMm: { widthMm: number; heightMm: number } | null,
+): Promise<Buffer> {
+  const sharp = await loadSharp();
+  const widthMm  = areaMm?.widthMm  ?? 80;
+  const heightMm = areaMm?.heightMm ?? 30;
+  const dpi = 300;
+  const widthPx  = Math.round((widthMm  / 25.4) * dpi);
+  const heightPx = Math.round((heightMm / 25.4) * dpi);
+  const safe = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Start at 80% of the shorter edge and rely on textLength to force-fit.
+  const fontPx = Math.round(Math.min(widthPx, heightPx) * 0.7);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${widthPx}" height="${heightPx}" viewBox="0 0 ${widthPx} ${heightPx}">
+      <rect width="100%" height="100%" fill="#ffffff" />
+      <text
+        x="${widthPx / 2}" y="${heightPx / 2}"
+        dominant-baseline="central" text-anchor="middle"
+        font-family="Playfair Display, Fraunces, Georgia, serif"
+        font-weight="600"
+        font-size="${fontPx}"
+        fill="#0a0a0a"
+        textLength="${widthPx * 0.9}"
+        lengthAdjust="spacingAndGlyphs"
+      >${safe}</text>
+    </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ---------------------------------------------------------------------------
 // Mode implementations
 // ---------------------------------------------------------------------------
 

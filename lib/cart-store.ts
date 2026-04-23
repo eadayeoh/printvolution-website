@@ -3,6 +3,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+/** One face of a surfaces-driven gift line item. Mirrors the shape of
+ *  gift_order_item_surfaces that checkout will write. Mode is literal
+ *  so the checkout OrderSchema.enum narrows cleanly without a cast. */
+export type CartItemSurface = {
+  id: string;                // matches surface.id on the variant
+  label: string;             // 'Front' — for admin + cart display
+  text?: string;             // text-surface content
+  source_asset_id?: string;  // photo-surface asset (pre-uploaded on add to cart)
+  mode: 'laser' | 'uv' | 'embroidery' | 'photo-resize' | 'eco-solvent' | 'digital' | 'uv-dtf';
+};
+
 export type CartItem = {
   id: string;             // local ID (ci_<timestamp>)
   product_slug: string;
@@ -14,6 +25,14 @@ export type CartItem = {
   line_total_cents: number;
   personalisation_notes?: string;
   gift_image_url?: string;
+  /** Per-surface fill data. Present only when the variant uses
+   *  surfaces[]; checkout fans out into gift_order_item_surfaces rows
+   *  and the pipeline produces one file per entry. */
+  surfaces?: CartItemSurface[];
+  /** Gift variant id (uuid) picked at Add-to-Cart. Needed at checkout
+   *  so we can join to the variant row for price / mockup / dimensions
+   *  / surface config even if the parent product changes later. */
+  gift_variant_id?: string;
 };
 
 type CartState = {

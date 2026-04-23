@@ -19,6 +19,19 @@ type Row = {
   source: { bucket: string; path: string } | null;
   production: { bucket: string; path: string } | null;
   production_pdf: { bucket: string; path: string } | null;
+  surfaces: Array<{
+    id: string;
+    surface_id: string;
+    surface_label: string;
+    text: string | null;
+    mode: string;
+    production_status: string;
+    production_error: string | null;
+    display_order: number;
+    src_asset: { bucket: string; path: string } | null;
+    prod_asset: { bucket: string; path: string } | null;
+    pdf_asset: { bucket: string; path: string } | null;
+  }>;
 };
 
 export default async function AdminGiftOrdersPage({
@@ -36,7 +49,13 @@ export default async function AdminGiftOrdersPage({
     bundle:bundles(id, slug, name),
     source:gift_assets!source_asset_id(bucket, path),
     production:gift_assets!production_asset_id(bucket, path),
-    production_pdf:gift_assets!production_pdf_id(bucket, path)
+    production_pdf:gift_assets!production_pdf_id(bucket, path),
+    surfaces:gift_order_item_surfaces(
+      id, surface_id, surface_label, text, mode, production_status, production_error, display_order,
+      src_asset:gift_assets!source_asset_id(bucket, path),
+      prod_asset:gift_assets!production_asset_id(bucket, path),
+      pdf_asset:gift_assets!production_pdf_id(bucket, path)
+    )
   `).order('created_at', { ascending: false }).limit(200);
 
   if (searchParams.status && searchParams.status !== 'all') {
@@ -148,8 +167,52 @@ export default async function AdminGiftOrdersPage({
                       <a href={`/api/admin/gift-download?bucket=${it.production_pdf.bucket}&path=${encodeURIComponent(it.production_pdf.path)}`}
                          className="inline-block rounded border border-ink bg-pink px-1.5 py-0.5 text-[10px] font-bold text-white">PDF</a>
                     )}
-                    {srcGone && prodGone && pdfGone && (
+                    {srcGone && prodGone && pdfGone && (it.surfaces?.length ?? 0) === 0 && (
                       <span className="text-[10px] text-neutral-400">purged</span>
+                    )}
+                    {(it.surfaces?.length ?? 0) > 0 && (
+                      <div className="mt-2 space-y-1 border-t border-neutral-200 pt-2">
+                        <div className="text-[9px] font-bold uppercase text-neutral-500 tracking-wider">Surfaces</div>
+                        {it.surfaces
+                          .slice()
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((sf) => (
+                            <div key={sf.id} className="flex items-start gap-2">
+                              <div className="w-20 flex-shrink-0">
+                                <div className="font-bold">{sf.surface_label}</div>
+                                <div className="text-[9px] text-neutral-500">({sf.mode})</div>
+                              </div>
+                              <div className="flex-1">
+                                {sf.text && <div className="italic text-neutral-700">&quot;{sf.text}&quot;</div>}
+                                <div className="mt-0.5 flex flex-wrap gap-1">
+                                  {sf.src_asset && (
+                                    <a href={`/api/admin/gift-download?bucket=${sf.src_asset.bucket}&path=${encodeURIComponent(sf.src_asset.path)}`}
+                                       className="rounded border border-ink px-1 py-0.5 text-[10px] font-bold underline">src</a>
+                                  )}
+                                  {sf.prod_asset && (
+                                    <a href={`/api/admin/gift-download?bucket=${sf.prod_asset.bucket}&path=${encodeURIComponent(sf.prod_asset.path)}`}
+                                       className="rounded border border-ink bg-ink px-1 py-0.5 text-[10px] font-bold text-white">PNG</a>
+                                  )}
+                                  {sf.pdf_asset && (
+                                    <a href={`/api/admin/gift-download?bucket=${sf.pdf_asset.bucket}&path=${encodeURIComponent(sf.pdf_asset.path)}`}
+                                       className="rounded border border-ink bg-pink px-1 py-0.5 text-[10px] font-bold text-white">PDF</a>
+                                  )}
+                                  <span className={`rounded px-1 py-0.5 text-[10px] font-bold uppercase ${
+                                    sf.production_status === 'ready' ? 'bg-green-100 text-green-800' :
+                                    sf.production_status === 'failed' ? 'bg-red-100 text-red-800' :
+                                    sf.production_status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-neutral-100 text-neutral-700'
+                                  }`}>
+                                    {sf.production_status}
+                                  </span>
+                                </div>
+                                {sf.production_error && (
+                                  <div className="mt-0.5 text-[9px] text-red-600">{sf.production_error}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     )}
                   </td>
                   <td className="border-b p-2">

@@ -7,6 +7,65 @@ import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 
+/**
+ * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
+ * variants). Returns the gift_assets.id so the cart can stash it on the
+ * line item. Checkout later turns that into a gift_order_item_surfaces
+ * row with source_asset_id.
+ *
+ * Scoped narrow on purpose — no preview generation, no pipeline run,
+ * no per-variant resolution. The production pipeline fans out per
+ * surface at fulfilment time.
+ */
+export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
+  { ok: true; sourceAssetId: string } | { ok: false; error: string }
+> {
+  try {
+    const file = formData.get('file');
+    const productSlug = (formData.get('product_slug') || '').toString();
+    const surfaceId   = (formData.get('surface_id')   || '').toString();
+    if (!(file instanceof File)) return { ok: false, error: 'No file' };
+    if (file.size === 0)        return { ok: false, error: 'Empty file' };
+    if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'File too large (max 20 MB)' };
+    if (!productSlug || !surfaceId)   return { ok: false, error: 'Missing product or surface id' };
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detected = detectImage(bytes);
+    const allowed = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif']);
+    if (!detected || !allowed.has(detected.mime)) {
+      return { ok: false, error: 'File is not a supported image format' };
+    }
+    const extMap: Record<string, string> = {
+      'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic','image/heif':'heif',
+    };
+    const ext = extMap[detected.mime] ?? 'bin';
+
+    const service = serviceClient();
+    const key = makeKey(`surface-${productSlug}-${surfaceId}`, ext);
+    const { error: upErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .upload(key, bytes, { contentType: detected.mime, upsert: false, cacheControl: '3600' });
+    if (upErr) return { ok: false, error: 'upload failed' };
+
+    const { data: asset, error: aErr } = await service
+      .from('gift_assets')
+      .insert({
+        role: 'source',
+        bucket: GIFT_BUCKETS.sources,
+        path: key,
+        mime_type: detected.mime,
+        size_bytes: file.size,
+      })
+      .select('id').single();
+    if (aErr || !asset) return { ok: false, error: 'asset row failed' };
+
+    return { ok: true, sourceAssetId: asset.id as string };
+  } catch (e: any) {
+    console.error('[surface upload] uncaught error');
+    return { ok: false, error: 'Server error during upload' };
+  }
+}
+
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const MAX_BYTES = 20 * 1024 * 1024;
 // ext inferred from magic bytes; keep a short, safe mapping.
