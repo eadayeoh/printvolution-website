@@ -338,7 +338,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <div className="mb-3 grid gap-3 md:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-xs font-bold text-ink">Production pipeline</span>
+                <span className="mb-1 block text-xs font-bold text-ink">
+                  Production pipeline override ({GIFT_MODE_LABEL[mode]})
+                </span>
                 <select value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} className={inputCls}>
                   <option value="">Use mode default ({mode})</option>
                   {pipelines.filter((p) => p.kind === mode).map((p) => (
@@ -346,7 +348,12 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   ))}
                 </select>
                 <span className="mt-1 block text-[11px] text-neutral-500">
-                  Overrides which transform + params run for this product.{' '}
+                  Overrides which transform + params run for <strong>{GIFT_MODE_LABEL[mode]}</strong> surfaces on this product.{' '}
+                  {secondaryMode && (
+                    <>
+                      Secondary-mode (<strong>{GIFT_MODE_LABEL[secondaryMode]}</strong>) surfaces always use the default pipeline for that mode.{' '}
+                    </>
+                  )}
                   <Link href="/admin/gifts/pipelines" className="underline">Manage pipelines →</Link>
                 </span>
               </label>

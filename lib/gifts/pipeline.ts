@@ -43,6 +43,24 @@ async function resolvePipeline(product: GiftProduct): Promise<GiftPipeline | nul
   return getDefaultPipelineForMode(product.mode);
 }
 
+/** Mode-aware resolver for surface fan-out. When the product has a
+ *  specific pipeline override AND its `kind` matches the surface's
+ *  mode, use it. Otherwise fall back to the default pipeline for that
+ *  mode. Keeps the override UI useful for single-mode products while
+ *  staying correct for dual-mode products where the primary-mode
+ *  override would otherwise be used incorrectly for secondary-mode
+ *  surfaces. */
+async function resolvePipelineForMode(
+  product: GiftProduct,
+  mode: string,
+): Promise<GiftPipeline | null> {
+  if (product.pipeline_id) {
+    const p = await getPipelineByIdAdmin(product.pipeline_id);
+    if (p && p.kind === mode) return p;
+  }
+  return getDefaultPipelineForMode(mode as any);
+}
+
 // sharp is loaded lazily because it's a native dependency and we only want it
 // on the server in production (not in edge runtimes or bundled builds).
 async function loadSharp() {
@@ -327,7 +345,7 @@ export async function runSurfaceProductionPipeline(input: SurfaceProductionInput
     case 'laser':
     case 'uv':
     case 'embroidery': {
-      const pipeline = await resolvePipeline(fakeProduct);
+      const pipeline = await resolvePipelineForMode(fakeProduct, input.mode);
       productionBuf = await runAiTransform(srcBytes, fakeProduct, pipeline, /*preview=*/false);
       break;
     }
