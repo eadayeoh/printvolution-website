@@ -390,6 +390,11 @@ const VariantSchema = z.object({
         font_family: z.string().nullable().optional(),
         font_size_pct: z.number().positive().nullable().optional(),
         color: z.string().nullable().optional(),
+        // Optional per-surface production method. Null = inherit parent.
+        mode: z
+          .enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'])
+          .nullable()
+          .optional(),
       }),
     )
     .default([]),

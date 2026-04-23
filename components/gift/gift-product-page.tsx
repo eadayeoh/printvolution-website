@@ -196,14 +196,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     }
     // Surfaces: emit one config line per filled surface so the admin
     // order view reads "Front: ELAINE / Back: 2024-01-15" without
-    // having to parse the personalisation_notes blob.
+    // having to parse the personalisation_notes blob. When a surface
+    // has its own production method, annotate the label so production
+    // knows which machine runs this face ("Front (laser): ELAINE").
     if (hasSurfaces && selectedVariant) {
       for (const s of selectedVariant.surfaces) {
         const fill = surfaceFills[s.id];
         if (!fill) continue;
         const txt = (fill.text ?? '').trim();
-        if (txt) config[s.label] = txt;
-        else if (fill.photoThumb) config[s.label] = '(photo uploaded)';
+        const method = s.mode ?? null;
+        const label = method ? `${s.label} (${GIFT_MODE_LABEL[method]})` : s.label;
+        if (txt) config[label] = txt;
+        else if (fill.photoThumb) config[label] = '(photo uploaded)';
       }
     }
     // Build the personalisation_notes string. Server preview path keeps
@@ -220,6 +224,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         if (!fill) continue;
         const txt = (fill.text ?? '').trim();
         if (txt) notes += `${notes ? ';' : ''}text_${s.id}:${txt}`;
+        if (s.mode) notes += `${notes ? ';' : ''}mode_${s.id}:${s.mode}`;
       }
     }
     if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;

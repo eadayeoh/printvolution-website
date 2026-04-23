@@ -247,6 +247,13 @@ export type GiftVariantSurface = {
   font_family?: string | null;
   font_size_pct?: number | null;
   color?: string | null;
+  /** Production method for THIS face. Overrides the parent product's
+   *  `mode` when set. Lets a single variant mix methods — e.g. the front
+   *  of an acrylic wall art is UV-printed, the border text is laser
+   *  engraved — or split the parent catalogue into method-choice
+   *  variants like "Laser-engraved figurine" vs "UV-printed figurine"
+   *  under one parent. Null → inherit the parent's mode. */
+  mode?: GiftMode | null;
 };
 
 export type GiftProductVariant = {

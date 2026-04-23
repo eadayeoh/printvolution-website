@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
+import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+
+const ALL_GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
 type Draft = {
   id?: string;
@@ -156,6 +159,7 @@ export function GiftVariantsPanel({
         font_family: s.font_family ?? null,
         font_size_pct: s.font_size_pct ?? null,
         color: s.color ?? null,
+        mode: s.mode ?? null,
       })),
     };
     // Extra validation for surfaces up-front so Zod errors don't
@@ -541,6 +545,26 @@ export function GiftVariantsPanel({
                                       </label>
                                     ))}
                                   </div>
+                                </div>
+                              </div>
+                              <div className="mt-2">
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+                                    Production method (overrides parent product&apos;s mode)
+                                  </span>
+                                  <select
+                                    value={s.mode ?? ''}
+                                    onChange={(e) => updateSurface(i, sIdx, { mode: (e.target.value || null) as GiftMode | null })}
+                                    className={inputCls}
+                                  >
+                                    <option value="">Inherit parent</option>
+                                    {ALL_GIFT_MODES.map((m) => (
+                                      <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <div className="mt-1 text-[10px] text-neutral-500">
+                                  Use this when one face of the same variant uses a different process — e.g. UV-printed front + laser-engraved back on the same acrylic piece.
                                 </div>
                               </div>
                             </div>
