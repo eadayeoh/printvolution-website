@@ -64,6 +64,8 @@ const GiftProductSchema = z.object({
   })).nullable().optional(),
   // Migration 0035 additions
   pipeline_id: z.string().uuid().nullable().optional(),
+  // Migration 0047 — pipeline override for the secondary mode.
+  secondary_pipeline_id: z.string().uuid().nullable().optional(),
   source_retention_days: z.number().int().min(1).default(30),
 });
 

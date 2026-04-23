@@ -85,6 +85,9 @@ export type GiftProduct = {
   faqs?: Array<{ question: string; answer: string }> | null;
   // Migration 0035 additions
   pipeline_id?: string | null;
+  /** Override for the SECONDARY mode's pipeline. Paired with
+   *  `secondary_mode`; ignored when that's null. See migration 0047. */
+  secondary_pipeline_id?: string | null;
   source_retention_days?: number;
   // Migration 0043 — photo upload vs text engraving vs both.
   input_mode?: GiftInputMode;

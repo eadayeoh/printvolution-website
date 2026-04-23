@@ -43,19 +43,25 @@ async function resolvePipeline(product: GiftProduct): Promise<GiftPipeline | nul
   return getDefaultPipelineForMode(product.mode);
 }
 
-/** Mode-aware resolver for surface fan-out. When the product has a
- *  specific pipeline override AND its `kind` matches the surface's
- *  mode, use it. Otherwise fall back to the default pipeline for that
- *  mode. Keeps the override UI useful for single-mode products while
- *  staying correct for dual-mode products where the primary-mode
- *  override would otherwise be used incorrectly for secondary-mode
- *  surfaces. */
+/** Mode-aware resolver for surface fan-out. Dual-mode products can
+ *  set an override per mode: pipeline_id for the primary,
+ *  secondary_pipeline_id for the secondary. The override is only
+ *  honoured when the pipeline's kind matches the surface's mode —
+ *  so even if admin mis-configures one override, we won't run the
+ *  wrong transform on a surface. Falls back to that mode's default
+ *  pipeline otherwise. */
 async function resolvePipelineForMode(
   product: GiftProduct,
   mode: string,
 ): Promise<GiftPipeline | null> {
-  if (product.pipeline_id) {
-    const p = await getPipelineByIdAdmin(product.pipeline_id);
+  const overrideId =
+    mode === product.mode
+      ? product.pipeline_id
+      : mode === product.secondary_mode
+        ? product.secondary_pipeline_id
+        : null;
+  if (overrideId) {
+    const p = await getPipelineByIdAdmin(overrideId);
     if (p && p.kind === mode) return p;
   }
   return getDefaultPipelineForMode(mode as any);

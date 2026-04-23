@@ -59,6 +59,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [templateMode, setTemplateMode] = useState<GiftTemplateMode>(product?.template_mode ?? 'none');
   const [modeLocked] = useState(!!product?.first_ordered_at);
   const [pipelineId, setPipelineId] = useState<string>(product?.pipeline_id ?? '');
+  const [secondaryPipelineId, setSecondaryPipelineId] = useState<string>(product?.secondary_pipeline_id ?? '');
   const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
 
   const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
@@ -133,6 +134,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       // are ignored anyway — we keep them parked at the default.
       mockup_area: mockupArea,
       pipeline_id: pipelineId || null,
+      secondary_pipeline_id: secondaryMode ? (secondaryPipelineId || null) : null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
     };
     if (!modeLocked) payload.mode = mode;
@@ -337,26 +339,46 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <div className="mb-3 grid gap-3 md:grid-cols-2">
-              <label className="block">
+              <div className="block">
                 <span className="mb-1 block text-xs font-bold text-ink">
-                  Production pipeline override ({GIFT_MODE_LABEL[mode]})
+                  Production pipeline overrides
                 </span>
-                <select value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} className={inputCls}>
-                  <option value="">Use mode default ({mode})</option>
-                  {pipelines.filter((p) => p.kind === mode).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-[11px] text-neutral-500">
-                  Overrides which transform + params run for <strong>{GIFT_MODE_LABEL[mode]}</strong> surfaces on this product.{' '}
+                <div className="space-y-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+                      Primary: {GIFT_MODE_LABEL[mode]}
+                    </span>
+                    <select value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} className={inputCls}>
+                      <option value="">Use mode default ({mode})</option>
+                      {pipelines.filter((p) => p.kind === mode).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </label>
                   {secondaryMode && (
-                    <>
-                      Secondary-mode (<strong>{GIFT_MODE_LABEL[secondaryMode]}</strong>) surfaces always use the default pipeline for that mode.{' '}
-                    </>
+                    <label className="block">
+                      <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+                        Secondary: {GIFT_MODE_LABEL[secondaryMode]}
+                      </span>
+                      <select
+                        value={secondaryPipelineId}
+                        onChange={(e) => setSecondaryPipelineId(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">Use mode default ({secondaryMode})</option>
+                        {pipelines.filter((p) => p.kind === secondaryMode).map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </label>
                   )}
+                </div>
+                <span className="mt-2 block text-[11px] text-neutral-500">
+                  Each override picks a specific transform for that mode's surfaces on this product.
+                  Leave on default to use whatever pipeline is marked default at the mode level.{' '}
                   <Link href="/admin/gifts/pipelines" className="underline">Manage pipelines →</Link>
                 </span>
-              </label>
+              </div>
               <label className="block">
                 <span className="mb-1 block text-xs font-bold text-ink">Delete uploads + production after</span>
                 <div className="flex items-center gap-2">
