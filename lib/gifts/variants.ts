@@ -1,13 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
-import type { GiftProductVariant, GiftVariantColourSwatch } from './types';
+import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface } from './types';
 
-// Defensive coercion: migration 0042 gives every row a non-null default
-// `[]`, but older local DBs / staging envs may still have rows where
-// the column is missing entirely. Treat any non-array value as empty.
+// Defensive coercion: migrations 0042 + 0044 give every row non-null
+// defaults (`[]`), but older local DBs / staging envs may still have
+// rows where the columns are missing entirely. Treat any non-array
+// value as empty.
 function normalise(row: any): GiftProductVariant {
-  const raw = row?.colour_swatches;
-  const swatches: GiftVariantColourSwatch[] = Array.isArray(raw) ? raw : [];
-  return { ...(row as GiftProductVariant), colour_swatches: swatches };
+  const swatches: GiftVariantColourSwatch[] = Array.isArray(row?.colour_swatches) ? row.colour_swatches : [];
+  const surfaces: GiftVariantSurface[] = Array.isArray(row?.surfaces) ? row.surfaces : [];
+  return { ...(row as GiftProductVariant), colour_swatches: swatches, surfaces };
 }
 
 export async function listActiveVariants(giftProductId: string): Promise<GiftProductVariant[]> {

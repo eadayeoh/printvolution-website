@@ -1,3 +1,9 @@
+/** What kind of customer input a gift product accepts.
+ *  - photo → upload a photo (existing behaviour)
+ *  - text  → engrave a short string, no upload (necklaces, keychains, etc.)
+ *  - both  → either; reserved for future, UI currently treats as 'photo'. */
+export type GiftInputMode = 'photo' | 'text' | 'both';
+
 export type GiftMode =
   | 'laser'
   | 'uv'
@@ -75,6 +81,8 @@ export type GiftProduct = {
   // Migration 0035 additions
   pipeline_id?: string | null;
   source_retention_days?: number;
+  // Migration 0043 — photo upload vs text engraving vs both.
+  input_mode?: GiftInputMode;
 };
 
 export type GiftTemplateZoneBase = {
@@ -219,6 +227,28 @@ export type GiftVariantColourSwatch = {
   mockup_url: string;
 };
 
+/** One engravable / printable face of a variant. 3D bar keychains have
+ *  four of these (front / back / left / right); a plain necklace has
+ *  one or — when surfaces is empty — zero (falls back to the variant's
+ *  own mockup_url + mockup_area). */
+export type GiftVariantSurface = {
+  /** Stable key used in cart payload + admin. e.g. 'front'. */
+  id: string;
+  /** Customer-facing label. e.g. 'Front'. */
+  label: string;
+  /** What input this surface accepts. Overrides the parent's input_mode. */
+  accepts: GiftInputMode;
+  /** Photo of THIS face, with mockup_area marking the engraving zone. */
+  mockup_url: string;
+  mockup_area: { x: number; y: number; width: number; height: number };
+  /** Text-surface character cap (ignored for photo surfaces). */
+  max_chars?: number | null;
+  /** Optional default engraving-text style for this surface. */
+  font_family?: string | null;
+  font_size_pct?: number | null;
+  color?: string | null;
+};
+
 export type GiftProductVariant = {
   id: string;
   gift_product_id: string;
@@ -241,6 +271,9 @@ export type GiftProductVariant = {
    *  grid renders a swatch row under the tile; clicking a swatch swaps
    *  the shown mockup and records the chosen colour in the cart. */
   colour_swatches: GiftVariantColourSwatch[];
+  /** Per-face customisation. Empty → single-surface fallback using
+   *  this variant's mockup_url + mockup_area + parent input_mode. */
+  surfaces: GiftVariantSurface[];
 };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */

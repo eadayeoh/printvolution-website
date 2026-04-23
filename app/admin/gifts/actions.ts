@@ -376,6 +376,23 @@ const VariantSchema = z.object({
       }),
     )
     .default([]),
+  surfaces: z
+    .array(
+      z.object({
+        id: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Surface id must be lowercase-slug'),
+        label: z.string().min(1),
+        accepts: z.enum(['photo', 'text', 'both']),
+        mockup_url: z.string().min(1),
+        mockup_area: z.object({
+          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+        }),
+        max_chars: z.number().int().positive().nullable().optional(),
+        font_family: z.string().nullable().optional(),
+        font_size_pct: z.number().positive().nullable().optional(),
+        color: z.string().nullable().optional(),
+      }),
+    )
+    .default([]),
 });
 
 export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {

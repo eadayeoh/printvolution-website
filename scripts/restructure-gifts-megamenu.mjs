@@ -34,9 +34,7 @@ const LAYOUT = [
     items: [
       ['aluminium-fridge-magnets', 'Photo Magnets'],
       ['bluetooth-spotify-magnet', 'Bluetooth Spotify Magnet'],
-      ['led-black-base',           'LED Black Base'],
-      ['led-wood-circle-base',     'LED Wood Circle Base'],
-      ['led-wood-rectangle-base',  'LED Wood Rectangle Base'],
+      ['led-base',                 'LED Base'],
       ['luggage-tag',              'Luggage Tag'],
     ],
   },

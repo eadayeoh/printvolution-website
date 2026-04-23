@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode } from '@/lib/gifts/types';
 
 type Draft = {
   id?: string;
@@ -24,6 +24,9 @@ type Draft = {
   // Optional colour choices nested under this variant tile (e.g. one
   // "T-shirt" tile with red / navy / black swatches).
   colour_swatches: GiftVariantColourSwatch[];
+  // Multi-face config. Empty = single-surface fallback using the
+  // variant row's own mockup_url + mockup_area.
+  surfaces: GiftVariantSurface[];
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -42,6 +45,7 @@ function toDraft(v?: GiftProductVariant): Draft {
     width_mm:  v?.width_mm  != null ? String(v.width_mm)  : '',
     height_mm: v?.height_mm != null ? String(v.height_mm) : '',
     colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
+    surfaces: (v?.surfaces ?? []).map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
   };
 }
 
@@ -142,7 +146,28 @@ export function GiftVariantsPanel({
         hex: s.hex,
         mockup_url: s.mockup_url,
       })),
+      surfaces: d.surfaces.map((s) => ({
+        id: s.id.trim(),
+        label: s.label.trim(),
+        accepts: s.accepts,
+        mockup_url: s.mockup_url,
+        mockup_area: s.mockup_area,
+        max_chars: s.max_chars ?? null,
+        font_family: s.font_family ?? null,
+        font_size_pct: s.font_size_pct ?? null,
+        color: s.color ?? null,
+      })),
     };
+    // Extra validation for surfaces up-front so Zod errors don't
+    // surface as opaque blobs.
+    for (const [si, s] of d.surfaces.entries()) {
+      if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) {
+        setErr(`Surface #${si + 1} id must be lowercase-slug (got "${s.id}").`);
+        return;
+      }
+      if (!s.label.trim()) { setErr(`Surface #${si + 1} needs a label.`); return; }
+      if (!s.mockup_url) { setErr(`Surface "${s.label || s.id}" needs a mockup image.`); return; }
+    }
     startTransition(async () => {
       const r = await upsertGiftVariant(payload);
       if (!r.ok) { setErr(r.error); return; }
@@ -184,6 +209,47 @@ export function GiftVariantsPanel({
       list.map((d, idx) =>
         idx === variantI
           ? { ...d, colour_swatches: d.colour_swatches.filter((_, j) => j !== swatchI) }
+          : d,
+      ),
+    );
+  }
+
+  function addSurface(i: number) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === i
+          ? {
+              ...d,
+              surfaces: [
+                ...d.surfaces,
+                {
+                  id: `side-${d.surfaces.length + 1}`,
+                  label: `Side ${d.surfaces.length + 1}`,
+                  accepts: 'text',
+                  mockup_url: '',
+                  mockup_area: { x: 20, y: 20, width: 60, height: 60 },
+                  max_chars: 15,
+                } as GiftVariantSurface,
+              ],
+            }
+          : d,
+      ),
+    );
+  }
+  function updateSurface(variantI: number, surfI: number, patch: Partial<GiftVariantSurface>) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === variantI
+          ? { ...d, surfaces: d.surfaces.map((s, j) => (j === surfI ? { ...s, ...patch } : s)) }
+          : d,
+      ),
+    );
+  }
+  function removeSurface(variantI: number, surfI: number) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === variantI
+          ? { ...d, surfaces: d.surfaces.filter((_, j) => j !== surfI) }
           : d,
       ),
     );
@@ -376,6 +442,112 @@ export function GiftVariantsPanel({
                         </div>
                       </div>
                     )}
+                    <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div>
+                          <div className="text-[11px] font-bold text-ink">Surfaces (optional)</div>
+                          <div className="text-[10px] text-neutral-500">
+                            Multi-face config — e.g. a 3D bar keychain's 4 sides, or the front + back of a pendant. Leave empty to use this variant's own mockup + area as a single surface. When set, customers get one input per surface.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addSurface(i)}
+                          className="rounded-full border border-pink bg-white px-3 py-1 text-[11px] font-bold text-pink hover:bg-pink hover:text-white"
+                        >
+                          + Surface
+                        </button>
+                      </div>
+                      {d.surfaces.length > 0 && (
+                        <div className="space-y-2">
+                          {d.surfaces.map((s, sIdx) => (
+                            <div key={sIdx} className="rounded border border-neutral-200 bg-white p-2">
+                              <div className="grid grid-cols-[70px_1fr_90px_70px_auto] gap-2">
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Id</span>
+                                  <input
+                                    value={s.id}
+                                    onChange={(e) => updateSurface(i, sIdx, { id: e.target.value })}
+                                    className={`${inputCls} font-mono text-[11px]`}
+                                    placeholder="front"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Label</span>
+                                  <input
+                                    value={s.label}
+                                    onChange={(e) => updateSurface(i, sIdx, { label: e.target.value })}
+                                    className={inputCls}
+                                    placeholder="Front"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Accepts</span>
+                                  <select
+                                    value={s.accepts}
+                                    onChange={(e) => updateSurface(i, sIdx, { accepts: e.target.value as GiftInputMode })}
+                                    className={inputCls}
+                                  >
+                                    <option value="text">Text</option>
+                                    <option value="photo">Photo</option>
+                                    <option value="both">Both</option>
+                                  </select>
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Max chars</span>
+                                  <input
+                                    type="number"
+                                    value={s.max_chars ?? ''}
+                                    onChange={(e) => updateSurface(i, sIdx, { max_chars: e.target.value ? Number(e.target.value) : null })}
+                                    className={inputCls}
+                                    placeholder="15"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => removeSurface(i, sIdx)}
+                                  className="mt-5 rounded-full border border-red-200 p-1 text-red-600 hover:bg-red-50 self-start"
+                                  title="Remove surface"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                              <div className="mt-2 grid grid-cols-[120px_1fr] gap-2">
+                                <div>
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mockup</span>
+                                  <ImageUpload
+                                    value={s.mockup_url}
+                                    onChange={(url) => updateSurface(i, sIdx, { mockup_url: url })}
+                                    prefix={`surface-${d.slug || 'x'}-${s.id || sIdx}`}
+                                    aspect={1}
+                                    size="sm"
+                                    label="Mockup"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+                                    Surface area on mockup (% of image)
+                                  </span>
+                                  <div className="grid grid-cols-4 gap-1 text-[11px]">
+                                    {(['x', 'y', 'width', 'height'] as const).map((k) => (
+                                      <label key={k} className="block">
+                                        <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-400">{k}</span>
+                                        <input
+                                          type="number"
+                                          value={s.mockup_area[k]}
+                                          onChange={(e) => updateSurface(i, sIdx, { mockup_area: { ...s.mockup_area, [k]: parseFloat(e.target.value) || 0 } })}
+                                          className={inputCls}
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div>

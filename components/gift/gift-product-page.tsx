@@ -10,6 +10,7 @@ import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect, GiftVariantColourSwatch } from '@/lib/gifts/types';
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
+import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surfaces';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
@@ -54,6 +55,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // that variant has colour_swatches). Recorded on the cart line so the
   // admin sees "Navy" on the order, not just "T-shirt".
   const [selectedColour, setSelectedColour] = useState<GiftVariantColourSwatch | null>(null);
+  // Per-surface fills (text / photo) when the selected variant has
+  // surfaces[] configured. Keyed by surface.id. Cart payload reads from
+  // this map; the big LIVE PREVIEW follows the selected surface tab.
+  const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
   // Day / Night toggle for laser products where the "lights on" state is meaningful.
   const [nightMode, setNightMode] = useState(false);
   const showNightToggle = product.mode === 'laser';
@@ -156,8 +161,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     ? templates.find((t) => t.id === selectedTemplateId) ?? null
     : null;
 
+  // Multi-surface variants let the customer add to cart with text-only
+  // fills — no server preview needed. For every other flow we still
+  // require a server-generated preview.
+  const hasSurfaces = Boolean(selectedVariant && selectedVariant.surfaces.length > 0);
+  const filledSurfaceCount = hasSurfaces
+    ? Object.values(surfaceFills).filter((f) => (f.text ?? '').trim() || f.photoThumb).length
+    : 0;
+  const requiredSurfaceCount = hasSurfaces ? selectedVariant!.surfaces.length : 0;
+  const surfacesReady = hasSurfaces && filledSurfaceCount === requiredSurfaceCount;
+
   function handleAddToCart() {
-    if (!preview) return;
+    if (!hasSurfaces && !preview) return;
+    if (hasSurfaces && !surfacesReady) return;
     const unit = selectedVariant?.base_price_cents || product.base_price_cents;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
@@ -178,6 +194,36 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (engravedText.trim()) {
       config.Text = engravedText.trim();
     }
+    // Surfaces: emit one config line per filled surface so the admin
+    // order view reads "Front: ELAINE / Back: 2024-01-15" without
+    // having to parse the personalisation_notes blob.
+    if (hasSurfaces && selectedVariant) {
+      for (const s of selectedVariant.surfaces) {
+        const fill = surfaceFills[s.id];
+        if (!fill) continue;
+        const txt = (fill.text ?? '').trim();
+        if (txt) config[s.label] = txt;
+        else if (fill.photoThumb) config[s.label] = '(photo uploaded)';
+      }
+    }
+    // Build the personalisation_notes string. Server preview path keeps
+    // the asset-id trail; surfaces path emits one text_<id> pair per
+    // surface so the admin / pipeline can read each face separately.
+    let notes = '';
+    if (preview) {
+      notes = `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}`;
+      if (engravedText.trim()) notes += `;text:${engravedText.trim()}`;
+    }
+    if (hasSurfaces && selectedVariant) {
+      for (const s of selectedVariant.surfaces) {
+        const fill = surfaceFills[s.id];
+        if (!fill) continue;
+        const txt = (fill.text ?? '').trim();
+        if (txt) notes += `${notes ? ';' : ''}text_${s.id}:${txt}`;
+      }
+    }
+    if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
+
     addToCart({
       product_slug: product.slug,
       product_name: product.name,
@@ -186,8 +232,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       qty,
       unit_price_cents: unit,
       line_total_cents: lineTotal,
-      gift_image_url: preview.previewUrl,
-      personalisation_notes: `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}${engravedText.trim() ? `;text:${engravedText.trim()}` : ''}${selectedColour ? `;colour:${selectedColour.name}` : ''}`,
+      gift_image_url:
+        preview?.previewUrl ??
+        selectedVariant?.mockup_url ??
+        product.thumbnail_url ??
+        undefined,
+      personalisation_notes: notes,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
@@ -602,10 +652,25 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
 
+              {/* Multi-surface configurator — only shown when the
+                  selected variant has surfaces[] set. Replaces the
+                  standard Upload section below since surfaces handle
+                  their own input (text / photo / both per surface). */}
+              {selectedVariant && selectedVariant.surfaces.length > 0 && (
+                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title={`Configure ${selectedVariant.name}`}>
+                  <GiftVariantSurfaces
+                    surfaces={selectedVariant.surfaces}
+                    fills={surfaceFills}
+                    onChange={setSurfaceFills}
+                  />
+                </ComposeSection>
+              )}
+
               {/* Step B (or A when there are no templates): Multi-slot
                   upload when a template is active, single-file upload
-                  otherwise. */}
-              {activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                  otherwise. Skipped entirely for variants with surfaces[] —
+                  those use their own inline configurator above. */}
+              {selectedVariant && selectedVariant.surfaces.length > 0 ? null : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
                 <ComposeSection letter={hasTemplates ? 'B' : 'A'} title="Fill the template">
                   <TemplateMultiSlotForm
                     template={activeTemplate}
@@ -1039,32 +1104,44 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 <GiftRetentionNotice days={product.source_retention_days ?? 30} />
               </div>
 
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!preview || uploading}
-                style={{
-                  background: addedFlash ? 'var(--pv-green)' : !preview ? 'rgba(255,255,255,0.15)' : 'var(--pv-orange)',
-                  color: !preview ? 'rgba(255,255,255,0.4)' : '#fff',
-                  width: '100%',
-                  padding: '16px 24px',
-                  fontWeight: 800,
-                  border: '2px solid #fff',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  fontSize: 14,
-                  cursor: !preview ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--pv-f-body)',
-                }}
-              >
-                {addedFlash ? (
-                  <><CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} />Added to Cart</>
-                ) : !preview ? (
-                  'Upload photo to continue →'
-                ) : (
-                  'Add to Cart →'
-                )}
-              </button>
+              {(() => {
+                // Surface-driven variants don't need a server preview;
+                // add-to-cart enables once every surface is filled.
+                const canAdd = hasSurfaces ? surfacesReady : Boolean(preview);
+                const cta = hasSurfaces
+                  ? surfacesReady
+                    ? 'Add to Cart →'
+                    : `Fill every side (${filledSurfaceCount}/${requiredSurfaceCount}) →`
+                  : preview
+                    ? 'Add to Cart →'
+                    : 'Upload photo to continue →';
+                return (
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    disabled={!canAdd || uploading}
+                    style={{
+                      background: addedFlash ? 'var(--pv-green)' : !canAdd ? 'rgba(255,255,255,0.15)' : 'var(--pv-orange)',
+                      color: !canAdd ? 'rgba(255,255,255,0.4)' : '#fff',
+                      width: '100%',
+                      padding: '16px 24px',
+                      fontWeight: 800,
+                      border: '2px solid #fff',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      fontSize: 14,
+                      cursor: !canAdd ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--pv-f-body)',
+                    }}
+                  >
+                    {addedFlash ? (
+                      <><CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} />Added to Cart</>
+                    ) : (
+                      cta
+                    )}
+                  </button>
+                );
+              })()}
 
               <div
                 style={{
