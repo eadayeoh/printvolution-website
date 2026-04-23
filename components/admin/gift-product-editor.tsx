@@ -55,6 +55,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
 
   const [mode, setMode] = useState<GiftMode>(product?.mode ?? 'photo-resize');
+  const [secondaryMode, setSecondaryMode] = useState<GiftMode | null>(product?.secondary_mode ?? null);
   const [templateMode, setTemplateMode] = useState<GiftTemplateMode>(product?.template_mode ?? 'none');
   const [modeLocked] = useState(!!product?.first_ordered_at);
   const [pipelineId, setPipelineId] = useState<string>(product?.pipeline_id ?? '');
@@ -135,6 +136,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
     };
     if (!modeLocked) payload.mode = mode;
+    payload.secondary_mode = secondaryMode;
 
     startTransition(async () => {
       if (product) {
@@ -145,7 +147,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 1600);
       } else {
-        const r = await createGiftProduct({ ...payload, mode });
+        const r = await createGiftProduct({ ...payload, mode, secondary_mode: secondaryMode });
         if (!r.ok) { setErr(r.error); return; }
         if (assignedTemplates.length > 0) {
           await setProductTemplates(r.id, assignedTemplates);
@@ -255,7 +257,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
           )}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-xs font-bold text-ink">Processing mode</div>
+              <div>
+                <div className="text-xs font-bold text-ink">Primary processing mode</div>
+                <div className="text-[11px] text-neutral-500">The default for the whole product. Surfaces and templates inherit this unless they specify otherwise.</div>
+              </div>
               <Link href="/admin/gifts/modes" className="text-[11px] text-pink underline hover:text-pink-dark">
                 Manage modes →
               </Link>
@@ -268,12 +273,61 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                     key={m.slug}
                     type="button"
                     disabled={modeLocked}
-                    onClick={() => setMode(m.slug)}
+                    onClick={() => {
+                      setMode(m.slug);
+                      // If the user flips primary to the current secondary,
+                      // clear secondary to keep the two distinct.
+                      if (m.slug === secondaryMode) setSecondaryMode(null);
+                    }}
                     className={`rounded-lg border-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
                     }`}
                   >
                     <div className="mb-1 font-bold text-ink">{m.label}</div>
+                    <div className="text-[11px] leading-relaxed text-neutral-600">{m.description ?? ''}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-bold text-ink">Secondary processing mode (optional)</div>
+                <div className="text-[11px] text-neutral-500">
+                  For products that combine two methods — e.g. acrylic wall art with a UV-printed photo + laser-engraved border. A product can have up to 2 modes. Leave empty for single-mode products.
+                </div>
+              </div>
+              {secondaryMode && (
+                <button
+                  type="button"
+                  onClick={() => setSecondaryMode(null)}
+                  className="text-[11px] font-bold text-neutral-500 underline hover:text-ink"
+                >
+                  Clear secondary
+                </button>
+              )}
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {MODE_OPTIONS.map((m) => {
+                const isPrimary = mode === m.slug;
+                const active = secondaryMode === m.slug;
+                return (
+                  <button
+                    key={m.slug}
+                    type="button"
+                    disabled={isPrimary}
+                    onClick={() => setSecondaryMode(active ? null : m.slug)}
+                    className={`rounded-lg border-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
+                    }`}
+                    title={isPrimary ? 'Already the primary mode' : undefined}
+                  >
+                    <div className="mb-1 font-bold text-ink">
+                      {m.label}
+                      {isPrimary && <span className="ml-2 text-[10px] font-normal text-neutral-400">(primary)</span>}
+                    </div>
                     <div className="text-[11px] leading-relaxed text-neutral-600">{m.description ?? ''}</div>
                   </button>
                 );
@@ -518,7 +572,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
       {tab === 'variants' && (
         product
-          ? <GiftVariantsPanel giftProductId={product.id} initialVariants={variants} />
+          ? <GiftVariantsPanel
+              giftProductId={product.id}
+              initialVariants={variants}
+              allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
+            />
           : <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>
       )}
 

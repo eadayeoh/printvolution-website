@@ -58,6 +58,11 @@ export type GiftProduct = {
   safe_zone_mm: number;
   min_source_px: number;
   mode: GiftMode;
+  /** Optional second production method — products like acrylic wall
+   *  art can mix e.g. UV-printed photo panel + laser-engraved border.
+   *  Null = single-mode product (the common case). When set, templates
+   *  and variant surfaces can pick between {mode, secondary_mode}. */
+  secondary_mode?: GiftMode | null;
   template_mode: GiftTemplateMode;
   ai_prompt: string | null;
   ai_negative_prompt: string | null;

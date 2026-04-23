@@ -33,6 +33,13 @@ const GiftProductSchema = z.object({
   safe_zone_mm: z.number().min(0).default(3),
   min_source_px: z.number().int().min(300).default(1200),
   mode: z.enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf']),
+  // Optional second production method — max 2 modes per product. When
+  // set, variant surface / template zone mode dropdowns are limited to
+  // {mode, secondary_mode}. Validated distinct from `mode` below.
+  secondary_mode: z
+    .enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'])
+    .nullable()
+    .optional(),
   template_mode: z.enum(['none', 'optional', 'required']).default('none'),
   ai_prompt: z.string().nullable().optional(),
   ai_negative_prompt: z.string().nullable().optional(),
@@ -60,9 +67,18 @@ const GiftProductSchema = z.object({
   source_retention_days: z.number().int().min(1).default(30),
 });
 
+function validateModes(p: { mode?: string; secondary_mode?: string | null }) {
+  if (p.secondary_mode && p.mode && p.secondary_mode === p.mode) {
+    return 'Secondary mode must differ from the primary mode — pick a different one, or clear it to keep the product single-mode.';
+  }
+  return null;
+}
+
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {
   const sb = await requireAdmin();
   const parsed = GiftProductSchema.parse(input);
+  const err = validateModes(parsed);
+  if (err) return { ok: false as const, error: err };
   const { data, error } = await sb.from('gift_products').insert(parsed as any).select('id').single();
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
@@ -71,6 +87,8 @@ export async function createGiftProduct(input: z.input<typeof GiftProductSchema>
 
 export async function updateGiftProduct(id: string, input: Partial<z.input<typeof GiftProductSchema>>) {
   const sb = await requireAdmin();
+  const err = validateModes(input);
+  if (err) return { ok: false as const, error: err };
   const { error } = await sb.from('gift_products').update(input as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');

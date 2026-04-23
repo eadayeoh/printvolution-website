@@ -65,9 +65,14 @@ const A_SERIES_PRESETS: Array<{ label: string; w: number; h: number }> = [
 export function GiftVariantsPanel({
   giftProductId,
   initialVariants,
+  allowedModes,
 }: {
   giftProductId: string;
   initialVariants: GiftProductVariant[];
+  /** When set, the per-surface Mode dropdown only lets admin pick from
+   *  these (parent product's {mode, secondary_mode}). When undefined or
+   *  empty, every mode is available (back-compat). */
+  allowedModes?: GiftMode[];
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
@@ -570,7 +575,7 @@ export function GiftVariantsPanel({
                                     className={inputCls}
                                   >
                                     <option value="">Inherit parent</option>
-                                    {ALL_GIFT_MODES.map((m) => (
+                                    {(allowedModes && allowedModes.length > 0 ? allowedModes : ALL_GIFT_MODES).map((m) => (
                                       <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
                                     ))}
                                   </select>
