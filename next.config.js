@@ -4,6 +4,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: 'picsum.photos' },
+      // picsum.photos 302s to fastly.picsum.photos, so the CDN host
+      // has to be whitelisted too or <img> loads are CSP-blocked.
+      { protocol: 'https', hostname: 'fastly.picsum.photos' },
     ],
   },
   experimental: {
@@ -25,7 +28,7 @@ const nextConfig = {
       // Next.js ships inline bootstrap scripts and styled-jsx inline styles.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://*.hit-pay.com`,
+      `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://fastly.picsum.photos https://*.hit-pay.com`,
       "font-src 'self' data: https://fonts.gstatic.com",
       `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.hit-pay.com https://api.sandbox.hit-pay.com`,
       "frame-src 'self' https://hit-pay.com https://*.hit-pay.com https://www.google.com",
