@@ -472,7 +472,13 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
               {showSample && zones.map((z, i) => {
                 if (isTextZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
-                const fallback = `https://picsum.photos/seed/pv-zone-${encodeURIComponent(img.id)}/600/450`;
+                // Fallback face placeholder — stable portrait chosen
+                // by hashing the zone id into the 1–99 range on each
+                // gender endpoint. Same zone id → same face.
+                const hash = Array.from(img.id).reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
+                const n = (Math.abs(hash) % 99) + 1;
+                const gender = hash % 2 === 0 ? 'women' : 'men';
+                const fallback = `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
                 const content = img.default_image_url || fallback;
                 const fit = img.fit_mode ?? 'cover';
                 return (
