@@ -12,8 +12,14 @@
 // fidelity is good enough for an overview — the big LIVE PREVIEW at
 // the top of the page still uses GiftMockupPreview for the selected
 // variant at full canvas fidelity.
+//
+// When a variant has colour_swatches, each tile shows a little swatch
+// row below — picking a swatch swaps the displayed mockup on that tile
+// and (if the tile is selected) reports the colour choice back to the
+// parent so it flows into the cart line.
 
-import type { GiftProductVariant } from '@/lib/gifts/types';
+import { useState } from 'react';
+import type { GiftProductVariant, GiftVariantColourSwatch } from '@/lib/gifts/types';
 import { formatSGD } from '@/lib/utils';
 
 type Props = {
@@ -26,6 +32,10 @@ type Props = {
   previewUrl?: string | null;
   /** Label shown under the picker (e.g. "Pick your base"). */
   title?: string;
+  /** When a swatch on the currently-selected variant is picked, the
+   *  parent gets notified so it can record the choice on the cart line
+   *  (or re-composite a bigger preview off this colour's mockup). */
+  onColourChange?: (colour: GiftVariantColourSwatch | null) => void;
 };
 
 export function GiftVariantLivePreview({
@@ -34,7 +44,24 @@ export function GiftVariantLivePreview({
   onSelect,
   previewUrl,
   title,
+  onColourChange,
 }: Props) {
+  // Per-variant selected swatch index. Keyed by variant id so switching
+  // the selected tile doesn't reset sibling tiles' swatch choices.
+  const [swatchIdxByVariant, setSwatchIdxByVariant] = useState<Record<string, number>>({});
+
+  function chooseSwatch(variantId: string, swatchIdx: number, swatch: GiftVariantColourSwatch) {
+    setSwatchIdxByVariant((prev) => ({ ...prev, [variantId]: swatchIdx }));
+    if (variantId === selectedId) onColourChange?.(swatch);
+  }
+
+  function chooseVariant(v: GiftProductVariant) {
+    onSelect(v.id);
+    const idx = swatchIdxByVariant[v.id];
+    const s = v.colour_swatches[idx];
+    onColourChange?.(s ?? null);
+  }
+
   if (variants.length === 0) return null;
   return (
     <div>
@@ -62,52 +89,122 @@ export function GiftVariantLivePreview({
       >
         {variants.map((v) => {
           const active = v.id === selectedId;
+          const swatchIdx = swatchIdxByVariant[v.id];
+          const chosenSwatch = v.colour_swatches[swatchIdx];
+          const displayedMockup = chosenSwatch?.mockup_url || v.mockup_url;
           return (
-            <button
+            <div
               key={v.id}
-              type="button"
-              onClick={() => onSelect(v.id)}
               style={{
                 background: '#fff',
                 border: active ? '3px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
-                padding: 0,
                 overflow: 'hidden',
-                cursor: 'pointer',
                 boxShadow: active ? '4px 4px 0 var(--pv-magenta)' : 'none',
                 transition: 'transform 0.12s, box-shadow 0.12s',
-                textAlign: 'left',
                 display: 'flex',
                 flexDirection: 'column',
               }}
             >
-              <VariantTile variant={v} previewUrl={previewUrl ?? null} />
-              <div style={{ padding: '8px 10px', borderTop: '1px solid var(--pv-rule)' }}>
-                <div
-                  style={{
-                    fontFamily: 'var(--pv-f-body)',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--pv-ink)',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {v.name}
-                </div>
-                {v.base_price_cents > 0 && (
+              <button
+                type="button"
+                onClick={() => chooseVariant(v)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                }}
+              >
+                <VariantTile
+                  variantName={v.name}
+                  mockupUrl={displayedMockup}
+                  mockupArea={v.mockup_area}
+                  previewUrl={previewUrl ?? null}
+                />
+                <div style={{ padding: '8px 10px', borderTop: '1px solid var(--pv-rule)' }}>
                   <div
                     style={{
-                      fontFamily: 'var(--pv-f-display)',
-                      fontSize: 16,
-                      color: 'var(--pv-magenta)',
-                      letterSpacing: '-0.01em',
-                      marginTop: 2,
+                      fontFamily: 'var(--pv-f-body)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: 'var(--pv-ink)',
+                      lineHeight: 1.2,
                     }}
                   >
-                    {formatSGD(v.base_price_cents)}
+                    {v.name}
                   </div>
-                )}
-              </div>
-            </button>
+                  {v.base_price_cents > 0 && (
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 16,
+                        color: 'var(--pv-magenta)',
+                        letterSpacing: '-0.01em',
+                        marginTop: 2,
+                      }}
+                    >
+                      {formatSGD(v.base_price_cents)}
+                    </div>
+                  )}
+                  {chosenSwatch && (
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        color: 'var(--pv-muted)',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        marginTop: 2,
+                      }}
+                    >
+                      {chosenSwatch.name}
+                    </div>
+                  )}
+                </div>
+              </button>
+              {v.colour_swatches.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 6,
+                    padding: '8px 10px 10px',
+                    borderTop: '1px solid var(--pv-rule)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {v.colour_swatches.map((s, sIdx) => {
+                    const activeSwatch = sIdx === swatchIdx;
+                    return (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          chooseSwatch(v.id, sIdx, s);
+                        }}
+                        title={s.name}
+                        aria-label={s.name}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                          border: activeSwatch
+                            ? '2px solid var(--pv-ink)'
+                            : '1px solid var(--pv-rule)',
+                          boxShadow: activeSwatch ? '0 0 0 2px var(--pv-magenta)' : 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -116,14 +213,17 @@ export function GiftVariantLivePreview({
 }
 
 function VariantTile({
-  variant,
+  variantName,
+  mockupUrl,
+  mockupArea,
   previewUrl,
 }: {
-  variant: GiftProductVariant;
+  variantName: string;
+  mockupUrl: string;
+  mockupArea: GiftProductVariant['mockup_area'];
   previewUrl: string | null;
 }) {
-  const area = variant.mockup_area;
-  const hasComposite = previewUrl && variant.mockup_url && area;
+  const hasComposite = previewUrl && mockupUrl && mockupArea;
   return (
     <div
       style={{
@@ -134,10 +234,10 @@ function VariantTile({
         overflow: 'hidden',
       }}
     >
-      {variant.mockup_url ? (
+      {mockupUrl ? (
         <img
-          src={variant.mockup_url}
-          alt={variant.name}
+          src={mockupUrl}
+          alt={variantName}
           style={{
             position: 'absolute',
             inset: 0,
@@ -163,7 +263,7 @@ function VariantTile({
             textAlign: 'center',
           }}
         >
-          {variant.name}
+          {variantName}
         </div>
       )}
       {hasComposite && (
@@ -172,10 +272,10 @@ function VariantTile({
           alt=""
           style={{
             position: 'absolute',
-            left: `${area!.x}%`,
-            top: `${area!.y}%`,
-            width: `${area!.width}%`,
-            height: `${area!.height}%`,
+            left: `${mockupArea.x}%`,
+            top: `${mockupArea.y}%`,
+            width: `${mockupArea.width}%`,
+            height: `${mockupArea.height}%`,
             objectFit: 'cover',
             mixBlendMode: 'multiply',
             pointerEvents: 'none',

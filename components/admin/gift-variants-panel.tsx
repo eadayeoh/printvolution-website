@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantKind } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch } from '@/lib/gifts/types';
 
 type Draft = {
   id?: string;
@@ -21,6 +21,9 @@ type Draft = {
   variant_kind: GiftVariantKind;
   width_mm: string;  // mm for size variants, blank otherwise
   height_mm: string;
+  // Optional colour choices nested under this variant tile (e.g. one
+  // "T-shirt" tile with red / navy / black swatches).
+  colour_swatches: GiftVariantColourSwatch[];
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -38,6 +41,7 @@ function toDraft(v?: GiftProductVariant): Draft {
     variant_kind: v?.variant_kind ?? 'base',
     width_mm:  v?.width_mm  != null ? String(v.width_mm)  : '',
     height_mm: v?.height_mm != null ? String(v.height_mm) : '',
+    colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
   };
 }
 
@@ -108,6 +112,16 @@ export function GiftVariantsPanel({
         return;
       }
     }
+    // Validate swatches up-front so the Zod error on the server doesn't
+    // surface as an opaque blob.
+    for (const [si, s] of d.colour_swatches.entries()) {
+      if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return; }
+      if (!/^#[0-9A-Fa-f]{6}$/.test(s.hex)) {
+        setErr(`Colour swatch #${si + 1} hex must be #RRGGBB (got "${s.hex}").`);
+        return;
+      }
+      if (!s.mockup_url) { setErr(`Colour swatch #${si + 1} needs a mockup image.`); return; }
+    }
     const payload = {
       id: d.id,
       gift_product_id: giftProductId,
@@ -123,6 +137,11 @@ export function GiftVariantsPanel({
       variant_kind: d.variant_kind,
       width_mm:  d.variant_kind === 'size' && d.width_mm  ? parseFloat(d.width_mm)  : null,
       height_mm: d.variant_kind === 'size' && d.height_mm ? parseFloat(d.height_mm) : null,
+      colour_swatches: d.colour_swatches.map((s) => ({
+        name: s.name.trim(),
+        hex: s.hex,
+        mockup_url: s.mockup_url,
+      })),
     };
     startTransition(async () => {
       const r = await upsertGiftVariant(payload);
@@ -135,6 +154,39 @@ export function GiftVariantsPanel({
         setTimeout(() => setFlashId(null), 1600);
       }
     });
+  }
+
+  function addSwatch(i: number) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === i
+          ? { ...d, colour_swatches: [...d.colour_swatches, { name: '', hex: '#000000', mockup_url: '' }] }
+          : d,
+      ),
+    );
+  }
+  function updateSwatch(variantI: number, swatchI: number, patch: Partial<GiftVariantColourSwatch>) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === variantI
+          ? {
+              ...d,
+              colour_swatches: d.colour_swatches.map((s, j) =>
+                j === swatchI ? { ...s, ...patch } : s,
+              ),
+            }
+          : d,
+      ),
+    );
+  }
+  function removeSwatch(variantI: number, swatchI: number) {
+    setDrafts((list) =>
+      list.map((d, idx) =>
+        idx === variantI
+          ? { ...d, colour_swatches: d.colour_swatches.filter((_, j) => j !== swatchI) }
+          : d,
+      ),
+    );
   }
 
   function autoSlug(i: number) {
@@ -324,6 +376,82 @@ export function GiftVariantsPanel({
                         </div>
                       </div>
                     )}
+                    <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div>
+                          <div className="text-[11px] font-bold text-ink">Colour swatches (optional)</div>
+                          <div className="text-[10px] text-neutral-500">
+                            Add colour choices inside this tile — e.g. one T-shirt tile with red / navy / black dots. Customer picks a swatch to swap the displayed mockup. Leave empty for no colour choice.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addSwatch(i)}
+                          className="rounded-full border border-pink bg-white px-3 py-1 text-[11px] font-bold text-pink hover:bg-pink hover:text-white"
+                        >
+                          + Swatch
+                        </button>
+                      </div>
+                      {d.colour_swatches.length > 0 && (
+                        <div className="space-y-2">
+                          {d.colour_swatches.map((s, sIdx) => (
+                            <div key={sIdx} className="flex items-start gap-2 rounded border border-neutral-200 bg-white p-2">
+                              <div className="flex items-center gap-1 pt-1">
+                                <span
+                                  aria-hidden
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
+                                    background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                                    border: '2px solid #0a0a0a',
+                                  }}
+                                />
+                              </div>
+                              <div className="grid flex-1 grid-cols-[1fr_120px] gap-2">
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Name</span>
+                                  <input
+                                    value={s.name}
+                                    onChange={(e) => updateSwatch(i, sIdx, { name: e.target.value })}
+                                    className={inputCls}
+                                    placeholder="Red"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Hex</span>
+                                  <input
+                                    value={s.hex}
+                                    onChange={(e) => updateSwatch(i, sIdx, { hex: e.target.value })}
+                                    className={`${inputCls} font-mono text-xs`}
+                                    placeholder="#C62828"
+                                  />
+                                </label>
+                              </div>
+                              <div className="w-[120px]">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mockup</span>
+                                <ImageUpload
+                                  value={s.mockup_url}
+                                  onChange={(url) => updateSwatch(i, sIdx, { mockup_url: url })}
+                                  prefix={`swatch-${d.slug || 'x'}-${sIdx}`}
+                                  aspect={1}
+                                  size="sm"
+                                  label="Mockup"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeSwatch(i, sIdx)}
+                                className="mt-5 rounded-full border border-red-200 p-1 text-red-600 hover:bg-red-50"
+                                title="Remove swatch"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {d.variant_kind === 'base' && (

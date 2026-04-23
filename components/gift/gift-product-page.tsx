@@ -7,7 +7,7 @@ import { uploadAndPreviewGift } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
-import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
+import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect, GiftVariantColourSwatch } from '@/lib/gifts/types';
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
@@ -50,6 +50,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // composite runs).
   const [templateThumbs, setTemplateThumbs] = useState<Record<string, string>>({});
   const [templateTexts, setTemplateTexts] = useState<Record<string, string>>({});
+  // Colour swatch picked inside the currently-selected variant tile (if
+  // that variant has colour_swatches). Recorded on the cart line so the
+  // admin sees "Navy" on the order, not just "T-shirt".
+  const [selectedColour, setSelectedColour] = useState<GiftVariantColourSwatch | null>(null);
   // Day / Night toggle for laser products where the "lights on" state is meaningful.
   const [nightMode, setNightMode] = useState(false);
   const showNightToggle = product.mode === 'laser';
@@ -162,6 +166,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (selectedVariant) {
       config.Base = selectedVariant.name;
     }
+    if (selectedColour) {
+      config.Colour = selectedColour.name;
+    }
     if (selectedTemplateId) {
       config.Template = templates.find((t) => t.id === selectedTemplateId)?.name ?? '';
     }
@@ -180,7 +187,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       unit_price_cents: unit,
       line_total_cents: lineTotal,
       gift_image_url: preview.previewUrl,
-      personalisation_notes: `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}${engravedText.trim() ? `;text:${engravedText.trim()}` : ''}`,
+      personalisation_notes: `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}${engravedText.trim() ? `;text:${engravedText.trim()}` : ''}${selectedColour ? `;colour:${selectedColour.name}` : ''}`,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
@@ -778,6 +785,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       selectedId={selectedVariantId}
                       onSelect={setSelectedVariantId}
                       previewUrl={preview?.previewUrl ?? null}
+                      onColourChange={setSelectedColour}
                     />
                   </ComposeSection>
                 );

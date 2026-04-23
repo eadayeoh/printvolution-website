@@ -213,6 +213,12 @@ export const GIFT_VARIANT_PICKER_LABEL: Record<GiftVariantKind, string> = {
   material: 'Choose a material',
 };
 
+export type GiftVariantColourSwatch = {
+  name: string;
+  hex: string;
+  mockup_url: string;
+};
+
 export type GiftProductVariant = {
   id: string;
   gift_product_id: string;
@@ -231,6 +237,10 @@ export type GiftProductVariant = {
   width_mm: number | null;
   /** Print height override (mm) for size variants. */
   height_mm: number | null;
+  /** Optional nested colour choices. When non-empty the customer-facing
+   *  grid renders a swatch row under the tile; clicking a swatch swaps
+   *  the shown mockup and records the chosen colour in the cart. */
+  colour_swatches: GiftVariantColourSwatch[];
 };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */

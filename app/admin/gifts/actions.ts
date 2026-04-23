@@ -367,6 +367,15 @@ const VariantSchema = z.object({
   variant_kind: z.enum(['base', 'size', 'colour', 'material']).default('base'),
   width_mm:  z.number().positive().nullable().optional(),
   height_mm: z.number().positive().nullable().optional(),
+  colour_swatches: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex must be #RRGGBB'),
+        mockup_url: z.string().min(1),
+      }),
+    )
+    .default([]),
 });
 
 export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
