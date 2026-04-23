@@ -7,7 +7,7 @@
 // onGeneratePreview callback fires with the collected FormData, which
 // the server action then decomposes into a per-zone composite render.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   GiftTemplate,
   GiftTemplateZone,
@@ -31,6 +31,10 @@ type Props = {
   }) => void;
   onReset?: () => void;
   currentPreviewUrl?: string | null;
+  /** When true, hide the Generate button and fire onGeneratePreview
+   *  silently (debounced) whenever the zones are filled. Used for
+   *  non-AI modes where the server composite matches the CSS preview. */
+  autoGenerate?: boolean;
 };
 
 function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
@@ -44,6 +48,7 @@ export function TemplateMultiSlotForm({
   onStateChange,
   onReset,
   currentPreviewUrl,
+  autoGenerate = false,
 }: Props) {
   const zones = template.zones_json ?? [];
   const imageZones = useMemo(
@@ -61,6 +66,10 @@ export function TemplateMultiSlotForm({
 
   const [files, setFiles] = useState<Record<string, File>>({});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  // One hidden <input type="file"> per image zone. We store refs so the
+  // "+ Label" empty-state div can open the picker programmatically —
+  // clicking a filled slot is a no-op (only the X button removes).
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   // Prefill every editable text zone with its default_text so the
   // customer can submit without typing when defaults are acceptable.
   const initialTexts = useMemo<Record<string, string>>(() => {
@@ -73,6 +82,49 @@ export function TemplateMultiSlotForm({
   useEffect(() => {
     onStateChange?.({ thumbs, texts });
   }, [thumbs, texts, onStateChange]);
+
+  // Auto-generate: in non-AI modes we want the server composite to run
+  // silently as the customer edits, so Add to Cart is always ready.
+  // Refs keep the callback + latest state accessible without bloating the
+  // debounce effect's dep list.
+  const onGenRef = useRef(onGeneratePreview);
+  onGenRef.current = onGeneratePreview;
+  const filesRef = useRef(files);
+  filesRef.current = files;
+  const textsRef = useRef(texts);
+  textsRef.current = texts;
+  const pendingRegenRef = useRef(false);
+  const prevWorkingRef = useRef(isWorking);
+
+  // Debounced auto-fire. When a generate is in flight, we set a
+  // "pending" flag and re-fire once it finishes (handled in the next
+  // effect) so nothing gets dropped.
+  useEffect(() => {
+    if (!autoGenerate) return;
+    if (Object.keys(files).length === 0) return;
+    if (isWorking) {
+      pendingRegenRef.current = true;
+      return;
+    }
+    const t = setTimeout(() => {
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [files, texts, autoGenerate, isWorking]);
+
+  // When a generate finishes and changes arrived during it, fire once
+  // more immediately so the server composite is always up to date.
+  useEffect(() => {
+    const wasWorking = prevWorkingRef.current;
+    prevWorkingRef.current = isWorking;
+    if (!autoGenerate) return;
+    if (wasWorking && !isWorking && pendingRegenRef.current) {
+      pendingRegenRef.current = false;
+      if (Object.keys(filesRef.current).length > 0) {
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current });
+      }
+    }
+  }, [isWorking, autoGenerate]);
 
   function pickFile(zoneId: string, file: File | null) {
     if (!file) return;
@@ -144,7 +196,9 @@ export function TemplateMultiSlotForm({
                 fontWeight: 700,
               }}
             >
-              ✓ Tweak anything below and regenerate, or add to cart
+              {autoGenerate
+                ? '✓ Tweak anything below — saves automatically'
+                : '✓ Tweak anything below and regenerate, or add to cart'}
             </div>
           </div>
           {onReset && (
@@ -196,17 +250,19 @@ export function TemplateMultiSlotForm({
             {imageZones.map((z, i) => {
               const thumb = thumbs[z.id];
               const file = files[z.id];
+              const openPicker = () => inputRefs.current[z.id]?.click();
               return (
-                <label
+                <div
                   key={z.id}
                   style={{
                     display: 'block',
                     background: thumb ? '#fff' : 'var(--pv-cream)',
                     border: thumb ? '2px solid var(--pv-green)' : '2px dashed var(--pv-rule)',
-                    cursor: 'pointer',
+                    cursor: thumb ? 'default' : 'pointer',
                     overflow: 'hidden',
                     position: 'relative',
                   }}
+                  onClick={thumb ? undefined : openPicker}
                 >
                   <div
                     style={{
@@ -255,7 +311,7 @@ export function TemplateMultiSlotForm({
                     {file && (
                       <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); removeFile(z.id); }}
+                        onClick={(e) => { e.stopPropagation(); removeFile(z.id); }}
                         style={{
                           background: 'transparent',
                           border: 'none',
@@ -270,6 +326,7 @@ export function TemplateMultiSlotForm({
                     )}
                   </div>
                   <input
+                    ref={(el) => { inputRefs.current[z.id] = el; }}
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                     style={{ display: 'none' }}
@@ -279,7 +336,7 @@ export function TemplateMultiSlotForm({
                       e.target.value = '';
                     }}
                   />
-                </label>
+                </div>
               );
             })}
           </div>
@@ -343,28 +400,60 @@ export function TemplateMultiSlotForm({
         </div>
       )}
 
-      <button
-        type="button"
-        disabled={!canGenerate}
-        onClick={submit}
-        style={{
-          padding: '12px 20px',
-          background: canGenerate ? 'var(--pv-magenta)' : 'var(--pv-rule)',
-          color: '#fff',
-          border: '2px solid var(--pv-ink)',
-          fontFamily: 'var(--pv-f-display)',
-          fontSize: 14,
-          letterSpacing: '-0.01em',
-          cursor: canGenerate ? 'pointer' : 'not-allowed',
-          boxShadow: canGenerate ? '3px 3px 0 var(--pv-ink)' : 'none',
-        }}
-      >
-        {isWorking
-          ? 'Generating…'
-          : currentPreviewUrl
-            ? 'Regenerate preview'
-            : 'Generate preview'}
-      </button>
+      {autoGenerate ? (
+        // Status line replaces the Generate button in auto-mode. The
+        // server composite runs silently on debounced state changes
+        // (see the auto-fire effect above).
+        filledImageCount === 0 ? null : (
+          <div
+            style={{
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: isWorking
+                ? 'var(--pv-ink)'
+                : currentPreviewUrl
+                  ? 'var(--pv-green)'
+                  : 'var(--pv-muted)',
+              padding: '12px 16px',
+              background: 'var(--pv-cream)',
+              border: '2px solid var(--pv-ink)',
+              textAlign: 'center',
+            }}
+          >
+            {isWorking
+              ? 'Saving at print resolution…'
+              : currentPreviewUrl
+                ? '✓ Saved at print resolution'
+                : 'Preparing…'}
+          </div>
+        )
+      ) : (
+        <button
+          type="button"
+          disabled={!canGenerate}
+          onClick={submit}
+          style={{
+            padding: '12px 20px',
+            background: canGenerate ? 'var(--pv-magenta)' : 'var(--pv-rule)',
+            color: '#fff',
+            border: '2px solid var(--pv-ink)',
+            fontFamily: 'var(--pv-f-display)',
+            fontSize: 14,
+            letterSpacing: '-0.01em',
+            cursor: canGenerate ? 'pointer' : 'not-allowed',
+            boxShadow: canGenerate ? '3px 3px 0 var(--pv-ink)' : 'none',
+          }}
+        >
+          {isWorking
+            ? 'Generating…'
+            : currentPreviewUrl
+              ? 'Regenerate preview'
+              : 'Generate preview'}
+        </button>
+      )}
 
       {filledImageCount > 0 && filledImageCount < imageZones.length && (
         <div

@@ -57,6 +57,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
   const showPromptPicker = prompts.length >= 2;
   const needPrompt = showPromptPicker && !selectedPromptId;
+  // Non-AI modes run the server composite as a straight passthrough —
+  // the CSS layout preview matches the final output, so we auto-fire
+  // generate silently instead of asking the customer to click a button.
+  // AI modes (laser / uv / embroidery) keep the explicit button because
+  // their stylised output differs from the raw upload.
+  const isNonAiMode =
+    product.mode === 'photo-resize' ||
+    product.mode === 'digital' ||
+    product.mode === 'eco-solvent' ||
+    product.mode === 'uv-dtf';
 
   async function onFile(file: File) {
     setErr(null);
@@ -533,6 +543,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     currentPreviewUrl={preview?.previewUrl ?? null}
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
+                    autoGenerate={isNonAiMode}
                     onStateChange={({ thumbs, texts }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
