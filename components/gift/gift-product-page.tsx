@@ -9,6 +9,7 @@ import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect } from '@/lib/gifts/types';
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
+import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
@@ -43,6 +44,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [addedFlash, setAddedFlash] = useState(false);
   const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
   const [engravedText, setEngravedText] = useState('');
+  // Mirrored state from TemplateMultiSlotForm so the LIVE PREVIEW can
+  // paint the zones the moment a file/text changes (before the server
+  // composite runs).
+  const [templateThumbs, setTemplateThumbs] = useState<Record<string, string>>({});
+  const [templateTexts, setTemplateTexts] = useState<Record<string, string>>({});
   // Day / Night toggle for laser products where the "lights on" state is meaningful.
   const [nightMode, setNightMode] = useState(false);
   const showNightToggle = product.mode === 'laser';
@@ -450,6 +456,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       }}
                     />
                   )
+                ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                  <div style={{ width: '100%', maxWidth: 420 }}>
+                    <GiftTemplateLayoutPreview
+                      template={activeTemplate}
+                      thumbs={templateThumbs}
+                      texts={templateTexts}
+                    />
+                  </div>
                 ) : (
                   <div
                     style={{
@@ -517,6 +531,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     currentPreviewUrl={preview?.previewUrl ?? null}
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
+                    onStateChange={({ thumbs, texts }) => {
+                      setTemplateThumbs(thumbs);
+                      setTemplateTexts(texts);
+                    }}
                   />
                   {err && (
                     <div

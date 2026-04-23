@@ -7,7 +7,7 @@
 // onGeneratePreview callback fires with the collected FormData, which
 // the server action then decomposes into a per-zone composite render.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   GiftTemplate,
   GiftTemplateZone,
@@ -22,6 +22,13 @@ type Props = {
     files: Record<string, File>;
     texts: Record<string, string>;
   }) => void;
+  /** Fires whenever the customer's in-progress zone content changes so
+   *  the parent can render a live layout preview (dataURLs + text) before
+   *  the server composite runs. */
+  onStateChange?: (state: {
+    thumbs: Record<string, string>;
+    texts: Record<string, string>;
+  }) => void;
   onReset?: () => void;
   currentPreviewUrl?: string | null;
 };
@@ -30,7 +37,14 @@ function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
   return (z as GiftTemplateTextZone).type === 'text';
 }
 
-export function TemplateMultiSlotForm({ template, isWorking, onGeneratePreview, onReset, currentPreviewUrl }: Props) {
+export function TemplateMultiSlotForm({
+  template,
+  isWorking,
+  onGeneratePreview,
+  onStateChange,
+  onReset,
+  currentPreviewUrl,
+}: Props) {
   const zones = template.zones_json ?? [];
   const imageZones = useMemo(
     () => zones.filter((z): z is GiftTemplateImageZone => !isTextZone(z)),
@@ -55,6 +69,10 @@ export function TemplateMultiSlotForm({ template, isWorking, onGeneratePreview, 
     return out;
   }, [editableTextZones]);
   const [texts, setTexts] = useState<Record<string, string>>(initialTexts);
+
+  useEffect(() => {
+    onStateChange?.({ thumbs, texts });
+  }, [thumbs, texts, onStateChange]);
 
   function pickFile(zoneId: string, file: File | null) {
     if (!file) return;
