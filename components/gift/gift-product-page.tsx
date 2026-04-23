@@ -534,9 +534,71 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 boxShadow: '5px 5px 0 var(--pv-ink)',
               }}
             >
-              {/* Step A: Multi-slot upload (template) or single-file upload (legacy) */}
+              {/* Step A: Template picker — picked first so the Fill /
+                  Upload section below knows whether to render the
+                  multi-slot form or the legacy single-file dropzone. */}
+              {hasTemplates && (
+                <ComposeSection letter="A" title="Pick a template">
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 8,
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    }}
+                  >
+                    {templates.map((t) => {
+                      const active = selectedTemplateId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSelectedTemplateId(active ? null : t.id)}
+                          style={{
+                            background: '#fff',
+                            border: active ? '2px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            overflow: 'hidden',
+                            boxShadow: active ? '3px 3px 0 var(--pv-magenta)' : 'none',
+                            transition: 'all 0.12s',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <div style={{ aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
+                            {t.thumbnail_url ? (
+                              <img src={t.thumbnail_url} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
+                            )}
+                          </div>
+                          <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
+                            {t.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {product.template_mode === 'optional' && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        color: 'var(--pv-muted)',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      Optional — or just upload your own.
+                    </div>
+                  )}
+                </ComposeSection>
+              )}
+
+              {/* Step B (or A when there are no templates): Multi-slot
+                  upload when a template is active, single-file upload
+                  otherwise. */}
               {activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
-                <ComposeSection letter="A" title="Fill the template">
+                <ComposeSection letter={hasTemplates ? 'B' : 'A'} title="Fill the template">
                   <TemplateMultiSlotForm
                     template={activeTemplate}
                     isWorking={uploading}
@@ -567,7 +629,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   )}
                 </ComposeSection>
               ) : (
-              <ComposeSection letter="A" title="Upload your photo">
+              <ComposeSection letter={hasTemplates ? 'B' : 'A'} title="Upload your photo">
                 {!preview && !uploading && (
                   <div
                     onClick={() => !needTemplate && !needPrompt && fileRef.current?.click()}
@@ -693,64 +755,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
               </ComposeSection>
-              )}
-
-              {/* Step B: Template picker (if applicable) */}
-              {hasTemplates && (
-                <ComposeSection letter="B" title="Pick a template">
-                  <div
-                    style={{
-                      display: 'grid',
-                      gap: 8,
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                    }}
-                  >
-                    {templates.map((t) => {
-                      const active = selectedTemplateId === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setSelectedTemplateId(active ? null : t.id)}
-                          style={{
-                            background: '#fff',
-                            border: active ? '2px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
-                            cursor: 'pointer',
-                            padding: 0,
-                            overflow: 'hidden',
-                            boxShadow: active ? '3px 3px 0 var(--pv-magenta)' : 'none',
-                            transition: 'all 0.12s',
-                            textAlign: 'left',
-                          }}
-                        >
-                          <div style={{ aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
-                            {t.thumbnail_url ? (
-                              <img src={t.thumbnail_url} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
-                            )}
-                          </div>
-                          <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
-                            {t.name}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {product.template_mode === 'optional' && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 10,
-                        color: 'var(--pv-muted)',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Optional — or just upload your own.
-                    </div>
-                  )}
-                </ComposeSection>
               )}
 
               {/* Variant picker — label adapts to the variants' kind.

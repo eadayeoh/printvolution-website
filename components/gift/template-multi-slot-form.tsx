@@ -258,25 +258,44 @@ export function TemplateMultiSlotForm({
                     display: 'block',
                     background: thumb ? '#fff' : 'var(--pv-cream)',
                     border: thumb ? '2px solid var(--pv-green)' : '2px dashed var(--pv-rule)',
-                    cursor: thumb ? 'default' : 'pointer',
                     overflow: 'hidden',
                     position: 'relative',
                   }}
-                  onClick={thumb ? undefined : openPicker}
                 >
-                  <div
-                    style={{
-                      aspectRatio: `${z.width_mm} / ${z.height_mm}`,
-                      backgroundImage: thumb ? `url(${thumb})` : undefined,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--pv-muted)',
-                    }}
-                  >
-                    {!thumb && (
+                  {thumb ? (
+                    // Filled state: purely visual, zero click handlers.
+                    // Only the X button in the footer can remove the
+                    // photo. pointer-events: none belt-and-braces against
+                    // any stray bubble.
+                    <div
+                      style={{
+                        aspectRatio: `${z.width_mm} / ${z.height_mm}`,
+                        backgroundImage: `url(${thumb})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  ) : (
+                    // Empty state: whole area is the click target for the
+                    // file picker. Using <button> over onClick-div so
+                    // keyboard / assistive tech can activate it too.
+                    <button
+                      type="button"
+                      onClick={openPicker}
+                      style={{
+                        aspectRatio: `${z.width_mm} / ${z.height_mm}`,
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--pv-muted)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
                       <span
                         style={{
                           fontFamily: 'var(--pv-f-mono)',
@@ -285,12 +304,13 @@ export function TemplateMultiSlotForm({
                           textTransform: 'uppercase',
                           padding: 8,
                           textAlign: 'center',
+                          color: 'var(--pv-muted)',
                         }}
                       >
                         + {z.label || `Photo ${i + 1}`}
                       </span>
-                    )}
-                  </div>
+                    </button>
+                  )}
                   <div
                     style={{
                       padding: '6px 8px',
