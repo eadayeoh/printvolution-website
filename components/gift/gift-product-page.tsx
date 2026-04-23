@@ -14,6 +14,7 @@ import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
+import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
 import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
 import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
 
@@ -772,10 +773,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                                               'Choose an option';
                 return (
                   <ComposeSection letter={hasTemplates ? 'C' : 'B'} title={title}>
-                    <GiftVariantPicker
+                    <GiftVariantLivePreview
                       variants={variants}
                       selectedId={selectedVariantId}
                       onSelect={setSelectedVariantId}
+                      previewUrl={preview?.previewUrl ?? null}
                     />
                   </ComposeSection>
                 );
