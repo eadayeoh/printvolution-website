@@ -382,7 +382,12 @@ const VariantSchema = z.object({
         id: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Surface id must be lowercase-slug'),
         label: z.string().min(1),
         accepts: z.enum(['photo', 'text', 'both']),
-        mockup_url: z.string().min(1),
+        // Mockup image for the customer-facing preview only. Optional —
+        // text-only surfaces render fine on a blank background, and
+        // production never uses this field. If omitted, the parent
+        // variant's mockup_url serves as the fallback visual at render
+        // time.
+        mockup_url: z.string().default(''),
         mockup_area: z.object({
           x: z.number(), y: z.number(), width: z.number(), height: z.number(),
         }),

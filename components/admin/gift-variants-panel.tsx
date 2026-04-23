@@ -163,14 +163,19 @@ export function GiftVariantsPanel({
       })),
     };
     // Extra validation for surfaces up-front so Zod errors don't
-    // surface as opaque blobs.
+    // surface as opaque blobs. mockup_url is optional — text-only
+    // surfaces render fine without one, and production never touches
+    // it (the real output uses text or the per-surface source photo).
     for (const [si, s] of d.surfaces.entries()) {
       if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) {
         setErr(`Surface #${si + 1} id must be lowercase-slug (got "${s.id}").`);
         return;
       }
       if (!s.label.trim()) { setErr(`Surface #${si + 1} needs a label.`); return; }
-      if (!s.mockup_url) { setErr(`Surface "${s.label || s.id}" needs a mockup image.`); return; }
+      if (s.accepts === 'photo' && !s.mockup_url) {
+        setErr(`Surface "${s.label || s.id}" accepts photo — set a mockup image so the customer can see where their photo lands, or change accepts to 'text'.`);
+        return;
+      }
     }
     startTransition(async () => {
       const r = await upsertGiftVariant(payload);
@@ -518,7 +523,9 @@ export function GiftVariantsPanel({
                               </div>
                               <div className="mt-2 grid grid-cols-[120px_1fr] gap-2">
                                 <div>
-                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mockup</span>
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+                                    Mockup{s.accepts === 'photo' ? '' : ' (optional)'}
+                                  </span>
                                   <ImageUpload
                                     value={s.mockup_url}
                                     onChange={(url) => updateSurface(i, sIdx, { mockup_url: url })}
@@ -527,6 +534,11 @@ export function GiftVariantsPanel({
                                     size="sm"
                                     label="Mockup"
                                   />
+                                  {s.accepts !== 'photo' && (
+                                    <div className="mt-1 text-[9px] text-neutral-500">
+                                      Used for the customer preview only. Text-only surfaces render fine without one.
+                                    </div>
+                                  )}
                                 </div>
                                 <div>
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">

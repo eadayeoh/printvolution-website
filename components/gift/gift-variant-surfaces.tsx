@@ -26,9 +26,14 @@ type Props = {
   surfaces: GiftVariantSurface[];
   fills: SurfaceFillMap;
   onChange: (next: SurfaceFillMap) => void;
+  /** Variant-level mockup to fall back to when a surface omits its
+   *  own mockup_url (common for text-only surfaces — admin doesn't
+   *  need to shoot a photo of each side if the whole variant mockup
+   *  works). */
+  variantMockupUrl?: string;
 };
 
-export function GiftVariantSurfaces({ surfaces, fills, onChange }: Props) {
+export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl }: Props) {
   const [activeId, setActiveId] = useState(surfaces[0]?.id ?? '');
   useEffect(() => {
     if (!surfaces.find((s) => s.id === activeId)) {
@@ -99,7 +104,11 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange }: Props) {
               );
             })}
           </div>
-          <SurfacePreview surface={activeSurface} fill={fills[activeSurface.id] ?? {}} />
+          <SurfacePreview
+            surface={activeSurface}
+            fill={fills[activeSurface.id] ?? {}}
+            fallbackMockupUrl={variantMockupUrl}
+          />
         </div>
       )}
 
@@ -240,7 +249,15 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange }: Props) {
  *  surface.mockup_area. Uses CSS positioning — no canvas here because
  *  the big LIVE PREVIEW up top is for presentation quality, and the
  *  server composite is what actually gets printed. */
-function SurfacePreview({ surface, fill }: { surface: GiftVariantSurface; fill: SurfaceFill }) {
+function SurfacePreview({
+  surface,
+  fill,
+  fallbackMockupUrl,
+}: {
+  surface: GiftVariantSurface;
+  fill: SurfaceFill;
+  fallbackMockupUrl?: string;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
   useEffect(() => {
@@ -281,9 +298,9 @@ function SurfacePreview({ surface, fill }: { surface: GiftVariantSurface; fill: 
         overflow: 'hidden',
       }}
     >
-      {surface.mockup_url && (
+      {(surface.mockup_url || fallbackMockupUrl) && (
         <img
-          src={surface.mockup_url}
+          src={surface.mockup_url || fallbackMockupUrl}
           alt={surface.label}
           style={{
             position: 'absolute',

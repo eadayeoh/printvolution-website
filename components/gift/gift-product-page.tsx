@@ -714,6 +714,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     surfaces={selectedVariant.surfaces}
                     fills={surfaceFills}
                     onChange={setSurfaceFills}
+                    variantMockupUrl={selectedVariant.mockup_url || undefined}
                   />
                 </ComposeSection>
               )}
