@@ -788,7 +788,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
 
 type Rect = { x: number; y: number; width: number; height: number };
 
-function DraggableArea({
+export function DraggableArea({
   mockupUrl,
   area,
   productWidthMm,

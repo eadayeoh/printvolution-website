@@ -934,6 +934,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             area={figurineArea}
             onAreaChange={setFigurineArea}
             productSlug={slug || 'new-product'}
+            mockupUrl={mockupUrl || variants.find((v) => v.mockup_url)?.mockup_url || null}
+            productWidthMm={parseFloat(widthMm) || product?.width_mm || 100}
+            productHeightMm={parseFloat(heightMm) || product?.height_mm || 100}
           />
         </div>
       )}

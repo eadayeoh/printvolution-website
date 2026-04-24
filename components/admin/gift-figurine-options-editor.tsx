@@ -2,6 +2,7 @@
 
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { DraggableArea } from '@/components/admin/gift-variants-panel';
 
 export type FigurineOption = {
   slug: string;
@@ -20,6 +21,11 @@ type Props = {
   area: FigurineArea;
   onAreaChange: (next: FigurineArea) => void;
   productSlug: string;
+  /** Product's mockup image — shown as the backdrop for the drag-area
+   *  editor so admin can place the figurine visually. */
+  mockupUrl?: string | null;
+  productWidthMm: number;
+  productHeightMm: number;
 };
 
 export function GiftFigurineOptionsEditor({
@@ -30,6 +36,9 @@ export function GiftFigurineOptionsEditor({
   area,
   onAreaChange,
   productSlug,
+  mockupUrl,
+  productWidthMm,
+  productHeightMm,
 }: Props) {
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
 
@@ -66,29 +75,22 @@ export function GiftFigurineOptionsEditor({
         <>
           <div className="mb-4 rounded border border-dashed border-neutral-300 bg-neutral-50 p-3">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-              Figurine area on mockup (% of image)
+              Figurine area on mockup — drag to position, drag the pink corner to resize
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {(['x', 'y', 'width', 'height'] as const).map((field) => (
-                <label key={field} className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
-                    {field} %
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    value={area[field]}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value || '0');
-                      onAreaChange({ ...area, [field]: Number.isFinite(v) ? v : 0 });
-                    }}
-                    className={inputCls}
-                  />
-                </label>
-              ))}
-            </div>
+            {mockupUrl ? (
+              <DraggableArea
+                mockupUrl={mockupUrl}
+                area={area}
+                productWidthMm={productWidthMm}
+                productHeightMm={productHeightMm}
+                onChange={onAreaChange}
+              />
+            ) : (
+              <p className="text-[11px] text-neutral-500">
+                Upload the product&apos;s fallback mockup (Design tab → Fallback mockup)
+                first. That image becomes the backdrop you drag the figurine area on.
+              </p>
+            )}
           </div>
 
           {value.length === 0 ? (
