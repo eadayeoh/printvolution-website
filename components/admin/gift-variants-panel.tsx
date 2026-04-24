@@ -142,7 +142,10 @@ export function GiftVariantsPanel({
       features: d.features_text.split('\n').map((s) => s.trim()).filter(Boolean),
       mockup_url: d.mockup_url,
       mockup_area: d.mockup_area,
-      variant_thumbnail_url: d.variant_thumbnail_url || null,
+      // Thumbnail = mockup (auto). Still written to the column so
+      // any legacy consumer that reads variant_thumbnail_url directly
+      // keeps working without change.
+      variant_thumbnail_url: d.variant_thumbnail_url || d.mockup_url || null,
       base_price_cents: Math.round((parseFloat(d.base_price) || 0) * 100),
       display_order: parseInt(d.display_order, 10) || 0,
       is_active: d.is_active,
@@ -680,17 +683,11 @@ export function GiftVariantsPanel({
                         />
                       </div>
                     )}
-                    <div>
-                      <span className="mb-1 block text-xs font-bold text-ink">Variant thumbnail</span>
-                      <ImageUpload
-                        value={d.variant_thumbnail_url}
-                        onChange={(url) => updateDraft(i, { variant_thumbnail_url: url })}
-                        prefix={`variant-${d.slug || 'thumb'}`}
-                        aspect={1}
-                        size="md"
-                        label="Thumb"
-                      />
-                    </div>
+                    {/* Variant thumbnail used to be a separate upload
+                        field. Admin now gets it for free — the mockup
+                        image doubles as the thumbnail (copy happens on
+                        save). Keeping the column in the DB means old
+                        rows still work without a migration. */}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">

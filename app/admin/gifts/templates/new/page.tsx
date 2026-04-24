@@ -1,7 +1,12 @@
 import { GiftTemplateEditor } from '@/components/admin/gift-template-editor';
+import { listAllTemplatesAdmin } from '@/lib/gifts/data';
 
 export const dynamic = 'force-dynamic';
 
-export default function NewTemplatePage() {
-  return <GiftTemplateEditor template={null} />;
+export default async function NewTemplatePage() {
+  const all = await listAllTemplatesAdmin();
+  const existingGroups = Array.from(
+    new Set(all.map((t) => t.group_name).filter((g): g is string => !!g && g.trim().length > 0)),
+  ).sort();
+  return <GiftTemplateEditor template={null} existingGroups={existingGroups} />;
 }

@@ -76,13 +76,23 @@ function makeTextZone(n: number): GiftTemplateTextZone {
   };
 }
 
-export function GiftTemplateEditor({ template }: { template: GiftTemplate | null }) {
+export function GiftTemplateEditor({
+  template,
+  existingGroups,
+}: {
+  template: GiftTemplate | null;
+  /** Group names already in use across the template library. Powers
+   *  the Group field's autocomplete so admins stay on existing
+   *  buckets instead of accidentally coining a typo'd new one. */
+  existingGroups?: string[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
 
   const [name, setName] = useState(template?.name ?? '');
+  const [groupName, setGroupName] = useState(template?.group_name ?? '');
   const [description, setDescription] = useState(template?.description ?? '');
   const [thumbnail, setThumbnail] = useState(template?.thumbnail_url ?? '');
   const [background, setBackground] = useState(template?.background_url ?? '');
@@ -192,6 +202,7 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
     const refHParsed = parseFloat(refHeightMm);
     const payload: any = {
       name: name.trim(),
+      group_name: groupName.trim() || null,
       description: description.trim() || null,
       thumbnail_url: thumbnail || null,
       background_url: background || null,
@@ -244,6 +255,22 @@ export function GiftTemplateEditor({ template }: { template: GiftTemplate | null
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Name</span>
               <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Hearts Frame" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-ink">Group</span>
+              <input
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className={inputCls}
+                list="gift-template-groups"
+                placeholder="Wall art · Necklaces · Embroidery on tees"
+              />
+              <span className="mt-1 block text-[11px] text-neutral-500">
+                Optional. Templates in the admin list are bucketed by this label. Typing a new value creates a new bucket; leave empty to drop into &ldquo;Ungrouped&rdquo;.
+              </span>
+              <datalist id="gift-template-groups">
+                {(existingGroups ?? []).map((g) => <option key={g} value={g} />)}
+              </datalist>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Description</span>

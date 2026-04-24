@@ -169,6 +169,9 @@ export type GiftTemplate = {
   is_active: boolean;
   reference_width_mm: number | null;
   reference_height_mm: number | null;
+  /** Admin-assigned grouping label ("Wall art", "Necklaces", …).
+   *  Null = "Ungrouped". Drives the buckets in the templates list. */
+  group_name?: string | null;
 };
 
 export type GiftCropRect = {
