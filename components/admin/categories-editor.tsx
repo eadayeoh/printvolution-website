@@ -23,7 +23,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { createCategory, updateCategory, deleteCategory } from '@/app/admin/categories/actions';
 
-type Category = { id: string; slug: string; name: string; parent_id: string | null; display_order: number };
+type Kind = 'service' | 'gift' | 'unassigned';
+type Category = { id: string; slug: string; name: string; parent_id: string | null; display_order: number; kind?: Kind };
 
 export function CategoriesEditor({ initial }: { initial: Category[] }) {
   const router = useRouter();
@@ -44,9 +45,9 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
   // Parents are sorted by display_order, then each parent's children
   // follow immediately after, also by display_order. This is the visible
   // order shown on the site so dragging reflects what the customer sees.
-  const ordered = useMemo(() => {
+  function buildGroup(kind: Kind): Category[] {
     const topLevels = rows
-      .filter((r) => !r.parent_id)
+      .filter((r) => !r.parent_id && (r.kind ?? 'unassigned') === kind)
       .sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
     const out: Category[] = [];
     for (const parent of topLevels) {
@@ -56,13 +57,20 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
         .sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
       out.push(...kids);
     }
-    // Orphan subcategories (parent_id set but parent missing) — show at end
-    const orphanSubs = rows.filter(
-      (r) => r.parent_id && !topLevels.find((p) => p.id === r.parent_id)
-    );
-    out.push(...orphanSubs);
     return out;
+  }
+
+  const { services, gifts, unassigned } = useMemo(() => {
+    const services = buildGroup('service');
+    const gifts = buildGroup('gift');
+    const unassigned = buildGroup('unassigned');
+    // Orphan subcategories (parent_id set but parent missing) — show at end
+    const topIds = new Set(rows.filter((r) => !r.parent_id).map((r) => r.id));
+    const orphans = rows.filter((r) => r.parent_id && !topIds.has(r.parent_id));
+    return { services, gifts, unassigned: [...unassigned, ...orphans] };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
+  const ordered = useMemo(() => [...services, ...gifts, ...unassigned], [services, gifts, unassigned]);
 
   function mark(id: string) {
     const next = new Set(dirty);
@@ -201,57 +209,153 @@ export function CategoriesEditor({ initial }: { initial: Category[] }) {
       </div>
 
       {/* List */}
-      <div className="rounded-lg border border-neutral-200 bg-white overflow-hidden">
-        <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-          <div />
-          <div>Name</div>
-          <div>Slug</div>
-          <div>Parent</div>
-          <div />
+      {ordered.length === 0 ? (
+        <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-xs text-neutral-500">
+          No categories yet. Add one above.
         </div>
-        {ordered.length === 0 ? (
-          <div className="p-8 text-center text-xs text-neutral-500">No categories yet. Add one above.</div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext items={ordered.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-              {ordered.map((r) => (
-                <SortableCategoryRow
-                  key={r.id}
-                  row={r}
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        >
+          <SortableContext items={ordered.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-6">
+              <CategorySection
+                title="Print Services"
+                subtitle="Categories whose products live in the Print catalog (/shop)."
+                accent="cyan"
+                rows={services}
+                parents={parents}
+                dirty={dirty}
+                inputCls={inputCls}
+                onChange={(id, patch) => {
+                  setRows(rows.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+                  mark(id);
+                }}
+                onRemove={removeRow}
+              />
+              <CategorySection
+                title="Gifts"
+                subtitle="Categories whose products live in the Gifts catalog (/gift)."
+                accent="pink"
+                rows={gifts}
+                parents={parents}
+                dirty={dirty}
+                inputCls={inputCls}
+                onChange={(id, patch) => {
+                  setRows(rows.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+                  mark(id);
+                }}
+                onRemove={removeRow}
+              />
+              {unassigned.length > 0 && (
+                <CategorySection
+                  title="Unassigned"
+                  subtitle="No products yet — will be classified once a product is added."
+                  accent="neutral"
+                  rows={unassigned}
                   parents={parents}
-                  isDirty={dirty.has(r.id)}
+                  dirty={dirty}
                   inputCls={inputCls}
-                  onChange={(patch) => {
-                    setRows(rows.map((x) => (x.id === r.id ? { ...x, ...patch } : x)));
-                    mark(r.id);
+                  onChange={(id, patch) => {
+                    setRows(rows.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+                    mark(id);
                   }}
-                  onRemove={() => removeRow(r.id)}
+                  onRemove={removeRow}
                 />
-              ))}
-            </SortableContext>
-            <DragOverlay>
-              {dragging ? (
-                <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] items-center gap-3 rounded-lg border-2 border-pink bg-white px-4 py-2 text-sm shadow-[0_20px_40px_-8px_rgba(233,30,140,0.35)]">
-                  <div className="flex h-7 w-7 items-center justify-center rounded bg-pink text-white">
-                    <GripVertical size={14} />
-                  </div>
-                  <div className="font-bold text-ink">
-                    {dragging.parent_id ? '↳ ' : ''}{dragging.name}
-                  </div>
-                  <div className="font-mono text-xs text-neutral-500">{dragging.slug}</div>
-                  <div />
-                  <div />
+              )}
+            </div>
+          </SortableContext>
+          <DragOverlay>
+            {dragging ? (
+              <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] items-center gap-3 rounded-lg border-2 border-pink bg-white px-4 py-2 text-sm shadow-[0_20px_40px_-8px_rgba(233,30,140,0.35)]">
+                <div className="flex h-7 w-7 items-center justify-center rounded bg-pink text-white">
+                  <GripVertical size={14} />
                 </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
+                <div className="font-bold text-ink">
+                  {dragging.parent_id ? '↳ ' : ''}{dragging.name}
+                </div>
+                <div className="font-mono text-xs text-neutral-500">{dragging.slug}</div>
+                <div />
+                <div />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+    </div>
+  );
+}
+
+function CategorySection({
+  title, subtitle, accent, rows, parents, dirty, inputCls, onChange, onRemove,
+}: {
+  title: string;
+  subtitle: string;
+  accent: 'cyan' | 'pink' | 'neutral';
+  rows: Category[];
+  parents: Category[];
+  dirty: Set<string>;
+  inputCls: string;
+  onChange: (id: string, patch: Partial<Category>) => void;
+  onRemove: (id: string) => void;
+}) {
+  const accentBar = accent === 'pink'
+    ? 'bg-pink'
+    : accent === 'cyan'
+    ? 'bg-cyan-500'
+    : 'bg-neutral-300';
+  const headerBg = accent === 'pink'
+    ? 'bg-pink/10'
+    : accent === 'cyan'
+    ? 'bg-cyan-500/10'
+    : 'bg-neutral-100';
+  const pill = accent === 'pink'
+    ? 'bg-pink text-white'
+    : accent === 'cyan'
+    ? 'bg-cyan-500 text-white'
+    : 'bg-neutral-400 text-white';
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+      <div className={`flex items-center gap-3 border-b border-neutral-200 ${headerBg} px-4 py-3`}>
+        <span className={`h-5 w-1.5 rounded-full ${accentBar}`} aria-hidden />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${pill}`}>
+              {title}
+            </span>
+            <span className="text-[11px] text-neutral-500">{rows.filter((r) => !r.parent_id).length} top-level</span>
+          </div>
+          <div className="mt-0.5 text-[11px] text-neutral-500">{subtitle}</div>
+        </div>
       </div>
+      {rows.length === 0 ? (
+        <div className="p-6 text-center text-xs text-neutral-400">No categories in this group.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+            <div />
+            <div>Name</div>
+            <div>Slug</div>
+            <div>Parent</div>
+            <div />
+          </div>
+          {rows.map((r) => (
+            <SortableCategoryRow
+              key={r.id}
+              row={r}
+              parents={parents}
+              isDirty={dirty.has(r.id)}
+              inputCls={inputCls}
+              onChange={(patch) => onChange(r.id, patch)}
+              onRemove={() => onRemove(r.id)}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 }
