@@ -95,6 +95,144 @@ const CropSchema = z.object({
  * No cart/order side effects yet. The customer still has to confirm before
  * we add it to the cart.
  */
+/**
+ * Regenerate a preview for an already-uploaded source photo with a new
+ * prompt / style. Used when the customer flips Line Art ↔ Realistic
+ * after a first Generate — we don't want to make them re-pick the file
+ * from disk just to try the other style.
+ *
+ * Works by reading the original source bytes out of the private
+ * `gift-sources` bucket and re-running the preview pipeline. A fresh
+ * gift_assets row is inserted for the new preview so each restyle lands
+ * in history as its own entry.
+ */
+export async function restylePreviewFromSource(input: {
+  product_slug: string;
+  source_asset_id: string;
+  prompt_id: string | null;
+  variant_id?: string | null;
+}): Promise<
+  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
+  | { ok: false; error: string }
+> {
+  try {
+    const productSlug = input.product_slug;
+    if (!productSlug) return { ok: false, error: 'Product slug missing' };
+    if (!input.source_asset_id) return { ok: false, error: 'Source asset missing' };
+
+    const sb = createClient();
+    const { data: product } = await sb
+      .from('gift_products')
+      .select('*')
+      .eq('slug', productSlug)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!product) return { ok: false, error: 'Product not found' };
+
+    // photo-resize has no style picker, so regenerate is a no-op there —
+    // the original preview is already the final output.
+    if (product.mode === 'photo-resize') {
+      return { ok: false, error: 'This product has no AI styles to regenerate' };
+    }
+
+    const service = serviceClient();
+    const { data: sourceAsset } = await service
+      .from('gift_assets')
+      .select('id, bucket, path, mime_type')
+      .eq('id', input.source_asset_id)
+      .eq('role', 'source')
+      .maybeSingle();
+    if (!sourceAsset) return { ok: false, error: 'Source asset not found' };
+
+    // Download the original bytes so the pipeline can re-run against
+    // the same photo the customer already uploaded.
+    const { data: blob, error: dlErr } = await service
+      .storage.from(sourceAsset.bucket)
+      .download(sourceAsset.path);
+    if (dlErr || !blob) return { ok: false, error: 'Source bytes not readable' };
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+
+    // Resolve the requested prompt — must be active + match the
+    // product's AI mode. Empty = pick the first active prompt for the
+    // mode, matching the upload action's behaviour.
+    let prompt: { id: string; transformation_prompt: string; negative_prompt: string | null; params: Record<string, unknown>; pipeline_id: string | null } | null = null;
+    if (input.prompt_id) {
+      const { data } = await sb.from('gift_prompts')
+        .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
+        .eq('id', input.prompt_id).maybeSingle();
+      if (data && data.is_active && data.mode === product.mode) prompt = data as any;
+    } else {
+      const { data } = await sb.from('gift_prompts')
+        .select('id, transformation_prompt, negative_prompt, params, pipeline_id')
+        .eq('mode', product.mode).eq('is_active', true).order('display_order').limit(1);
+      if (data && data.length > 0) prompt = data[0] as any;
+    }
+
+    // Same size-variant override logic as upload, so a customer-picked
+    // A4 vs A5 variant gets the right print dimensions on restyle.
+    let variantDims: { width_mm: number; height_mm: number } | null = null;
+    if (input.variant_id) {
+      const { data: v } = await sb
+        .from('gift_product_variants')
+        .select('width_mm, height_mm, variant_kind, is_active, gift_product_id')
+        .eq('id', input.variant_id)
+        .maybeSingle();
+      if (
+        v && v.is_active
+        && v.gift_product_id === product.id
+        && v.variant_kind === 'size'
+        && v.width_mm && v.height_mm
+      ) {
+        variantDims = { width_mm: Number(v.width_mm), height_mm: Number(v.height_mm) };
+      }
+    }
+
+    let preview;
+    try {
+      preview = await runPreviewPipeline({
+        product: {
+          ...(product as unknown as GiftProduct),
+          ai_prompt: prompt?.transformation_prompt ?? (product as any).ai_prompt ?? null,
+          ai_negative_prompt: prompt?.negative_prompt ?? null,
+          ai_params: (prompt?.params ?? {}) as Record<string, unknown>,
+          pipeline_id: prompt?.pipeline_id ?? (product as any).pipeline_id ?? null,
+          ...(variantDims ? { width_mm: variantDims.width_mm, height_mm: variantDims.height_mm } : {}),
+        },
+        sourceBytes: bytes,
+        sourceMime: sourceAsset.mime_type ?? 'image/jpeg',
+        cropRect: null,
+        templateId: null,
+      });
+    } catch (e: any) {
+      return { ok: false, error: `preview failed: ${e.message}` };
+    }
+
+    const { data: previewAsset, error: prevErr } = await service
+      .from('gift_assets')
+      .insert({
+        role: 'preview',
+        bucket: GIFT_BUCKETS.previews,
+        path: preview.previewPath,
+        mime_type: 'image/jpeg',
+        width_px: preview.widthPx,
+        height_px: preview.heightPx,
+      })
+      .select('id')
+      .single();
+    if (prevErr || !previewAsset) return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
+
+    return {
+      ok: true,
+      sourceAssetId: sourceAsset.id,
+      previewAssetId: previewAsset.id,
+      previewUrl: preview.previewPublicUrl,
+    };
+  } catch (e: any) {
+    console.error('[gift restyle] uncaught error');
+    return { ok: false, error: 'Server error during restyle' };
+  }
+}
+
 export async function uploadAndPreviewGift(formData: FormData): Promise<
   { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
   | { ok: false; error: string }

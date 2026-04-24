@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { uploadAndPreviewGift, uploadGiftSurfacePhoto } from '@/app/(site)/gift/actions';
+import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
@@ -22,7 +22,6 @@ import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
 import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
 import {
   appendPreviewHit,
-  clearPreviewHistoryForStyle,
   loadPreviewHistory,
   removePreviewHit,
   type PreviewHit,
@@ -69,6 +68,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
+  // Which style the CURRENT preview was generated with. Drives the
+  // Regenerate CTA: when selectedPromptId drifts from this, the preview
+  // is stale relative to the picker and the customer gets a button to
+  // re-run the pipeline with the new style against the same source.
+  const [lastGeneratedPromptId, setLastGeneratedPromptId] = useState<string | null>(null);
+  const [restyling, setRestyling] = useState(false);
   // Per-product preview history — persists to localStorage so customers
   // can flip back to earlier generations (across styles + photo uploads)
   // without re-running generate.
@@ -160,6 +165,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         setErr('Server returned no response. Please try again in a moment.');
       } else if (r.ok === true) {
         setPreview(r);
+        setLastGeneratedPromptId(selectedPromptId);
         setHistory(appendPreviewHit(product.slug, {
           promptId: selectedPromptId,
           sourceAssetId: r.sourceAssetId,
@@ -207,6 +213,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         setErr('Server returned no response. Please try again.');
       } else if (r.ok === true) {
         setPreview(r);
+        setLastGeneratedPromptId(selectedPromptId);
         setHistory(appendPreviewHit(product.slug, {
           promptId: selectedPromptId,
           sourceAssetId: r.sourceAssetId,
@@ -220,6 +227,36 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       setErr(e?.message || e?.toString?.() || 'Upload failed');
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function doRestyle() {
+    if (!preview || !selectedPromptId) return;
+    setErr(null);
+    setRestyling(true);
+    try {
+      const r = await restylePreviewFromSource({
+        product_slug: product.slug,
+        source_asset_id: preview.sourceAssetId,
+        prompt_id: selectedPromptId,
+        variant_id: selectedVariantId,
+      });
+      if (r.ok) {
+        setPreview(r);
+        setLastGeneratedPromptId(selectedPromptId);
+        setHistory(appendPreviewHit(product.slug, {
+          promptId: selectedPromptId,
+          sourceAssetId: r.sourceAssetId,
+          previewAssetId: r.previewAssetId,
+          previewUrl: r.previewUrl,
+        }));
+      } else {
+        setErr(r.error || 'Regenerate failed');
+      }
+    } catch (e: any) {
+      setErr(e?.message || 'Regenerate failed');
+    } finally {
+      setRestyling(false);
     }
   }
 
@@ -573,7 +610,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   minHeight: 320,
                 }}
               >
-                {uploading && (
+                {(uploading || restyling) && (
                   <div
                     style={{
                       position: 'absolute',
@@ -598,7 +635,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         color: nightMode ? 'var(--pv-yellow)' : 'var(--pv-ink)',
                       }}
                     >
-                      {product.mode === 'photo-resize' ? 'Cropping and adding bleed…' : 'Stylising your photo…'}
+                      {restyling
+                        ? 'Regenerating with new style…'
+                        : product.mode === 'photo-resize' ? 'Cropping and adding bleed…' : 'Stylising your photo…'}
                     </div>
                   </div>
                 )}
@@ -716,17 +755,69 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
-            {/* Per-style generation history — thumbnails of earlier hits for
-                the current style. Click restores the stored source + preview
-                without burning another generate call. */}
+            {/* Regenerate CTA — surfaces when the customer switches the
+                style picker after a generation, so the visible preview
+                is now in the *old* style. Re-runs the pipeline against
+                the already-uploaded source with the new prompt. */}
+            {preview && showPromptPicker && selectedPromptId && selectedPromptId !== lastGeneratedPromptId && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: '12px 16px',
+                  border: '2px solid var(--pv-ink)',
+                  background: 'var(--pv-yellow)',
+                  boxShadow: '4px 4px 0 var(--pv-ink)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    color: 'var(--pv-ink)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Preview is still <b>{prompts.find((p) => p.id === lastGeneratedPromptId)?.name ?? 'the old style'}</b>.
+                  <br />
+                  Regenerate with <b>{prompts.find((p) => p.id === selectedPromptId)?.name ?? 'the new style'}</b>?
+                </div>
+                <button
+                  type="button"
+                  onClick={doRestyle}
+                  disabled={restyling}
+                  style={{
+                    padding: '10px 18px',
+                    border: '2px solid var(--pv-ink)',
+                    background: restyling ? 'var(--pv-muted, #999)' : 'var(--pv-magenta)',
+                    color: '#fff',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 11,
+                    fontWeight: 900,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    cursor: restyling ? 'wait' : 'pointer',
+                    boxShadow: '3px 3px 0 var(--pv-ink)',
+                  }}
+                >
+                  {restyling ? 'Regenerating…' : '↻ Regenerate'}
+                </button>
+              </div>
+            )}
+
+            {/* Cross-style generation history — every earlier hit for this
+                product (both Line Art and Realistic, across photo swaps).
+                Click restores the preview AND flips the style picker to
+                match so the configurator stays coherent. */}
             {(() => {
-              const styleHits = history
-                .filter((h) => h.promptId === selectedPromptId)
-                .sort((a, b) => b.ts - a.ts);
-              if (styleHits.length === 0) return null;
-              const currentStyleName = showPromptPicker
-                ? prompts.find((p) => p.id === selectedPromptId)?.name ?? 'this style'
-                : 'your photo';
+              const allHits = [...history].sort((a, b) => b.ts - a.ts);
+              if (allHits.length === 0) return null;
               return (
                 <div
                   style={{
@@ -756,13 +847,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         color: 'var(--pv-ink)',
                       }}
                     >
-                      ↻ Earlier {currentStyleName} previews · tap to restore
+                      ↻ Your earlier previews · tap to restore
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        if (!confirm(`Clear all ${currentStyleName} previews from history?`)) return;
-                        setHistory(clearPreviewHistoryForStyle(product.slug, selectedPromptId));
+                        if (!confirm('Clear all preview history for this product?')) return;
+                        // clearPreviewHistoryForStyle with every distinct
+                        // promptId would still work, but wiping the whole
+                        // localStorage key is simpler — no server state to
+                        // reconcile.
+                        try { window.localStorage.removeItem(`gift-preview-history:${product.slug}`); } catch {}
+                        setHistory([]);
                       }}
                       style={{
                         background: 'transparent',
@@ -777,31 +873,42 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         cursor: 'pointer',
                       }}
                     >
-                      Clear
+                      Clear all
                     </button>
                   </div>
                   <div
                     style={{
                       display: 'flex',
-                      gap: 8,
+                      gap: 10,
                       overflowX: 'auto',
                       paddingBottom: 2,
                     }}
                   >
-                    {styleHits.map((h) => {
+                    {allHits.map((h) => {
                       const active = preview?.previewAssetId === h.previewAssetId;
+                      const styleName = h.promptId
+                        ? prompts.find((p) => p.id === h.promptId)?.name ?? 'Style'
+                        : 'Preview';
                       return (
-                        <div key={h.id} style={{ position: 'relative', flexShrink: 0 }}>
+                        <div key={h.id} style={{ position: 'relative', flexShrink: 0, width: 80 }}>
                           <button
                             type="button"
-                            onClick={() => setPreview({
-                              sourceAssetId: h.sourceAssetId,
-                              previewAssetId: h.previewAssetId,
-                              previewUrl: h.previewUrl,
-                            })}
+                            onClick={() => {
+                              setPreview({
+                                sourceAssetId: h.sourceAssetId,
+                                previewAssetId: h.previewAssetId,
+                                previewUrl: h.previewUrl,
+                              });
+                              if (h.promptId) setSelectedPromptId(h.promptId);
+                              // The picked hit IS the current preview now —
+                              // keep lastGeneratedPromptId in sync so the
+                              // Regenerate button only surfaces on a real
+                              // style drift, not right after a restore.
+                              setLastGeneratedPromptId(h.promptId);
+                            }}
                             style={{
-                              width: 72,
-                              height: 72,
+                              width: 80,
+                              height: 80,
                               padding: 0,
                               border: active ? '3px solid var(--pv-magenta)' : '2px solid var(--pv-ink)',
                               boxShadow: active ? '2px 2px 0 var(--pv-yellow)' : 'none',
@@ -810,14 +917,31 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                               display: 'block',
                               overflow: 'hidden',
                             }}
-                            title={`Restore this preview (${new Date(h.ts).toLocaleString()})`}
+                            title={`${styleName} · ${new Date(h.ts).toLocaleString()}`}
                           >
                             <img
                               src={h.previewUrl}
-                              alt="Previous preview"
+                              alt={`${styleName} preview`}
                               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             />
                           </button>
+                          <div
+                            style={{
+                              marginTop: 4,
+                              fontFamily: 'var(--pv-f-mono)',
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase',
+                              textAlign: 'center',
+                              color: 'var(--pv-ink)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {styleName}
+                          </div>
                           <button
                             type="button"
                             aria-label="Remove from history"
