@@ -182,7 +182,15 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     { v: 'pricing', label: 'Pricing' },
     { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
-    { v: 'mockup', label: 'Mockup' },
+    {
+      v: 'mockup' as const,
+      // When every base variant has its own mockup the product-level
+      // one is effectively overridden — dim the label so admin knows
+      // the tab is informational at that point.
+      label: variants.length > 0 && variants.every((v) => v.variant_kind === 'base' && v.mockup_url)
+        ? 'Mockup (fallback)'
+        : 'Mockup',
+    },
     { v: 'variants', label: `Variants${variants.length > 0 ? ` (${variants.length})` : ''}` },
     { v: 'content', label: `Content${faqs.length > 0 ? ` (${faqs.length})` : ''}` },
     { v: 'seo', label: 'SEO' },
@@ -615,16 +623,46 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         </div>
       )}
 
-      {/* SEO */}
-      {tab === 'mockup' && (
-        <GiftMockupEditor
-          mockupUrl={mockupUrl}
-          setMockupUrl={setMockupUrl}
-          area={mockupArea}
-          setArea={setMockupArea}
-          slug={slug}
-        />
-      )}
+      {/* Mockup — product-level fallback only. Customer rendering
+          prefers variant.mockup_url when a variant is selected. Show
+          a banner that explains what this tab is still useful for so
+          admin doesn't upload a mockup here expecting it to override
+          variant-specific ones. */}
+      {tab === 'mockup' && (() => {
+        const hasBaseVariantWithMockup = variants.some((v) => v.variant_kind === 'base' && v.mockup_url);
+        const allVariantsAreBase = variants.length > 0 && variants.every((v) => v.variant_kind === 'base');
+        const allBasesConfigured = allVariantsAreBase && variants.every((v) => v.mockup_url);
+        return (
+          <div className="max-w-4xl space-y-4">
+            {variants.length > 0 && (
+              <div className={`rounded-lg border p-4 text-xs leading-relaxed ${
+                allBasesConfigured ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-blue-200 bg-blue-50 text-blue-900'
+              }`}>
+                {allBasesConfigured ? (
+                  <>
+                    <strong>Not used by this product.</strong> Every base variant has its own mockup in the <strong>Variants</strong> tab, and customers always see the selected variant&apos;s mockup. This tab stays visible as a fallback only — you can leave it empty.
+                  </>
+                ) : hasBaseVariantWithMockup ? (
+                  <>
+                    <strong>Fallback mockup.</strong> Customers see the selected variant&apos;s mockup when available. This image is only used for variants that don&apos;t have their own mockup (typically <em>Size</em>, <em>Colour</em>, or <em>Material</em> variants that reuse the same product shot).
+                  </>
+                ) : (
+                  <>
+                    <strong>Shared mockup.</strong> None of this product&apos;s variants have their own mockup, so this image is used for every variant. If a base variant later carries a different photo (LED stand A vs B vs C), upload it per-variant in the <strong>Variants</strong> tab and this fallback stops being used.
+                  </>
+                )}
+              </div>
+            )}
+            <GiftMockupEditor
+              mockupUrl={mockupUrl}
+              setMockupUrl={setMockupUrl}
+              area={mockupArea}
+              setArea={setMockupArea}
+              slug={slug}
+            />
+          </div>
+        );
+      })()}
 
       {tab === 'variants' && (
         product
