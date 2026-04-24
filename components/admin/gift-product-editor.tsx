@@ -25,7 +25,7 @@ type Props = {
   variants?: GiftProductVariant[];
 };
 
-type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'variants' | 'sizes' | 'seo' | 'content';
+type Tab = 'basics' | 'production' | 'design' | 'content';
 
 // Fallback used only if the /admin/gifts/modes DB hasn't been seeded yet.
 const FALLBACK_MODES: GiftModeMeta[] = [
@@ -183,23 +183,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
   const TABS: Array<{ v: Tab; label: string; hide?: boolean }> = [
     { v: 'basics', label: 'Basics' },
-    { v: 'mode', label: 'Mode' },
-    { v: 'pricing', label: 'Pricing' },
-    { v: 'templates', label: 'Templates' },
     { v: 'production', label: 'Production' },
-    {
-      v: 'mockup' as const,
-      // When every base variant has its own mockup the product-level
-      // one is effectively overridden — dim the label so admin knows
-      // the tab is informational at that point.
-      label: variants.length > 0 && variants.every((v) => v.variant_kind === 'base' && v.mockup_url)
-        ? 'Mockup (fallback)'
-        : 'Mockup',
-    },
-    { v: 'variants', label: `Variants${variants.length > 0 ? ` (${variants.length})` : ''}` },
-    { v: 'sizes', label: `Sizes${sizes.length > 0 ? ` (${sizes.length})` : ''}` },
+    { v: 'design', label: `Design${variants.length + sizes.length > 0 ? ` (${variants.length} variants · ${sizes.length} sizes)` : ''}` },
     { v: 'content', label: `Content${faqs.length > 0 ? ` (${faqs.length})` : ''}` },
-    { v: 'seo', label: 'SEO' },
   ];
   const visibleTabs = TABS.filter((t) => !t.hide);
 
@@ -227,48 +213,107 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
       {/* Basics */}
       {tab === 'basics' && (
-        <div className="grid max-w-4xl gap-5 rounded-lg border border-neutral-200 bg-white p-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="max-w-4xl space-y-5">
+          {/* Identity */}
+          <div className="grid gap-4 rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="text-sm font-black text-ink">Identity</div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Name</span>
+                <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => !slug && autoSlugFromName()} className={inputCls} placeholder="Wood Keychain" />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Slug</span>
+                <div className="flex items-center">
+                  <span className="rounded-l border-2 border-r-0 border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500 font-mono">/gift/</span>
+                  <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${inputCls} rounded-l-none font-mono text-xs`} />
+                </div>
+              </label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Category</span>
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
+                  <option value="">— none —</option>
+                  {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="flex items-end gap-2 pb-2 text-sm">
+                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+                <span className="font-semibold text-ink">Active (visible to customers)</span>
+              </label>
+            </div>
             <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => !slug && autoSlugFromName()} className={inputCls} placeholder="Wood Keychain" />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Slug</span>
-              <div className="flex items-center">
-                <span className="rounded-l border-2 border-r-0 border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500 font-mono">/gift/</span>
-                <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${inputCls} rounded-l-none font-mono text-xs`} />
-              </div>
+              <span className="mb-1 block text-xs font-bold text-ink">Tagline</span>
+              <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} placeholder="One photo, one keepsake" />
             </label>
           </div>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Category</span>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
-              <option value="">— none —</option>
-              {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Tagline</span>
-            <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputCls} placeholder="One photo, one keepsake" />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">Description</span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
-          </label>
-          {/* Thumbnail upload removed — auto-derived on save from the
-              product mockup (or first variant mockup if no product-level
-              mockup is set). Keeps admin from having to upload the same
-              shot twice. Column stays populated for legacy consumers. */}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            <span className="font-semibold text-ink">Active (visible to customers)</span>
-          </label>
+
+          {/* Pricing */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 text-sm font-black text-ink">Pricing</div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-ink">Base price (S$)</span>
+              <input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} className={`${inputCls} max-w-[200px]`} />
+              {variants.length > 0 ? (
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Customers pay their selected <strong>variant&apos;s</strong> price plus any size delta. Leave <code>0</code> to auto-use the lowest variant price on catalog tiles; set non-zero to force-override the &ldquo;from $X&rdquo; display.
+                </span>
+              ) : (
+                <span className="mt-1 block text-[11px] text-neutral-500">Single-unit price if no volume tier applies.</span>
+              )}
+            </label>
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-ink">Volume tiers (optional)</div>
+                  <div className="text-[11px] text-neutral-500">Cheaper per-unit price in bulk.</div>
+                </div>
+                <button type="button" onClick={() => setPriceTiers([...priceTiers, { qty: '', price: '' }])} className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark">
+                  <Plus size={12} /> Add tier
+                </button>
+              </div>
+              {priceTiers.length === 0 ? (
+                <div className="rounded border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500">
+                  No tiers — all orders use the base price.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr_1fr_36px] gap-2 text-[10px] font-bold uppercase text-neutral-500">
+                    <div>From qty</div>
+                    <div>Price per unit (S$)</div>
+                    <div />
+                  </div>
+                  {priceTiers.map((t, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_1fr_36px] gap-2 items-center">
+                      <input type="number" value={t.qty} onChange={(e) => setPriceTiers(priceTiers.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} className={inputCls} placeholder="10" />
+                      <input type="number" step="0.01" value={t.price} onChange={(e) => setPriceTiers(priceTiers.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} className={inputCls} placeholder="18.00" />
+                      <button type="button" onClick={() => setPriceTiers(priceTiers.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SEO meta */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 text-sm font-black text-ink">Search snippet</div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">SEO title</span>
+                <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={inputCls} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">SEO description</span>
+                <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
+              </label>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Mode */}
-      {tab === 'mode' && (
+      {tab === 'production' && (
         <div className="max-w-4xl space-y-4">
           {modeLocked && (
             <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
@@ -448,15 +493,52 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             );
           })()}
 
+          {/* Dimensions — merged in from the old Production tab */}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <div className="mb-1 text-xs font-bold text-ink">Template selection</div>
+            <div className="mb-3 text-sm font-black text-ink">Dimensions & output</div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Default width (mm)</span>
+                <input type="number" step="0.1" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} className={inputCls} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Default height (mm)</span>
+                <input type="number" step="0.1" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} className={inputCls} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Bleed (mm)</span>
+                <input type="number" step="0.1" value={bleedMm} onChange={(e) => setBleedMm(e.target.value)} className={inputCls} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Safe zone (mm)</span>
+                <input type="number" step="0.1" value={safeZoneMm} onChange={(e) => setSafeZoneMm(e.target.value)} className={inputCls} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="mb-1 block text-xs font-bold text-ink">Minimum source resolution (px, long edge)</span>
+                <input type="number" value={minSourcePx} onChange={(e) => setMinSourcePx(e.target.value)} className={inputCls} />
+                <span className="mt-1 block text-[11px] text-neutral-500">Customer photos smaller than this trigger a warning at upload.</span>
+              </label>
+            </div>
+            <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
+              <strong>Recommended:</strong> bleed <strong>2 mm</strong>, safe zone <strong>3 mm</strong>, minimum source <strong>{Math.ceil((Math.max(parseFloat(widthMm), parseFloat(heightMm)) / 25.4) * 300)} px</strong> for 300 DPI at your current dimensions. Sizes under the <strong>Design</strong> tab override these per chosen size.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Design tab — variants, sizes, templates, fallback mockup */}
+      {tab === 'design' && (
+        <div className="max-w-4xl space-y-6">
+          {/* Template mode selector — only shown when templates are relevant */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 text-sm font-black text-ink">Template mode</div>
             <p className="mb-3 text-[11px] text-neutral-500">
-              Templates are pre-designed layouts that the customer&apos;s photo drops into. Assign templates in the <strong>Templates</strong> tab.
+              Templates are pre-designed layouts the customer&apos;s photo drops into.
             </p>
             <div className="grid gap-2 md:grid-cols-3">
               {[
                 { v: 'none' as const, label: 'No templates', desc: 'Customer uploads and configures directly' },
-                { v: 'optional' as const, label: 'Optional', desc: 'Customer can pick a template OR upload their own' },
+                { v: 'optional' as const, label: 'Optional', desc: 'Customer can pick a template OR upload' },
                 { v: 'required' as const, label: 'Required', desc: 'Customer MUST start from a template' },
               ].map((t) => {
                 const active = templateMode === t.v;
@@ -476,310 +558,110 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               })}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* AI settings */}
-
-      {/* Pricing */}
-      {tab === 'pricing' && (
-        <div className="max-w-3xl space-y-4">
-          <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Base price (S$)</span>
-              <input
-                type="number"
-                step="0.01"
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                className={`${inputCls} max-w-[200px]`}
+          {/* Variants (tiles with mockups) */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-black text-ink">Variants</div>
+                <div className="text-[11px] text-neutral-500">Mockup tiles the customer picks between. Each variant is photographed in one base/material/colour.</div>
+              </div>
+            </div>
+            {product ? (
+              <GiftVariantsPanel
+                giftProductId={product.id}
+                initialVariants={variants}
+                allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
+                productWidthMm={parseFloat(widthMm) || product.width_mm}
+                productHeightMm={parseFloat(heightMm) || product.height_mm}
               />
-              {variants.length > 0 ? (
-                <span className="mt-1 block text-[11px] text-neutral-500">
-                  Customer always pays their selected <strong>variant&apos;s</strong> price. Leave this at <code>0</code> to auto-use the lowest variant price on catalogue tiles (&ldquo;from $X&rdquo;); set a non-zero value to force-override that display.
-                </span>
-              ) : (
-                <span className="mt-1 block text-[11px] text-neutral-500">Price for a single unit if no volume tier applies.</span>
-              )}
-            </label>
+            ) : (
+              <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>
+            )}
           </div>
 
+          {/* Sizes (product-wide, shared across variants) */}
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div>
-                <div className="text-xs font-bold text-ink">Volume tiers (optional)</div>
-                <div className="text-[11px] text-neutral-500">Cheaper per-unit price when customers buy in bulk.</div>
+                <div className="text-sm font-black text-ink">Sizes</div>
+                <div className="mt-1 text-xs text-neutral-500">
+                  Product-level size options. Every variant above is available in every size. Leave empty if the product has a single fixed size.
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setPriceTiers([...priceTiers, { qty: '', price: '' }])}
+                onClick={() => setSizes([...sizes, { slug: '', name: '', width_mm: parseFloat(widthMm) || 100, height_mm: parseFloat(heightMm) || 100, price_delta_cents: 0, display_order: sizes.length }])}
                 className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark"
               >
-                <Plus size={12} /> Add tier
+                <Plus size={12} /> Add size
               </button>
             </div>
-            {priceTiers.length === 0 ? (
-              <div className="rounded border border-dashed border-neutral-300 p-6 text-center text-xs text-neutral-500">
-                No tiers — all orders use the base price.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-[1fr_1fr_36px] gap-2 text-[10px] font-bold uppercase text-neutral-500">
-                  <div>From qty</div>
-                  <div>Price per unit (S$)</div>
-                  <div />
+            <div className="mt-4">
+              {sizes.length === 0 ? (
+                <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
+                  No sizes yet. Use the quick-add buttons below or click <strong>+ Add size</strong>.
                 </div>
-                {priceTiers.map((t, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_1fr_36px] gap-2 items-center">
-                    <input type="number" value={t.qty} onChange={(e) => setPriceTiers(priceTiers.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} className={inputCls} placeholder="10" />
-                    <input type="number" step="0.01" value={t.price} onChange={(e) => setPriceTiers(priceTiers.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} className={inputCls} placeholder="18.00" />
-                    <button type="button" onClick={() => setPriceTiers(priceTiers.filter((_, j) => j !== i))} className="justify-self-center text-red-600 hover:text-red-700"><Trash2 size={14} /></button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Templates */}
-      {tab === 'templates' && (
-        <div className="max-w-4xl space-y-4">
-          <div className="rounded border border-neutral-200 bg-white p-6">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-ink">Assigned templates</div>
-                <div className="text-[11px] text-neutral-500">
-                  Template mode: <strong>{templateMode}</strong> (change in Mode tab).
+              ) : (
+                <div className="space-y-2">
+                  {sizes.map((s, i) => (
+                    <div key={i} className="grid grid-cols-[1.2fr_1fr_90px_90px_110px_40px] items-end gap-2 rounded border border-neutral-200 bg-neutral-50 p-3">
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Name</span>
+                        <input
+                          value={s.name}
+                          onChange={(e) => { const next = [...sizes]; next[i] = { ...s, name: e.target.value }; setSizes(next); }}
+                          onBlur={() => {
+                            if (!s.slug && s.name) {
+                              const next = [...sizes];
+                              next[i] = { ...s, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) };
+                              setSizes(next);
+                            }
+                          }}
+                          placeholder="A4 portrait"
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Slug</span>
+                        <input
+                          value={s.slug}
+                          onChange={(e) => {
+                            const next = [...sizes];
+                            next[i] = { ...s, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40) };
+                            setSizes(next);
+                          }}
+                          placeholder="a4-portrait"
+                          className={`${inputCls} font-mono text-xs`}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">W (mm)</span>
+                        <input type="number" min={1} step={0.1} value={s.width_mm}
+                          onChange={(e) => { const next = [...sizes]; next[i] = { ...s, width_mm: parseFloat(e.target.value) || 0 }; setSizes(next); }}
+                          className={inputCls} />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">H (mm)</span>
+                        <input type="number" min={1} step={0.1} value={s.height_mm}
+                          onChange={(e) => { const next = [...sizes]; next[i] = { ...s, height_mm: parseFloat(e.target.value) || 0 }; setSizes(next); }}
+                          className={inputCls} />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">+ Price (S$)</span>
+                        <input type="number" min={0} step={0.01}
+                          value={(s.price_delta_cents / 100).toFixed(2)}
+                          onChange={(e) => { const next = [...sizes]; next[i] = { ...s, price_delta_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }; setSizes(next); }}
+                          className={inputCls} />
+                      </label>
+                      <button type="button" onClick={() => setSizes(sizes.filter((_, j) => j !== i))}
+                        className="flex h-9 w-9 items-center justify-center rounded text-red-600 hover:bg-red-50" title="Remove">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <Link href="/admin/gifts/templates/new" className="text-[11px] font-bold text-pink hover:underline">
-                + Create new template
-              </Link>
-            </div>
-            {allTemplates.length === 0 ? (
-              <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
-                No templates exist yet. <Link href="/admin/gifts/templates/new" className="font-bold text-pink">Create one</Link> then come back.
-              </div>
-            ) : (
-              <div className="grid gap-2 md:grid-cols-2">
-                {allTemplates.map((t) => {
-                  const active = assignedTemplates.includes(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setAssignedTemplates(active ? assignedTemplates.filter((id) => id !== t.id) : [...assignedTemplates, t.id])}
-                      className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${
-                        active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
-                      }`}
-                    >
-                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded bg-neutral-100">
-                        {t.thumbnail_url ? (
-                          <img src={t.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xl text-neutral-300">🎨</div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-ink truncate">{t.name}</div>
-                        <div className="text-[11px] text-neutral-500 truncate">{t.description || '—'}</div>
-                      </div>
-                      <div className={`h-5 w-5 rounded-full border-2 ${active ? 'border-pink bg-pink' : 'border-neutral-300'} flex items-center justify-center`}>
-                        {active && <span className="text-[10px] text-white">✓</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Production */}
-      {tab === 'production' && (
-        <div className="max-w-3xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Width (mm)</span>
-              <input type="number" step="0.1" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} className={inputCls} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Height (mm)</span>
-              <input type="number" step="0.1" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} className={inputCls} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Bleed (mm)</span>
-              <input type="number" step="0.1" value={bleedMm} onChange={(e) => setBleedMm(e.target.value)} className={inputCls} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Safe zone (mm)</span>
-              <input type="number" step="0.1" value={safeZoneMm} onChange={(e) => setSafeZoneMm(e.target.value)} className={inputCls} />
-            </label>
-            <label className="block md:col-span-2">
-              <span className="mb-1 block text-xs font-bold text-ink">Minimum source resolution (px, long edge)</span>
-              <input type="number" value={minSourcePx} onChange={(e) => setMinSourcePx(e.target.value)} className={inputCls} />
-              <span className="mt-1 block text-[11px] text-neutral-500">Customer photos smaller than this trigger a warning at upload.</span>
-            </label>
-          </div>
-          <div className="rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
-            <strong>Recommended:</strong> bleed <strong>2 mm</strong>, safe zone <strong>3 mm</strong>, minimum source <strong>{Math.ceil((Math.max(parseFloat(widthMm), parseFloat(heightMm)) / 25.4) * 300)} px</strong> for 300 DPI at your current dimensions.
-          </div>
-        </div>
-      )}
-
-      {/* Mockup — product-level fallback only. Customer rendering
-          prefers variant.mockup_url when a variant is selected. Show
-          a banner that explains what this tab is still useful for so
-          admin doesn't upload a mockup here expecting it to override
-          variant-specific ones. */}
-      {tab === 'mockup' && (() => {
-        const hasBaseVariantWithMockup = variants.some((v) => v.variant_kind === 'base' && v.mockup_url);
-        const allVariantsAreBase = variants.length > 0 && variants.every((v) => v.variant_kind === 'base');
-        const allBasesConfigured = allVariantsAreBase && variants.every((v) => v.mockup_url);
-        return (
-          <div className="max-w-4xl space-y-4">
-            {variants.length > 0 && (
-              <div className={`rounded-lg border p-4 text-xs leading-relaxed ${
-                allBasesConfigured ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-blue-200 bg-blue-50 text-blue-900'
-              }`}>
-                {allBasesConfigured ? (
-                  <>
-                    <strong>Not used by this product.</strong> Every base variant has its own mockup in the <strong>Variants</strong> tab, and customers always see the selected variant&apos;s mockup. This tab stays visible as a fallback only — you can leave it empty.
-                  </>
-                ) : hasBaseVariantWithMockup ? (
-                  <>
-                    <strong>Fallback mockup.</strong> Customers see the selected variant&apos;s mockup when available. This image is only used for variants that don&apos;t have their own mockup (typically <em>Size</em>, <em>Colour</em>, or <em>Material</em> variants that reuse the same product shot).
-                  </>
-                ) : (
-                  <>
-                    <strong>Shared mockup.</strong> None of this product&apos;s variants have their own mockup, so this image is used for every variant. If a base variant later carries a different photo (LED stand A vs B vs C), upload it per-variant in the <strong>Variants</strong> tab and this fallback stops being used.
-                  </>
-                )}
-              </div>
-            )}
-            <GiftMockupEditor
-              mockupUrl={mockupUrl}
-              setMockupUrl={setMockupUrl}
-              area={mockupArea}
-              setArea={setMockupArea}
-              slug={slug}
-            />
-          </div>
-        );
-      })()}
-
-      {tab === 'variants' && (
-        product
-          ? <GiftVariantsPanel
-              giftProductId={product.id}
-              initialVariants={variants}
-              allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
-              productWidthMm={parseFloat(widthMm) || product.width_mm}
-              productHeightMm={parseFloat(heightMm) || product.height_mm}
-            />
-          : <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>
-      )}
-
-      {tab === 'sizes' && (
-        <div className="max-w-3xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-sm font-bold text-ink">Sizes</div>
-              <div className="mt-1 text-xs text-neutral-500">
-                Product-level size options. Every variant (mockup tile) is available in every size. Leave empty if the product has a single fixed size — customers then skip the size picker.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSizes([...sizes, { slug: '', name: '', width_mm: parseFloat(widthMm) || 100, height_mm: parseFloat(heightMm) || 100, price_delta_cents: 0, display_order: sizes.length }])}
-              className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark"
-            >
-              <Plus size={12} /> Add size
-            </button>
-          </div>
-
-          {sizes.length === 0 ? (
-            <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
-              No sizes yet. Add one to let customers pick from multiple dimensions (e.g. A4, A5, A6).
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sizes.map((s, i) => (
-                <div key={i} className="grid grid-cols-[1.2fr_1fr_90px_90px_110px_40px] items-end gap-2 rounded border border-neutral-200 bg-neutral-50 p-3">
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Name</span>
-                    <input
-                      value={s.name}
-                      onChange={(e) => {
-                        const next = [...sizes]; next[i] = { ...s, name: e.target.value }; setSizes(next);
-                      }}
-                      onBlur={() => {
-                        if (!s.slug && s.name) {
-                          const next = [...sizes];
-                          next[i] = { ...s, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) };
-                          setSizes(next);
-                        }
-                      }}
-                      placeholder="A4 portrait"
-                      className={inputCls}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Slug</span>
-                    <input
-                      value={s.slug}
-                      onChange={(e) => {
-                        const next = [...sizes];
-                        next[i] = { ...s, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40) };
-                        setSizes(next);
-                      }}
-                      placeholder="a4-portrait"
-                      className={`${inputCls} font-mono text-xs`}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">W (mm)</span>
-                    <input
-                      type="number" min={1} step={0.1} value={s.width_mm}
-                      onChange={(e) => {
-                        const next = [...sizes]; next[i] = { ...s, width_mm: parseFloat(e.target.value) || 0 }; setSizes(next);
-                      }}
-                      className={inputCls}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">H (mm)</span>
-                    <input
-                      type="number" min={1} step={0.1} value={s.height_mm}
-                      onChange={(e) => {
-                        const next = [...sizes]; next[i] = { ...s, height_mm: parseFloat(e.target.value) || 0 }; setSizes(next);
-                      }}
-                      className={inputCls}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">+ Price (S$)</span>
-                    <input
-                      type="number" min={0} step={0.01}
-                      value={(s.price_delta_cents / 100).toFixed(2)}
-                      onChange={(e) => {
-                        const next = [...sizes]; next[i] = { ...s, price_delta_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }; setSizes(next);
-                      }}
-                      className={inputCls}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setSizes(sizes.filter((_, j) => j !== i))}
-                    className="flex h-9 w-9 items-center justify-center rounded text-red-600 hover:bg-red-50"
-                    title="Remove size"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
+              )}
               <div className="mt-3 flex flex-wrap gap-1 text-[11px]">
                 <span className="mr-1 text-neutral-500">Quick add:</span>
                 {[
@@ -803,22 +685,85 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Templates assignment — only when template mode != none */}
+          {templateMode !== 'none' && (
+            <div className="rounded-lg border border-neutral-200 bg-white p-6">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-black text-ink">Assigned templates</div>
+                  <div className="text-[11px] text-neutral-500">Pre-designed layouts customers can pick from.</div>
+                </div>
+                <Link href="/admin/gifts/templates/new" className="text-[11px] font-bold text-pink hover:underline">
+                  + Create new template
+                </Link>
+              </div>
+              {allTemplates.length === 0 ? (
+                <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
+                  No templates exist yet. <Link href="/admin/gifts/templates/new" className="font-bold text-pink">Create one</Link> then come back.
+                </div>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {allTemplates.map((t) => {
+                    const active = assignedTemplates.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setAssignedTemplates(active ? assignedTemplates.filter((id) => id !== t.id) : [...assignedTemplates, t.id])}
+                        className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${
+                          active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
+                        }`}
+                      >
+                        <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded bg-neutral-100">
+                          {t.thumbnail_url ? (
+                            <img src={t.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xl text-neutral-300">🎨</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-ink truncate">{t.name}</div>
+                          <div className="text-[11px] text-neutral-500 truncate">{t.description || '—'}</div>
+                        </div>
+                        <div className={`h-5 w-5 rounded-full border-2 ${active ? 'border-pink bg-pink' : 'border-neutral-300'} flex items-center justify-center`}>
+                          {active && <span className="text-[10px] text-white">✓</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
+
+          {/* Fallback mockup — only relevant when no variant mockups cover it */}
+          {(() => {
+            const variantsWithMockup = variants.filter((v) => v.mockup_url).length;
+            const allCovered = variants.length > 0 && variantsWithMockup === variants.length;
+            if (allCovered) return null;
+            return (
+              <div className="rounded-lg border border-neutral-200 bg-white p-6">
+                <div className="mb-3">
+                  <div className="text-sm font-black text-ink">Fallback mockup</div>
+                  <div className="text-[11px] text-neutral-500">
+                    Used for any variant that doesn&apos;t carry its own mockup. Disappears automatically once every variant has a mockup assigned.
+                  </div>
+                </div>
+                <GiftMockupEditor
+                  mockupUrl={mockupUrl}
+                  setMockupUrl={setMockupUrl}
+                  area={mockupArea}
+                  setArea={setMockupArea}
+                  slug={slug}
+                />
+              </div>
+            );
+          })()}
         </div>
       )}
 
-      {tab === 'seo' && (
-        <div className="max-w-3xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">SEO title</span>
-            <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={inputCls} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold text-ink">SEO description</span>
-            <textarea value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} rows={3} className={inputCls} />
-          </label>
-        </div>
-      )}
 
       {/* Content — long-form page sections: 2-line SEO body, magazine, FAQs */}
       {tab === 'content' && (

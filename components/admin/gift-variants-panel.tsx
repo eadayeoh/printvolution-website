@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantKind, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 
 const ALL_GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
@@ -21,9 +21,6 @@ type Draft = {
   base_price: string; // dollars
   display_order: string;
   is_active: boolean;
-  variant_kind: GiftVariantKind;
-  width_mm: string;  // mm for size variants, blank otherwise
-  height_mm: string;
   // Optional colour choices nested under this variant tile (e.g. one
   // "T-shirt" tile with red / navy / black swatches).
   colour_swatches: GiftVariantColourSwatch[];
@@ -44,23 +41,10 @@ function toDraft(v?: GiftProductVariant): Draft {
     base_price: ((v?.base_price_cents ?? 0) / 100).toFixed(2),
     display_order: String(v?.display_order ?? 0),
     is_active: v?.is_active ?? true,
-    variant_kind: v?.variant_kind ?? 'base',
-    width_mm:  v?.width_mm  != null ? String(v.width_mm)  : '',
-    height_mm: v?.height_mm != null ? String(v.height_mm) : '',
     colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
     surfaces: (v?.surfaces ?? []).map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
   };
 }
-
-const A_SERIES_PRESETS: Array<{ label: string; w: number; h: number }> = [
-  { label: 'A3 portrait', w: 297, h: 420 },
-  { label: 'A4 portrait', w: 210, h: 297 },
-  { label: 'A5 portrait', w: 148, h: 210 },
-  { label: 'A6 portrait', w: 105, h: 148 },
-  { label: 'A3 landscape', w: 420, h: 297 },
-  { label: 'A4 landscape', w: 297, h: 210 },
-  { label: 'A5 landscape', w: 210, h: 148 },
-];
 
 // Mockup areas are stored as percentages of the mockup image (0–100),
 // but editors are easier to reason about in millimetres. We convert
@@ -505,8 +489,8 @@ export function GiftVariantsPanel({
                                     Surface area on mockup (mm)
                                   </span>
                                   {(() => {
-                                    const wMm = parseFloat(d.width_mm) || productWidthMm;
-                                    const hMm = parseFloat(d.height_mm) || productHeightMm;
+                                    const wMm = productWidthMm;
+                                    const hMm = productHeightMm;
                                     const dimFor = (k: 'x' | 'y' | 'width' | 'height') => (k === 'x' || k === 'width' ? wMm : hMm);
                                     return (
                                       <div className="grid grid-cols-4 gap-1 text-[11px]">
