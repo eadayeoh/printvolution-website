@@ -61,6 +61,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [pipelineId, setPipelineId] = useState<string>(product?.pipeline_id ?? '');
   const [secondaryPipelineId, setSecondaryPipelineId] = useState<string>(product?.secondary_pipeline_id ?? '');
   const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
+  const [leadTimeDays, setLeadTimeDays] = useState<string>(String(product?.lead_time_days ?? 5));
 
   const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
   const [heightMm, setHeightMm] = useState(product?.height_mm.toString() ?? '100');
@@ -142,6 +143,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       pipeline_id: pipelineId || null,
       secondary_pipeline_id: secondaryMode ? (secondaryPipelineId || null) : null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
+      lead_time_days: Math.max(1, parseInt(leadTimeDays, 10) || 5),
       sizes: sizes
         .map((s, i) => ({ ...s, display_order: i }))
         .filter((s) => s.slug && s.name && s.width_mm > 0 && s.height_mm > 0),
@@ -442,6 +444,22 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   <Link href="/admin/gifts/pipelines" className="underline">Manage pipelines →</Link>
                 </span>
               </div>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Turnaround (Ready-by calendar)</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={leadTimeDays}
+                    onChange={(e) => setLeadTimeDays(e.target.value)}
+                    className={`${inputCls} max-w-[120px]`}
+                  />
+                  <span className="text-xs text-neutral-600">business days</span>
+                </div>
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Drives the Ready-by calendar card customers see. Weekends are skipped automatically; SG public holidays are not — pad a day or two if a holiday window matters.
+                </span>
+              </label>
               <label className="block">
                 <span className="mb-1 block text-xs font-bold text-ink">Delete uploads + production after</span>
                 <div className="flex items-center gap-2">

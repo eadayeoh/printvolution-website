@@ -79,6 +79,9 @@ export type GiftProduct = {
   ai_negative_prompt: string | null;
   ai_params: Record<string, unknown>;
   color_profile: string | null;
+  /** Business-day turnaround from order placed to ready. Drives the
+   *  "Ready by" calendar card on the customer-facing product page. */
+  lead_time_days: number;
   base_price_cents: number;
   price_tiers: GiftPriceTier[];
   /** Size options for this product. Applies uniformly across every

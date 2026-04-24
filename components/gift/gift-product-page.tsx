@@ -14,6 +14,7 @@ import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surface
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
+import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
 import { GiftMockupPreviewInteractive } from '@/components/gift/gift-mockup-preview-interactive';
 import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
 import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
@@ -1111,6 +1112,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
             </div>
+
+            {/* Ready-by calendar — between compose steps and Quantity */}
+            <GiftReadyByCard leadTimeDays={product.lead_time_days ?? 5} />
 
             {/* Quantity step */}
             <div
