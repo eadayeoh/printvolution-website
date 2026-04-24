@@ -1193,7 +1193,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       color: 'var(--pv-yellow)',
                     }}
                   >
-                    {formatSGD((selectedVariant?.base_price_cents || product.base_price_cents) * qty)}
+                    {formatSGD(((selectedVariant?.base_price_cents || product.base_price_cents) + (selectedSize?.price_delta_cents ?? 0)) * qty)}
                   </div>
                 </div>
               </div>
