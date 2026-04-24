@@ -186,17 +186,20 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   }
 
   // Resolve the prompt (if AI mode and a prompt_id was supplied or there is
-  // exactly one active prompt for this mode).
-  let prompt: { id: string; transformation_prompt: string; negative_prompt: string | null; params: Record<string, unknown> } | null = null;
+  // exactly one active prompt for this mode). The prompt can carry its
+  // own `pipeline_id` — that takes priority over the product's default,
+  // because styles (e.g. "3D Cartoon" vs "Pass-through") use different
+  // providers + models and the choice happens at customer-pick time.
+  let prompt: { id: string; transformation_prompt: string; negative_prompt: string | null; params: Record<string, unknown>; pipeline_id: string | null } | null = null;
   if (product.mode !== 'photo-resize') {
     if (promptId) {
       const { data } = await sb.from('gift_prompts')
-        .select('id, transformation_prompt, negative_prompt, params, mode, is_active')
+        .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
         .eq('id', promptId).maybeSingle();
       if (data && data.is_active && data.mode === product.mode) prompt = data as any;
     } else {
       const { data } = await sb.from('gift_prompts')
-        .select('id, transformation_prompt, negative_prompt, params')
+        .select('id, transformation_prompt, negative_prompt, params, pipeline_id')
         .eq('mode', product.mode).eq('is_active', true).order('display_order').limit(1);
       if (data && data.length > 0) prompt = data[0] as any;
     }
@@ -260,6 +263,10 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
         ai_prompt: prompt?.transformation_prompt ?? (product as any).ai_prompt ?? null,
         ai_negative_prompt: prompt?.negative_prompt ?? null,
         ai_params: (prompt?.params ?? {}) as Record<string, unknown>,
+        // The prompt's pipeline_id (if set) wins over the product's
+        // default — styles like "3D Cartoon" vs "Pass-through" map to
+        // different providers + models.
+        pipeline_id: prompt?.pipeline_id ?? (product as any).pipeline_id ?? null,
         // Size-variant override: if the customer picked an A-series
         // size variant, the print target is the variant's dimensions,
         // not the product's defaults. The pipeline reads width_mm /

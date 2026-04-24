@@ -54,17 +54,55 @@ export async function renderPhotoResize(
     .toBuffer();
 }
 
-/** Stub AI stylisation. Produces a visually-distinct output per mode
- *  (line-art for laser, saturated for UV, posterised for embroidery)
- *  so the customer preview reads correctly. Replace this body when
- *  wiring the real AI endpoint — the signature stays. */
+/** AI stylisation dispatcher. Branches on `pipeline.provider`:
+ *  - `passthrough` → crop + 300 DPI resize (no model call), same as
+ *    `renderPhotoResize`.
+ *  - `replicate`   → POST to replicate.com, poll for output, then
+ *    resize to product dimensions.
+ *
+ *  If `pipeline` is null or has no provider (legacy rows), falls back
+ *  to the original local-sharp stub so existing products keep working.
+ */
 export async function runAiTransform(
   input: Buffer,
   product: GiftProduct,
   pipeline: GiftPipeline | null,
   preview: boolean,
+  opts?: { prompt?: string | null; negativePrompt?: string | null },
 ): Promise<Buffer> {
   const sharp = await loadSharp();
+  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | undefined;
+
+  if (provider === 'passthrough') {
+    return renderPhotoResize(input, product, null, preview);
+  }
+
+  if (provider === 'replicate') {
+    const model = (pipeline as any)?.ai_model_slug as string | undefined;
+    if (!model) throw new Error(`Pipeline ${pipeline?.slug ?? '?'} is provider=replicate but has no ai_model_slug`);
+    const { runReplicate } = await import('../ai');
+    const defaultParams = ((pipeline as any)?.default_params as Record<string, unknown> | null) ?? {};
+    const bytes = await runReplicate({
+      model,
+      input: defaultParams,
+      imageBytes: input,
+      imageMime: 'image/jpeg',
+      prompt: opts?.prompt ?? null,
+      negativePrompt: opts?.negativePrompt ?? null,
+    });
+    // Normalise to product dimensions at the right DPI.
+    const totalW = product.width_mm + product.bleed_mm * 2;
+    const totalH = product.height_mm + product.bleed_mm * 2;
+    const dpi = preview ? 150 : 300;
+    const targetW = Math.round((totalW / 25.4) * dpi);
+    const targetH = Math.round((totalH / 25.4) * dpi);
+    return sharp(bytes).rotate()
+      .resize({ width: targetW, height: targetH, fit: 'cover' })
+      .png().toBuffer();
+  }
+
+  // Legacy fallback — the mode-based stub. Keeps pre-provider pipelines
+  // working until admin has migrated them to a proper provider.
   let img = sharp(input).rotate();
   const kind = pipeline?.kind ?? product.mode;
   switch (kind) {

@@ -161,7 +161,10 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
     case 'laser':
     case 'uv':
     case 'embroidery':
-      buf = await runAiTransform(buf, product, pipeline, /*preview=*/true);
+      buf = await runAiTransform(buf, product, pipeline, /*preview=*/true, {
+        prompt: (product as any).ai_prompt ?? null,
+        negativePrompt: (product as any).ai_negative_prompt ?? null,
+      });
       break;
   }
 
@@ -336,7 +339,10 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     case 'laser':
     case 'uv':
     case 'embroidery':
-      buf = await runAiTransform(buf, product, pipeline, /*preview=*/false);
+      buf = await runAiTransform(buf, product, pipeline, /*preview=*/false, {
+        prompt: (product as any).ai_prompt ?? null,
+        negativePrompt: (product as any).ai_negative_prompt ?? null,
+      });
       break;
   }
 

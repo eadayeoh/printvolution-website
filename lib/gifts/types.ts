@@ -211,12 +211,15 @@ export function giftFromPrice(p: Pick<GiftProduct, 'base_price_cents' | 'price_t
 
 export type GiftPipelineKind = GiftMode;
 
+export type GiftPipelineProvider = 'passthrough' | 'replicate';
+
 export type GiftPipeline = {
   id: string;
   slug: string;
   name: string;
   description: string | null;
   kind: GiftPipelineKind;
+  provider: GiftPipelineProvider;
   ai_endpoint_url: string | null;
   ai_model_slug: string | null;
   default_params: Record<string, unknown>;
