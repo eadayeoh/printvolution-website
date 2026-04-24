@@ -124,20 +124,44 @@ export function GiftMockupPreviewInteractive({
         draggable={false}
         style={{ display: 'block', width: '100%', height: 'auto' }}
       />
-      {/* Bounds guide — faint dashed outline so customer sees where they can drag */}
+      {/* Bounds guide + label — explains what the dashed box is */}
       {bounds && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${bounds.x}%`,
-            top: `${bounds.y}%`,
-            width: `${bounds.width}%`,
-            height: `${bounds.height}%`,
-            border: '1px dashed rgba(10,10,10,0.25)',
-            pointerEvents: 'none',
-          }}
-        />
+        <>
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              left: `${bounds.x}%`,
+              top: `${bounds.y}%`,
+              width: `${bounds.width}%`,
+              height: `${bounds.height}%`,
+              border: '1.5px dashed rgba(10,10,10,0.35)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              left: `${bounds.x}%`,
+              top: `calc(${bounds.y}% - 22px)`,
+              display: 'inline-block',
+              padding: '3px 8px',
+              background: '#0a0a0a',
+              color: '#fff',
+              fontFamily: 'var(--pv-f-mono, monospace)',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              lineHeight: 1,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ⤢ Safe zone · drag your photo inside
+          </div>
+        </>
       )}
       {/* Customer's design — draggable */}
       <div
