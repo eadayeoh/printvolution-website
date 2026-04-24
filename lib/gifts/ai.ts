@@ -31,9 +31,15 @@ export type ReplicateInput = {
 };
 
 export async function runReplicate(opts: ReplicateInput): Promise<Buffer> {
-  const token = process.env.REPLICATE_API_TOKEN;
+  // Accept either the canonical `REPLICATE_API_TOKEN` or the friendlier
+  // `Replicate` / `REPLICATE` names — Vercel lets admins pick anything
+  // and we don't want a name mismatch to silently disable AI.
+  const token = process.env.REPLICATE_API_TOKEN
+    ?? process.env.Replicate
+    ?? process.env.REPLICATE
+    ?? process.env.replicate;
   if (!token) {
-    throw new Error('REPLICATE_API_TOKEN not set — add it to Vercel env + .env.local');
+    throw new Error('Replicate token not set — add REPLICATE_API_TOKEN (or Replicate) to Vercel env');
   }
 
   // Encode the image as a data URI so we don't need to upload to Replicate's
