@@ -398,20 +398,37 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
           </div>
 
-          {mode !== 'photo-resize' && (
-            <div className="rounded-lg border border-neutral-200 bg-white p-6">
-              <div className="mb-1 text-xs font-bold text-ink">Transformation prompts</div>
-              <p className="mb-3 text-[11px] text-neutral-500">
-                Prompts live at the <strong>mode level</strong> (with optional per-pipeline override). Customers always see a <strong>Line Art</strong> and <strong>Realistic</strong> picker; admin fills the prompt text for each.
-              </p>
-              <Link
-                href={`/admin/gifts/prompts?mode=${mode}`}
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
-              >
-                Manage {GIFT_MODE_LABEL[mode]} prompts →
-              </Link>
-            </div>
-          )}
+          {(() => {
+            // Only AI modes carry transform prompts. Non-AI modes
+            // (photo-resize, eco-solvent, digital, uv-dtf) just do
+            // pass-through rendering so there's nothing to prompt for.
+            const AI_MODES: GiftMode[] = ['laser', 'uv', 'embroidery'];
+            const productModes = [mode, ...(secondaryMode ? [secondaryMode] : [])];
+            const promptable = productModes.filter((m) => AI_MODES.includes(m));
+            if (promptable.length === 0) return null;
+            return (
+              <div className="rounded-lg border border-neutral-200 bg-white p-6">
+                <div className="mb-1 text-xs font-bold text-ink">Transformation prompts</div>
+                <p className="mb-3 text-[11px] text-neutral-500">
+                  Prompts live at the <strong>mode level</strong> (with optional per-pipeline override). Customers always see a <strong>Line Art</strong> and <strong>Realistic</strong> picker; admin fills the prompt text for each.
+                  {promptable.length > 1 && (
+                    <> Dual-mode product — manage prompts for each mode separately.</>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {promptable.map((m) => (
+                    <Link
+                      key={m}
+                      href={`/admin/gifts/prompts?mode=${m}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
+                    >
+                      Manage {GIFT_MODE_LABEL[m]} prompts →
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
             <div className="mb-1 text-xs font-bold text-ink">Template selection</div>
