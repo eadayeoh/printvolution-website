@@ -412,21 +412,19 @@ export function HeaderClient({ nav, mega, productRoutes, settings, isAdmin = fal
           color: var(--pv-magenta);
         }
         .pv-mega-grid {
-          column-count: 3;
-          column-gap: 40px;
-          column-fill: balance;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 28px 32px;
+          align-items: start;
         }
         .pv-mega-section {
-          break-inside: avoid;
-          margin-bottom: 28px;
-          display: inline-block;
-          width: 100%;
+          min-width: 0;
         }
         @media (max-width: 900px) {
-          .pv-mega-grid { column-count: 2; }
+          .pv-mega-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 24px; }
         }
         @media (max-width: 600px) {
-          .pv-mega-grid { column-count: 1; }
+          .pv-mega-grid { grid-template-columns: 1fr; gap: 16px; }
         }
       `}</style>
     </>
