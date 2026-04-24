@@ -375,36 +375,71 @@ export function GiftVariantsPanel({
                     {(() => {
                       const wMm = productWidthMm;
                       const hMm = productHeightMm;
+                      // Clamp % values to 0–100 so off-canvas bugs can't happen.
+                      const clamp = (n: number) => Math.max(0, Math.min(100, n));
+                      const updateArea = (patch: Partial<typeof d.mockup_area>) => {
+                        const next = { ...d.mockup_area, ...patch };
+                        updateDraft(i, {
+                          mockup_area: {
+                            x: clamp(next.x),
+                            y: clamp(next.y),
+                            width: clamp(next.width),
+                            height: clamp(next.height),
+                          },
+                        });
+                      };
                       return (
                         <div>
-                          <div className="mb-1 text-[11px] font-bold text-neutral-500">
-                            Mockup area (mm, relative to the {wMm}×{hMm}mm surface)
+                          <div className="mb-2 flex items-center justify-between">
+                            <div className="text-[11px] font-bold text-neutral-500">
+                              Mockup area (mm, relative to the {wMm}×{hMm}mm surface)
+                            </div>
+                            <div className="text-[10px] text-neutral-400">
+                              Pink rectangle = where the customer&apos;s photo will land
+                            </div>
                           </div>
-                          <div className="grid grid-cols-4 gap-2 text-[11px]">
-                            <label className="block">
-                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">X (mm)</span>
-                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.x, wMm)}
-                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, x: mmToPct(parseFloat(e.target.value) || 0, wMm) } })}
-                                className={inputCls} />
-                            </label>
-                            <label className="block">
-                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Y (mm)</span>
-                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.y, hMm)}
-                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, y: mmToPct(parseFloat(e.target.value) || 0, hMm) } })}
-                                className={inputCls} />
-                            </label>
-                            <label className="block">
-                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width (mm)</span>
-                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.width, wMm)}
-                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, width: mmToPct(parseFloat(e.target.value) || 0, wMm) } })}
-                                className={inputCls} />
-                            </label>
-                            <label className="block">
-                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height (mm)</span>
-                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.height, hMm)}
-                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, height: mmToPct(parseFloat(e.target.value) || 0, hMm) } })}
-                                className={inputCls} />
-                            </label>
+                          <div className="grid gap-3 md:grid-cols-[1fr_240px]">
+                            <div className="grid grid-cols-4 gap-2 text-[11px]">
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">X (mm)</span>
+                                <input type="number" step="0.1" value={pctToMm(d.mockup_area.x, wMm)}
+                                  onChange={(e) => updateArea({ x: mmToPct(parseFloat(e.target.value) || 0, wMm) })}
+                                  className={inputCls} />
+                              </label>
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Y (mm)</span>
+                                <input type="number" step="0.1" value={pctToMm(d.mockup_area.y, hMm)}
+                                  onChange={(e) => updateArea({ y: mmToPct(parseFloat(e.target.value) || 0, hMm) })}
+                                  className={inputCls} />
+                              </label>
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width (mm)</span>
+                                <input type="number" step="0.1" value={pctToMm(d.mockup_area.width, wMm)}
+                                  onChange={(e) => updateArea({ width: mmToPct(parseFloat(e.target.value) || 0, wMm) })}
+                                  className={inputCls} />
+                              </label>
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height (mm)</span>
+                                <input type="number" step="0.1" value={pctToMm(d.mockup_area.height, hMm)}
+                                  onChange={(e) => updateArea({ height: mmToPct(parseFloat(e.target.value) || 0, hMm) })}
+                                  className={inputCls} />
+                              </label>
+                            </div>
+                            {d.mockup_url && (
+                              <div className="relative overflow-hidden rounded border border-neutral-300 bg-neutral-50" style={{ aspectRatio: '1 / 1' }}>
+                                <img src={d.mockup_url} alt="" className="h-full w-full object-contain" />
+                                <div
+                                  aria-hidden
+                                  className="pointer-events-none absolute border-2 border-pink bg-pink/15"
+                                  style={{
+                                    left: `${clamp(d.mockup_area.x)}%`,
+                                    top: `${clamp(d.mockup_area.y)}%`,
+                                    width: `${clamp(d.mockup_area.width)}%`,
+                                    height: `${clamp(d.mockup_area.height)}%`,
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
