@@ -20,6 +20,13 @@ import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
 import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
 import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
 import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
+import {
+  appendPreviewHit,
+  clearPreviewHistoryForStyle,
+  loadPreviewHistory,
+  removePreviewHit,
+  type PreviewHit,
+} from '@/lib/gifts/preview-history';
 
 type Props = {
   product: GiftProduct;
@@ -62,6 +69,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
+  // Per-product preview history — persists to localStorage so customers
+  // can flip back to earlier generations (across styles + photo uploads)
+  // without re-running generate.
+  const [history, setHistory] = useState<PreviewHit[]>([]);
+  useEffect(() => {
+    setHistory(loadPreviewHistory(product.slug));
+  }, [product.slug]);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
@@ -146,6 +160,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         setErr('Server returned no response. Please try again in a moment.');
       } else if (r.ok === true) {
         setPreview(r);
+        setHistory(appendPreviewHit(product.slug, {
+          promptId: selectedPromptId,
+          sourceAssetId: r.sourceAssetId,
+          previewAssetId: r.previewAssetId,
+          previewUrl: r.previewUrl,
+        }));
       } else {
         setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
       }
@@ -187,6 +207,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         setErr('Server returned no response. Please try again.');
       } else if (r.ok === true) {
         setPreview(r);
+        setHistory(appendPreviewHit(product.slug, {
+          promptId: selectedPromptId,
+          sourceAssetId: r.sourceAssetId,
+          previewAssetId: r.previewAssetId,
+          previewUrl: r.previewUrl,
+        }));
       } else {
         setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
       }
@@ -686,6 +712,145 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     draggable layer — no separate overlay here. */}
               </div>
             </div>
+
+            {/* Per-style generation history — thumbnails of earlier hits for
+                the current style. Click restores the stored source + preview
+                without burning another generate call. */}
+            {(() => {
+              const styleHits = history
+                .filter((h) => h.promptId === selectedPromptId)
+                .sort((a, b) => b.ts - a.ts);
+              if (styleHits.length === 0) return null;
+              const currentStyleName = showPromptPicker
+                ? prompts.find((p) => p.id === selectedPromptId)?.name ?? 'this style'
+                : 'your photo';
+              return (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: '14px 16px',
+                    background: 'var(--pv-cream-warm, #FFF4E5)',
+                    border: '2px solid var(--pv-ink)',
+                    boxShadow: '4px 4px 0 var(--pv-ink)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 10,
+                      gap: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 900,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        color: 'var(--pv-ink)',
+                      }}
+                    >
+                      ↻ Earlier {currentStyleName} previews · tap to restore
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!confirm(`Clear all ${currentStyleName} previews from history?`)) return;
+                        setHistory(clearPreviewHistoryForStyle(product.slug, selectedPromptId));
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: '2px 6px',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--pv-magenta)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      overflowX: 'auto',
+                      paddingBottom: 2,
+                    }}
+                  >
+                    {styleHits.map((h) => {
+                      const active = preview?.previewAssetId === h.previewAssetId;
+                      return (
+                        <div key={h.id} style={{ position: 'relative', flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={() => setPreview({
+                              sourceAssetId: h.sourceAssetId,
+                              previewAssetId: h.previewAssetId,
+                              previewUrl: h.previewUrl,
+                            })}
+                            style={{
+                              width: 72,
+                              height: 72,
+                              padding: 0,
+                              border: active ? '3px solid var(--pv-magenta)' : '2px solid var(--pv-ink)',
+                              boxShadow: active ? '2px 2px 0 var(--pv-yellow)' : 'none',
+                              background: '#fff',
+                              cursor: 'pointer',
+                              display: 'block',
+                              overflow: 'hidden',
+                            }}
+                            title={`Restore this preview (${new Date(h.ts).toLocaleString()})`}
+                          >
+                            <img
+                              src={h.previewUrl}
+                              alt="Previous preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Remove from history"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setHistory(removePreviewHit(product.slug, h.id));
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: -6,
+                              right: -6,
+                              width: 18,
+                              height: 18,
+                              borderRadius: '50%',
+                              border: '2px solid var(--pv-ink)',
+                              background: '#fff',
+                              color: 'var(--pv-ink)',
+                              cursor: 'pointer',
+                              fontSize: 10,
+                              fontWeight: 900,
+                              lineHeight: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Selected variant's features — playful "inside the box"
                 panel. Confetti dots on cream background, thick ink
