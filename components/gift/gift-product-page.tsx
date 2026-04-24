@@ -664,12 +664,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
+          </div>
+
+          {/* RIGHT: Options + Price */}
+          <div>
             {/* Compose controls */}
             <div
               style={{
                 background: '#fff',
                 border: '2px solid var(--pv-ink)',
                 boxShadow: '5px 5px 0 var(--pv-ink)',
+                marginBottom: 14,
               }}
             >
               {/* Step A: Template picker — picked first so the Fill /
@@ -1106,10 +1111,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
             </div>
-          </div>
 
-          {/* RIGHT: Options + Price */}
-          <div>
             {/* Quantity step */}
             <div
               style={{
