@@ -86,12 +86,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
   const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
 
-  // Resolve the active mockup URL + area based on (variant, shape).
-  // Variants may carry per-shape overrides (migration 0058). Fall back
-  // to the variant's base mockup, then to the product mockup. Same rule
-  // for the customer-draggable area so cutout renders don't inherit
-  // rectangular panel coords.
+  // Resolve the active mockup URL + area for the big live preview.
+  // Precedence:
+  //   1. If the variant has surfaces[] (front/back/left/right), the
+  //      chosen surface's mockup wins so flipping a tab rotates the
+  //      preview visually (used by the 360° rotating photo frame).
+  //   2. Per-shape override from shape_options config (migration 0058).
+  //   3. Variant's base mockup_url / mockup_area.
+  //   4. Product's mockup_url / mockup_area as final fallback.
   const shapeMockup = (() => {
+    if (selectedVariant && selectedVariant.surfaces.length > 0) {
+      const surface = selectedVariant.surfaces.find((s) => s.id === activeSurfaceId)
+        ?? selectedVariant.surfaces[0];
+      if (surface?.mockup_url) {
+        return { url: surface.mockup_url, area: surface.mockup_area };
+      }
+    }
     if (shapePickerActive && selectedVariant?.mockup_by_shape) {
       const override = selectedVariant.mockup_by_shape[selectedShapeKind];
       if (override && override.url) {
@@ -111,6 +121,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     setCustomerArea(shapeMockup.area);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId]);
+
+  // Reset the active surface when the variant changes — otherwise a
+  // cutout-style flip between variants could leave a stale surface id
+  // selected.
+  useEffect(() => {
+    const first = selectedVariant?.surfaces?.[0]?.id ?? '';
+    setActiveSurfaceId(first);
+  }, [selectedVariantId, selectedVariant?.surfaces]);
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
@@ -163,6 +181,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
+  // Which face of a multi-surface variant (front / back / left / right)
+  // the live preview is currently showing. Lifted here so both the
+  // big-preview frame AND the inline surfaces configurator track the
+  // same face — click the "↻ Flip" button above the preview or tap a
+  // tab in the configurator, both paths update this one id.
+  const [activeSurfaceId, setActiveSurfaceId] = useState<string>('');
   // Day / Night toggle was used for laser products; removed per user
   // feedback since it only flipped colours without changing the actual
   // preview. `nightMode` stays as a hard-coded `false` so inline styles
@@ -743,6 +767,39 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   />
                   Live Preview
                 </span>
+                {/* Face toggle — shown only when the chosen variant has
+                    two or more surfaces (e.g. the 360° rotating photo
+                    frame's front + back). Clicking flips the visible
+                    face in the big preview; the configurator's inline
+                    tabs stay in sync via the shared activeSurfaceId. */}
+                {hasSurfaces && (selectedVariant?.surfaces.length ?? 0) >= 2 && (
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {selectedVariant!.surfaces.map((s) => {
+                      const active = s.id === activeSurfaceId;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setActiveSurfaceId(s.id)}
+                          style={{
+                            background: active ? 'var(--pv-magenta)' : 'transparent',
+                            color: active ? '#fff' : 'var(--pv-yellow)',
+                            border: `1.5px solid ${active ? 'var(--pv-magenta)' : 'var(--pv-yellow)'}`,
+                            padding: '4px 10px',
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 10,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               {/* Preview stage — sized to the mockup so there's no
                   empty space above / below the image. Safety minHeight
@@ -791,12 +848,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
 
-                {preview ? (
+                {(() => {
+                  // Surfaces flow: no server preview — composite the
+                  // customer's uploaded thumb directly onto the active
+                  // surface's mockup so flipping Front/Back updates the
+                  // big preview live without a generate call.
+                  const surfaceThumb = hasSurfaces
+                    ? surfaceFills[activeSurfaceId]?.photoThumb ?? null
+                    : null;
+                  const effectivePreviewUrl = preview?.previewUrl ?? surfaceThumb;
+                  return effectivePreviewUrl;
+                })() ? (
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <div style={{ width: '100%' }}>
                       <GiftMockupPreviewInteractive
                         mockupUrl={shapeMockup.url}
-                        previewUrl={preview.previewUrl}
+                        previewUrl={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
                         area={customerArea}
                         bounds={(shapeMockup.area as any) ?? null}
                         onAreaChange={setCustomerArea}
@@ -814,7 +881,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     </div>
                   ) : (
                     <img
-                      src={preview.previewUrl}
+                      src={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
                       alt="Preview"
                       style={{
                         maxWidth: '100%',
@@ -1381,6 +1448,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     fills={surfaceFills}
                     onChange={setSurfaceFills}
                     variantMockupUrl={selectedVariant.mockup_url || undefined}
+                    activeSurfaceId={activeSurfaceId || selectedVariant.surfaces[0]?.id}
+                    onActiveSurfaceChange={setActiveSurfaceId}
                   />
                 </ComposeSection>
               )}

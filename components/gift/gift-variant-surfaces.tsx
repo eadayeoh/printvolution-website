@@ -31,15 +31,27 @@ type Props = {
    *  need to shoot a photo of each side if the whole variant mockup
    *  works). */
   variantMockupUrl?: string;
+  /** Controlled active surface id — lifted to the parent so the big
+   *  live preview (in the left column) can mirror whichever face the
+   *  customer last tapped. Uncontrolled = internal state. */
+  activeSurfaceId?: string;
+  onActiveSurfaceChange?: (id: string) => void;
 };
 
-export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl }: Props) {
-  const [activeId, setActiveId] = useState(surfaces[0]?.id ?? '');
+export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl, activeSurfaceId, onActiveSurfaceChange }: Props) {
+  const isControlled = typeof activeSurfaceId === 'string';
+  const [internalActiveId, setInternalActiveId] = useState(surfaces[0]?.id ?? '');
+  const activeId = isControlled ? activeSurfaceId : internalActiveId;
+  const setActiveId = (id: string) => {
+    if (!isControlled) setInternalActiveId(id);
+    onActiveSurfaceChange?.(id);
+  };
   useEffect(() => {
-    if (!surfaces.find((s) => s.id === activeId)) {
-      setActiveId(surfaces[0]?.id ?? '');
+    if (isControlled) return;
+    if (!surfaces.find((s) => s.id === internalActiveId)) {
+      setInternalActiveId(surfaces[0]?.id ?? '');
     }
-  }, [surfaces, activeId]);
+  }, [surfaces, internalActiveId, isControlled]);
   const activeSurface = surfaces.find((s) => s.id === activeId) ?? surfaces[0];
 
   function updateFill(surfaceId: string, patch: Partial<SurfaceFill>) {
