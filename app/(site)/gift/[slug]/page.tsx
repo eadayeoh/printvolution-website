@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { GiftProductPage } from '@/components/gift/gift-product-page';
 import { getGiftProductBySlug, listActiveGiftProducts, listTemplatesForProduct } from '@/lib/gifts/data';
-import { listPromptsForMode } from '@/lib/gifts/prompts';
+import { listPromptsForModes } from '@/lib/gifts/prompts';
 import { listActiveVariants } from '@/lib/gifts/variants';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,10 @@ export default async function GiftPage({ params }: { params: { slug: string } })
   if (!product) notFound();
   const [templates, prompts, variants, allGifts] = await Promise.all([
     product.template_mode === 'none' ? Promise.resolve([]) : listTemplatesForProduct(product.id),
-    product.mode === 'photo-resize' ? Promise.resolve([]) : listPromptsForMode(product.mode),
+    product.mode === 'photo-resize' ? Promise.resolve([]) : listPromptsForModes([
+      product.mode,
+      ...(product.secondary_mode ? [product.secondary_mode] : []),
+    ]),
     listActiveVariants(product.id),
     listActiveGiftProducts(),
   ]);

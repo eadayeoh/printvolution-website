@@ -17,10 +17,18 @@ export type GiftPrompt = {
 };
 
 export async function listPromptsForMode(mode: GiftMode): Promise<GiftPrompt[]> {
+  return listPromptsForModes([mode]);
+}
+
+/** Load every active prompt that matches any of the given modes.
+ *  Used by dual-mode products (e.g. a UV/laser frame) so the customer's
+ *  art-style picker can offer BOTH production methods' prompts. */
+export async function listPromptsForModes(modes: GiftMode[]): Promise<GiftPrompt[]> {
+  if (modes.length === 0) return [];
   const sb = createClient();
   const { data } = await sb
     .from('gift_prompts').select('*')
-    .eq('mode', mode).eq('is_active', true)
+    .in('mode', modes).eq('is_active', true)
     .order('display_order');
   return (data ?? []) as GiftPrompt[];
 }

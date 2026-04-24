@@ -178,7 +178,11 @@ export async function restylePreviewFromSource(input: {
       const { data } = await sb.from('gift_prompts')
         .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
         .eq('id', input.prompt_id).maybeSingle();
-      if (data && data.is_active && data.mode === product.mode) prompt = data as any;
+      // Allow the prompt's mode to match either the product's primary
+      // OR secondary mode — so a dual-mode product (e.g. uv + laser)
+      // can offer BOTH methods' prompts in the art-style picker.
+      const allowedPromptModes = [product.mode, product.secondary_mode].filter(Boolean);
+      if (data && data.is_active && allowedPromptModes.includes(data.mode)) prompt = data as any;
     } else {
       const { data } = await sb.from('gift_prompts')
         .select('id, transformation_prompt, negative_prompt, params, pipeline_id')
@@ -391,7 +395,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       const { data } = await sb.from('gift_prompts')
         .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
         .eq('id', promptId).maybeSingle();
-      if (data && data.is_active && data.mode === product.mode) prompt = data as any;
+      // Allow the prompt's mode to match either the product's primary
+      // OR secondary mode — so a dual-mode product (e.g. uv + laser)
+      // can offer BOTH methods' prompts in the art-style picker.
+      const allowedPromptModes = [product.mode, product.secondary_mode].filter(Boolean);
+      if (data && data.is_active && allowedPromptModes.includes(data.mode)) prompt = data as any;
     } else {
       const { data } = await sb.from('gift_prompts')
         .select('id, transformation_prompt, negative_prompt, params, pipeline_id')
