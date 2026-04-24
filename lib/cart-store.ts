@@ -33,6 +33,13 @@ export type CartItem = {
    *  so we can join to the variant row for price / mockup / dimensions
    *  / surface config even if the parent product changes later. */
   gift_variant_id?: string;
+  /** Customer-picked shape from the product's shape_options (migration
+   *  0056). NULL / undefined = product has no shape picker — production
+   *  pipeline treats it as rectangle-equivalent. */
+  shape_kind?: 'cutout' | 'rectangle' | 'template' | null;
+  /** Only set when shape_kind === 'template'. Picks which gift_template
+   *  row the laser composites into at fan-out time. */
+  shape_template_id?: string | null;
 };
 
 type CartState = {

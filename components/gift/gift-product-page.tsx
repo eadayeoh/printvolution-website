@@ -476,6 +476,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       personalisation_notes: notes,
       surfaces: surfacesPayload,
       gift_variant_id: selectedVariant?.id,
+      shape_kind: shapePickerActive ? selectedShapeKind : null,
+      shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
