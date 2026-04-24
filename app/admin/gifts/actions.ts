@@ -97,6 +97,18 @@ const GiftProductSchema = z.object({
   })).default([]),
 });
 
+/** Pretty-print a Zod error for the admin toast — takes the first
+ *  issue so the user isn't swamped. Beats a generic "server-side
+ *  exception" when `.parse()` used to throw silently. */
+function friendlyZodError(err: z.ZodError): string {
+  const issue = err.issues?.[0];
+  if (!issue) return 'Validation failed';
+  const path = Array.isArray(issue.path) && issue.path.length > 0
+    ? ` (${issue.path.join('.')})`
+    : '';
+  return `${issue.message}${path}`;
+}
+
 function validateModes(p: { mode?: string; secondary_mode?: string | null }) {
   if (p.secondary_mode && p.mode && p.secondary_mode === p.mode) {
     return 'Secondary mode must differ from the primary mode — pick a different one, or clear it to keep the product single-mode.';
@@ -197,7 +209,11 @@ async function resolveBasePrice(
 
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {
   const sb = await requireAdmin();
-  const parsed = GiftProductSchema.parse(input);
+  const parseResult = GiftProductSchema.safeParse(input);
+  if (!parseResult.success) {
+    return { ok: false as const, error: friendlyZodError(parseResult.error) };
+  }
+  const parsed = parseResult.data;
   const err = validateModes(parsed);
   if (err) return { ok: false as const, error: err };
   const shapeErr = validateShapeOptions(parsed);
@@ -660,7 +676,11 @@ async function maybeRecomputeParentBase(
 
 export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
   const sb = await requireAdmin();
-  const parsed = VariantSchema.parse(input);
+  const parseResult = VariantSchema.safeParse(input);
+  if (!parseResult.success) {
+    return { ok: false as const, error: friendlyZodError(parseResult.error) };
+  }
+  const parsed = parseResult.data;
   const { id, ...row } = parsed as any;
   if (id) {
     const { error } = await sb.from('gift_product_variants').update(row).eq('id', id);
