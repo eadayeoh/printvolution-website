@@ -66,9 +66,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
-  // Day / Night toggle for laser products where the "lights on" state is meaningful.
-  const [nightMode, setNightMode] = useState(false);
-  const showNightToggle = product.mode === 'laser';
+  // Day / Night toggle was used for laser products; removed per user
+  // feedback since it only flipped colours without changing the actual
+  // preview. `nightMode` stays as a hard-coded `false` so inline styles
+  // that reference it still compile — the conditional branches are dead.
+  const nightMode = false;
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
@@ -476,63 +478,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   />
                   Live Preview
                 </span>
-                {showNightToggle && (
-                  <div style={{ display: 'flex', border: '1px solid #fff' }}>
-                    <button
-                      type="button"
-                      onClick={() => setNightMode(false)}
-                      style={{
-                        background: nightMode ? 'transparent' : 'var(--pv-yellow)',
-                        color: nightMode ? '#fff' : 'var(--pv-ink)',
-                        padding: '4px 10px',
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        border: 'none',
-                        cursor: 'pointer',
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Day
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNightMode(true)}
-                      style={{
-                        background: nightMode ? 'var(--pv-yellow)' : 'transparent',
-                        color: nightMode ? 'var(--pv-ink)' : '#fff',
-                        padding: '4px 10px',
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        border: 'none',
-                        borderLeft: '1px solid #fff',
-                        cursor: 'pointer',
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      ✦ Night
-                    </button>
-                  </div>
-                )}
               </div>
-              {/* Preview stage */}
+              {/* Preview stage — sized to the mockup so there's no
+                  empty space above / below the image. */}
               <div
                 style={{
-                  padding: '40px 32px',
-                  background: nightMode ? '#1a1410' : 'var(--pv-cream-warm, #FFF4E5)',
-                  backgroundImage: nightMode
-                    ? 'radial-gradient(circle at center bottom, rgba(255,221,0,0.15), transparent 70%)'
-                    : 'radial-gradient(circle at 1px 1px, rgba(10,10,10,0.06) 1px, transparent 0)',
-                  backgroundSize: nightMode ? undefined : '6px 6px',
-                  minHeight: 460,
+                  background: 'var(--pv-cream-warm, #FFF4E5)',
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'stretch',
                   justifyContent: 'center',
                   position: 'relative',
-                  transition: 'all 0.4s',
                 }}
               >
                 {uploading && (
@@ -567,7 +522,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
                 {preview ? (
                   (selectedVariant?.mockup_url || product.mockup_url) && (selectedVariant?.mockup_area || product.mockup_area) ? (
-                    <div style={{ width: '100%', maxWidth: 420 }}>
+                    <div style={{ width: '100%' }}>
                       <GiftMockupPreview
                         mockupUrl={selectedVariant?.mockup_url || product.mockup_url!}
                         previewUrl={preview.previewUrl}
@@ -597,7 +552,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     />
                   </div>
                 ) : (selectedVariant?.mockup_url || product.mockup_url) ? (
-                  <div style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
+                  <div style={{ width: '100%', position: 'relative' }}>
                     <img
                       src={selectedVariant?.mockup_url || product.mockup_url!}
                       alt={product.name}
