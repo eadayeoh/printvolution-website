@@ -1,20 +1,56 @@
 import Link from 'next/link';
 import { Plus, Gift as GiftIcon } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
 import { listAllGiftProductsAdmin } from '@/lib/gifts/data';
-import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
-import { formatSGD } from '@/lib/utils';
+import { GiftsByCategory, type GiftRow } from '@/components/admin/gifts-by-category';
 
 export const dynamic = 'force-dynamic';
 
-const MODE_COLORS: Record<string, string> = {
-  'laser': 'bg-amber-100 text-amber-800',
-  'uv': 'bg-blue-100 text-blue-800',
-  'embroidery': 'bg-purple-100 text-purple-800',
-  'photo-resize': 'bg-green-100 text-green-800',
-};
-
 export default async function AdminGiftsPage() {
-  const products = await listAllGiftProductsAdmin();
+  const [products, sb] = [await listAllGiftProductsAdmin(), createClient()];
+  const { data: cats } = await sb
+    .from('categories')
+    .select('id, slug, name, parent_id, display_order');
+
+  // Resolve each product's category to its top-level (so subcategory gifts
+  // roll up under the parent section heading, matching the Categories admin).
+  const catById = new Map<string, { id: string; slug: string; name: string; parent_id: string | null; display_order: number }>();
+  for (const c of cats ?? []) catById.set(c.id, c as any);
+  const topLevelFor = (id: string | null | undefined) => {
+    let cur = id ? catById.get(id) : null;
+    while (cur?.parent_id) cur = catById.get(cur.parent_id) ?? null;
+    return cur ?? null;
+  };
+
+  const rows: GiftRow[] = products.map((p) => {
+    const top = topLevelFor(p.category_id);
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      mode: p.mode,
+      is_active: p.is_active,
+      base_price_cents: p.base_price_cents,
+      thumbnail_url: p.thumbnail_url ?? null,
+      first_ordered_at: (p as any).first_ordered_at ?? null,
+      cat_slug: top?.slug ?? 'uncategorized',
+      cat_name: top?.name ?? 'Uncategorised',
+      cat_order: top?.display_order ?? 9999,
+    };
+  });
+
+  // Build ordered category list with counts (only categories that have gifts)
+  const catsMap = new Map<string, { slug: string; name: string; order: number; count: number }>();
+  for (const r of rows) {
+    if (!catsMap.has(r.cat_slug)) {
+      catsMap.set(r.cat_slug, { slug: r.cat_slug, name: r.cat_name, order: r.cat_order, count: 0 });
+    }
+    catsMap.get(r.cat_slug)!.count++;
+  }
+  const categories = Array.from(catsMap.values()).sort(
+    (a, b) => a.order - b.order || a.name.localeCompare(b.name)
+  );
+
   const active = products.filter((p) => p.is_active).length;
 
   return (
@@ -51,16 +87,8 @@ export default async function AdminGiftsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white">
-        <div className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] gap-3 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-          <div>Image</div>
-          <div>Name / Slug</div>
-          <div>Mode</div>
-          <div>Status</div>
-          <div>Price from</div>
-          <div>Actions</div>
-        </div>
-        {products.length === 0 ? (
+      {products.length === 0 ? (
+        <div className="rounded-lg border border-neutral-200 bg-white">
           <div className="flex flex-col items-center px-4 py-20 text-center">
             <GiftIcon size={48} className="mb-3 text-neutral-300" />
             <div className="text-sm font-bold text-ink">No gift products yet</div>
@@ -74,43 +102,10 @@ export default async function AdminGiftsPage() {
               <Plus size={14} /> Create gift product
             </Link>
           </div>
-        ) : (
-          products.map((p) => (
-            <div key={p.id} className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] items-center gap-3 border-b border-neutral-100 px-4 py-3 text-sm">
-              <div className="h-14 w-14 overflow-hidden rounded bg-neutral-100">
-                {p.thumbnail_url ? (
-                  <img src={p.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xl text-neutral-300">🎁</div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate font-bold text-ink">{p.name}</div>
-                <div className="truncate text-[11px] text-neutral-500 font-mono">/gift/{p.slug}</div>
-              </div>
-              <div>
-                <span className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold ${MODE_COLORS[p.mode] ?? 'bg-neutral-100 text-neutral-700'}`}>
-                  {GIFT_MODE_LABEL[p.mode]}
-                </span>
-                {p.first_ordered_at && (
-                  <span className="ml-1 text-[9px] text-neutral-400" title="Mode locked — product has been ordered">🔒</span>
-                )}
-              </div>
-              <div>
-                {p.is_active ? (
-                  <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Active</span>
-                ) : (
-                  <span className="inline-flex rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600">Inactive</span>
-                )}
-              </div>
-              <div className="text-[11px] font-semibold text-ink">{formatSGD(p.base_price_cents)}</div>
-              <div className="flex gap-2">
-                <Link href={`/admin/gifts/${p.id}`} className="text-[11px] font-bold text-pink hover:underline">Edit</Link>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+        </div>
+      ) : (
+        <GiftsByCategory products={rows} categories={categories} />
+      )}
     </div>
   );
 }
