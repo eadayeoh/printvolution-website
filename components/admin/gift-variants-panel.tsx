@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
@@ -381,94 +381,24 @@ export function GiftVariantsPanel({
                         <span>Active</span>
                       </label>
                     </div>
-                    {(() => {
-                      const wMm = productWidthMm;
-                      const hMm = productHeightMm;
-                      const clamp = (n: number) => Math.max(0, Math.min(100, n));
-                      const updateArea = (patch: Partial<typeof d.mockup_area>) => {
-                        const next = { ...d.mockup_area, ...patch };
-                        updateDraft(i, {
-                          mockup_area: {
-                            x: clamp(next.x), y: clamp(next.y),
-                            width: clamp(next.width), height: clamp(next.height),
-                          },
-                        });
-                      };
-                      const updateBounds = (patch: Partial<typeof d.mockup_bounds>) => {
-                        const next = { ...d.mockup_bounds, ...patch };
-                        updateDraft(i, {
-                          mockup_bounds: {
-                            x: clamp(next.x), y: clamp(next.y),
-                            width: clamp(next.width), height: clamp(next.height),
-                          },
-                        });
-                      };
-                      return (
-                        <div className="space-y-3">
-                          <div className="grid gap-3 md:grid-cols-[1fr_240px]">
-                            <div className="space-y-3">
-                              <div>
-                                <div className="mb-1 text-[11px] font-bold text-neutral-500">
-                                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-pink align-middle" aria-hidden /> Starting area (mm) — where the customer&apos;s photo lands by default
-                                </div>
-                                <div className="grid grid-cols-4 gap-2 text-[11px]">
-                                  {(['x', 'y', 'width', 'height'] as const).map((k) => (
-                                    <label key={k} className="block">
-                                      <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">{k === 'x' || k === 'width' ? `${k.toUpperCase()} (mm)` : `${k.toUpperCase()} (mm)`}</span>
-                                      <input type="number" step="0.1"
-                                        value={pctToMm(d.mockup_area[k], k === 'x' || k === 'width' ? wMm : hMm)}
-                                        onChange={(e) => updateArea({ [k]: mmToPct(parseFloat(e.target.value) || 0, k === 'x' || k === 'width' ? wMm : hMm) })}
-                                        className={inputCls} />
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="mb-1 text-[11px] font-bold text-neutral-500">
-                                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-cyan-500 align-middle" aria-hidden /> Draggable bounds (mm) — customer can drag/resize inside this
-                                </div>
-                                <div className="grid grid-cols-4 gap-2 text-[11px]">
-                                  {(['x', 'y', 'width', 'height'] as const).map((k) => (
-                                    <label key={k} className="block">
-                                      <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">{k.toUpperCase()} (mm)</span>
-                                      <input type="number" step="0.1"
-                                        value={pctToMm(d.mockup_bounds[k], k === 'x' || k === 'width' ? wMm : hMm)}
-                                        onChange={(e) => updateBounds({ [k]: mmToPct(parseFloat(e.target.value) || 0, k === 'x' || k === 'width' ? wMm : hMm) })}
-                                        className={inputCls} />
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            {d.mockup_url && (
-                              <div className="relative overflow-hidden rounded border border-neutral-300 bg-neutral-50" style={{ aspectRatio: '1 / 1' }}>
-                                <img src={d.mockup_url} alt="" className="h-full w-full object-contain" />
-                                <div
-                                  aria-hidden
-                                  className="pointer-events-none absolute border-2 border-dashed border-cyan-500 bg-cyan-500/10"
-                                  style={{
-                                    left: `${clamp(d.mockup_bounds.x)}%`,
-                                    top: `${clamp(d.mockup_bounds.y)}%`,
-                                    width: `${clamp(d.mockup_bounds.width)}%`,
-                                    height: `${clamp(d.mockup_bounds.height)}%`,
-                                  }}
-                                />
-                                <div
-                                  aria-hidden
-                                  className="pointer-events-none absolute border-2 border-pink bg-pink/15"
-                                  style={{
-                                    left: `${clamp(d.mockup_area.x)}%`,
-                                    top: `${clamp(d.mockup_area.y)}%`,
-                                    width: `${clamp(d.mockup_area.width)}%`,
-                                    height: `${clamp(d.mockup_area.height)}%`,
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
+                    {d.mockup_url ? (
+                      <div>
+                        <div className="mb-2 text-[11px] font-bold text-neutral-500">
+                          Mockup area — drag to move, drag the pink corner to resize
                         </div>
-                      );
-                    })()}
+                        <DraggableArea
+                          mockupUrl={d.mockup_url}
+                          area={d.mockup_area}
+                          productWidthMm={productWidthMm}
+                          productHeightMm={productHeightMm}
+                          onChange={(next) => updateDraft(i, { mockup_area: next })}
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-3 text-[11px] text-neutral-500">
+                        Upload a mockup image first to position the design area.
+                      </div>
+                    )}
                     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div>
@@ -729,6 +659,133 @@ export function GiftVariantsPanel({
         )}
 
         {err && <div className="mt-3 text-xs font-bold text-red-600">{err}</div>}
+      </div>
+    </div>
+  );
+}
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+function DraggableArea({
+  mockupUrl,
+  area,
+  productWidthMm,
+  productHeightMm,
+  onChange,
+}: {
+  mockupUrl: string;
+  area: Rect;
+  productWidthMm: number;
+  productHeightMm: number;
+  onChange: (next: Rect) => void;
+}) {
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [drag, setDrag] = useState<
+    | { mode: 'move' | 'resize'; startX: number; startY: number; startArea: Rect }
+    | null
+  >(null);
+
+  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+  const normalise = (r: Rect): Rect => {
+    const width = Math.max(2, Math.min(100, r.width));
+    const height = Math.max(2, Math.min(100, r.height));
+    const x = Math.max(0, Math.min(100 - width, r.x));
+    const y = Math.max(0, Math.min(100 - height, r.y));
+    return { x, y, width, height };
+  };
+
+  useEffect(() => {
+    if (!drag) return;
+    function pctDelta(clientX: number, clientY: number) {
+      const stage = stageRef.current;
+      if (!stage) return { dxPct: 0, dyPct: 0 };
+      const r = stage.getBoundingClientRect();
+      return {
+        dxPct: ((clientX - drag!.startX) / r.width) * 100,
+        dyPct: ((clientY - drag!.startY) / r.height) * 100,
+      };
+    }
+    function onMove(e: PointerEvent) {
+      const { dxPct, dyPct } = pctDelta(e.clientX, e.clientY);
+      if (drag!.mode === 'move') {
+        onChange(normalise({
+          x: drag!.startArea.x + dxPct,
+          y: drag!.startArea.y + dyPct,
+          width: drag!.startArea.width,
+          height: drag!.startArea.height,
+        }));
+      } else {
+        onChange(normalise({
+          x: drag!.startArea.x,
+          y: drag!.startArea.y,
+          width: drag!.startArea.width + dxPct,
+          height: drag!.startArea.height + dyPct,
+        }));
+      }
+    }
+    function onUp() { setDrag(null); }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag]);
+
+  function startMove(e: React.PointerEvent) {
+    e.preventDefault();
+    setDrag({ mode: 'move', startX: e.clientX, startY: e.clientY, startArea: { ...area } });
+  }
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDrag({ mode: 'resize', startX: e.clientX, startY: e.clientY, startArea: { ...area } });
+  }
+
+  // mm readout (not editable — just so admin sees the physical size)
+  const wMm = ((area.width / 100) * productWidthMm).toFixed(1);
+  const hMm = ((area.height / 100) * productHeightMm).toFixed(1);
+
+  return (
+    <div className="grid gap-3 md:grid-cols-[1fr_300px]">
+      <div
+        ref={stageRef}
+        className="relative overflow-hidden rounded border border-neutral-300 bg-neutral-50"
+        style={{ aspectRatio: '1 / 1', userSelect: 'none', touchAction: 'none' }}
+      >
+        <img src={mockupUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-contain" />
+        <div
+          onPointerDown={startMove}
+          className="absolute border-2 border-pink bg-pink/15"
+          style={{
+            left: `${clamp(area.x)}%`,
+            top: `${clamp(area.y)}%`,
+            width: `${clamp(area.width)}%`,
+            height: `${clamp(area.height)}%`,
+            cursor: drag?.mode === 'move' ? 'grabbing' : 'grab',
+          }}
+        >
+          <div
+            onPointerDown={startResize}
+            aria-label="Drag to resize"
+            style={{
+              position: 'absolute', right: -6, bottom: -6,
+              width: 14, height: 14,
+              background: '#E91E8C', border: '2px solid #fff', borderRadius: 2,
+              cursor: 'nwse-resize', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            }}
+          />
+        </div>
+      </div>
+      <div className="space-y-1 text-[11px] text-neutral-600">
+        <div><strong>Design size:</strong> {wMm} × {hMm} mm</div>
+        <div><strong>Position:</strong> {area.x.toFixed(1)}%, {area.y.toFixed(1)}% from top-left</div>
+        <div className="mt-2 text-[10px] text-neutral-400">
+          Drag the pink rectangle to move it. Drag the small square in the bottom-right to resize. Customers can fine-tune position inside this area when they upload their photo.
+        </div>
       </div>
     </div>
   );
