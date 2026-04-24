@@ -111,6 +111,8 @@ export async function restylePreviewFromSource(input: {
   source_asset_id: string;
   prompt_id: string | null;
   variant_id?: string | null;
+  shape_kind?: 'cutout' | 'rectangle' | 'template' | null;
+  shape_template_id?: string | null;
 }): Promise<
   { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
   | { ok: false; error: string }
@@ -133,6 +135,22 @@ export async function restylePreviewFromSource(input: {
     // the original preview is already the final output.
     if (product.mode === 'photo-resize') {
       return { ok: false, error: 'This product has no AI styles to regenerate' };
+    }
+
+    // Validate shape_kind against the product's shape_options config.
+    const configuredShapes = Array.isArray((product as any).shape_options)
+      ? ((product as any).shape_options as Array<{ kind: string; template_ids?: string[] }>)
+      : [];
+    const shapeKind = input.shape_kind ?? null;
+    const shapeTemplateId = input.shape_template_id ?? null;
+    if (configuredShapes.length > 0 && shapeKind) {
+      const row = configuredShapes.find((r) => r.kind === shapeKind);
+      if (!row) return { ok: false, error: `Shape "${shapeKind}" is not enabled on this product.` };
+      if (shapeKind === 'template') {
+        if (!shapeTemplateId || !Array.isArray(row.template_ids) || !row.template_ids.includes(shapeTemplateId)) {
+          return { ok: false, error: 'Picked template is not allowed for this product.' };
+        }
+      }
     }
 
     const service = serviceClient();
@@ -201,7 +219,8 @@ export async function restylePreviewFromSource(input: {
         sourceBytes: bytes,
         sourceMime: sourceAsset.mime_type ?? 'image/jpeg',
         cropRect: null,
-        templateId: null,
+        templateId: shapeKind === 'template' ? shapeTemplateId : null,
+        shapeKind,
       });
     } catch (e: any) {
       return { ok: false, error: `preview failed: ${e.message}` };
