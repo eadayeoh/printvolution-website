@@ -353,6 +353,15 @@ export type GiftProductVariant = {
       area: { x: number; y: number; width: number; height: number };
     }
   >> | null;
+  /** Migration 0061 — per-prompt mockup override keyed by prompt UUID.
+   *  When the customer picks a prompt on the art-style picker and this
+   *  variant has a mockup stored for that prompt, the live preview
+   *  swaps to it. Missing key = falls through to mockup_by_shape /
+   *  variant.mockup_url. */
+  mockup_by_prompt_id?: Record<string, {
+    url: string;
+    area: { x: number; y: number; width: number; height: number };
+  }> | null;
   /** Migration 0059 — when true the customer pans their photo WITHIN
    *  the fixed mockup_area instead of dragging the rectangle around.
    *  Used for products with a fixed photo-panel slot (e.g. Figurine

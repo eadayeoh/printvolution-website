@@ -36,6 +36,8 @@ type Draft = {
   mockup_by_shape: Partial<Record<ShapeKind, { url: string; area: { x: number; y: number; width: number; height: number } }>>;
   // Migration 0059 — pan-photo mode (fixed mockup_area; customer pans).
   photo_pan_mode: boolean;
+  // Migration 0061 — per-prompt mockup keyed by prompt UUID.
+  mockup_by_prompt_id: Record<string, { url: string; area: { x: number; y: number; width: number; height: number } }>;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -67,6 +69,14 @@ function toDraft(v?: GiftProductVariant): Draft {
             entry ? { url: entry.url, area: { ...entry.area } } : entry,
           ]),
         ) as Draft['mockup_by_shape']
+      : {},
+    mockup_by_prompt_id: v?.mockup_by_prompt_id
+      ? Object.fromEntries(
+          Object.entries(v.mockup_by_prompt_id).map(([k, entry]) => [
+            k,
+            { url: entry.url, area: { ...entry.area } },
+          ]),
+        )
       : {},
   };
 }
@@ -101,6 +111,10 @@ type GiftVariantsPanelProps = {
    *  cutout / rectangle / template each render on the correct base
    *  visual. */
   parentShapeOptions?: ShapeOption[] | null;
+  /** Active prompts available on the parent product. Drives a second
+   *  per-variant mockup block — one slot per prompt — so the live
+   *  preview can swap the mockup when the customer picks an art style. */
+  parentPrompts?: Array<{ id: string; name: string; mode: string }>;
 };
 
 export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariantsPanelProps>(function GiftVariantsPanel({
@@ -110,6 +124,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   productWidthMm,
   productHeightMm,
   parentShapeOptions,
+  parentPrompts,
 }, ref) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
@@ -199,6 +214,15 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         for (const [kind, entry] of Object.entries(d.mockup_by_shape)) {
           if (entry && typeof entry.url === 'string' && entry.url.trim()) {
             cleaned[kind as ShapeKind] = { url: entry.url.trim(), area: entry.area };
+          }
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : null;
+      })(),
+      mockup_by_prompt_id: (() => {
+        const cleaned: Record<string, { url: string; area: { x: number; y: number; width: number; height: number } }> = {};
+        for (const [promptId, entry] of Object.entries(d.mockup_by_prompt_id)) {
+          if (entry && typeof entry.url === 'string' && entry.url.trim()) {
+            cleaned[promptId] = { url: entry.url.trim(), area: entry.area };
           }
         }
         return Object.keys(cleaned).length > 0 ? cleaned : null;
@@ -746,6 +770,89 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                             const next = { ...d.mockup_by_shape };
                                             next[opt.kind] = { url: currentUrl, area: nextArea };
                                             updateDraft(i, { mockup_by_shape: next });
+                                          }}
+                                          className="w-full rounded border border-neutral-200 bg-white px-1 py-0.5 text-[10px]"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {parentPrompts && parentPrompts.length > 0 && (
+                      <div className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-3">
+                        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Per-prompt mockups (optional)
+                        </div>
+                        <p className="mb-2 text-[10px] text-neutral-500">
+                          Swap the live-preview mockup when the customer picks a specific art-style
+                          prompt. Useful when Line Art (laser) and UV Print render on different
+                          frames. Leave blank to fall back to the base mockup above.
+                        </p>
+                        <div className="space-y-2">
+                          {parentPrompts.map((pr) => {
+                            const entry = d.mockup_by_prompt_id[pr.id];
+                            const currentUrl = entry?.url ?? '';
+                            const currentArea = entry?.area ?? d.mockup_area;
+                            return (
+                              <div key={pr.id} className="rounded border border-neutral-200 bg-white p-2">
+                                <div className="mb-1 flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink">
+                                    {pr.name} · {pr.mode}
+                                  </span>
+                                  {currentUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const next = { ...d.mockup_by_prompt_id };
+                                        delete next[pr.id];
+                                        updateDraft(i, { mockup_by_prompt_id: next });
+                                      }}
+                                      className="text-[10px] font-bold text-red-600 hover:underline"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                                <ImageUpload
+                                  value={currentUrl}
+                                  onChange={(url) => {
+                                    const next = { ...d.mockup_by_prompt_id };
+                                    if (url) {
+                                      next[pr.id] = { url, area: currentArea };
+                                    } else {
+                                      delete next[pr.id];
+                                    }
+                                    updateDraft(i, { mockup_by_prompt_id: next });
+                                  }}
+                                  prefix={`variant-${d.slug || 'mockup'}-prompt-${pr.id.slice(0, 8)}`}
+                                  aspect={1}
+                                  size="sm"
+                                  label={`${pr.name} mockup`}
+                                />
+                                {currentUrl && (
+                                  <div className="mt-1 grid grid-cols-4 gap-1 text-[10px]">
+                                    {(['x', 'y', 'width', 'height'] as const).map((field) => (
+                                      <label key={field} className="block">
+                                        <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">
+                                          {field}%
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          step={0.1}
+                                          value={currentArea[field]}
+                                          onChange={(e) => {
+                                            const val = parseFloat(e.target.value || '0');
+                                            const nextArea = { ...currentArea, [field]: Number.isFinite(val) ? val : 0 };
+                                            const next = { ...d.mockup_by_prompt_id };
+                                            next[pr.id] = { url: currentUrl, area: nextArea };
+                                            updateDraft(i, { mockup_by_prompt_id: next });
                                           }}
                                           className="w-full rounded border border-neutral-200 bg-white px-1 py-0.5 text-[10px]"
                                         />

@@ -26,6 +26,9 @@ type Props = {
   pipelines?: GiftPipeline[];
   modes?: GiftModeMeta[];
   variants?: GiftProductVariant[];
+  /** Active prompts from the modes this product supports. Fed into the
+   *  variants panel so each variant can upload per-prompt mockups. */
+  parentPrompts?: Array<{ id: string; name: string; mode: string }>;
 };
 
 type Tab = 'basics' | 'production' | 'design' | 'content';
@@ -41,7 +44,7 @@ const FALLBACK_MODES: GiftModeMeta[] = [
   { slug: 'uv-dtf',       label: 'UV DTF',           description: GIFT_MODE_DESCRIPTION['uv-dtf'],       icon: null, display_order: 7, is_active: true },
 ];
 
-export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [] }: Props) {
+export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [], parentPrompts = [] }: Props) {
   const MODE_OPTIONS = (modes && modes.length > 0 ? modes : FALLBACK_MODES);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -659,6 +662,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 productWidthMm={parseFloat(widthMm) || product.width_mm}
                 productHeightMm={parseFloat(heightMm) || product.height_mm}
                 parentShapeOptions={shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null}
+                parentPrompts={parentPrompts}
               />
             ) : (
               <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>

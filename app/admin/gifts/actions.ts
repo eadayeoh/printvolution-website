@@ -624,6 +624,21 @@ const VariantSchema = z.object({
   // Migration 0059 — pan-photo mode (customer pans inside the fixed
   // mockup_area instead of dragging the rectangle around).
   photo_pan_mode: z.boolean().default(false),
+  // Per-prompt mockup override (migration 0061). Keyed by prompt UUID,
+  // value = { url, area }. Free-form string keys so z.record works here
+  // (unlike mockup_by_shape which has a fixed enum key set).
+  mockup_by_prompt_id: z
+    .record(
+      z.string().uuid(),
+      z.object({
+        url: z.string().min(1),
+        area: z.object({
+          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+        }),
+      }),
+    )
+    .nullable()
+    .optional(),
   // Per-shape mockup overrides (migration 0058). Keyed by shape kind;
   // missing key = fall back to the variant's base mockup_url / area.
   // Shaped as an object with optional fields (NOT z.record) because

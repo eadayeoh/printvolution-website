@@ -4,6 +4,7 @@ import { getGiftProductByIdAdmin, listAllTemplatesAdmin, listCategoriesForGifts 
 import { listActivePipelines } from '@/lib/gifts/pipelines';
 import { listActiveModes } from '@/lib/gifts/modes';
 import { listAllVariantsAdmin } from '@/lib/gifts/variants';
+import { listPromptsForProduct } from '@/lib/gifts/prompts';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,16 @@ export default async function EditGiftProductPage({ params }: { params: { id: st
   ]);
   if (!product) notFound();
   const assignedTemplateIds = await listAllAssignedForProduct(params.id);
+  // Prompts visible to admin's per-prompt mockup block on each variant.
+  // Uses the same filter as the customer page — honouring pinned pipelines.
+  const parentPrompts = (product.mode === 'photo-resize')
+    ? []
+    : (await listPromptsForProduct({
+        mode: product.mode,
+        secondary_mode: product.secondary_mode,
+        pipeline_id: product.pipeline_id,
+        secondary_pipeline_id: product.secondary_pipeline_id,
+      })).map((p) => ({ id: p.id, name: p.name, mode: p.mode }));
   return (
     <GiftProductEditor
       product={product}
@@ -27,6 +38,7 @@ export default async function EditGiftProductPage({ params }: { params: { id: st
       pipelines={pipelines}
       modes={modes}
       variants={variants}
+      parentPrompts={parentPrompts}
     />
   );
 }

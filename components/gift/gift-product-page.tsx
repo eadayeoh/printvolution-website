@@ -110,9 +110,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   //   1. If the variant has surfaces[] (front/back/left/right), the
   //      chosen surface's mockup wins so flipping a tab rotates the
   //      preview visually (used by the 360° rotating photo frame).
-  //   2. Per-shape override from shape_options config (migration 0058).
-  //   3. Variant's base mockup_url / mockup_area.
-  //   4. Product's mockup_url / mockup_area as final fallback.
+  //   2. Per-prompt override (migration 0061) — selected art style has
+  //      its own product shot.
+  //   3. Per-shape override from shape_options config (migration 0058).
+  //   4. Variant's base mockup_url / mockup_area.
+  //   5. Product's mockup_url / mockup_area as final fallback.
   const shapeMockup = (() => {
     const variantSurfaces = Array.isArray(selectedVariant?.surfaces) ? selectedVariant!.surfaces : [];
     if (variantSurfaces.length > 0) {
@@ -120,6 +122,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         ?? variantSurfaces[0];
       if (surface?.mockup_url) {
         return { url: surface.mockup_url, area: surface.mockup_area };
+      }
+    }
+    if (selectedPromptId && selectedVariant?.mockup_by_prompt_id) {
+      const byPrompt = selectedVariant.mockup_by_prompt_id[selectedPromptId];
+      if (byPrompt && byPrompt.url) {
+        return { url: byPrompt.url, area: byPrompt.area };
       }
     }
     if (shapePickerActive && selectedVariant?.mockup_by_shape) {
@@ -136,11 +144,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   // Reset the draggable area whenever the resolved shape mockup area
   // changes — either because variant flipped, or shape flipped, or the
-  // selected template inside the shape=template flow changed.
+  // selected template inside the shape=template flow changed, or the
+  // picked prompt has its own per-prompt mockup/area override.
   useEffect(() => {
     setCustomerArea(shapeMockup.area);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId]);
+  }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId]);
 
   // Reset the active surface when the variant changes — otherwise a
   // cutout-style flip between variants could leave a stale surface id
