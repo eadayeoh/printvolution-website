@@ -11,11 +11,10 @@
 
 import { runReplicate } from '../ai';
 
-// NOTE: potrace doesn't ship TypeScript types. Using require() keeps the
-// type system out of the way — the module exposes a single `trace(buf, opts, cb)`
-// that we promisify below.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const potrace = require('potrace') as {
+// potrace is a CJS Node module — loaded lazily inside `traceAlpha` so
+// the webpack Server-Actions bundle trace doesn't try to pull it into
+// the client manifest. Typed as the minimal surface we use.
+type PotraceModule = {
   trace: (
     input: Buffer | string,
     opts: Record<string, unknown>,
@@ -102,7 +101,13 @@ async function makeCheckerPng(w: number, h: number): Promise<Buffer> {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-function traceAlpha(pngBytes: Buffer): Promise<string> {
+async function traceAlpha(pngBytes: Buffer): Promise<string> {
+  // Hide the require from webpack's static analyser so the Server
+  // Actions bundler doesn't try to pull potrace into the client trace.
+  // `eval('require')` reaches Node's runtime require at run time.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-eval
+  const nodeRequire = eval('require') as NodeRequire;
+  const potrace = nodeRequire('potrace') as PotraceModule;
   return new Promise((resolve, reject) => {
     potrace.trace(
       pngBytes,

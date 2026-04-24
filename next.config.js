@@ -18,7 +18,7 @@ const nextConfig = {
       bodySizeLimit: '60mb',
     },
     // Native deps must stay external so Webpack doesn't try to bundle them.
-    serverComponentsExternalPackages: ['sharp', 'pdf-lib', '@resvg/resvg-js'],
+    serverComponentsExternalPackages: ['sharp', 'pdf-lib', '@resvg/resvg-js', 'potrace'],
   },
   async headers() {
     // Defence-in-depth response headers. CSP is intentionally NOT
