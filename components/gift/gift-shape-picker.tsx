@@ -3,12 +3,6 @@
 import type { ShapeOption, ShapeKind } from '@/lib/gifts/shape-options';
 import type { GiftTemplate } from '@/lib/gifts/types';
 
-const KIND_ICON: Record<ShapeKind, string> = {
-  cutout: '◐',
-  rectangle: '▭',
-  template: '▦',
-};
-
 type Props = {
   options: ShapeOption[];
   allTemplates: GiftTemplate[];
@@ -32,20 +26,7 @@ export function GiftShapePicker({
       ? allTemplates.filter((t) => templateRow.template_ids.includes(t.id))
       : [];
   return (
-    <div style={{ marginTop: 14 }}>
-      <div
-        style={{
-          fontFamily: 'var(--pv-f-mono)',
-          fontSize: 10,
-          fontWeight: 900,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--pv-ink)',
-          marginBottom: 8,
-        }}
-      >
-        Shape
-      </div>
+    <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {options.map((o) => {
           const active = selectedKind === o.kind;
@@ -68,7 +49,7 @@ export function GiftShapePicker({
                 boxShadow: active ? '2px 2px 0 var(--pv-yellow)' : 'none',
               }}
             >
-              {KIND_ICON[o.kind]} {o.label}
+              {o.label}
               {typeof o.price_delta_cents === 'number' && o.price_delta_cents > 0 && (
                 <span style={{ opacity: 0.7, marginLeft: 6 }}>+S${(o.price_delta_cents / 100).toFixed(2)}</span>
               )}
