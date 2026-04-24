@@ -62,6 +62,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [secondaryPipelineId, setSecondaryPipelineId] = useState<string>(product?.secondary_pipeline_id ?? '');
   const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
   const [leadTimeDays, setLeadTimeDays] = useState<string>(String(product?.lead_time_days ?? 5));
+  const [allowedFonts, setAllowedFonts] = useState<string[]>(product?.allowed_fonts ?? []);
 
   const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
   const [heightMm, setHeightMm] = useState(product?.height_mm.toString() ?? '100');
@@ -144,6 +145,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       secondary_pipeline_id: secondaryMode ? (secondaryPipelineId || null) : null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
       lead_time_days: Math.max(1, parseInt(leadTimeDays, 10) || 5),
+      allowed_fonts: allowedFonts.map((f) => f.trim()).filter(Boolean),
       sizes: sizes
         .map((s, i) => ({ ...s, display_order: i }))
         .filter((s) => s.slug && s.name && s.width_mm > 0 && s.height_mm > 0),
@@ -699,6 +701,70 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                     className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-bold text-neutral-700 hover:border-ink"
                   >
                     + {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Allowed fonts — customer picks from this list when adding text */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm font-black text-ink">Fonts customer can pick from</div>
+                <div className="mt-1 text-xs text-neutral-500">
+                  Google-Fonts family names (exact spelling). Customer sees a dropdown on the product page when adding text. Leave empty to hide the font picker.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAllowedFonts([...allowedFonts, ''])}
+                className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark"
+              >
+                <Plus size={12} /> Add font
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {allowedFonts.length === 0 ? (
+                <div className="rounded border border-dashed border-neutral-300 p-4 text-center text-xs text-neutral-500">
+                  No fonts — customer can&apos;t add text. Use the suggestions below or click <strong>+ Add font</strong>.
+                </div>
+              ) : (
+                allowedFonts.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      value={f}
+                      onChange={(e) => {
+                        const next = [...allowedFonts]; next[i] = e.target.value; setAllowedFonts(next);
+                      }}
+                      placeholder="e.g. Playfair Display"
+                      className={`${inputCls} flex-1`}
+                      style={{ fontFamily: f || undefined }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAllowedFonts(allowedFonts.filter((_, j) => j !== i))}
+                      className="flex h-9 w-9 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                      title="Remove"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+              <div className="mt-3 flex flex-wrap gap-1 text-[11px]">
+                <span className="mr-1 text-neutral-500">Quick add:</span>
+                {['Archivo', 'Fraunces', 'Playfair Display', 'Dancing Script', 'Bebas Neue', 'Montserrat', 'Lora', 'Caveat', 'Great Vibes'].map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      if (!allowedFonts.includes(name)) setAllowedFonts([...allowedFonts, name]);
+                    }}
+                    className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-bold text-neutral-700 hover:border-ink"
+                    style={{ fontFamily: name }}
+                  >
+                    + {name}
                   </button>
                 ))}
               </div>

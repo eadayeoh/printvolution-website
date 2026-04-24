@@ -14,23 +14,40 @@ import { useEffect, useRef, useState } from 'react';
 
 type Rect = { x: number; y: number; width: number; height: number };
 
+export type TextLayer = {
+  text: string;
+  /** Position of the text's centre (as % of mockup image). */
+  x: number;
+  y: number;
+  /** Font size as % of mockup-image height. */
+  sizePct: number;
+  fontFamily: string;
+  color: string;
+};
+
 export function GiftMockupPreviewInteractive({
   mockupUrl,
   previewUrl,
   area,
   bounds,
   onAreaChange,
+  textLayer,
+  onTextChange,
 }: {
   mockupUrl: string;
   previewUrl: string;
   area: Rect;
   bounds: Rect | null;
   onAreaChange: (next: Rect) => void;
+  /** Optional draggable text overlay. Null = no text. */
+  textLayer?: TextLayer | null;
+  onTextChange?: (next: TextLayer) => void;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
     | { mode: 'move'; startX: number; startY: number; startArea: Rect }
     | { mode: 'resize'; startX: number; startY: number; startArea: Rect }
+    | { mode: 'text'; startX: number; startY: number; startText: TextLayer }
     | null
   >(null);
 
@@ -60,16 +77,14 @@ export function GiftMockupPreviewInteractive({
     }
     function onMove(e: PointerEvent) {
       const { dxPct, dyPct } = pctDelta(e.clientX, e.clientY);
-      if (drag!.mode === 'move') {
+      if (drag!.mode === 'move' && 'startArea' in drag!) {
         onAreaChange(clampInsideBounds({
           x: drag!.startArea.x + dxPct,
           y: drag!.startArea.y + dyPct,
           width: drag!.startArea.width,
           height: drag!.startArea.height,
         }));
-      } else {
-        // Resize from the bottom-right handle, maintain aspect ratio
-        // of the starting rectangle so photos don't distort.
+      } else if (drag!.mode === 'resize' && 'startArea' in drag!) {
         const ratio = drag!.startArea.height / drag!.startArea.width;
         const newW = Math.max(5, drag!.startArea.width + dxPct);
         const newH = newW * ratio;
@@ -79,6 +94,11 @@ export function GiftMockupPreviewInteractive({
           width: newW,
           height: newH,
         }));
+      } else if (drag!.mode === 'text' && 'startText' in drag! && onTextChange) {
+        const b = bounds ?? { x: 0, y: 0, width: 100, height: 100 };
+        const nx = Math.max(b.x, Math.min(b.x + b.width, drag!.startText.x + dxPct));
+        const ny = Math.max(b.y, Math.min(b.y + b.height, drag!.startText.y + dyPct));
+        onTextChange({ ...drag!.startText, x: nx, y: ny });
       }
     }
     function onUp() { setDrag(null); }
@@ -116,6 +136,7 @@ export function GiftMockupPreviewInteractive({
         border: '2px solid #0a0a0a',
         userSelect: 'none',
         touchAction: 'none',
+        containerType: 'size',
       }}
     >
       <img
@@ -201,6 +222,37 @@ export function GiftMockupPreviewInteractive({
           />
         )}
       </div>
+      {/* Customer's text — draggable */}
+      {textLayer && textLayer.text.trim() && (
+        <div
+          onPointerDown={(e) => {
+            if (!onTextChange) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setDrag({ mode: 'text', startX: e.clientX, startY: e.clientY, startText: { ...textLayer } });
+          }}
+          style={{
+            position: 'absolute',
+            left: `${textLayer.x}%`,
+            top: `${textLayer.y}%`,
+            transform: 'translate(-50%, -50%)',
+            cursor: onTextChange ? (drag?.mode === 'text' ? 'grabbing' : 'grab') : 'default',
+            fontFamily: textLayer.fontFamily,
+            fontSize: `${textLayer.sizePct}cqh`,
+            color: textLayer.color,
+            whiteSpace: 'nowrap',
+            userSelect: 'none',
+            textShadow: '0 0 2px rgba(255,255,255,0.5)',
+            padding: '2px 6px',
+            outline: onTextChange ? '1px dashed rgba(233,30,140,0.6)' : undefined,
+            outlineOffset: 2,
+            lineHeight: 1,
+            pointerEvents: 'auto',
+          }}
+        >
+          {textLayer.text}
+        </div>
+      )}
     </div>
   );
 }

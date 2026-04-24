@@ -67,6 +67,24 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [addedFlash, setAddedFlash] = useState(false);
   const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
   const [engravedText, setEngravedText] = useState('');
+  const allowedFonts = product.allowed_fonts ?? [];
+  const [engravedFont, setEngravedFont] = useState<string>(allowedFonts[0] ?? 'Archivo');
+  const [engravedSizePct, setEngravedSizePct] = useState<number>(6); // % of preview height
+  const [textPos, setTextPos] = useState<{ x: number; y: number }>({ x: 50, y: 80 });
+
+  // Pull the admin-configured Google Fonts once on mount so the picker
+  // dropdown + the draggable text overlay both render in the real font.
+  useEffect(() => {
+    if (allowedFonts.length === 0) return;
+    const families = allowedFonts.map((f) => f.replace(/\s+/g, '+') + ':wght@400;700').join('&family=');
+    const href = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+    if (document.querySelector(`link[data-gift-fonts]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute('data-gift-fonts', '1');
+    document.head.appendChild(link);
+  }, [allowedFonts]);
   // Mirrored state from TemplateMultiSlotForm so the LIVE PREVIEW can
   // paint the zones the moment a file/text changes (before the server
   // composite runs).
@@ -287,7 +305,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     let notes = '';
     if (preview) {
       notes = `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}`;
-      if (engravedText.trim()) notes += `;text:${engravedText.trim()}`;
+      if (engravedText.trim()) {
+        notes += `;text:${engravedText.trim()}`;
+        notes += `;text_font:${engravedFont}`;
+        notes += `;text_size:${engravedSizePct}`;
+        notes += `;text_pos:${textPos.x.toFixed(1)},${textPos.y.toFixed(1)}`;
+      }
     }
     if (hasSurfaces && selectedVariant) {
       for (const s of selectedVariant.surfaces) {
@@ -553,6 +576,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         area={customerArea}
                         bounds={(selectedVariant?.mockup_area as any) ?? null}
                         onAreaChange={setCustomerArea}
+                        textLayer={engravedText.trim() ? {
+                          text: engravedText.trim(),
+                          x: textPos.x,
+                          y: textPos.y,
+                          sizePct: engravedSizePct,
+                          fontFamily: engravedFont,
+                          color: '#0a0a0a',
+                        } : null}
+                        onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
                       />
                     </div>
                   ) : (
@@ -643,25 +675,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
 
-                {engravedText.trim() && preview && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 28,
-                      left: 0,
-                      right: 0,
-                      textAlign: 'center',
-                      fontFamily: 'var(--pv-f-display)',
-                      fontSize: 14,
-                      letterSpacing: '0.05em',
-                      color: nightMode ? 'rgba(255,221,0,0.9)' : 'rgba(10,10,10,0.55)',
-                      textShadow: nightMode ? '0 0 8px rgba(255,221,0,0.5)' : 'none',
-                      padding: '0 16px',
-                    }}
-                  >
-                    {engravedText.trim()}
-                  </div>
-                )}
+                {/* Text is rendered inside GiftMockupPreviewInteractive as a
+                    draggable layer — no separate overlay here. */}
               </div>
             </div>
 
@@ -1109,6 +1124,47 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   >
                     {engravedText.length} / 32
                   </div>
+
+                  {engravedText.trim() && (
+                    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                      {allowedFonts.length > 0 && (
+                        <label style={{ display: 'block' }}>
+                          <span style={{ display: 'block', marginBottom: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Font</span>
+                          <select
+                            value={engravedFont}
+                            onChange={(e) => setEngravedFont(e.target.value)}
+                            style={{
+                              width: '100%', padding: '10px 12px', background: '#fff',
+                              border: '2px solid var(--pv-ink)', fontFamily: engravedFont,
+                              fontSize: 14, fontWeight: 500,
+                            }}
+                          >
+                            {allowedFonts.map((f) => (
+                              <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <label style={{ display: 'block' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Size</span>
+                          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedSizePct}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={2}
+                          max={20}
+                          step={0.5}
+                          value={engravedSizePct}
+                          onChange={(e) => setEngravedSizePct(parseFloat(e.target.value))}
+                          style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
+                        />
+                      </label>
+                      <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
+                        ✦ Drag the text on the preview to position it inside the safe zone.
+                      </div>
+                    </div>
+                  )}
                 </ComposeSection>
               )}
             </div>

@@ -82,6 +82,9 @@ export type GiftProduct = {
   /** Business-day turnaround from order placed to ready. Drives the
    *  "Ready by" calendar card on the customer-facing product page. */
   lead_time_days: number;
+  /** Google-Fonts family names the customer can pick from when adding
+   *  text to this product. Empty = no font picker. */
+  allowed_fonts: string[];
   base_price_cents: number;
   price_tiers: GiftPriceTier[];
   /** Size options for this product. Applies uniformly across every

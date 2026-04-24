@@ -68,6 +68,7 @@ const GiftProductSchema = z.object({
   secondary_pipeline_id: z.string().uuid().nullable().optional(),
   source_retention_days: z.number().int().min(1).default(30),
   lead_time_days: z.number().int().min(1).default(5),
+  allowed_fonts: z.array(z.string().min(1)).default([]),
   sizes: z.array(z.object({
     slug: z.string().regex(/^[a-z0-9-]+$/, 'Size slug must be lowercase letters, numbers, hyphens'),
     name: z.string().min(1),
