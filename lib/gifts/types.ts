@@ -343,6 +343,11 @@ export type GiftProductVariant = {
       area: { x: number; y: number; width: number; height: number };
     }
   >> | null;
+  /** Migration 0059 — when true the customer pans their photo WITHIN
+   *  the fixed mockup_area instead of dragging the rectangle around.
+   *  Used for products with a fixed photo-panel slot (e.g. Figurine
+   *  Photo Frame). Default false keeps the legacy drag-the-area UX. */
+  photo_pan_mode?: boolean;
 };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */

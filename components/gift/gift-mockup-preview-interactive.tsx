@@ -34,6 +34,9 @@ export function GiftMockupPreviewInteractive({
   textLayer,
   onTextChange,
   captureMode,
+  panMode,
+  panOffset,
+  onPanOffsetChange,
 }: {
   mockupUrl: string;
   previewUrl: string;
@@ -47,14 +50,25 @@ export function GiftMockupPreviewInteractive({
    *  magenta design outline, resize handle, text dashed outline) so a
    *  DOM snapshot only captures the final composited visual. */
   captureMode?: boolean;
+  /** Migration 0059 — when true the `area` rectangle is LOCKED (no
+   *  move / resize). Customer drags the photo INSIDE the rectangle,
+   *  shifting `panOffset` (background-position %). Photo still
+   *  cover-fills the area — panning decides which part is visible. */
+  panMode?: boolean;
+  /** Pan offset as % of the FRAME (0 = top/left of cropped-out photo,
+   *  50 = centre, 100 = bottom/right). Only meaningful in panMode. */
+  panOffset?: { x: number; y: number };
+  onPanOffsetChange?: (next: { x: number; y: number }) => void;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
     | { mode: 'move'; startX: number; startY: number; startArea: Rect }
     | { mode: 'resize'; startX: number; startY: number; startArea: Rect }
     | { mode: 'text'; startX: number; startY: number; startText: TextLayer }
+    | { mode: 'pan'; startX: number; startY: number; startOffset: { x: number; y: number } }
     | null
   >(null);
+  const effectivePanOffset = panOffset ?? { x: 50, y: 50 };
 
   // Clamp `area` inside `bounds` (or 0-100 if no bounds). Pure — no
   // DOM dependency, so it's safe to call before the stage mounts.
@@ -104,6 +118,19 @@ export function GiftMockupPreviewInteractive({
         const nx = Math.max(b.x, Math.min(b.x + b.width, drag!.startText.x + dxPct));
         const ny = Math.max(b.y, Math.min(b.y + b.height, drag!.startText.y + dyPct));
         onTextChange({ ...drag!.startText, x: nx, y: ny });
+      } else if (drag!.mode === 'pan' && 'startOffset' in drag! && onPanOffsetChange) {
+        // Pan mode: dragging the photo translates its background-position
+        // within the fixed area. Drag delta is stage-pct; scale by
+        // stage/area ratio so a 1-stage-pct pull moves the photo by
+        // about 2 area-pct inside an area that's half the stage. Clamp
+        // 0-100 so the photo never fully leaves the window.
+        const areaWPct = Math.max(area.width, 1);
+        const areaHPct = Math.max(area.height, 1);
+        const scaledDx = (dxPct / areaWPct) * 100;
+        const scaledDy = (dyPct / areaHPct) * 100;
+        const nx = Math.max(0, Math.min(100, drag!.startOffset.x - scaledDx));
+        const ny = Math.max(0, Math.min(100, drag!.startOffset.y - scaledDy));
+        onPanOffsetChange({ x: nx, y: ny });
       }
     }
     function onUp() { setDrag(null); }
@@ -165,7 +192,7 @@ export function GiftMockupPreviewInteractive({
         style={{ display: 'block', width: '100%', height: 'auto' }}
       />
       {/* Bounds guide + label — explains what the dashed box is */}
-      {bounds && !captureMode && (
+      {bounds && !captureMode && !panMode && (
         <>
           <div
             aria-hidden
@@ -203,26 +230,46 @@ export function GiftMockupPreviewInteractive({
           </div>
         </>
       )}
-      {/* Customer's design — draggable */}
+      {/* Customer's design — draggable.
+          panMode: rectangle locked, photo pans inside via background-position.
+          Default (admin-drag) mode: whole rectangle moves + resizes. */}
       <div
-        onPointerDown={canAdjust ? startMove : undefined}
+        onPointerDown={(e) => {
+          if (panMode) {
+            if (!onPanOffsetChange) return;
+            e.preventDefault();
+            setDrag({
+              mode: 'pan',
+              startX: e.clientX,
+              startY: e.clientY,
+              startOffset: { ...effectivePanOffset },
+            });
+          } else if (canAdjust) {
+            startMove(e);
+          }
+        }}
         style={{
           position: 'absolute',
           left: `${area.x}%`,
           top: `${area.y}%`,
           width: `${area.width}%`,
           height: `${area.height}%`,
-          cursor: canAdjust ? (drag?.mode === 'move' ? 'grabbing' : 'grab') : 'default',
-          mixBlendMode: 'multiply',
+          cursor: panMode
+            ? (drag?.mode === 'pan' ? 'grabbing' : 'grab')
+            : canAdjust ? (drag?.mode === 'move' ? 'grabbing' : 'grab') : 'default',
+          mixBlendMode: panMode ? 'normal' : 'multiply',
           backgroundImage: `url(${previewUrl})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          outline: canAdjust && !captureMode ? '2px solid rgba(233,30,140,0.6)' : undefined,
+          backgroundPosition: panMode
+            ? `${effectivePanOffset.x}% ${effectivePanOffset.y}%`
+            : 'center',
+          outline: !panMode && canAdjust && !captureMode ? '2px solid rgba(233,30,140,0.6)' : undefined,
           outlineOffset: 1,
           transition: drag ? undefined : 'outline-color 0.2s',
+          overflow: 'hidden',
         }}
       >
-        {canAdjust && !captureMode && (
+        {!panMode && canAdjust && !captureMode && (
           <div
             onPointerDown={startResize}
             aria-label="Drag to resize"

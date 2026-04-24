@@ -63,6 +63,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // variant changes so selecting a new base doesn't carry stale offsets.
   const defaultArea = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
   const [customerArea, setCustomerArea] = useState<{ x: number; y: number; width: number; height: number } | null>(defaultArea);
+  // Pan offset (%) used when the selected variant's photo_pan_mode is on.
+  // 50/50 = centred, matches the default background-position.
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
 
   // Ref to the preview-stage DIV — lets handleAddToCart snapshot the
   // composited live-preview (mockup + positioned photo + text overlay)
@@ -136,6 +139,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     const first = selectedVariant?.surfaces?.[0]?.id ?? '';
     setActiveSurfaceId(first);
   }, [selectedVariantId, selectedVariant?.surfaces]);
+
+  // Reset pan offset when variant changes so a panMode variant doesn't
+  // inherit a stale crop from the previous variant.
+  useEffect(() => {
+    setPanOffset({ x: 50, y: 50 });
+  }, [selectedVariantId]);
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
@@ -526,6 +535,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
     // Record the customer's adjusted area so production knows where
     // to place the design on the 300 DPI file (if they dragged/resized).
+    if (selectedVariant?.photo_pan_mode && (panOffset.x !== 50 || panOffset.y !== 50)) {
+      notes += `${notes ? ';' : ''}pan:${panOffset.x.toFixed(1)},${panOffset.y.toFixed(1)}`;
+    }
     if (customerArea && defaultArea && (
       customerArea.x !== defaultArea.x ||
       customerArea.y !== defaultArea.y ||
@@ -882,6 +894,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         } : null}
                         onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
                         captureMode={capturingSnapshot}
+                        panMode={selectedVariant?.photo_pan_mode === true}
+                        panOffset={panOffset}
+                        onPanOffsetChange={setPanOffset}
                       />
                     </div>
                   ) : (

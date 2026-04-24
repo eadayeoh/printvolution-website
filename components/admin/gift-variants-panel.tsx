@@ -34,6 +34,8 @@ type Draft = {
   // `mockup_area`. Only shown in the editor when the parent product has
   // `shape_options` active.
   mockup_by_shape: Partial<Record<ShapeKind, { url: string; area: { x: number; y: number; width: number; height: number } }>>;
+  // Migration 0059 — pan-photo mode (fixed mockup_area; customer pans).
+  photo_pan_mode: boolean;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -57,6 +59,7 @@ function toDraft(v?: GiftProductVariant): Draft {
     is_active: v?.is_active ?? true,
     colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
     surfaces: (v?.surfaces ?? []).map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
+    photo_pan_mode: v?.photo_pan_mode ?? false,
     mockup_by_shape: v?.mockup_by_shape
       ? Object.fromEntries(
           Object.entries(v.mockup_by_shape).map(([k, entry]) => [
@@ -187,6 +190,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         font_family: s.font_family ?? null, font_size_pct: s.font_size_pct ?? null,
         color: s.color ?? null, mode: s.mode ?? null,
       })),
+      photo_pan_mode: d.photo_pan_mode,
       mockup_by_shape: (() => {
         // Strip empty entries so we don't bloat the DB with
         // {kind: {url: '', area: {...}}} noise. Missing key on the
@@ -405,6 +409,21 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         <span>Active</span>
                       </label>
                     </div>
+                    <label className="flex items-center gap-2 text-xs pt-2">
+                      <input
+                        type="checkbox"
+                        checked={d.photo_pan_mode}
+                        onChange={(e) => updateDraft(i, { photo_pan_mode: e.target.checked })}
+                      />
+                      <span>
+                        <b>Customer pans photo inside fixed area</b>
+                        <span className="block text-[10px] text-neutral-500">
+                          Area rectangle is locked. Customer drags the photo within it instead
+                          of moving the whole rectangle around. Use for frames with a fixed
+                          photo-panel slot.
+                        </span>
+                      </span>
+                    </label>
                     {d.mockup_url ? (
                       <div>
                         <div className="mb-2 text-[11px] font-bold text-neutral-500">

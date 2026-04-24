@@ -612,6 +612,9 @@ const VariantSchema = z.object({
       }),
     )
     .default([]),
+  // Migration 0059 — pan-photo mode (customer pans inside the fixed
+  // mockup_area instead of dragging the rectangle around).
+  photo_pan_mode: z.boolean().default(false),
   // Per-shape mockup overrides (migration 0058). Keyed by shape kind;
   // missing key = fall back to the variant's base mockup_url / area.
   // Shaped as an object with optional fields (NOT z.record) because
