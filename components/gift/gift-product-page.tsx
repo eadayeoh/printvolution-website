@@ -377,11 +377,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       setUploading(false);
     }
 
-    const unit = (selectedVariant?.base_price_cents || product.base_price_cents) + (selectedSize?.price_delta_cents ?? 0);
+    const shapeDelta = shapePickerActive
+      ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind)
+      : 0;
+    const unit = (selectedVariant?.base_price_cents || product.base_price_cents)
+      + (selectedSize?.price_delta_cents ?? 0)
+      + shapeDelta;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
     };
+    if (shapePickerActive) {
+      config.Shape = selectedShapeKind === 'template'
+        ? `Template — ${templates.find((t) => t.id === selectedShapeTemplateId)?.name ?? 'Template'}`
+        : selectedShapeKind.charAt(0).toUpperCase() + selectedShapeKind.slice(1);
+    }
     if (selectedVariant) {
       config.Base = selectedVariant.name;
     }
@@ -1816,7 +1826,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       color: 'var(--pv-yellow)',
                     }}
                   >
-                    {formatSGD(((selectedVariant?.base_price_cents || product.base_price_cents) + (selectedSize?.price_delta_cents ?? 0)) * qty)}
+                    {formatSGD((
+                      (selectedVariant?.base_price_cents || product.base_price_cents)
+                      + (selectedSize?.price_delta_cents ?? 0)
+                      + (shapePickerActive ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind) : 0)
+                    ) * qty)}
                   </div>
                 </div>
               </div>
