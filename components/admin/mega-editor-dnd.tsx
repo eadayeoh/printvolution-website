@@ -94,9 +94,14 @@ export function MegaEditorDnd({
           next[toSec].items.splice(insertAt, 0, item);
           return next;
         });
-      } else if (over.startsWith('dropzone:')) {
-        // Dropped on an empty section's drop zone
-        const toSec = parseInt(over.slice(9), 10);
+      } else if (over.startsWith('dropzone:') || over.startsWith('section:')) {
+        // Dropped on a section's drop zone (tail marker) OR anywhere
+        // inside the section card's background — both land the item
+        // at the end of that section. Falling back to `section:` when
+        // no specific item was hit is what fixes the "I drag to the
+        // other section and nothing happens" complaint.
+        const toSec = parseInt(over.slice(over.indexOf(':') + 1), 10);
+        if (toSec === fromSec) return;
         const item = sections[fromSec].items[fromItem];
         setSections((prev) => {
           const next = prev.map((s) => ({ ...s, items: [...s.items] }));
@@ -169,44 +174,50 @@ export function MegaEditorDnd({
             )}
             {sections.map((section, si) => (
               <SortableSection key={`sec:${si}`} id={`sec:${si}`}>
-                <SectionCardChrome
-                  title={section.section_heading}
-                  onTitleChange={(v) => updateSection(si, { section_heading: v })}
-                  onRemove={() => removeSection(si)}
-                  itemCount={section.items.length}
+                <SectionDroppableBody
+                  sectionIdx={si}
+                  active={!!activeKey && activeKey.startsWith('it:')}
                 >
-                  <SortableContext items={section.items.map((_, ii) => `it:${si}:${ii}`)} strategy={rectSortingStrategy}>
-                    <div
-                      className="flex flex-wrap gap-2"
-                      data-dropzone={`dropzone:${si}`}
-                      id={`dropzone:${si}`}
-                    >
-                      {section.items.map((it, ii) => (
-                        <SortableItem
-                          key={`it:${si}:${ii}`}
-                          id={`it:${si}:${ii}`}
-                          label={it.label || productBySlug.get(it.product_slug)?.name || it.product_slug}
-                          slug={it.product_slug}
-                          onLabelChange={(v) => setSections(sections.map((s, j) => j === si ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: v } : x) } : s))}
-                          onRemove={() => removeItem(si, ii)}
-                        />
-                      ))}
-                      {/* Always-rendered drop target so a drag can land at
-                          the END of any section regardless of size. While
-                          idle it stays narrow / muted; expands + glows
-                          while a drag is in progress. */}
-                      <EmptyDropZone sectionIdx={si} active={!!activeKey && activeKey.startsWith('it:')} empty={section.items.length === 0} />
-
-                      <button
-                        type="button"
-                        onClick={() => setAddingToSection(si)}
-                        className="flex h-10 items-center gap-1 rounded-full border-2 border-dashed border-neutral-300 px-4 text-xs font-bold text-neutral-500 hover:border-pink hover:text-pink"
+                  <SectionCardChrome
+                    title={section.section_heading}
+                    onTitleChange={(v) => updateSection(si, { section_heading: v })}
+                    onRemove={() => removeSection(si)}
+                    itemCount={section.items.length}
+                  >
+                    <SortableContext items={section.items.map((_, ii) => `it:${si}:${ii}`)} strategy={rectSortingStrategy}>
+                      <div
+                        className="flex flex-wrap gap-2"
+                        data-dropzone={`dropzone:${si}`}
+                        id={`dropzone:${si}`}
                       >
-                        <Plus size={14} /> Add products
-                      </button>
-                    </div>
-                  </SortableContext>
-                </SectionCardChrome>
+                        {section.items.map((it, ii) => (
+                          <SortableItem
+                            key={`it:${si}:${ii}`}
+                            id={`it:${si}:${ii}`}
+                            label={it.label || productBySlug.get(it.product_slug)?.name || it.product_slug}
+                            slug={it.product_slug}
+                            onLabelChange={(v) => setSections(sections.map((s, j) => j === si ? { ...s, items: s.items.map((x, k) => k === ii ? { ...x, label: v } : x) } : s))}
+                            onRemove={() => removeItem(si, ii)}
+                          />
+                        ))}
+                        {/* Tail drop target — narrow strip that lets you
+                            reliably land at the END of a non-empty
+                            section. The whole section card is also a
+                            drop target (via SectionDroppableBody), so
+                            this is mainly a visible "end marker". */}
+                        <EmptyDropZone sectionIdx={si} active={!!activeKey && activeKey.startsWith('it:')} empty={section.items.length === 0} />
+
+                        <button
+                          type="button"
+                          onClick={() => setAddingToSection(si)}
+                          className="flex h-10 items-center gap-1 rounded-full border-2 border-dashed border-neutral-300 px-4 text-xs font-bold text-neutral-500 hover:border-pink hover:text-pink"
+                        >
+                          <Plus size={14} /> Add products
+                        </button>
+                      </div>
+                    </SortableContext>
+                  </SectionCardChrome>
+                </SectionDroppableBody>
               </SortableSection>
             ))}
           </div>
@@ -377,6 +388,28 @@ function ItemChip({ label, ghost }: { label: string; ghost?: boolean }) {
     <div className={`flex h-10 items-center rounded-full border border-pink bg-pink/10 px-3 text-xs font-semibold text-pink ${ghost ? 'shadow-lg' : ''}`}>
       <GripVertical size={14} className="mr-1" />
       {label}
+    </div>
+  );
+}
+
+/** Wraps each section card in a droppable so dragging a chip and
+ *  releasing ANYWHERE inside the section area (not just over another
+ *  chip or the tail marker) still lands the item at the end of that
+ *  section. Without this the "drag to another section" UX requires
+ *  pixel-accurate aim at a small marker, which is why the original
+ *  report was "I can't drag one product to the other section". */
+function SectionDroppableBody({
+  sectionIdx, active, children,
+}: {
+  sectionIdx: number; active: boolean; children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `section:${sectionIdx}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg transition-colors ${active && isOver ? 'bg-pink/5 ring-2 ring-pink' : ''}`}
+    >
+      {children}
     </div>
   );
 }
