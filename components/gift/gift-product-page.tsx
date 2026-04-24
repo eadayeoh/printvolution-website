@@ -95,9 +95,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   //   3. Variant's base mockup_url / mockup_area.
   //   4. Product's mockup_url / mockup_area as final fallback.
   const shapeMockup = (() => {
-    if (selectedVariant && selectedVariant.surfaces.length > 0) {
-      const surface = selectedVariant.surfaces.find((s) => s.id === activeSurfaceId)
-        ?? selectedVariant.surfaces[0];
+    const variantSurfaces = Array.isArray(selectedVariant?.surfaces) ? selectedVariant!.surfaces : [];
+    if (variantSurfaces.length > 0) {
+      const surface = variantSurfaces.find((s) => s.id === activeSurfaceId)
+        ?? variantSurfaces[0];
       if (surface?.mockup_url) {
         return { url: surface.mockup_url, area: surface.mockup_area };
       }
@@ -392,7 +393,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Multi-surface variants let the customer add to cart with text-only
   // fills — no server preview needed. For every other flow we still
   // require a server-generated preview.
-  const hasSurfaces = Boolean(selectedVariant && selectedVariant.surfaces.length > 0);
+  const hasSurfaces = Boolean(
+    selectedVariant && Array.isArray(selectedVariant.surfaces) && selectedVariant.surfaces.length > 0,
+  );
   const filledSurfaceCount = hasSurfaces
     ? Object.values(surfaceFills).filter((f) => (f.text ?? '').trim() || f.photoThumb).length
     : 0;
