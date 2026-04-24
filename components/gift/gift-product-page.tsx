@@ -550,7 +550,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         mockupUrl={selectedVariant?.mockup_url || product.mockup_url!}
                         previewUrl={preview.previewUrl}
                         area={customerArea}
-                        bounds={(selectedVariant?.mockup_bounds as any) ?? null}
+                        bounds={(selectedVariant?.mockup_area as any) ?? null}
                         onAreaChange={setCustomerArea}
                       />
                     </div>
