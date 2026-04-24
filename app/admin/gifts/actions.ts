@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { putObject, GIFT_BUCKETS } from '@/lib/gifts/storage';
+import { parseShapeOptions } from '@/lib/gifts/shape-options';
 async function requireAdmin() {
   const sb = createClient();
   const { data: { user } } = await sb.auth.getUser();
@@ -73,6 +74,12 @@ const GiftProductSchema = z.object({
     time: z.string(),
     desc: z.string(),
   })).nullable().optional(),
+  shape_options: z.array(z.object({
+    kind: z.enum(['cutout', 'rectangle', 'template']),
+    label: z.string().min(1),
+    price_delta_cents: z.number().int().min(0).default(0),
+    template_ids: z.array(z.string().uuid()).optional(),
+  })).nullable().optional(),
   // Migration 0035 additions
   pipeline_id: z.string().uuid().nullable().optional(),
   // Migration 0047 — pipeline override for the secondary mode.
@@ -93,6 +100,49 @@ const GiftProductSchema = z.object({
 function validateModes(p: { mode?: string; secondary_mode?: string | null }) {
   if (p.secondary_mode && p.mode && p.secondary_mode === p.mode) {
     return 'Secondary mode must differ from the primary mode — pick a different one, or clear it to keep the product single-mode.';
+  }
+  return null;
+}
+
+function validateShapeOptions(
+  input: { shape_options?: unknown },
+): string | null {
+  if (!input.shape_options) return null;
+  try {
+    parseShapeOptions(input.shape_options);
+  } catch (e: any) {
+    return e?.message ?? 'Invalid shape_options';
+  }
+  return null;
+}
+
+/** Reject template-kind shape rows whose templates use modes the product
+ *  doesn't support — same rule as setProductTemplates, so there's only
+ *  one place for this invariant to drift. */
+async function validateShapeTemplatesCompat(
+  sb: Awaited<ReturnType<typeof requireAdmin>>,
+  input: { mode?: string; secondary_mode?: string | null; shape_options?: unknown },
+): Promise<string | null> {
+  const raw = Array.isArray(input.shape_options) ? input.shape_options : null;
+  if (!raw) return null;
+  const tpl = raw.find((s: any) => s?.kind === 'template');
+  const ids = tpl && Array.isArray(tpl.template_ids) ? (tpl.template_ids as string[]) : [];
+  if (ids.length === 0) return null;
+  const { data: templates } = await sb
+    .from('gift_templates')
+    .select('id, name, zones_json')
+    .in('id', ids);
+  const allowed = new Set<string>([
+    (input.mode ?? '') as string,
+    ...(input.secondary_mode ? [input.secondary_mode as string] : []),
+  ].filter(Boolean));
+  for (const t of templates ?? []) {
+    const zones = Array.isArray((t as any).zones_json) ? (t as any).zones_json : [];
+    for (const z of zones) {
+      if (z?.mode && !allowed.has(z.mode)) {
+        return `Template "${(t as any).name}" uses mode ${z.mode} which isn't enabled on this product.`;
+      }
+    }
   }
   return null;
 }
@@ -150,6 +200,10 @@ export async function createGiftProduct(input: z.input<typeof GiftProductSchema>
   const parsed = GiftProductSchema.parse(input);
   const err = validateModes(parsed);
   if (err) return { ok: false as const, error: err };
+  const shapeErr = validateShapeOptions(parsed);
+  if (shapeErr) return { ok: false as const, error: shapeErr };
+  const tplErr = await validateShapeTemplatesCompat(sb, parsed);
+  if (tplErr) return { ok: false as const, error: tplErr };
   // Can't auto-derive here — variants don't exist until after insert.
   // Admin's manual value (or 0) goes in as-is. First variant save
   // triggers recomputeParentBasePrice which fills it.
@@ -163,6 +217,10 @@ export async function updateGiftProduct(id: string, input: Partial<z.input<typeo
   const sb = await requireAdmin();
   const err = validateModes(input);
   if (err) return { ok: false as const, error: err };
+  const shapeErr = validateShapeOptions(input);
+  if (shapeErr) return { ok: false as const, error: shapeErr };
+  const tplErr = await validateShapeTemplatesCompat(sb, input);
+  if (tplErr) return { ok: false as const, error: tplErr };
   // Auto-derive base price from variants when admin saves with 0.
   const effectiveBase = await resolveBasePrice(sb, id, input.base_price_cents);
   // Auto-derive thumbnail: admin value → mockup_url → first variant.
