@@ -136,7 +136,7 @@ export function GiftMockupPreviewInteractive({
         border: '2px solid #0a0a0a',
         userSelect: 'none',
         touchAction: 'none',
-        containerType: 'size',
+        containerType: 'inline-size',
       }}
     >
       <img
@@ -238,7 +238,7 @@ export function GiftMockupPreviewInteractive({
             transform: 'translate(-50%, -50%)',
             cursor: onTextChange ? (drag?.mode === 'text' ? 'grabbing' : 'grab') : 'default',
             fontFamily: textLayer.fontFamily,
-            fontSize: `${textLayer.sizePct}cqh`,
+            fontSize: `${textLayer.sizePct}cqw`,
             color: textLayer.color,
             whiteSpace: 'nowrap',
             userSelect: 'none',
