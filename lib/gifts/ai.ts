@@ -31,6 +31,25 @@ export type ReplicateInput = {
 };
 
 export async function runReplicate(opts: ReplicateInput): Promise<Buffer> {
+  // Replicate occasionally returns transient "Prediction interrupted"
+  // (PA / E6716) errors. Retry a couple of times before giving up.
+  const MAX_ATTEMPTS = 3;
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await runReplicateOnce(opts);
+    } catch (e: any) {
+      lastErr = e;
+      const msg = e?.message ?? '';
+      const transient = /interrupted|aborted|timed out|ECONN|ETIMEDOUT|5\d\d|429|PA\b|E67/i.test(msg);
+      if (!transient || attempt === MAX_ATTEMPTS) throw e;
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
+async function runReplicateOnce(opts: ReplicateInput): Promise<Buffer> {
   // Accept either the canonical `REPLICATE_API_TOKEN` or the friendlier
   // `Replicate` / `REPLICATE` names — Vercel lets admins pick anything
   // and we don't want a name mismatch to silently disable AI.
