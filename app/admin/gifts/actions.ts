@@ -596,6 +596,20 @@ const VariantSchema = z.object({
       }),
     )
     .default([]),
+  // Per-shape mockup overrides (migration 0058). Keyed by shape kind;
+  // missing key = fall back to the variant's base mockup_url / area.
+  mockup_by_shape: z
+    .record(
+      z.enum(['cutout', 'rectangle', 'template']),
+      z.object({
+        url: z.string().min(1),
+        area: z.object({
+          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+        }),
+      }),
+    )
+    .nullable()
+    .optional(),
 });
 
 /** If the parent product's base_price_cents is still at 0, recompute

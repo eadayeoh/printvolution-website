@@ -63,11 +63,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // variant changes so selecting a new base doesn't carry stale offsets.
   const defaultArea = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
   const [customerArea, setCustomerArea] = useState<{ x: number; y: number; width: number; height: number } | null>(defaultArea);
-  useEffect(() => {
-    const next = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
-    setCustomerArea(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantId]);
 
   // Shape picker (cutout / rectangle / template) — enabled on products
   // that have a non-empty `shape_options` column. Customer picks a shape
@@ -83,6 +78,32 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   });
   const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
   const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
+
+  // Resolve the active mockup URL + area based on (variant, shape).
+  // Variants may carry per-shape overrides (migration 0058). Fall back
+  // to the variant's base mockup, then to the product mockup. Same rule
+  // for the customer-draggable area so cutout renders don't inherit
+  // rectangular panel coords.
+  const shapeMockup = (() => {
+    if (shapePickerActive && selectedVariant?.mockup_by_shape) {
+      const override = selectedVariant.mockup_by_shape[selectedShapeKind];
+      if (override && override.url) {
+        return { url: override.url, area: override.area };
+      }
+    }
+    return {
+      url: selectedVariant?.mockup_url || product.mockup_url || '',
+      area: (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null,
+    };
+  })();
+
+  // Reset the draggable area whenever the resolved shape mockup area
+  // changes — either because variant flipped, or shape flipped, or the
+  // selected template inside the shape=template flow changed.
+  useEffect(() => {
+    setCustomerArea(shapeMockup.area);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId]);
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
@@ -712,10 +733,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <div style={{ width: '100%' }}>
                       <GiftMockupPreviewInteractive
-                        mockupUrl={selectedVariant?.mockup_url || product.mockup_url!}
+                        mockupUrl={shapeMockup.url}
                         previewUrl={preview.previewUrl}
                         area={customerArea}
-                        bounds={(selectedVariant?.mockup_area as any) ?? null}
+                        bounds={(shapeMockup.area as any) ?? null}
                         onAreaChange={setCustomerArea}
                         textLayer={engravedText.trim() ? {
                           text: engravedText.trim(),
@@ -750,10 +771,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
                   </div>
-                ) : (selectedVariant?.mockup_url || product.mockup_url) ? (
+                ) : shapeMockup.url ? (
                   <div style={{ width: '100%', position: 'relative' }}>
                     <img
-                      src={selectedVariant?.mockup_url || product.mockup_url!}
+                      src={shapeMockup.url}
                       alt={product.name}
                       style={{
                         display: 'block',

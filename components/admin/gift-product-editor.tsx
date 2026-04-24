@@ -643,6 +643,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
                 productWidthMm={parseFloat(widthMm) || product.width_mm}
                 productHeightMm={parseFloat(heightMm) || product.height_mm}
+                parentShapeOptions={shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null}
               />
             ) : (
               <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>

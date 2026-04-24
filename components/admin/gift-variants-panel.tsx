@@ -7,6 +7,7 @@ import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
 import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 
 const ALL_GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -28,6 +29,11 @@ type Draft = {
   // Multi-face config. Empty = single-surface fallback using the
   // variant row's own mockup_url + mockup_area.
   surfaces: GiftVariantSurface[];
+  // Per-shape mockup overrides (migration 0058). Keyed by shape kind.
+  // Missing key = fall back to the variant's base `mockup_url` +
+  // `mockup_area`. Only shown in the editor when the parent product has
+  // `shape_options` active.
+  mockup_by_shape: Partial<Record<ShapeKind, { url: string; area: { x: number; y: number; width: number; height: number } }>>;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -51,6 +57,14 @@ function toDraft(v?: GiftProductVariant): Draft {
     is_active: v?.is_active ?? true,
     colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
     surfaces: (v?.surfaces ?? []).map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
+    mockup_by_shape: v?.mockup_by_shape
+      ? Object.fromEntries(
+          Object.entries(v.mockup_by_shape).map(([k, entry]) => [
+            k,
+            entry ? { url: entry.url, area: { ...entry.area } } : entry,
+          ]),
+        ) as Draft['mockup_by_shape']
+      : {},
   };
 }
 
@@ -79,6 +93,11 @@ type GiftVariantsPanelProps = {
    *  doesn't override width_mm/height_mm. */
   productWidthMm: number;
   productHeightMm: number;
+  /** Parent product's shape_options. When present, each variant row
+   *  grows an extra block to upload a per-shape mockup + area so
+   *  cutout / rectangle / template each render on the correct base
+   *  visual. */
+  parentShapeOptions?: ShapeOption[] | null;
 };
 
 export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariantsPanelProps>(function GiftVariantsPanel({
@@ -87,6 +106,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   allowedModes,
   productWidthMm,
   productHeightMm,
+  parentShapeOptions,
 }, ref) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
@@ -167,8 +187,23 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         font_family: s.font_family ?? null, font_size_pct: s.font_size_pct ?? null,
         color: s.color ?? null, mode: s.mode ?? null,
       })),
+      mockup_by_shape: (() => {
+        // Strip empty entries so we don't bloat the DB with
+        // {kind: {url: '', area: {...}}} noise. Missing key on the
+        // customer side falls back to the base mockup.
+        const cleaned: Partial<Record<ShapeKind, { url: string; area: { x: number; y: number; width: number; height: number } }>> = {};
+        for (const [kind, entry] of Object.entries(d.mockup_by_shape)) {
+          if (entry && typeof entry.url === 'string' && entry.url.trim()) {
+            cleaned[kind as ShapeKind] = { url: entry.url.trim(), area: entry.area };
+          }
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : null;
+      })(),
     };
-    const r = await upsertGiftVariant(payload);
+    // `mockup_by_shape` is a Partial<Record<>>; z.record(enum, obj)
+    // widens values to required. Cast at the call site — the server
+    // validator accepts missing keys just fine.
+    const r = await upsertGiftVariant(payload as any);
     if (!r.ok) {
       const msg = r.error.includes('gift_product_id_slug_key')
         ? `A variant with slug "${d.slug.trim()}" already exists.`
@@ -623,6 +658,88 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         image doubles as the thumbnail (copy happens on
                         save). Keeping the column in the DB means old
                         rows still work without a migration. */}
+                    {parentShapeOptions && parentShapeOptions.length > 0 && (
+                      <div className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-3">
+                        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Per-shape mockups (optional)
+                        </div>
+                        <p className="mb-2 text-[10px] text-neutral-500">
+                          Override the base mockup for specific shapes. Useful when the customer picks Cutout and the
+                          rectangular-panel mockup above stops looking right. Leave blank to fall back to the base mockup.
+                        </p>
+                        <div className="space-y-2">
+                          {parentShapeOptions.map((opt) => {
+                            const entry = d.mockup_by_shape[opt.kind];
+                            const currentUrl = entry?.url ?? '';
+                            const currentArea = entry?.area ?? d.mockup_area;
+                            return (
+                              <div key={opt.kind} className="rounded border border-neutral-200 bg-white p-2">
+                                <div className="mb-1 flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink">
+                                    {opt.kind} · {opt.label}
+                                  </span>
+                                  {currentUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const next = { ...d.mockup_by_shape };
+                                        delete next[opt.kind];
+                                        updateDraft(i, { mockup_by_shape: next });
+                                      }}
+                                      className="text-[10px] font-bold text-red-600 hover:underline"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                                <ImageUpload
+                                  value={currentUrl}
+                                  onChange={(url) => {
+                                    const next = { ...d.mockup_by_shape };
+                                    if (url) {
+                                      next[opt.kind] = { url, area: currentArea };
+                                    } else {
+                                      delete next[opt.kind];
+                                    }
+                                    updateDraft(i, { mockup_by_shape: next });
+                                  }}
+                                  prefix={`variant-${d.slug || 'mockup'}-${opt.kind}`}
+                                  aspect={1}
+                                  size="sm"
+                                  label={`${opt.kind} mockup`}
+                                />
+                                {currentUrl && (
+                                  <div className="mt-1 grid grid-cols-4 gap-1 text-[10px]">
+                                    {(['x', 'y', 'width', 'height'] as const).map((field) => (
+                                      <label key={field} className="block">
+                                        <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">
+                                          {field}%
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          step={0.1}
+                                          value={currentArea[field]}
+                                          onChange={(e) => {
+                                            const val = parseFloat(e.target.value || '0');
+                                            const nextArea = { ...currentArea, [field]: Number.isFinite(val) ? val : 0 };
+                                            const next = { ...d.mockup_by_shape };
+                                            next[opt.kind] = { url: currentUrl, area: nextArea };
+                                            updateDraft(i, { mockup_by_shape: next });
+                                          }}
+                                          className="w-full rounded border border-neutral-200 bg-white px-1 py-0.5 text-[10px]"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">

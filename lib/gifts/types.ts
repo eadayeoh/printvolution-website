@@ -331,6 +331,18 @@ export type GiftProductVariant = {
   /** Per-face customisation. Empty → single-surface fallback using
    *  this variant's mockup_url + mockup_area + parent input_mode. */
   surfaces: GiftVariantSurface[];
+  /** Migration 0058 — per-shape mockup overrides. When the parent
+   *  product's shape_options is active, each shape kind may want its
+   *  own mockup image + mockup_area: a cutout piece on a Black Base
+   *  doesn't look the same as a rectangular one. Missing key falls
+   *  back to the variant's base `mockup_url` + `mockup_area`. */
+  mockup_by_shape?: Partial<Record<
+    import('./shape-options').ShapeKind,
+    {
+      url: string;
+      area: { x: number; y: number; width: number; height: number };
+    }
+  >> | null;
 };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */
