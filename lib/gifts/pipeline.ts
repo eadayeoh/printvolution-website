@@ -92,6 +92,12 @@ export type PreviewInput = {
   /** Per-zone text overrides keyed by zone_id. Defaults to the
    *  template zone's default_text when a key is absent. */
   textByZoneId?: Record<string, string>;
+  /** Customer-picked shape from the product's shape_options config.
+   *  null / undefined = legacy behaviour (rectangle-equivalent).
+   *  Drives a dispatcher below — 'cutout' runs the new bg-remove stage,
+   *  'template' falls through to the composite path (templateId must be
+   *  set), 'rectangle' passes through the mode-default pipeline. */
+  shapeKind?: 'cutout' | 'rectangle' | 'template' | null;
 };
 
 export type PreviewOutput = {

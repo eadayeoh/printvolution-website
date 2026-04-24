@@ -256,6 +256,12 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   const promptId = (formData.get('prompt_id') || '').toString() || null;
   const variantId = (formData.get('variant_id') || '').toString() || null;
   const cropRaw = (formData.get('crop_rect') || '').toString();
+  const shapeKindRaw = (formData.get('shape_kind') || '').toString() || null;
+  const shapeTemplateId = (formData.get('shape_template_id') || '').toString() || null;
+  const shapeKind: 'cutout' | 'rectangle' | 'template' | null =
+    shapeKindRaw === 'cutout' || shapeKindRaw === 'rectangle' || shapeKindRaw === 'template'
+      ? shapeKindRaw
+      : null;
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
   if (file.size > MAX_BYTES) return { ok: false, error: 'File too large (max 20 MB)' };
@@ -376,6 +382,22 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     }
   }
 
+  // Validate shape_kind against the product's shape_options config.
+  // Keeps a customer-crafted request from asking for a Cutout on a
+  // rectangle-only product, or picking a template that's not enabled.
+  const configuredShapes = Array.isArray((product as any).shape_options)
+    ? ((product as any).shape_options as Array<{ kind: string; template_ids?: string[] }>)
+    : [];
+  if (configuredShapes.length > 0 && shapeKind) {
+    const row = configuredShapes.find((r) => r.kind === shapeKind);
+    if (!row) return { ok: false, error: `Shape "${shapeKind}" is not enabled on this product.` };
+    if (shapeKind === 'template') {
+      if (!shapeTemplateId || !Array.isArray(row.template_ids) || !row.template_ids.includes(shapeTemplateId)) {
+        return { ok: false, error: 'Picked template is not allowed for this product.' };
+      }
+    }
+  }
+
   // 2. Register source asset row
   const { data: sourceAsset, error: srcErr } = await service
     .from('gift_assets')
@@ -414,7 +436,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       sourceBytes: bytes,
       sourceMime: file.type,
       cropRect: cropRect ?? null,
-      templateId,
+      // Shape='template' carries its own template id — it wins over the
+      // legacy top-level template_id path so admin-enabled shape-picker
+      // products pick the right template at fan-out time.
+      templateId: shapeKind === 'template' ? shapeTemplateId : templateId,
+      shapeKind,
       imagesByZoneId: Object.keys(zoneFilesBytes).length > 0 ? zoneFilesBytes : undefined,
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
     });
