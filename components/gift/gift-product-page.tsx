@@ -586,6 +586,44 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
                   </div>
+                ) : (selectedVariant?.mockup_url || product.mockup_url) ? (
+                  <div style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
+                    <img
+                      src={selectedVariant?.mockup_url || product.mockup_url!}
+                      alt={product.name}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        height: 'auto',
+                        filter: nightMode ? 'brightness(0.8) contrast(1.1)' : undefined,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: nightMode ? 'rgba(26,20,16,0.55)' : 'rgba(255,244,229,0.72)',
+                        color: nightMode ? 'var(--pv-yellow)' : 'var(--pv-ink)',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        padding: 16,
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 24, marginBottom: 6, color: 'var(--pv-magenta)' }}>✦</div>
+                        Upload a photo<br />
+                        {hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div
                     style={{

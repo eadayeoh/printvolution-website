@@ -62,10 +62,20 @@ const A_SERIES_PRESETS: Array<{ label: string; w: number; h: number }> = [
   { label: 'A5 landscape', w: 210, h: 148 },
 ];
 
+// Mockup areas are stored as percentages of the mockup image (0–100),
+// but editors are easier to reason about in millimetres. We convert
+// in/out using the variant's own width_mm/height_mm (falling back to
+// the product's when the variant hasn't overridden them). This assumes
+// the mockup image represents the product surface.
+const pctToMm = (pct: number, dimMm: number) => (dimMm > 0 ? +((pct / 100) * dimMm).toFixed(1) : 0);
+const mmToPct = (mm: number, dimMm: number) => (dimMm > 0 ? +((mm / dimMm) * 100).toFixed(3) : 0);
+
 export function GiftVariantsPanel({
   giftProductId,
   initialVariants,
   allowedModes,
+  productWidthMm,
+  productHeightMm,
 }: {
   giftProductId: string;
   initialVariants: GiftProductVariant[];
@@ -73,6 +83,10 @@ export function GiftVariantsPanel({
    *  these (parent product's {mode, secondary_mode}). When undefined or
    *  empty, every mode is available (back-compat). */
   allowedModes?: GiftMode[];
+  /** Parent product dimensions used as the mockup canvas when a variant
+   *  doesn't override width_mm/height_mm. */
+  productWidthMm: number;
+  productHeightMm: number;
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
@@ -428,37 +442,43 @@ export function GiftVariantsPanel({
                         <span>Active</span>
                       </label>
                     </div>
-                    {d.variant_kind === 'base' && (
-                      <div>
-                        <div className="mb-1 text-[11px] font-bold text-neutral-500">Mockup area (% of mockup image)</div>
-                        <div className="grid grid-cols-4 gap-2 text-[11px]">
-                          <label className="block">
-                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area x %</span>
-                            <input type="number" value={d.mockup_area.x}
-                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, x: parseFloat(e.target.value) || 0 } })}
-                              className={inputCls} />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Area y %</span>
-                            <input type="number" value={d.mockup_area.y}
-                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, y: parseFloat(e.target.value) || 0 } })}
-                              className={inputCls} />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width %</span>
-                            <input type="number" value={d.mockup_area.width}
-                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, width: parseFloat(e.target.value) || 0 } })}
-                              className={inputCls} />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height %</span>
-                            <input type="number" value={d.mockup_area.height}
-                              onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, height: parseFloat(e.target.value) || 0 } })}
-                              className={inputCls} />
-                          </label>
+                    {d.variant_kind === 'base' && (() => {
+                      const wMm = parseFloat(d.width_mm) || productWidthMm;
+                      const hMm = parseFloat(d.height_mm) || productHeightMm;
+                      return (
+                        <div>
+                          <div className="mb-1 text-[11px] font-bold text-neutral-500">
+                            Mockup area (mm, relative to the {wMm}×{hMm}mm surface)
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-[11px]">
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">X (mm)</span>
+                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.x, wMm)}
+                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, x: mmToPct(parseFloat(e.target.value) || 0, wMm) } })}
+                                className={inputCls} />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Y (mm)</span>
+                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.y, hMm)}
+                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, y: mmToPct(parseFloat(e.target.value) || 0, hMm) } })}
+                                className={inputCls} />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Width (mm)</span>
+                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.width, wMm)}
+                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, width: mmToPct(parseFloat(e.target.value) || 0, wMm) } })}
+                                className={inputCls} />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Height (mm)</span>
+                              <input type="number" step="0.1" value={pctToMm(d.mockup_area.height, hMm)}
+                                onChange={(e) => updateDraft(i, { mockup_area: { ...d.mockup_area, height: mmToPct(parseFloat(e.target.value) || 0, hMm) } })}
+                                className={inputCls} />
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div>
@@ -550,21 +570,29 @@ export function GiftVariantsPanel({
                                 </div>
                                 <div>
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
-                                    Surface area on mockup (% of image)
+                                    Surface area on mockup (mm)
                                   </span>
-                                  <div className="grid grid-cols-4 gap-1 text-[11px]">
-                                    {(['x', 'y', 'width', 'height'] as const).map((k) => (
-                                      <label key={k} className="block">
-                                        <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-400">{k}</span>
-                                        <input
-                                          type="number"
-                                          value={s.mockup_area[k]}
-                                          onChange={(e) => updateSurface(i, sIdx, { mockup_area: { ...s.mockup_area, [k]: parseFloat(e.target.value) || 0 } })}
-                                          className={inputCls}
-                                        />
-                                      </label>
-                                    ))}
-                                  </div>
+                                  {(() => {
+                                    const wMm = parseFloat(d.width_mm) || productWidthMm;
+                                    const hMm = parseFloat(d.height_mm) || productHeightMm;
+                                    const dimFor = (k: 'x' | 'y' | 'width' | 'height') => (k === 'x' || k === 'width' ? wMm : hMm);
+                                    return (
+                                      <div className="grid grid-cols-4 gap-1 text-[11px]">
+                                        {(['x', 'y', 'width', 'height'] as const).map((k) => (
+                                          <label key={k} className="block">
+                                            <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-400">{k} (mm)</span>
+                                            <input
+                                              type="number"
+                                              step="0.1"
+                                              value={pctToMm(s.mockup_area[k], dimFor(k))}
+                                              onChange={(e) => updateSurface(i, sIdx, { mockup_area: { ...s.mockup_area, [k]: mmToPct(parseFloat(e.target.value) || 0, dimFor(k)) } })}
+                                              className={inputCls}
+                                            />
+                                          </label>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               <div className="mt-2">
