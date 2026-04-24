@@ -86,6 +86,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
   const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
 
+  // Which face of a multi-surface variant the live preview shows.
+  // Declared here (before shapeMockup) because the resolver reads it —
+  // leaving it lower in the file tripped a temporal-dead-zone error in
+  // the production bundle on products like the figurine photo frame.
+  const [activeSurfaceId, setActiveSurfaceId] = useState<string>('');
+
   // Resolve the active mockup URL + area for the big live preview.
   // Precedence:
   //   1. If the variant has surfaces[] (front/back/left/right), the
@@ -182,12 +188,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
-  // Which face of a multi-surface variant (front / back / left / right)
-  // the live preview is currently showing. Lifted here so both the
-  // big-preview frame AND the inline surfaces configurator track the
-  // same face — click the "↻ Flip" button above the preview or tap a
-  // tab in the configurator, both paths update this one id.
-  const [activeSurfaceId, setActiveSurfaceId] = useState<string>('');
+  // activeSurfaceId is declared higher up (before shapeMockup reads it)
+  // to avoid a temporal-dead-zone crash at render time.
   // Day / Night toggle was used for laser products; removed per user
   // feedback since it only flipped colours without changing the actual
   // preview. `nightMode` stays as a hard-coded `false` so inline styles
