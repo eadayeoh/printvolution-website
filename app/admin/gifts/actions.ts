@@ -598,16 +598,29 @@ const VariantSchema = z.object({
     .default([]),
   // Per-shape mockup overrides (migration 0058). Keyed by shape kind;
   // missing key = fall back to the variant's base mockup_url / area.
+  // Shaped as an object with optional fields (NOT z.record) because
+  // Zod v4's record(enum, ...) demands every enum value be present.
   mockup_by_shape: z
-    .record(
-      z.enum(['cutout', 'rectangle', 'template']),
-      z.object({
+    .object({
+      cutout: z.object({
         url: z.string().min(1),
         area: z.object({
           x: z.number(), y: z.number(), width: z.number(), height: z.number(),
         }),
-      }),
-    )
+      }).optional(),
+      rectangle: z.object({
+        url: z.string().min(1),
+        area: z.object({
+          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+        }),
+      }).optional(),
+      template: z.object({
+        url: z.string().min(1),
+        area: z.object({
+          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+        }),
+      }).optional(),
+    })
     .nullable()
     .optional(),
 });
