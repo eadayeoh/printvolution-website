@@ -296,6 +296,10 @@ export type GiftProductVariant = {
   features: string[];
   mockup_url: string;
   mockup_area: { x: number; y: number; width: number; height: number };
+  /** Outer box (as % of mockup image) inside which the customer can
+   *  drag/resize their design. mockup_area starts inside this. Null →
+   *  customer cannot adjust position on this variant. */
+  mockup_bounds: { x: number; y: number; width: number; height: number } | null;
   variant_thumbnail_url: string | null;
   base_price_cents: number;
   price_tiers: GiftPriceTier[];

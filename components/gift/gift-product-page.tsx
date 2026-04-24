@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { uploadAndPreviewGift, uploadGiftSurfacePhoto } from '@/app/(site)/gift/actions';
@@ -14,6 +14,7 @@ import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surface
 import type { GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
+import { GiftMockupPreviewInteractive } from '@/components/gift/gift-mockup-preview-interactive';
 import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
 import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
 import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
@@ -46,6 +47,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     sortedSizes.length > 0 ? sortedSizes[0].slug : null,
   );
   const selectedSize = sortedSizes.find((s) => s.slug === selectedSizeSlug) ?? null;
+
+  // Customer can drag/resize the design inside the variant's bounds.
+  // Reset back to the variant's default starting area whenever the
+  // variant changes so selecting a new base doesn't carry stale offsets.
+  const defaultArea = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
+  const [customerArea, setCustomerArea] = useState<{ x: number; y: number; width: number; height: number } | null>(defaultArea);
+  useEffect(() => {
+    const next = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
+    setCustomerArea(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantId]);
+
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -285,6 +298,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       }
     }
     if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
+    // Record the customer's adjusted area so production knows where
+    // to place the design on the 300 DPI file (if they dragged/resized).
+    if (customerArea && defaultArea && (
+      customerArea.x !== defaultArea.x ||
+      customerArea.y !== defaultArea.y ||
+      customerArea.width !== defaultArea.width ||
+      customerArea.height !== defaultArea.height
+    )) {
+      notes += `${notes ? ';' : ''}area:${customerArea.x.toFixed(2)},${customerArea.y.toFixed(2)},${customerArea.width.toFixed(2)},${customerArea.height.toFixed(2)}`;
+    }
 
     addToCart({
       product_slug: product.slug,
@@ -521,12 +544,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 )}
 
                 {preview ? (
-                  (selectedVariant?.mockup_url || product.mockup_url) && (selectedVariant?.mockup_area || product.mockup_area) ? (
+                  (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <div style={{ width: '100%' }}>
-                      <GiftMockupPreview
+                      <GiftMockupPreviewInteractive
                         mockupUrl={selectedVariant?.mockup_url || product.mockup_url!}
                         previewUrl={preview.previewUrl}
-                        area={(selectedVariant?.mockup_area as any) ?? (product.mockup_area as any)}
+                        area={customerArea}
+                        bounds={(selectedVariant?.mockup_bounds as any) ?? null}
+                        onAreaChange={setCustomerArea}
                       />
                     </div>
                   ) : (

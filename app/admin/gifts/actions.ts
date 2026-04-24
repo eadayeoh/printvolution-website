@@ -476,6 +476,9 @@ const VariantSchema = z.object({
   mockup_area: z.object({
     x: z.number(), y: z.number(), width: z.number(), height: z.number(),
   }),
+  mockup_bounds: z.object({
+    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+  }).nullable().optional(),
   variant_thumbnail_url: z.string().nullable().optional(),
   base_price_cents: z.number().int().min(0).default(0),
   price_tiers: z.array(z.object({
