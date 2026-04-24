@@ -122,14 +122,20 @@ export function GiftShapeOptionsEditor({
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                        Price delta (cents)
+                        Price delta (S$)
                       </span>
                       <input
                         type="number"
                         min={0}
-                        value={row.price_delta_cents ?? 0}
-                        onChange={(e) => updateRow(i, { price_delta_cents: parseInt(e.target.value || '0', 10) })}
+                        step={0.01}
+                        value={((row.price_delta_cents ?? 0) / 100).toFixed(2)}
+                        onChange={(e) => {
+                          const dollars = parseFloat(e.target.value || '0');
+                          const cents = Math.max(0, Math.round((Number.isFinite(dollars) ? dollars : 0) * 100));
+                          updateRow(i, { price_delta_cents: cents });
+                        }}
                         className={inputCls}
+                        placeholder="0.00"
                       />
                     </label>
                   </div>
