@@ -166,6 +166,24 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
   const showPromptPicker = prompts.length >= 2;
   const needPrompt = showPromptPicker && !selectedPromptId;
+  const showTextStep = product.mode === 'laser' || product.mode === 'uv';
+
+  // Right-column ComposeSection letters, computed once so adding or
+  // removing a step (Shape, Style, Size …) doesn't require rethinking
+  // every downstream ternary. Steps only count when their section is
+  // actually rendered.
+  const sectionLetters = (() => {
+    const m: Record<string, string> = {};
+    let i = 0;
+    if (hasTemplates) m.template = String.fromCharCode(65 + i++);
+    m.compose = String.fromCharCode(65 + i++); // Upload / Fill / Configure
+    if (variants.length >= 2) m.variants = String.fromCharCode(65 + i++);
+    if (shapePickerActive) m.shape = String.fromCharCode(65 + i++);
+    if (sortedSizes.length > 0) m.size = String.fromCharCode(65 + i++);
+    if (showPromptPicker) m.style = String.fromCharCode(65 + i++);
+    if (showTextStep) m.text = String.fromCharCode(65 + i++);
+    return m;
+  })();
   // Non-AI modes run the server composite as a straight passthrough —
   // the CSS layout preview matches the final output, so we auto-fire
   // generate silently instead of asking the customer to click a button.
@@ -842,21 +860,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
-            {/* Customer-facing shape picker — tabs under the preview, with
-                a second-level template sub-grid when the Template tab is
-                active. Only renders on products that opted in via the
-                admin editor's "Shape options" block. */}
-            {shapePickerActive && (
-              <GiftShapePicker
-                options={shapeOptions}
-                allTemplates={templates}
-                selectedKind={selectedShapeKind}
-                selectedTemplateId={selectedShapeTemplateId}
-                onSelectKind={setSelectedShapeKind}
-                onSelectTemplate={setSelectedShapeTemplateId}
-              />
-            )}
-
             {/* Regenerate CTA — surfaces when the customer switches the
                 style picker after a generation, so the visible preview
                 is now in the *old* style. Re-runs the pipeline against
@@ -1266,7 +1269,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   Upload section below knows whether to render the
                   multi-slot form or the legacy single-file dropzone. */}
               {hasTemplates && (
-                <ComposeSection letter="A" title="Pick a template">
+                <ComposeSection letter={sectionLetters.template ?? 'A'} title="Pick a template">
                   <div
                     style={{
                       display: 'grid',
@@ -1327,7 +1330,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   standard Upload section below since surfaces handle
                   their own input (text / photo / both per surface). */}
               {selectedVariant && selectedVariant.surfaces.length > 0 && (
-                <ComposeSection letter={hasTemplates ? 'C' : 'B'} title={`Configure ${selectedVariant.name}`}>
+                <ComposeSection letter={sectionLetters.compose} title={`Configure ${selectedVariant.name}`}>
                   <GiftVariantSurfaces
                     surfaces={selectedVariant.surfaces}
                     fills={surfaceFills}
@@ -1342,7 +1345,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   otherwise. Skipped entirely for variants with surfaces[] —
                   those use their own inline configurator above. */}
               {selectedVariant && selectedVariant.surfaces.length > 0 ? null : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
-                <ComposeSection letter={hasTemplates ? 'B' : 'A'} title="Fill the template">
+                <ComposeSection letter={sectionLetters.compose} title="Fill the template">
                   <TemplateMultiSlotForm
                     template={activeTemplate}
                     isWorking={uploading}
@@ -1373,7 +1376,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   )}
                 </ComposeSection>
               ) : (
-              <ComposeSection letter={hasTemplates ? 'B' : 'A'} title="Upload your photo">
+              <ComposeSection letter={sectionLetters.compose} title="Upload your photo">
                 {!preview && !uploading && (
                   <div
                     onClick={() => !needTemplate && !needPrompt && fileRef.current?.click()}
@@ -1515,7 +1518,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   singleKind === 'base'     ? 'Pick your base' :
                                               'Choose an option';
                 return (
-                  <ComposeSection letter={hasTemplates ? 'C' : 'B'} title={title}>
+                  <ComposeSection letter={sectionLetters.variants ?? 'B'} title={title}>
                     <GiftVariantLivePreview
                       variants={variants}
                       selectedId={selectedVariantId}
@@ -1527,9 +1530,27 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 );
               })()}
 
+              {/* Shape picker — cutout / rectangle / template. Only appears
+                  on products that opted in via admin shape_options. Sits
+                  between Variants and Size in the compose flow so the
+                  customer picks "which base" first, then "what shape of
+                  panel", then "what size of panel". */}
+              {shapePickerActive && (
+                <ComposeSection letter={sectionLetters.shape ?? 'C'} title="Pick your shape">
+                  <GiftShapePicker
+                    options={shapeOptions}
+                    allTemplates={templates}
+                    selectedKind={selectedShapeKind}
+                    selectedTemplateId={selectedShapeTemplateId}
+                    onSelectKind={setSelectedShapeKind}
+                    onSelectTemplate={setSelectedShapeTemplateId}
+                  />
+                </ComposeSection>
+              )}
+
               {/* Size picker — product-level. Applies to every variant. */}
               {sortedSizes.length > 0 && (
-                <ComposeSection letter={hasTemplates ? 'D' : 'C'} title="Pick a size">
+                <ComposeSection letter={sectionLetters.size ?? 'C'} title="Pick a size">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {sortedSizes.map((s) => {
                       const isSelected = s.slug === selectedSizeSlug;
@@ -1571,7 +1592,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (
-                <ComposeSection letter={hasTemplates ? (variants.length >= 2 ? 'D' : 'C') : (variants.length >= 2 ? 'C' : 'B')} title="Pick art style">
+                <ComposeSection letter={sectionLetters.style ?? 'C'} title="Pick art style">
                   <div
                     style={{
                       display: 'grid',
@@ -1660,9 +1681,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               )}
 
               {/* Step D: Optional text */}
-              {(product.mode === 'laser' || product.mode === 'uv') && (
+              {showTextStep && (
                 <ComposeSection
-                  letter={hasTemplates && showPromptPicker ? 'D' : hasTemplates || showPromptPicker ? 'C' : 'B'}
+                  letter={sectionLetters.text ?? 'C'}
                   title="Add text (optional)"
                 >
                   <input
