@@ -1,21 +1,28 @@
-// Rewrite LED Bases customer-facing copy — name, tagline, SEO meta,
-// keyword footer, long description. Run once.
+// Rewrite LED Bases copy from the ACTUAL config:
+//   - 3 bases: Black (S$55, Bluetooth speaker + 7-colour LED + USB/battery)
+//              Wood Circle (S$55, 7-colour LED + remote + USB/battery)
+//              Wood Rectangle (S$40, warm light + USB only)
+//   - 2 sizes: A5 portrait (148×210, +S$0), A4 portrait (210×297, +S$10)
+//   - 2 styles: Line Art, Realistic Imagery (laser engraving)
+//   - 1-day turnaround
+//
+// Accurate facts only — no invented workshop location or cure time.
 
 import { openSql } from './_lib-merge-gift-group.mjs';
 
 const PATCH = {
   name: 'LED Photo Lamp Base',
-  tagline: 'Upload a photo · warm LED acrylic on wood or black base.',
-  seo_title: 'LED Photo Lamp Base Singapore — Engraved Acrylic Warm LED Gifts',
-  seo_desc: 'Personalised LED photo lamp base in Singapore — laser-engraved acrylic on warm wood, wood circle or matte black base. Upload any photo, pick line art or realistic. 5-day turnaround, islandwide delivery.',
-  seo_body: 'LED photo lamp base Singapore — laser-engraved acrylic on warm wood or matte black base. Birthday gifts, anniversary, Mother\'s Day, baby keepsakes, corporate hampers. A5 / A4 portrait sizes, 5-day turnaround, Paya Lebar Square walk-in collection.',
-  description: 'Swap your phone wallpaper for something real. Pick a base — warm wood rectangle, wood circle, or matte black with a Bluetooth speaker — upload any photo, and we laser-engrave it into a standing acrylic panel that lights up soft warm white when you flick the switch. A quiet nightlight for a kid\'s room. A retirement gift that outclasses yet another pen. A bar-top family portrait that glows at 10pm.',
+  tagline: 'From S$40 · Upload a photo, pick your base, light it up.',
+  seo_title: 'LED Photo Lamp Base Singapore · Engraved Acrylic from S$40',
+  seo_desc: 'Personalised LED photo lamp base in Singapore. Pick Black (Bluetooth speaker + 7-colour LED), Wood Circle (remote + 7-colour LED) or Wood Rectangle (warm light). Laser-engraved acrylic, A5 or A4, 1-day turnaround.',
+  seo_body: 'LED photo lamp base Singapore — laser-engraved acrylic on Black base with Bluetooth speaker, Wood Circle with remote, or Wood Rectangle warm light. Line art or realistic imagery engraving, A5 (148×210mm) or A4 (210×297mm), 1-day turnaround.',
+  description: 'Three bases, one photo, one lamp. The Black base packs a Bluetooth speaker and 7-colour LED. The Wood Circle ships with a remote and runs the same 7 colours. The Wood Rectangle keeps it pure — warm white light, USB-powered, under S$50. Upload any photo; pick line art for crisp vector strokes or realistic imagery for tonal greyscale engraving. A5 (148×210mm) or A4 (210×297mm) acrylic panel, engraved overnight for next-day collection.',
 };
 
 const sql = await openSql();
 try {
-  const [before] = await sql`select slug, name, tagline, seo_title from gift_products where slug = 'led-bases'`;
-  if (!before) { console.log('✗ LED Bases product not found'); process.exit(1); }
+  const [before] = await sql`select slug, name, tagline from gift_products where slug = 'led-bases'`;
+  if (!before) { console.log('LED Bases not found'); process.exit(1); }
   console.log('Before:');
   console.log('  name:', before.name);
   console.log('  tagline:', before.tagline);
@@ -35,7 +42,8 @@ try {
   const [after] = await sql`select name, tagline, seo_title, seo_desc, seo_body, description from gift_products where slug = 'led-bases'`;
   console.log('\nAfter:');
   for (const [k, v] of Object.entries(after)) {
-    console.log(`  ${k}: ${String(v).slice(0, 160)}${String(v).length > 160 ? '…' : ''}`);
+    console.log(`  ${k}: ${v}`);
+    console.log('');
   }
 } finally {
   await sql.end();
