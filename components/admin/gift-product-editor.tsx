@@ -92,6 +92,17 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(
     (product?.faqs as Array<{ question: string; answer: string }>) ?? [],
   );
+  const [occasions, setOccasions] = useState<Array<{ icon: string; title: string; tip: string; suggested: string }>>(
+    (product?.occasions ?? []).map((o) => ({
+      icon: o.icon ?? '',
+      title: o.title ?? '',
+      tip: o.tip ?? '',
+      suggested: o.suggested ?? '',
+    })),
+  );
+  const [processSteps, setProcessSteps] = useState<Array<{ title: string; time: string; desc: string }>>(
+    (product?.process_steps as Array<{ title: string; time: string; desc: string }>) ?? [],
+  );
 
   const [mockupUrl, setMockupUrl] = useState(product?.mockup_url ?? '');
   const [mockupArea, setMockupArea] = useState<{ x: number; y: number; width: number; height: number }>(
@@ -139,6 +150,21 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       seo_magazine: seoMagazine,
       faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()).length > 0
         ? faqs.filter((f) => f.question.trim() && f.answer.trim())
+        : null,
+      occasions: occasions.filter((o) => o.title.trim() && o.tip.trim()).length > 0
+        ? occasions
+            .filter((o) => o.title.trim() && o.tip.trim())
+            .map((o) => ({
+              icon: o.icon.trim() || '★',
+              title: o.title.trim(),
+              tip: o.tip.trim(),
+              ...(o.suggested.trim() ? { suggested: o.suggested.trim() } : {}),
+            }))
+        : null,
+      process_steps: processSteps.filter((s) => s.title.trim() && s.desc.trim()).length > 0
+        ? processSteps
+            .filter((s) => s.title.trim() && s.desc.trim())
+            .map((s) => ({ title: s.title.trim(), time: s.time.trim(), desc: s.desc.trim() }))
         : null,
       is_active: isActive,
       mockup_url: mockupUrl || null,
@@ -945,6 +971,179 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                         rows={3}
                         className={inputCls}
                         placeholder="About 8 hours on a single AA battery. USB-C cable also included for always-on display."
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Who's it for? — per-product occasion matcher */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-ink">Who&apos;s it for? — occasion cards</div>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  The "Who&apos;s it for?" band on the product page. Leave empty to fall back to the
+                  generic gift-occasion defaults.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOccasions([...occasions, { icon: '★', title: '', tip: '', suggested: '' }])}
+                className="inline-flex items-center gap-1 rounded border-2 border-ink bg-white px-3 py-1.5 text-[11px] font-bold text-ink transition-all hover:bg-yellow"
+              >
+                <Plus size={12} /> Add occasion
+              </button>
+            </div>
+            {occasions.length === 0 ? (
+              <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-center text-xs text-neutral-500">
+                No occasions yet — using generic defaults. Click &quot;Add occasion&quot; to override.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {occasions.map((o, i) => (
+                  <div key={i} className="rounded border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Occasion {i + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOccasions(occasions.filter((_, j) => j !== i))}
+                        className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={11} /> Remove
+                      </button>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-[80px_1fr]">
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Icon
+                        </span>
+                        <input
+                          value={o.icon}
+                          onChange={(e) => setOccasions(occasions.map((x, j) => (j === i ? { ...x, icon: e.target.value } : x)))}
+                          className={inputCls}
+                          placeholder="★"
+                          maxLength={4}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Title
+                        </span>
+                        <input
+                          value={o.title}
+                          onChange={(e) => setOccasions(occasions.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+                          className={inputCls}
+                          placeholder="Housewarming"
+                        />
+                      </label>
+                    </div>
+                    <label className="mt-2 block">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                        Tip (HTML &lt;b&gt; allowed)
+                      </span>
+                      <textarea
+                        value={o.tip}
+                        onChange={(e) => setOccasions(occasions.map((x, j) => (j === i ? { ...x, tip: e.target.value } : x)))}
+                        rows={2}
+                        className={inputCls}
+                        placeholder="A photo of <b>the new place</b> — the garden, the front door, the view from the window."
+                      />
+                    </label>
+                    <label className="mt-2 block">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                        Suggested (optional — small footer line)
+                      </span>
+                      <input
+                        value={o.suggested}
+                        onChange={(e) => setOccasions(occasions.map((x, j) => (j === i ? { ...x, suggested: e.target.value } : x)))}
+                        className={inputCls}
+                        placeholder="Line art · Wood base"
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* How it works — per-product process steps */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-ink">How it works — process steps</div>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  The "From your photo to a finished piece" band. Leave empty to use the mode-based
+                  defaults. Don&apos;t invent operational facts (locations, exact hours) — keep copy
+                  honest to what the product actually ships.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProcessSteps([...processSteps, { title: '', time: '', desc: '' }])}
+                className="inline-flex items-center gap-1 rounded border-2 border-ink bg-white px-3 py-1.5 text-[11px] font-bold text-ink transition-all hover:bg-yellow"
+              >
+                <Plus size={12} /> Add step
+              </button>
+            </div>
+            {processSteps.length === 0 ? (
+              <p className="rounded border border-dashed border-neutral-300 bg-neutral-50 p-4 text-center text-xs text-neutral-500">
+                No steps yet — using mode-based defaults. Click &quot;Add step&quot; to override.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {processSteps.map((s, i) => (
+                  <div key={i} className="rounded border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                        Step {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setProcessSteps(processSteps.filter((_, j) => j !== i))}
+                        className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={11} /> Remove
+                      </button>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-[1fr_180px]">
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Title
+                        </span>
+                        <input
+                          value={s.title}
+                          onChange={(e) => setProcessSteps(processSteps.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+                          className={inputCls}
+                          placeholder="Upload &amp; Preview"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                          Time label (small yellow)
+                        </span>
+                        <input
+                          value={s.time}
+                          onChange={(e) => setProcessSteps(processSteps.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
+                          className={inputCls}
+                          placeholder="Free preview"
+                        />
+                      </label>
+                    </div>
+                    <label className="mt-2 block">
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                        Description
+                      </span>
+                      <textarea
+                        value={s.desc}
+                        onChange={(e) => setProcessSteps(processSteps.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
+                        rows={2}
+                        className={inputCls}
+                        placeholder="Upload any clear photo. Pick a style. Live preview updates as you choose."
                       />
                     </label>
                   </div>

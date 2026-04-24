@@ -104,6 +104,8 @@ export type GiftProduct = {
   seo_body?: string | null;
   seo_magazine?: unknown;
   faqs?: Array<{ question: string; answer: string }> | null;
+  occasions?: Array<{ icon: string; title: string; tip: string; suggested?: string }> | null;
+  process_steps?: Array<{ title: string; time: string; desc: string }> | null;
   // Migration 0035 additions
   pipeline_id?: string | null;
   /** Override for the SECONDARY mode's pipeline. Paired with

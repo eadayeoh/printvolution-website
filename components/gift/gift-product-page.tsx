@@ -364,8 +364,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const faqs = Array.isArray(product.faqs) && product.faqs.length > 0
     ? product.faqs.map((f) => ({ q: f.question, a: f.answer }))
     : buildGiftFaqs(product);
-  const occasions = DEFAULT_OCCASION_MATCHER;
-  const processSteps = buildProcessSteps(product);
+  const occasions = Array.isArray(product.occasions) && product.occasions.length > 0
+    ? product.occasions
+    : DEFAULT_OCCASION_MATCHER;
+  const processSteps = Array.isArray(product.process_steps) && product.process_steps.length > 0
+    ? product.process_steps
+    : buildProcessSteps(product);
 
   return (
     <article>
@@ -1652,6 +1656,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     letterSpacing: '-0.02em',
                     marginBottom: 6,
                     margin: '0 0 6px',
+                    color: '#fff',
                   }}
                 >
                   {s.title}

@@ -62,6 +62,17 @@ const GiftProductSchema = z.object({
     question: z.string(),
     answer: z.string(),
   })).nullable().optional(),
+  occasions: z.array(z.object({
+    icon: z.string(),
+    title: z.string(),
+    tip: z.string(),
+    suggested: z.string().optional(),
+  })).nullable().optional(),
+  process_steps: z.array(z.object({
+    title: z.string(),
+    time: z.string(),
+    desc: z.string(),
+  })).nullable().optional(),
   // Migration 0035 additions
   pipeline_id: z.string().uuid().nullable().optional(),
   // Migration 0047 — pipeline override for the secondary mode.
