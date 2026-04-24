@@ -33,6 +33,38 @@ export async function listPromptsForModes(modes: GiftMode[]): Promise<GiftPrompt
   return (data ?? []) as GiftPrompt[];
 }
 
+/** Prompts to show on THIS product's art-style picker. Honours the
+ *  product's per-mode pipeline overrides: when the product pins a
+ *  pipeline for a mode (e.g. "use uv-passthrough for UV printing"),
+ *  other prompts under that same mode are hidden — customers only see
+ *  prompts tied to the pinned pipeline. Falls back to all active
+ *  prompts for the mode when no pipeline is pinned. */
+export async function listPromptsForProduct(product: {
+  mode: GiftMode;
+  secondary_mode?: GiftMode | null;
+  pipeline_id?: string | null;
+  secondary_pipeline_id?: string | null;
+}): Promise<GiftPrompt[]> {
+  const modes: GiftMode[] = [
+    product.mode,
+    ...(product.secondary_mode ? [product.secondary_mode] : []),
+  ];
+  const all = await listPromptsForModes(modes);
+  return all.filter((p) => {
+    if (p.mode === product.mode && product.pipeline_id) {
+      return p.pipeline_id === product.pipeline_id;
+    }
+    if (
+      product.secondary_mode &&
+      p.mode === product.secondary_mode &&
+      product.secondary_pipeline_id
+    ) {
+      return p.pipeline_id === product.secondary_pipeline_id;
+    }
+    return true;
+  });
+}
+
 /**
  * Resolve the prompt for a product + style choice, honouring pipeline_id override.
  * Order: (1) prompt pinned to product's pipeline_id + style; (2) mode-level prompt
