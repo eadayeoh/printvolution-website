@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Trash2, X, Search } from 'lucide-react';
+import { GripVertical, Plus, Trash2, X, Search, Pencil } from 'lucide-react';
 import { saveMegaMenu } from '@/app/admin/pages/actions';
 
 type Section = {
@@ -315,15 +315,23 @@ function SortableItem({
     opacity: isDragging ? 0.3 : 1,
     outline: isOver && !isDragging ? '2px dashed #E91E8C' : undefined,
     outlineOffset: 2,
+    cursor: isDragging ? 'grabbing' : 'grab',
   };
   const [editing, setEditing] = useState(false);
   return (
-    <div ref={setNodeRef} style={style} className="group flex h-10 items-center rounded-full border border-neutral-200 bg-white pr-1 text-xs font-semibold text-ink">
-      <div
-        className="flex h-full cursor-grab items-center rounded-l-full px-2 text-neutral-400 hover:text-ink active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
+    // Whole chip is the drag handle so users can grab anywhere, not
+    // just the tiny grip icon. The edit / remove buttons stopPropagation
+    // + stopImmediatePropagation on mousedown so they don't initiate a
+    // drag when clicked — dnd-kit's PointerSensor only listens to
+    // pointerdown bubbling up from this element.
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="group flex h-10 items-center rounded-full border border-neutral-200 bg-white pr-1 text-xs font-semibold text-ink"
+    >
+      <div className="flex h-full items-center rounded-l-full px-2 text-neutral-400 group-hover:text-ink">
         <GripVertical size={14} />
       </div>
       {editing ? (
@@ -333,20 +341,31 @@ function SortableItem({
           onChange={(e) => onLabelChange(e.target.value)}
           onBlur={() => setEditing(false)}
           onKeyDown={(e) => { if (e.key === 'Enter') setEditing(false); }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="mx-0 w-40 rounded border border-pink bg-white px-2 py-0.5 text-xs font-semibold focus:outline-none"
         />
       ) : (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="max-w-[220px] truncate px-2 py-0.5 hover:text-pink"
-          title={`Slug: ${slug} — click to rename the menu label`}
-        >
+        <span className="max-w-[220px] truncate px-2 py-0.5" title={`Slug: ${slug}`}>
           {label}
-        </button>
+        </span>
       )}
       <span className="mx-1 font-mono text-[9px] text-neutral-400">{slug}</span>
-      <button type="button" onClick={onRemove} className="rounded-full p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Remove">
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-ink"
+        title="Rename menu label"
+      >
+        <Pencil size={11} />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="rounded-full p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+        title="Remove"
+      >
         <X size={12} />
       </button>
     </div>

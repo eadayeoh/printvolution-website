@@ -5,7 +5,7 @@ export const metadata = { title: 'Pages CMS' };
 
 export default async function AdminPagesCms() {
   const supabase = createClient();
-  const [pageContent, contacts, nav, megaRaw, products] = await Promise.all([
+  const [pageContent, contacts, nav, megaRaw, printProducts, giftProducts] = await Promise.all([
     supabase.from('page_content').select('page_key, section_key, data'),
     supabase.from('contact_methods').select('id, type, value, label, note, is_active, display_order').order('display_order'),
     supabase.from('navigation').select('label, type, action, mega_key, is_hidden, display_order').order('display_order'),
@@ -14,7 +14,15 @@ export default async function AdminPagesCms() {
       items:mega_menu_items(product_slug, label, display_order)
     `).order('display_order'),
     supabase.from('products').select('slug, name').eq('is_active', true).order('name'),
+    supabase.from('gift_products').select('slug, name').eq('is_active', true).order('name'),
   ]);
+  // Merge both catalogues for the mega-menu picker — gifts and prints
+  // each live in their own table, but the nav menu treats them
+  // interchangeably (both just link via /gift/<slug> or /<slug>).
+  const productsUnion: Array<{ slug: string; name: string }> = [
+    ...((printProducts.data ?? []) as any[]).map((p: any) => ({ slug: p.slug, name: p.name })),
+    ...((giftProducts.data  ?? []) as any[]).map((p: any) => ({ slug: p.slug, name: p.name })),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   const sectionsMap: Record<string, any[]> = {};
   for (const row of ((pageContent.data ?? []) as any[])) {
@@ -43,7 +51,7 @@ export default async function AdminPagesCms() {
         contacts={((contacts.data ?? []) as any[])}
         nav={((nav.data ?? []) as any[])}
         megaByKey={megaByKey}
-        products={((products.data ?? []) as any[])}
+        products={productsUnion}
       />
     </div>
   );
