@@ -177,11 +177,60 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
   // Resize to preview size (max 1200 px long edge)
   buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).jpeg({ quality: 82 }).toBuffer();
 
+  // Cutout shape: bg-remove + SVG silhouette trace. Runs AFTER the mode
+  // transform so it cuts the stylised subject, not the raw photo. Stores
+  // the SVG path as a gift_assets row with role='cut_file' so fulfilment
+  // can pull both preview and cut file at production time.
+  if (input.shapeKind === 'cutout') {
+    try {
+      const styledMeta = await sharp(buf).metadata();
+      const { renderCutoutPreview } = await import('./pipeline/cutout');
+      const cutout = await renderCutoutPreview({
+        styledBytes: buf,
+        styledMime: 'image/jpeg',
+        canvasWidthPx:  styledMeta.width ?? 1200,
+        canvasHeightPx: styledMeta.height ?? 1200,
+      });
+      buf = cutout.previewBuffer;
+
+      // Persist the SVG cut path + register the gift_assets row. A
+      // storage failure on the cut file shouldn't break the preview —
+      // the customer still gets to see their design. Fulfilment will
+      // re-run on the stored source at order time if needed.
+      try {
+        const cutKey = makeKey(`cut-${product.slug}`, 'svg');
+        await putObject(
+          GIFT_BUCKETS.previews,
+          cutKey,
+          Buffer.from(cutout.cutSvg, 'utf8'),
+          'image/svg+xml',
+        );
+        const sb = createClient();
+        await sb.from('gift_assets').insert({
+          role: 'cut_file',
+          bucket: GIFT_BUCKETS.previews,
+          path: cutKey,
+          mime_type: 'image/svg+xml',
+          width_px: cutout.widthPx,
+          height_px: cutout.heightPx,
+        });
+      } catch (e) {
+        console.error('[gift cutout] cut_file persist failed — continuing with preview only', e);
+      }
+    } catch (e: any) {
+      // Bg-remove upstream failed — fall back to rectangle preview so
+      // the customer still sees something. The caller can inspect the
+      // returned preview and offer a retry in the UI.
+      console.error('[gift cutout] bg-remove failed, falling back to rectangle', e?.message || e);
+    }
+  }
+
   // Watermark
   buf = await applyWatermark(buf);
 
   // Upload to public preview bucket
-  const key = makeKey(`pv-${product.slug}`, 'jpg');
+  const keyPrefix = input.shapeKind === 'cutout' ? `pv-cutout-${product.slug}` : `pv-${product.slug}`;
+  const key = makeKey(keyPrefix, 'jpg');
   const { path, publicUrl } = await putObject(GIFT_BUCKETS.previews, key, buf, 'image/jpeg');
 
   const meta = await sharp(buf).metadata();
