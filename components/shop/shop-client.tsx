@@ -19,13 +19,15 @@ type Item = {
 
 type Props = {
   items: Item[];
-  categories: Array<{ slug: string; name: string }>;
+  serviceCategories: Array<{ slug: string; name: string }>;
+  giftCategories: Array<{ slug: string; name: string }>;
   initialCategory: string | null;
   initialGift: boolean;
   initialSearch: string;
 };
 
-export function ShopClient({ items, categories, initialCategory, initialGift, initialSearch }: Props) {
+export function ShopClient({ items, serviceCategories, giftCategories, initialCategory, initialGift, initialSearch }: Props) {
+  const categories = [...serviceCategories, ...giftCategories];
   const [search, setSearch] = useState(initialSearch);
   const [activeCat, setActiveCat] = useState<string | null>(initialCategory);
   const [giftOnly, setGiftOnly] = useState(initialGift);
@@ -90,34 +92,59 @@ export function ShopClient({ items, categories, initialCategory, initialGift, in
         </div>
       </section>
 
-      {/* Sticky category chips */}
+      {/* Sticky category chips — split into Services + Gifts */}
       <div className="pvshop-catbar-wrap">
         <div className="pvshop-wrap">
-          <div className="pvshop-catbar">
+          <div className="pvshop-catbar pvshop-catbar-split">
             <button
               className={`pvshop-chip ${!activeCat && !giftOnly ? 'active' : ''}`}
               onClick={() => { setActiveCat(null); setGiftOnly(false); }}
             >
               All ({items.length})
             </button>
-            <button
-              className={`pvshop-chip ${giftOnly ? 'active' : ''}`}
-              onClick={() => { setGiftOnly(!giftOnly); setActiveCat(null); }}
-            >
-              🎁 Gifts
-            </button>
-            {categories.map((c) => {
-              const count = items.filter((i) => i.category_slug === c.slug).length;
-              return (
+
+            {serviceCategories.length > 0 && (
+              <>
+                <span className="pvshop-chip-label">Services</span>
+                {serviceCategories.map((c) => {
+                  const count = items.filter((i) => i.category_slug === c.slug).length;
+                  return (
+                    <button
+                      key={c.slug}
+                      className={`pvshop-chip ${activeCat === c.slug ? 'active' : ''}`}
+                      onClick={() => { setActiveCat(activeCat === c.slug ? null : c.slug); setGiftOnly(false); }}
+                    >
+                      {c.name} ({count})
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {giftCategories.length > 0 && (
+              <>
+                <span className="pvshop-chip-divider" aria-hidden />
+                <span className="pvshop-chip-label pvshop-chip-label-gifts">Gifts</span>
                 <button
-                  key={c.slug}
-                  className={`pvshop-chip ${activeCat === c.slug ? 'active' : ''}`}
-                  onClick={() => { setActiveCat(activeCat === c.slug ? null : c.slug); setGiftOnly(false); }}
+                  className={`pvshop-chip ${giftOnly ? 'active' : ''}`}
+                  onClick={() => { setGiftOnly(!giftOnly); setActiveCat(null); }}
                 >
-                  {c.name} ({count})
+                  🎁 All gifts ({items.filter((i) => i.is_gift).length})
                 </button>
-              );
-            })}
+                {giftCategories.map((c) => {
+                  const count = items.filter((i) => i.category_slug === c.slug).length;
+                  return (
+                    <button
+                      key={c.slug}
+                      className={`pvshop-chip pvshop-chip-gift ${activeCat === c.slug ? 'active' : ''}`}
+                      onClick={() => { setActiveCat(activeCat === c.slug ? null : c.slug); setGiftOnly(false); }}
+                    >
+                      {c.name} ({count})
+                    </button>
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>

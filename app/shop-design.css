@@ -72,11 +72,23 @@ body.pv-page-shop #screen-shop{background:#fafaf7}
 .pvshop-catbar-wrap{position:sticky;top:64px;z-index:90;background:#fafaf7;border-top:1px solid #ece9e2;
   border-bottom:1px solid #ece9e2;padding:14px 0}
 .pvshop-catbar{display:flex;gap:8px;flex-wrap:wrap}
+.pvshop-catbar-split{align-items:center;row-gap:10px}
 .pvshop-chip{padding:9px 18px;background:#fff;border:1.5px solid #0a0a0a;border-radius:999px;
   font-family:var(--sans,Archivo,sans-serif);font-size:12px;font-weight:700;letter-spacing:.3px;
   color:#0a0a0a;cursor:pointer;transition:all .15s ease;white-space:nowrap}
 .pvshop-chip:hover{background:#0a0a0a;color:#fff}
 .pvshop-chip.active{background:#E91E8C;border-color:#E91E8C;color:#fff}
+.pvshop-chip-gift{border-color:#E91E8C;color:#E91E8C}
+.pvshop-chip-gift:hover{background:#E91E8C;color:#fff}
+.pvshop-chip-label{display:inline-flex;align-items:center;height:32px;padding:0 10px 0 2px;
+  font-family:var(--sans,Archivo,sans-serif);font-size:10px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;color:#888;white-space:nowrap}
+.pvshop-chip-label-gifts{color:#E91E8C}
+.pvshop-chip-divider{display:inline-block;width:1px;height:22px;margin:0 6px;background:#d8d4c9}
+@media(max-width:640px){
+  .pvshop-chip-divider{display:none}
+  .pvshop-chip-label{width:100%;height:auto;padding:4px 0 0}
+}
 
 /* Product grid */
 .pvshop-grid-section{padding:48px 0 96px;background:#fafaf7}
