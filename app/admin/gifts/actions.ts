@@ -76,11 +76,36 @@ function validateModes(p: { mode?: string; secondary_mode?: string | null }) {
   return null;
 }
 
+/** Resolve the effective base_price_cents to write. Admin-set positive
+ *  value wins. When admin left it at 0 AND the product has variants
+ *  with positive prices, auto-derive as the lowest variant price so
+ *  catalogue "from $X" cards stay accurate without manual upkeep. */
+async function resolveBasePrice(
+  sb: Awaited<ReturnType<typeof requireAdmin>>,
+  productId: string | null,
+  incomingBase: number | undefined,
+): Promise<number | undefined> {
+  if (typeof incomingBase === 'number' && incomingBase > 0) return incomingBase;
+  if (!productId) return incomingBase;
+  const { data: vs } = await sb
+    .from('gift_product_variants')
+    .select('base_price_cents, is_active')
+    .eq('gift_product_id', productId);
+  const prices = (vs ?? [])
+    .filter((v: any) => v.is_active !== false && typeof v.base_price_cents === 'number' && v.base_price_cents > 0)
+    .map((v: any) => v.base_price_cents as number);
+  if (prices.length === 0) return incomingBase;
+  return Math.min(...prices);
+}
+
 export async function createGiftProduct(input: z.input<typeof GiftProductSchema>) {
   const sb = await requireAdmin();
   const parsed = GiftProductSchema.parse(input);
   const err = validateModes(parsed);
   if (err) return { ok: false as const, error: err };
+  // Can't auto-derive here — variants don't exist until after insert.
+  // Admin's manual value (or 0) goes in as-is. First variant save
+  // triggers recomputeParentBasePrice which fills it.
   const { data, error } = await sb.from('gift_products').insert(parsed as any).select('id').single();
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
@@ -91,7 +116,10 @@ export async function updateGiftProduct(id: string, input: Partial<z.input<typeo
   const sb = await requireAdmin();
   const err = validateModes(input);
   if (err) return { ok: false as const, error: err };
-  const { error } = await sb.from('gift_products').update(input as any).eq('id', id);
+  // Auto-derive base price from variants when admin saves with 0.
+  const effectiveBase = await resolveBasePrice(sb, id, input.base_price_cents);
+  const patch = { ...input, ...(effectiveBase !== undefined ? { base_price_cents: effectiveBase } : {}) };
+  const { error } = await sb.from('gift_products').update(patch as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
   revalidatePath(`/admin/gifts/${id}`);
@@ -453,6 +481,25 @@ const VariantSchema = z.object({
     .default([]),
 });
 
+/** If the parent product's base_price_cents is still at 0, recompute
+ *  it from the lowest active variant price. Leaves admin-set
+ *  non-zero values alone (manual override wins). */
+async function maybeRecomputeParentBase(
+  sb: Awaited<ReturnType<typeof requireAdmin>>,
+  giftProductId: string,
+) {
+  const { data: parent } = await sb
+    .from('gift_products').select('base_price_cents').eq('id', giftProductId).maybeSingle();
+  if (!parent) return;
+  // Only auto-fill when admin left it at 0 — respects any manual
+  // override by bailing out early.
+  if ((parent.base_price_cents ?? 0) > 0) return;
+  const resolved = await resolveBasePrice(sb, giftProductId, 0);
+  if (typeof resolved === 'number' && resolved > 0) {
+    await sb.from('gift_products').update({ base_price_cents: resolved }).eq('id', giftProductId);
+  }
+}
+
 export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
   const sb = await requireAdmin();
   const parsed = VariantSchema.parse(input);
@@ -464,6 +511,7 @@ export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
     const { error } = await sb.from('gift_product_variants').insert(row);
     if (error) return { ok: false as const, error: error.message };
   }
+  await maybeRecomputeParentBase(sb, parsed.gift_product_id);
   revalidatePath(`/admin/gifts/${parsed.gift_product_id}`);
   revalidatePath(`/gift/${parsed.gift_product_id}`);
   return { ok: true as const };
@@ -471,8 +519,12 @@ export async function upsertGiftVariant(input: z.input<typeof VariantSchema>) {
 
 export async function deleteGiftVariant(id: string) {
   const sb = await requireAdmin();
+  // Remember the parent BEFORE deletion so we can recompute its base.
+  const { data: v } = await sb
+    .from('gift_product_variants').select('gift_product_id').eq('id', id).maybeSingle();
   const { error } = await sb.from('gift_product_variants').delete().eq('id', id);
   if (error) return { ok: false as const, error: error.message };
+  if (v?.gift_product_id) await maybeRecomputeParentBase(sb, v.gift_product_id);
   revalidatePath('/admin/gifts');
   return { ok: true as const };
 }

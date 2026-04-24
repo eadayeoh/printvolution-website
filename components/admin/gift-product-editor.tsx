@@ -476,7 +476,13 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 onChange={(e) => setBasePrice(e.target.value)}
                 className={`${inputCls} max-w-[200px]`}
               />
-              <span className="mt-1 block text-[11px] text-neutral-500">Price for a single unit if no volume tier applies.</span>
+              {variants.length > 0 ? (
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Customer always pays their selected <strong>variant&apos;s</strong> price. Leave this at <code>0</code> to auto-use the lowest variant price on catalogue tiles (&ldquo;from $X&rdquo;); set a non-zero value to force-override that display.
+                </span>
+              ) : (
+                <span className="mt-1 block text-[11px] text-neutral-500">Price for a single unit if no volume tier applies.</span>
+              )}
             </label>
           </div>
 
