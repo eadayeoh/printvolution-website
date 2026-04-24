@@ -12,6 +12,8 @@ import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
 import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant, GiftSize } from '@/lib/gifts/types';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { GiftVariantsPanel, type GiftVariantsPanelHandle } from './gift-variants-panel';
+import { GiftShapeOptionsEditor } from './gift-shape-options-editor';
+import type { ShapeOption } from '@/lib/gifts/shape-options';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -113,6 +115,13 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
   const [sizes, setSizes] = useState<GiftSize[]>((product?.sizes ?? []) as GiftSize[]);
 
+  const [shapePickerEnabled, setShapePickerEnabled] = useState<boolean>(
+    Array.isArray(product?.shape_options) && (product!.shape_options!.length ?? 0) > 0,
+  );
+  const [shapeOptions, setShapeOptions] = useState<ShapeOption[]>(
+    (product?.shape_options ?? []) as ShapeOption[],
+  );
+
   function autoSlugFromName() {
     setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60));
   }
@@ -180,6 +189,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       sizes: sizes
         .map((s, i) => ({ ...s, display_order: i }))
         .filter((s) => s.slug && s.name && s.width_mm > 0 && s.height_mm > 0),
+      shape_options: shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null,
     };
     if (!modeLocked) payload.mode = mode;
     payload.secondary_mode = secondaryMode;
@@ -884,6 +894,17 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               </div>
             );
           })()}
+
+          {/* Customer-pickable shape options (cutout / rectangle / template).
+              Lives at the bottom of Design so the admin has already seen the
+              variants + template list above before deciding what to expose. */}
+          <GiftShapeOptionsEditor
+            enabled={shapePickerEnabled}
+            onEnabledChange={setShapePickerEnabled}
+            value={shapeOptions}
+            onChange={setShapeOptions}
+            allTemplates={allTemplates}
+          />
         </div>
       )}
 
