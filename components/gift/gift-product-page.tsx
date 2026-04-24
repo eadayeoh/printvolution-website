@@ -30,6 +30,7 @@ import { GiftShapePicker } from './gift-shape-picker';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
 import { GiftFigurinePicker } from './gift-figurine-picker';
+import { resolveMockup } from '@/lib/gifts/resolve-mockup';
 
 type Props = {
   product: GiftProduct;
@@ -64,12 +65,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // variant changes so selecting a new base doesn't carry stale offsets.
   const defaultArea = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
   const [customerArea, setCustomerArea] = useState<{ x: number; y: number; width: number; height: number } | null>(defaultArea);
-  // Pan offset (%) used when the selected variant's photo_pan_mode is on.
-  // 50/50 = centred, matches the default background-position.
+  // Pan offset % — only meaningful when the variant opts into photo_pan_mode.
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
 
-  // Figurine picker (migration 0060) — null when the product has
-  // figurine_options disabled OR the customer hasn't chosen one yet.
   const figurineOptions = Array.isArray(product.figurine_options) ? product.figurine_options : [];
   const figurinePickerActive = figurineOptions.length > 0 && !!product.figurine_area;
   const [selectedFigurineSlug, setSelectedFigurineSlug] = useState<string | null>(null);
@@ -77,17 +75,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     ? figurineOptions.find((o) => o.slug === selectedFigurineSlug) ?? null
     : null;
 
-  // Ref to the preview-stage DIV — lets handleAddToCart snapshot the
-  // composited live-preview (mockup + positioned photo + text overlay)
-  // via html2canvas so the cart thumbnail reflects what the customer
-  // actually arranged, not just the raw AI preview.
+  // Cart-thumbnail snapshot of the arranged live preview.
   const previewStageRef = useRef<HTMLDivElement | null>(null);
   const [capturingSnapshot, setCapturingSnapshot] = useState(false);
 
-  // Shape picker (cutout / rectangle / template) — enabled on products
-  // that have a non-empty `shape_options` column. Customer picks a shape
-  // under the big preview; Regenerate button fires when the tab drifts
-  // from the last rendered combination.
   const shapeOptions: ShapeOption[] = (product.shape_options ?? []) as ShapeOption[];
   const shapePickerActive = shapeOptions.length > 0;
   const defaultShape: ShapeKind = shapeOptions[0]?.kind ?? 'rectangle';
@@ -99,83 +90,38 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
   const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
 
-  // Which face of a multi-surface variant the live preview shows.
-  // Declared here (before shapeMockup) because the resolver reads it —
-  // leaving it lower in the file tripped a temporal-dead-zone error in
-  // the production bundle on products like the figurine photo frame.
+  // Declared before shapeMockup so the resolver below can read it —
+  // prevents a temporal-dead-zone crash in the minified prod bundle.
   const [activeSurfaceId, setActiveSurfaceId] = useState<string>('');
 
-  // Resolve the active mockup URL + area for the big live preview.
-  // Precedence:
-  //   1. If the variant has surfaces[] (front/back/left/right), the
-  //      chosen surface's mockup wins so flipping a tab rotates the
-  //      preview visually (used by the 360° rotating photo frame).
-  //   2. Per-prompt override (migration 0061) — selected art style has
-  //      its own product shot.
-  //   3. Per-shape override from shape_options config (migration 0058).
-  //   4. Variant's base mockup_url / mockup_area.
-  //   5. Product's mockup_url / mockup_area as final fallback.
-  const shapeMockup = (() => {
-    const variantSurfaces = Array.isArray(selectedVariant?.surfaces) ? selectedVariant!.surfaces : [];
-    if (variantSurfaces.length > 0) {
-      const surface = variantSurfaces.find((s) => s.id === activeSurfaceId)
-        ?? variantSurfaces[0];
-      if (surface?.mockup_url) {
-        return { url: surface.mockup_url, area: surface.mockup_area };
-      }
-    }
-    if (selectedPromptId && selectedVariant?.mockup_by_prompt_id) {
-      const byPrompt = selectedVariant.mockup_by_prompt_id[selectedPromptId];
-      if (byPrompt && byPrompt.url) {
-        return { url: byPrompt.url, area: byPrompt.area };
-      }
-    }
-    if (shapePickerActive && selectedVariant?.mockup_by_shape) {
-      const override = selectedVariant.mockup_by_shape[selectedShapeKind];
-      if (override && override.url) {
-        return { url: override.url, area: override.area };
-      }
-    }
-    return {
-      url: selectedVariant?.mockup_url || product.mockup_url || '',
-      area: (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null,
-    };
-  })();
+  const shapeMockup = resolveMockup({
+    product,
+    variant: selectedVariant,
+    activeSurfaceId,
+    selectedPromptId,
+    shapePickerActive,
+    selectedShapeKind,
+  });
 
-  // Reset the draggable area whenever the resolved shape mockup area
-  // changes — either because variant flipped, or shape flipped, or the
-  // selected template inside the shape=template flow changed, or the
-  // picked prompt has its own per-prompt mockup/area override.
+  // Reset variant-only state when the variant flips.
+  useEffect(() => {
+    setActiveSurfaceId(selectedVariant?.surfaces?.[0]?.id ?? '');
+    setPanOffset({ x: 50, y: 50 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantId]);
+
+  // Reset the draggable area whenever the resolved mockup area changes
+  // (variant, shape, template or prompt can all swap the backdrop).
   useEffect(() => {
     setCustomerArea(shapeMockup.area);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId]);
 
-  // Reset the active surface when the variant changes — otherwise a
-  // cutout-style flip between variants could leave a stale surface id
-  // selected.
-  useEffect(() => {
-    const first = selectedVariant?.surfaces?.[0]?.id ?? '';
-    setActiveSurfaceId(first);
-  }, [selectedVariantId, selectedVariant?.surfaces]);
-
-  // Reset pan offset when variant changes so a panMode variant doesn't
-  // inherit a stale crop from the previous variant.
-  useEffect(() => {
-    setPanOffset({ x: 50, y: 50 });
-  }, [selectedVariantId]);
-
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
-  // Which style the CURRENT preview was generated with. Drives the
-  // Regenerate CTA: when selectedPromptId drifts from this, the preview
-  // is stale relative to the picker and the customer gets a button to
-  // re-run the pipeline with the new style against the same source.
+  // Drives the Regenerate CTA — drift from this marks the preview stale.
   const [lastGeneratedPromptId, setLastGeneratedPromptId] = useState<string | null>(null);
   const [restyling, setRestyling] = useState(false);
-  // Per-product preview history — persists to localStorage so customers
-  // can flip back to earlier generations (across styles + photo uploads)
-  // without re-running generate.
   const [history, setHistory] = useState<PreviewHit[]>([]);
   useEffect(() => {
     setHistory(loadPreviewHistory(product.slug));
@@ -216,12 +162,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
-  // activeSurfaceId is declared higher up (before shapeMockup reads it)
-  // to avoid a temporal-dead-zone crash at render time.
-  // Day / Night toggle was used for laser products; removed per user
-  // feedback since it only flipped colours without changing the actual
-  // preview. `nightMode` stays as a hard-coded `false` so inline styles
-  // that reference it still compile — the conditional branches are dead.
+  // Day/Night toggle was removed but inline styles still branch on
+  // `nightMode` — keep as a fixed false until those branches are pruned.
   const nightMode = false;
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
@@ -903,32 +845,30 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   return effectivePreviewUrl;
                 })() ? (
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
-                    <div style={{ width: '100%' }}>
-                      <GiftMockupPreviewInteractive
-                        mockupUrl={shapeMockup.url}
-                        previewUrl={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
-                        area={customerArea}
-                        bounds={(shapeMockup.area as any) ?? null}
-                        onAreaChange={setCustomerArea}
-                        textLayer={engravedText.trim() ? {
-                          text: engravedText.trim(),
-                          x: textPos.x,
-                          y: textPos.y,
-                          sizePct: engravedSizePct,
-                          fontFamily: engravedFont,
-                          color: '#0a0a0a',
-                        } : null}
-                        onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
-                        captureMode={capturingSnapshot}
-                        panMode={selectedVariant?.photo_pan_mode === true}
-                        panOffset={panOffset}
-                        onPanOffsetChange={setPanOffset}
-                        figurineLayer={selectedFigurine && product.figurine_area ? {
-                          imageUrl: selectedFigurine.image_url,
-                          area: product.figurine_area,
-                        } : null}
-                      />
-                    </div>
+                    <GiftMockupPreviewInteractive
+                      mockupUrl={shapeMockup.url}
+                      previewUrl={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
+                      area={customerArea}
+                      bounds={shapeMockup.area ?? null}
+                      onAreaChange={setCustomerArea}
+                      textLayer={engravedText.trim() ? {
+                        text: engravedText.trim(),
+                        x: textPos.x,
+                        y: textPos.y,
+                        sizePct: engravedSizePct,
+                        fontFamily: engravedFont,
+                        color: '#0a0a0a',
+                      } : null}
+                      onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
+                      captureMode={capturingSnapshot}
+                      panMode={selectedVariant?.photo_pan_mode === true}
+                      panOffset={panOffset}
+                      onPanOffsetChange={setPanOffset}
+                      figurineLayer={selectedFigurine && product.figurine_area ? {
+                        imageUrl: selectedFigurine.image_url,
+                        area: product.figurine_area,
+                      } : null}
+                    />
                   ) : (
                     <img
                       src={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
@@ -1450,7 +1390,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   Upload section below knows whether to render the
                   multi-slot form or the legacy single-file dropzone. */}
               {hasTemplates && (
-                <ComposeSection letter={sectionLetters.template ?? 'A'} title="Pick a template">
+                <ComposeSection letter={sectionLetters.template!} title="Pick a template">
                   <div
                     style={{
                       display: 'grid',
@@ -1701,7 +1641,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   singleKind === 'base'     ? 'Pick your base' :
                                               'Choose an option';
                 return (
-                  <ComposeSection letter={sectionLetters.variants ?? 'B'} title={title}>
+                  <ComposeSection letter={sectionLetters.variants!} title={title}>
                     <GiftVariantLivePreview
                       variants={variants}
                       selectedId={selectedVariantId}
@@ -1719,7 +1659,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   customer picks "which base" first, then "what shape of
                   panel", then "what size of panel". */}
               {shapePickerActive && (
-                <ComposeSection letter={sectionLetters.shape ?? 'C'} title="Pick your shape">
+                <ComposeSection letter={sectionLetters.shape!} title="Pick your shape">
                   <GiftShapePicker
                     options={shapeOptions}
                     allTemplates={templates}
@@ -1733,7 +1673,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
               {/* Size picker — product-level. Applies to every variant. */}
               {sortedSizes.length > 0 && (
-                <ComposeSection letter={sectionLetters.size ?? 'C'} title="Pick a size">
+                <ComposeSection letter={sectionLetters.size!} title="Pick a size">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {sortedSizes.map((s) => {
                       const isSelected = s.slug === selectedSizeSlug;
@@ -1777,7 +1717,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   mockup. Only rendered when the product has
                   figurine_options configured (e.g. Figurine Photo Frame). */}
               {figurinePickerActive && (
-                <ComposeSection letter={sectionLetters.figurine ?? 'D'} title="Pick your figurine">
+                <ComposeSection letter={sectionLetters.figurine!} title="Pick your figurine">
                   <GiftFigurinePicker
                     options={figurineOptions}
                     selectedSlug={selectedFigurineSlug}
@@ -1788,7 +1728,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (
-                <ComposeSection letter={sectionLetters.style ?? 'C'} title="Pick art style">
+                <ComposeSection letter={sectionLetters.style!} title="Pick art style">
                   <div
                     style={{
                       display: 'grid',
@@ -1879,7 +1819,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               {/* Step D: Optional text */}
               {showTextStep && (
                 <ComposeSection
-                  letter={sectionLetters.text ?? 'C'}
+                  letter={sectionLetters.text!}
                   title="Add text (optional)"
                 >
                   <input

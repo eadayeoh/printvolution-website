@@ -20,6 +20,18 @@ async function requireAdmin() {
 // GIFT PRODUCTS CRUD
 // ---------------------------------------------------------------------------
 
+const AreaSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+});
+
+const MockupOverrideSchema = z.object({
+  url: z.string().min(1),
+  area: AreaSchema,
+});
+
 const GiftProductSchema = z.object({
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, hyphens only'),
   name: z.string().min(1),
@@ -52,9 +64,7 @@ const GiftProductSchema = z.object({
   seo_desc: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
   mockup_url: z.string().nullable().optional(),
-  mockup_area: z.object({
-    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-  }).nullable().optional(),
+  mockup_area: AreaSchema.nullable().optional(),
   // Admin-authored content overrides. NULL / empty = component falls
   // back to mode-based defaults.
   seo_body: z.string().nullable().optional(),
@@ -86,12 +96,8 @@ const GiftProductSchema = z.object({
     image_url: z.string().min(1),
     price_delta_cents: z.number().int().min(0).default(0),
   })).nullable().optional(),
-  figurine_area: z.object({
-    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-  }).nullable().optional(),
-  // Migration 0035 additions
+  figurine_area: AreaSchema.nullable().optional(),
   pipeline_id: z.string().uuid().nullable().optional(),
-  // Migration 0047 — pipeline override for the secondary mode.
   secondary_pipeline_id: z.string().uuid().nullable().optional(),
   source_retention_days: z.number().int().min(1).default(30),
   lead_time_days: z.number().int().min(1).default(5),
@@ -569,12 +575,8 @@ const VariantSchema = z.object({
   // Size / colour / material variants typically reuse the product's
   // mockup, so these are relaxed to allow an empty string.
   mockup_url: z.string().default(''),
-  mockup_area: z.object({
-    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-  }),
-  mockup_bounds: z.object({
-    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-  }).nullable().optional(),
+  mockup_area: AreaSchema,
+  mockup_bounds: AreaSchema.nullable().optional(),
   variant_thumbnail_url: z.string().nullable().optional(),
   base_price_cents: z.number().int().min(0).default(0),
   price_tiers: z.array(z.object({
@@ -606,9 +608,7 @@ const VariantSchema = z.object({
         // variant's mockup_url serves as the fallback visual at render
         // time.
         mockup_url: z.string().default(''),
-        mockup_area: z.object({
-          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-        }),
+        mockup_area: AreaSchema,
         max_chars: z.number().int().positive().nullable().optional(),
         font_family: z.string().nullable().optional(),
         font_size_pct: z.number().positive().nullable().optional(),
@@ -621,48 +621,18 @@ const VariantSchema = z.object({
       }),
     )
     .default([]),
-  // Migration 0059 — pan-photo mode (customer pans inside the fixed
-  // mockup_area instead of dragging the rectangle around).
   photo_pan_mode: z.boolean().default(false),
-  // Per-prompt mockup override (migration 0061). Keyed by prompt UUID,
-  // value = { url, area }. Free-form string keys so z.record works here
-  // (unlike mockup_by_shape which has a fixed enum key set).
   mockup_by_prompt_id: z
-    .record(
-      z.string().uuid(),
-      z.object({
-        url: z.string().min(1),
-        area: z.object({
-          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-        }),
-      }),
-    )
+    .record(z.string().uuid(), MockupOverrideSchema)
     .nullable()
     .optional(),
-  // Per-shape mockup overrides (migration 0058). Keyed by shape kind;
-  // missing key = fall back to the variant's base mockup_url / area.
-  // Shaped as an object with optional fields (NOT z.record) because
-  // Zod v4's record(enum, ...) demands every enum value be present.
+  // Shaped as optional fields (NOT z.record) because Zod v4's
+  // record(enum, ...) demands every enum value be present.
   mockup_by_shape: z
     .object({
-      cutout: z.object({
-        url: z.string().min(1),
-        area: z.object({
-          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-        }),
-      }).optional(),
-      rectangle: z.object({
-        url: z.string().min(1),
-        area: z.object({
-          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-        }),
-      }).optional(),
-      template: z.object({
-        url: z.string().min(1),
-        area: z.object({
-          x: z.number(), y: z.number(), width: z.number(), height: z.number(),
-        }),
-      }).optional(),
+      cutout: MockupOverrideSchema.optional(),
+      rectangle: MockupOverrideSchema.optional(),
+      template: MockupOverrideSchema.optional(),
     })
     .nullable()
     .optional(),

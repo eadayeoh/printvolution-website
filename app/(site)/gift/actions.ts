@@ -170,44 +170,47 @@ export async function restylePreviewFromSource(input: {
     if (dlErr || !blob) return { ok: false, error: 'Source bytes not readable' };
     const bytes = new Uint8Array(await blob.arrayBuffer());
 
-    // Resolve the requested prompt — must be active + match the
-    // product's AI mode. Empty = pick the first active prompt for the
-    // mode, matching the upload action's behaviour.
-    let prompt: { id: string; transformation_prompt: string; negative_prompt: string | null; params: Record<string, unknown>; pipeline_id: string | null } | null = null;
-    if (input.prompt_id) {
-      const { data } = await sb.from('gift_prompts')
-        .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
-        .eq('id', input.prompt_id).maybeSingle();
-      // Allow the prompt's mode to match either the product's primary
-      // OR secondary mode — so a dual-mode product (e.g. uv + laser)
-      // can offer BOTH methods' prompts in the art-style picker.
-      const allowedPromptModes = [product.mode, product.secondary_mode].filter(Boolean);
-      if (data && data.is_active && allowedPromptModes.includes(data.mode)) prompt = data as any;
-    } else {
+    // Prompt + variant-dims queries are independent — fetch in parallel.
+    type PromptRow = {
+      id: string;
+      transformation_prompt: string;
+      negative_prompt: string | null;
+      params: Record<string, unknown>;
+      pipeline_id: string | null;
+    };
+    const promptQuery: Promise<PromptRow | null> = (async () => {
+      if (input.prompt_id) {
+        const { data } = await sb.from('gift_prompts')
+          .select('id, transformation_prompt, negative_prompt, params, mode, is_active, pipeline_id')
+          .eq('id', input.prompt_id).maybeSingle();
+        const allowedModes = [product.mode, product.secondary_mode].filter(Boolean);
+        if (data && data.is_active && allowedModes.includes(data.mode)) return data as any;
+        return null;
+      }
       const { data } = await sb.from('gift_prompts')
         .select('id, transformation_prompt, negative_prompt, params, pipeline_id')
         .eq('mode', product.mode).eq('is_active', true).order('display_order').limit(1);
-      if (data && data.length > 0) prompt = data[0] as any;
-    }
-
-    // Same size-variant override logic as upload, so a customer-picked
-    // A4 vs A5 variant gets the right print dimensions on restyle.
-    let variantDims: { width_mm: number; height_mm: number } | null = null;
-    if (input.variant_id) {
-      const { data: v } = await sb
-        .from('gift_product_variants')
-        .select('width_mm, height_mm, variant_kind, is_active, gift_product_id')
-        .eq('id', input.variant_id)
-        .maybeSingle();
-      if (
-        v && v.is_active
-        && v.gift_product_id === product.id
-        && v.variant_kind === 'size'
-        && v.width_mm && v.height_mm
-      ) {
-        variantDims = { width_mm: Number(v.width_mm), height_mm: Number(v.height_mm) };
-      }
-    }
+      return data?.[0] as any ?? null;
+    })();
+    const variantDimsQuery: Promise<{ width_mm: number; height_mm: number } | null> = input.variant_id
+      ? (async () => {
+          const { data: v } = await sb
+            .from('gift_product_variants')
+            .select('width_mm, height_mm, variant_kind, is_active, gift_product_id')
+            .eq('id', input.variant_id)
+            .maybeSingle();
+          if (
+            v && v.is_active
+            && v.gift_product_id === product.id
+            && v.variant_kind === 'size'
+            && v.width_mm && v.height_mm
+          ) {
+            return { width_mm: Number(v.width_mm), height_mm: Number(v.height_mm) };
+          }
+          return null;
+        })()
+      : Promise.resolve(null);
+    const [prompt, variantDims] = await Promise.all([promptQuery, variantDimsQuery]);
 
     let preview;
     try {

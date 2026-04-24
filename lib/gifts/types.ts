@@ -106,12 +106,9 @@ export type GiftProduct = {
   faqs?: Array<{ question: string; answer: string }> | null;
   occasions?: Array<{ icon: string; title: string; tip: string; suggested?: string }> | null;
   process_steps?: Array<{ title: string; time: string; desc: string }> | null;
-  // Migration 0056 — per-product customer-facing shape picker.
-  // NULL / empty = disabled (legacy behaviour).
+  /** NULL / empty = picker disabled. */
   shape_options?: import('./shape-options').ShapeOption[] | null;
-  // Migration 0060 — per-product figurine-overlay picker. Only a
-  // couple of products (Figurine Photo Frame) use this — every other
-  // product leaves it NULL.
+  /** NULL / empty = feature disabled. */
   figurine_options?: Array<{
     slug: string;
     name: string;
@@ -341,33 +338,23 @@ export type GiftProductVariant = {
   /** Per-face customisation. Empty → single-surface fallback using
    *  this variant's mockup_url + mockup_area + parent input_mode. */
   surfaces: GiftVariantSurface[];
-  /** Migration 0058 — per-shape mockup overrides. When the parent
-   *  product's shape_options is active, each shape kind may want its
-   *  own mockup image + mockup_area: a cutout piece on a Black Base
-   *  doesn't look the same as a rectangular one. Missing key falls
-   *  back to the variant's base `mockup_url` + `mockup_area`. */
+  /** Per-shape mockup override. Missing key falls back to the
+   *  variant's base `mockup_url` + `mockup_area`. */
   mockup_by_shape?: Partial<Record<
     import('./shape-options').ShapeKind,
-    {
-      url: string;
-      area: { x: number; y: number; width: number; height: number };
-    }
+    MockupOverride
   >> | null;
-  /** Migration 0061 — per-prompt mockup override keyed by prompt UUID.
-   *  When the customer picks a prompt on the art-style picker and this
-   *  variant has a mockup stored for that prompt, the live preview
-   *  swaps to it. Missing key = falls through to mockup_by_shape /
-   *  variant.mockup_url. */
-  mockup_by_prompt_id?: Record<string, {
-    url: string;
-    area: { x: number; y: number; width: number; height: number };
-  }> | null;
-  /** Migration 0059 — when true the customer pans their photo WITHIN
-   *  the fixed mockup_area instead of dragging the rectangle around.
-   *  Used for products with a fixed photo-panel slot (e.g. Figurine
-   *  Photo Frame). Default false keeps the legacy drag-the-area UX. */
+  /** Per-prompt mockup override keyed by prompt UUID. Missing key
+   *  falls back to mockup_by_shape / variant.mockup_url. */
+  mockup_by_prompt_id?: Record<string, MockupOverride> | null;
+  /** When true the area rectangle is locked and the customer pans
+   *  the photo inside it. Used when the panel slot has a fixed
+   *  position on the mockup (e.g. Figurine Photo Frame). */
   photo_pan_mode?: boolean;
 };
+
+export type MockupArea = { x: number; y: number; width: number; height: number };
+export type MockupOverride = { url: string; area: MockupArea };
 
 /** Minimum price display for a variant (parallels giftFromPrice). */
 export function variantFromPrice(v: Pick<GiftProductVariant, 'base_price_cents' | 'price_tiers'>): number {

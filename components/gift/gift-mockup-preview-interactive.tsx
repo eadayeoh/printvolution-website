@@ -51,18 +51,13 @@ export function GiftMockupPreviewInteractive({
    *  magenta design outline, resize handle, text dashed outline) so a
    *  DOM snapshot only captures the final composited visual. */
   captureMode?: boolean;
-  /** Migration 0059 — when true the `area` rectangle is LOCKED (no
-   *  move / resize). Customer drags the photo INSIDE the rectangle,
-   *  shifting `panOffset` (background-position %). Photo still
-   *  cover-fills the area — panning decides which part is visible. */
+  /** When true the `area` rectangle is locked; customer drags the
+   *  photo INSIDE it and `panOffset` (background-position %) updates. */
   panMode?: boolean;
-  /** Pan offset as % of the FRAME (0 = top/left of cropped-out photo,
-   *  50 = centre, 100 = bottom/right). Only meaningful in panMode. */
+  /** Pan offset % — only meaningful in panMode. */
   panOffset?: { x: number; y: number };
   onPanOffsetChange?: (next: { x: number; y: number }) => void;
-  /** Migration 0060 — optional figurine overlay. Composites the given
-   *  image at the given area (% of mockup image) on top of everything
-   *  else. Non-interactive. Used by Figurine Photo Frame. */
+  /** Optional figurine overlay composited on top of everything. */
   figurineLayer?: {
     imageUrl: string;
     area: Rect;
