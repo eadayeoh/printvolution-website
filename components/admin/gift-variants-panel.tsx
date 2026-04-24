@@ -493,7 +493,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   <Trash2 size={12} />
                                 </button>
                               </div>
-                              <div className="mt-2 grid grid-cols-[120px_1fr] gap-2">
+                              <div className="mt-2 space-y-2">
                                 <div>
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
                                     Mockup{s.accepts === 'photo' ? '' : ' (optional)'}
@@ -507,7 +507,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     label="Mockup"
                                   />
                                   {s.accepts !== 'photo' && (
-                                    <div className="mt-1 text-[9px] text-neutral-500">
+                                    <div className="mt-1 text-[10px] text-neutral-500">
                                       Used for the customer preview only. Text-only surfaces render fine without one.
                                     </div>
                                   )}
