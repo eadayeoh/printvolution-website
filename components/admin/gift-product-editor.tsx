@@ -9,7 +9,7 @@ import { ImageUpload } from '@/components/admin/image-upload';
 import { GiftMockupEditor } from '@/components/admin/gift-mockup-editor';
 import { MagazineEditor, type MagValue } from '@/components/admin/product-magazine-editor';
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
-import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant } from '@/lib/gifts/types';
+import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant, GiftSize } from '@/lib/gifts/types';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { GiftVariantsPanel } from './gift-variants-panel';
 
@@ -25,7 +25,7 @@ type Props = {
   variants?: GiftProductVariant[];
 };
 
-type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'variants' | 'seo' | 'content';
+type Tab = 'basics' | 'mode' | 'pricing' | 'templates' | 'production' | 'mockup' | 'variants' | 'sizes' | 'seo' | 'content';
 
 // Fallback used only if the /admin/gifts/modes DB hasn't been seeded yet.
 const FALLBACK_MODES: GiftModeMeta[] = [
@@ -93,6 +93,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
 
   const [assignedTemplates, setAssignedTemplates] = useState<string[]>(assignedTemplateIds);
 
+  const [sizes, setSizes] = useState<GiftSize[]>((product?.sizes ?? []) as GiftSize[]);
+
   function autoSlugFromName() {
     setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60));
   }
@@ -140,6 +142,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       pipeline_id: pipelineId || null,
       secondary_pipeline_id: secondaryMode ? (secondaryPipelineId || null) : null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
+      sizes: sizes
+        .map((s, i) => ({ ...s, display_order: i }))
+        .filter((s) => s.slug && s.name && s.width_mm > 0 && s.height_mm > 0),
     };
     if (!modeLocked) payload.mode = mode;
     payload.secondary_mode = secondaryMode;
@@ -192,6 +197,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         : 'Mockup',
     },
     { v: 'variants', label: `Variants${variants.length > 0 ? ` (${variants.length})` : ''}` },
+    { v: 'sizes', label: `Sizes${sizes.length > 0 ? ` (${sizes.length})` : ''}` },
     { v: 'content', label: `Content${faqs.length > 0 ? ` (${faqs.length})` : ''}` },
     { v: 'seo', label: 'SEO' },
   ];
@@ -674,6 +680,131 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               productHeightMm={parseFloat(heightMm) || product.height_mm}
             />
           : <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>
+      )}
+
+      {tab === 'sizes' && (
+        <div className="max-w-3xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm font-bold text-ink">Sizes</div>
+              <div className="mt-1 text-xs text-neutral-500">
+                Product-level size options. Every variant (mockup tile) is available in every size. Leave empty if the product has a single fixed size — customers then skip the size picker.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSizes([...sizes, { slug: '', name: '', width_mm: parseFloat(widthMm) || 100, height_mm: parseFloat(heightMm) || 100, price_delta_cents: 0, display_order: sizes.length }])}
+              className="inline-flex items-center gap-1 rounded-full bg-pink px-3 py-1.5 text-[11px] font-bold text-white hover:bg-pink-dark"
+            >
+              <Plus size={12} /> Add size
+            </button>
+          </div>
+
+          {sizes.length === 0 ? (
+            <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
+              No sizes yet. Add one to let customers pick from multiple dimensions (e.g. A4, A5, A6).
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sizes.map((s, i) => (
+                <div key={i} className="grid grid-cols-[1.2fr_1fr_90px_90px_110px_40px] items-end gap-2 rounded border border-neutral-200 bg-neutral-50 p-3">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Name</span>
+                    <input
+                      value={s.name}
+                      onChange={(e) => {
+                        const next = [...sizes]; next[i] = { ...s, name: e.target.value }; setSizes(next);
+                      }}
+                      onBlur={() => {
+                        if (!s.slug && s.name) {
+                          const next = [...sizes];
+                          next[i] = { ...s, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) };
+                          setSizes(next);
+                        }
+                      }}
+                      placeholder="A4 portrait"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Slug</span>
+                    <input
+                      value={s.slug}
+                      onChange={(e) => {
+                        const next = [...sizes];
+                        next[i] = { ...s, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40) };
+                        setSizes(next);
+                      }}
+                      placeholder="a4-portrait"
+                      className={`${inputCls} font-mono text-xs`}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">W (mm)</span>
+                    <input
+                      type="number" min={1} step={0.1} value={s.width_mm}
+                      onChange={(e) => {
+                        const next = [...sizes]; next[i] = { ...s, width_mm: parseFloat(e.target.value) || 0 }; setSizes(next);
+                      }}
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">H (mm)</span>
+                    <input
+                      type="number" min={1} step={0.1} value={s.height_mm}
+                      onChange={(e) => {
+                        const next = [...sizes]; next[i] = { ...s, height_mm: parseFloat(e.target.value) || 0 }; setSizes(next);
+                      }}
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">+ Price (S$)</span>
+                    <input
+                      type="number" min={0} step={0.01}
+                      value={(s.price_delta_cents / 100).toFixed(2)}
+                      onChange={(e) => {
+                        const next = [...sizes]; next[i] = { ...s, price_delta_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }; setSizes(next);
+                      }}
+                      className={inputCls}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSizes(sizes.filter((_, j) => j !== i))}
+                    className="flex h-9 w-9 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                    title="Remove size"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              <div className="mt-3 flex flex-wrap gap-1 text-[11px]">
+                <span className="mr-1 text-neutral-500">Quick add:</span>
+                {[
+                  { label: 'A4 portrait', w: 210, h: 297 },
+                  { label: 'A5 portrait', w: 148, h: 210 },
+                  { label: 'A6 portrait', w: 105, h: 148 },
+                  { label: 'A4 landscape', w: 297, h: 210 },
+                  { label: 'A5 landscape', w: 210, h: 148 },
+                ].map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      const slug = p.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      setSizes([...sizes, { slug, name: p.label, width_mm: p.w, height_mm: p.h, price_delta_cents: 0, display_order: sizes.length }]);
+                    }}
+                    className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-bold text-neutral-700 hover:border-ink"
+                  >
+                    + {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {tab === 'seo' && (

@@ -67,6 +67,14 @@ const GiftProductSchema = z.object({
   // Migration 0047 — pipeline override for the secondary mode.
   secondary_pipeline_id: z.string().uuid().nullable().optional(),
   source_retention_days: z.number().int().min(1).default(30),
+  sizes: z.array(z.object({
+    slug: z.string().regex(/^[a-z0-9-]+$/, 'Size slug must be lowercase letters, numbers, hyphens'),
+    name: z.string().min(1),
+    width_mm: z.number().positive(),
+    height_mm: z.number().positive(),
+    price_delta_cents: z.number().int().min(0).default(0),
+    display_order: z.number().int().default(0),
+  })).default([]),
 });
 
 function validateModes(p: { mode?: string; secondary_mode?: string | null }) {

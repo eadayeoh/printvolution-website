@@ -39,6 +39,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     variants.length > 0 ? variants[0].id : null,
   );
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
+
+  const productSizes = product.sizes ?? [];
+  const sortedSizes = [...productSizes].sort((a, b) => a.display_order - b.display_order);
+  const [selectedSizeSlug, setSelectedSizeSlug] = useState<string | null>(
+    sortedSizes.length > 0 ? sortedSizes[0].slug : null,
+  );
+  const selectedSize = sortedSizes.find((s) => s.slug === selectedSizeSlug) ?? null;
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -219,13 +226,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       setUploading(false);
     }
 
-    const unit = selectedVariant?.base_price_cents || product.base_price_cents;
+    const unit = (selectedVariant?.base_price_cents || product.base_price_cents) + (selectedSize?.price_delta_cents ?? 0);
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
     };
     if (selectedVariant) {
       config.Base = selectedVariant.name;
+    }
+    if (selectedSize) {
+      config.Size = `${selectedSize.name} (${selectedSize.width_mm}×${selectedSize.height_mm}mm)`;
     }
     if (selectedColour) {
       config.Colour = selectedColour.name;
@@ -946,6 +956,48 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </ComposeSection>
                 );
               })()}
+
+              {/* Size picker — product-level. Applies to every variant. */}
+              {sortedSizes.length > 0 && (
+                <ComposeSection letter={hasTemplates ? 'D' : 'C'} title="Pick a size">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {sortedSizes.map((s) => {
+                      const isSelected = s.slug === selectedSizeSlug;
+                      return (
+                        <button
+                          key={s.slug}
+                          type="button"
+                          onClick={() => setSelectedSizeSlug(s.slug)}
+                          style={{
+                            padding: '12px 18px',
+                            background: isSelected ? 'var(--pv-ink)' : '#fff',
+                            color: isSelected ? '#fff' : 'var(--pv-ink)',
+                            border: `2px solid ${isSelected ? 'var(--pv-ink)' : '#0a0a0a'}`,
+                            borderRadius: 4,
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: 4,
+                            minWidth: 140,
+                          }}
+                        >
+                          <span>{s.name}</span>
+                          <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: '0.04em' }}>
+                            {s.width_mm}×{s.height_mm}mm
+                            {s.price_delta_cents > 0 && ` · +S$${(s.price_delta_cents / 100).toFixed(2)}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ComposeSection>
+              )}
 
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (

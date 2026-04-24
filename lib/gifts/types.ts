@@ -43,6 +43,17 @@ export type GiftPriceTier = {
   price_cents: number;
 };
 
+export type GiftSize = {
+  slug: string;
+  name: string;
+  width_mm: number;
+  height_mm: number;
+  /** Added on top of the selected variant's base price. A product with
+   *  a single baseline size typically has delta = 0. */
+  price_delta_cents: number;
+  display_order: number;
+};
+
 export type GiftProduct = {
   id: string;
   slug: string;
@@ -70,6 +81,10 @@ export type GiftProduct = {
   color_profile: string | null;
   base_price_cents: number;
   price_tiers: GiftPriceTier[];
+  /** Size options for this product. Applies uniformly across every
+   *  variant (mockup tile). Empty = the product has a single implicit
+   *  size (width_mm × height_mm on the product row itself). */
+  sizes: GiftSize[];
   seo_title: string | null;
   seo_desc: string | null;
   is_active: boolean;
