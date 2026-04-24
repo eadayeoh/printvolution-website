@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
@@ -62,13 +62,13 @@ function toDraft(v?: GiftProductVariant): Draft {
 const pctToMm = (pct: number, dimMm: number) => (dimMm > 0 ? +((pct / 100) * dimMm).toFixed(1) : 0);
 const mmToPct = (mm: number, dimMm: number) => (dimMm > 0 ? +((mm / dimMm) * 100).toFixed(3) : 0);
 
-export function GiftVariantsPanel({
-  giftProductId,
-  initialVariants,
-  allowedModes,
-  productWidthMm,
-  productHeightMm,
-}: {
+export type GiftVariantsPanelHandle = {
+  /** Save every dirty draft sequentially. Returns true if all rows
+   *  succeed; false (plus `err` state visible in the panel) otherwise. */
+  saveAll: () => Promise<boolean>;
+};
+
+type GiftVariantsPanelProps = {
   giftProductId: string;
   initialVariants: GiftProductVariant[];
   /** When set, the per-surface Mode dropdown only lets admin pick from
@@ -79,7 +79,15 @@ export function GiftVariantsPanel({
    *  doesn't override width_mm/height_mm. */
   productWidthMm: number;
   productHeightMm: number;
-}) {
+};
+
+export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariantsPanelProps>(function GiftVariantsPanel({
+  giftProductId,
+  initialVariants,
+  allowedModes,
+  productWidthMm,
+  productHeightMm,
+}, ref) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
   const [isPending, startTransition] = useTransition();
@@ -108,35 +116,33 @@ export function GiftVariantsPanel({
     });
   }
 
-  function saveRow(i: number) {
-    setErr(null);
+  // Core save — awaitable, returns whether it succeeded. saveAll
+  // (exposed via forwardRef) iterates and awaits each draft so the
+  // main product save button persists every variant in one go.
+  async function saveDraft(i: number): Promise<boolean> {
     const d = drafts[i];
     if (!d.name.trim() || !d.slug.trim()) {
-      setErr('Name and slug are required for each variant');
-      return;
+      setErr(`Variant #${i + 1}: name and slug are required`);
+      return false;
     }
-    // Every variant is a mockup tile (formerly "base" kind) — it needs
-    // a mockup image. Sizes are product-level now, not per-variant.
     if (!d.mockup_url) {
-      setErr('Each variant needs a mockup image. Sizes are set at the product level under the Sizes tab.');
-      return;
+      setErr(`Variant "${d.name}": needs a mockup image`);
+      return false;
     }
-    // Catch duplicate slugs client-side instead of surfacing the raw
-    // Postgres "gift_product_variants_gift_product_id_slug_key" error.
     const slugClash = drafts.find((other, j) => j !== i && other.slug.trim() === d.slug.trim());
     if (slugClash) {
-      setErr(`A variant with slug "${d.slug.trim()}" already exists${slugClash.name ? ` (“${slugClash.name}”)` : ''}. Pick a different slug or edit the existing variant instead.`);
-      return;
+      setErr(`A variant with slug "${d.slug.trim()}" already exists${slugClash.name ? ` (“${slugClash.name}”)` : ''}.`);
+      return false;
     }
-    // Validate swatches up-front so the Zod error on the server doesn't
-    // surface as an opaque blob.
     for (const [si, s] of d.colour_swatches.entries()) {
-      if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return; }
-      if (!/^#[0-9A-Fa-f]{6}$/.test(s.hex)) {
-        setErr(`Colour swatch #${si + 1} hex must be #RRGGBB (got "${s.hex}").`);
-        return;
-      }
-      if (!s.mockup_url) { setErr(`Colour swatch #${si + 1} needs a mockup image.`); return; }
+      if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return false; }
+      if (!/^#[0-9A-Fa-f]{6}$/.test(s.hex)) { setErr(`Colour swatch #${si + 1} hex must be #RRGGBB.`); return false; }
+      if (!s.mockup_url) { setErr(`Colour swatch #${si + 1} needs a mockup image.`); return false; }
+    }
+    for (const [si, s] of d.surfaces.entries()) {
+      if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) { setErr(`Surface #${si + 1} id must be lowercase-slug.`); return false; }
+      if (!s.label.trim()) { setErr(`Surface #${si + 1} needs a label.`); return false; }
+      if (s.accepts === 'photo' && !s.mockup_url) { setErr(`Surface "${s.label || s.id}" accepts photo — needs a mockup.`); return false; }
     }
     const payload = {
       id: d.id,
@@ -147,9 +153,6 @@ export function GiftVariantsPanel({
       mockup_url: d.mockup_url,
       mockup_area: d.mockup_area,
       mockup_bounds: d.mockup_bounds,
-      // Thumbnail = mockup (auto). Still written to the column so
-      // any legacy consumer that reads variant_thumbnail_url directly
-      // keeps working without change.
       variant_thumbnail_url: d.variant_thumbnail_url || d.mockup_url || null,
       base_price_cents: Math.round((parseFloat(d.base_price) || 0) * 100),
       display_order: parseInt(d.display_order, 10) || 0,
@@ -157,59 +160,45 @@ export function GiftVariantsPanel({
       variant_kind: 'base' as const,
       width_mm: null,
       height_mm: null,
-      colour_swatches: d.colour_swatches.map((s) => ({
-        name: s.name.trim(),
-        hex: s.hex,
-        mockup_url: s.mockup_url,
-      })),
+      colour_swatches: d.colour_swatches.map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: s.mockup_url })),
       surfaces: d.surfaces.map((s) => ({
-        id: s.id.trim(),
-        label: s.label.trim(),
-        accepts: s.accepts,
-        mockup_url: s.mockup_url,
-        mockup_area: s.mockup_area,
-        max_chars: s.max_chars ?? null,
-        font_family: s.font_family ?? null,
-        font_size_pct: s.font_size_pct ?? null,
-        color: s.color ?? null,
-        mode: s.mode ?? null,
+        id: s.id.trim(), label: s.label.trim(), accepts: s.accepts, mockup_url: s.mockup_url,
+        mockup_area: s.mockup_area, max_chars: s.max_chars ?? null,
+        font_family: s.font_family ?? null, font_size_pct: s.font_size_pct ?? null,
+        color: s.color ?? null, mode: s.mode ?? null,
       })),
     };
-    // Extra validation for surfaces up-front so Zod errors don't
-    // surface as opaque blobs. mockup_url is optional — text-only
-    // surfaces render fine without one, and production never touches
-    // it (the real output uses text or the per-surface source photo).
-    for (const [si, s] of d.surfaces.entries()) {
-      if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) {
-        setErr(`Surface #${si + 1} id must be lowercase-slug (got "${s.id}").`);
-        return;
-      }
-      if (!s.label.trim()) { setErr(`Surface #${si + 1} needs a label.`); return; }
-      if (s.accepts === 'photo' && !s.mockup_url) {
-        setErr(`Surface "${s.label || s.id}" accepts photo — set a mockup image so the customer can see where their photo lands, or change accepts to 'text'.`);
-        return;
-      }
+    const r = await upsertGiftVariant(payload);
+    if (!r.ok) {
+      const msg = r.error.includes('gift_product_id_slug_key')
+        ? `A variant with slug "${d.slug.trim()}" already exists.`
+        : r.error;
+      setErr(msg);
+      return false;
     }
-    startTransition(async () => {
-      const r = await upsertGiftVariant(payload);
-      if (!r.ok) {
-        // Humanise common Postgres constraint errors so admin doesn't
-        // see raw SQL messages.
-        const msg = r.error.includes('gift_product_id_slug_key')
-          ? `A variant with slug "${d.slug.trim()}" already exists on this product. Pick a different slug.`
-          : r.error;
-        setErr(msg);
-        return;
-      }
-      if (!d.id) {
-        // refresh to pull back the newly-created row with id
-        router.refresh();
-      } else {
-        setFlashId(d.id);
-        setTimeout(() => setFlashId(null), 1600);
-      }
-    });
+    if (d.id) {
+      setFlashId(d.id);
+      setTimeout(() => setFlashId(null), 1600);
+    }
+    return true;
   }
+
+  useImperativeHandle(ref, () => ({
+    async saveAll() {
+      setErr(null);
+      let ok = true;
+      let createdAny = false;
+      for (let i = 0; i < drafts.length; i++) {
+        const wasNew = !drafts[i].id;
+        const success = await saveDraft(i);
+        if (!success) { ok = false; break; }
+        if (wasNew) createdAny = true;
+      }
+      if (createdAny) router.refresh();
+      return ok;
+    },
+  }), [drafts]);
+
 
   function addSwatch(i: number) {
     setDrafts((list) =>
@@ -639,19 +628,16 @@ export function GiftVariantsPanel({
                 <div className="mt-3 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => saveRow(i)}
-                    disabled={isPending}
-                    className="rounded-full bg-pink px-4 py-1.5 text-xs font-bold text-white hover:bg-pink-dark disabled:opacity-50"
-                  >
-                    {d.id ? 'Save' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => removeRow(i)}
                     className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
                   >
                     <Trash2 size={12} /> {d.id ? 'Delete' : 'Discard'}
                   </button>
+                  {d.id && (
+                    <span className="text-[10px] text-neutral-400 font-mono">
+                      Saved automatically when you click the main Save button
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -662,7 +648,7 @@ export function GiftVariantsPanel({
       </div>
     </div>
   );
-}
+});
 
 type Rect = { x: number; y: number; width: number; height: number };
 

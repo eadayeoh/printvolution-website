@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Trash2, Plus } from 'lucide-react';
@@ -11,7 +11,7 @@ import { MagazineEditor, type MagValue } from '@/components/admin/product-magazi
 import { GIFT_MODE_LABEL, GIFT_MODE_DESCRIPTION } from '@/lib/gifts/types';
 import type { GiftMode, GiftTemplateMode, GiftProduct, GiftTemplate, GiftPipeline, GiftProductVariant, GiftSize } from '@/lib/gifts/types';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
-import { GiftVariantsPanel } from './gift-variants-panel';
+import { GiftVariantsPanel, type GiftVariantsPanelHandle } from './gift-variants-panel';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -63,6 +63,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
   const [leadTimeDays, setLeadTimeDays] = useState<string>(String(product?.lead_time_days ?? 5));
   const [allowedFonts, setAllowedFonts] = useState<string[]>(product?.allowed_fonts ?? []);
+
+  // The main Save button should also persist every variant (admin
+  // removed the per-row Save in favour of one action). Ref + handle
+  // lets us reach into the panel without lifting all its state.
+  const variantsRef = useRef<GiftVariantsPanelHandle | null>(null);
 
   const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
   const [heightMm, setHeightMm] = useState(product?.height_mm.toString() ?? '100');
@@ -157,8 +162,15 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       if (product) {
         const r = await updateGiftProduct(product.id, payload);
         if (!r.ok) { setErr(r.error); return; }
-        // Save templates too
+        // Save templates
         await setProductTemplates(product.id, assignedTemplates);
+        // Save every variant row — the per-row Save button is gone,
+        // so the main Save is the only way variants get persisted.
+        const variantsOk = await variantsRef.current?.saveAll();
+        if (variantsOk === false) {
+          // Error already surfaced inside the panel; bail out of flash.
+          return;
+        }
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 1600);
       } else {
@@ -589,6 +601,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
             {product ? (
               <GiftVariantsPanel
+                ref={variantsRef}
                 giftProductId={product.id}
                 initialVariants={variants}
                 allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
