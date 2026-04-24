@@ -106,6 +106,9 @@ export type GiftProduct = {
   faqs?: Array<{ question: string; answer: string }> | null;
   occasions?: Array<{ icon: string; title: string; tip: string; suggested?: string }> | null;
   process_steps?: Array<{ title: string; time: string; desc: string }> | null;
+  // Migration 0056 — per-product customer-facing shape picker.
+  // NULL / empty = disabled (legacy behaviour).
+  shape_options?: import('./shape-options').ShapeOption[] | null;
   // Migration 0035 additions
   pipeline_id?: string | null;
   /** Override for the SECONDARY mode's pipeline. Paired with
