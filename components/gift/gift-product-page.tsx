@@ -683,36 +683,123 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
-            {/* Selected variant's features — highlighter-style chips.
-                Admin writes them per variant; only the active one shows
-                so customers see what they're actually buying. */}
+            {/* Selected variant's features — playful "inside the box"
+                panel. Confetti dots on cream background, thick ink
+                border, magenta drop-shadow, corner ribbon tag, and a
+                two-column checklist with coloured ✓ badges. */}
             {selectedVariant && selectedVariant.features && selectedVariant.features.length > 0 && (
-              <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {selectedVariant.features.map((f, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      position: 'relative',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 12px',
-                      fontFamily: 'var(--pv-f-body)',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: 'var(--pv-ink)',
-                      background: i % 3 === 0
-                        ? 'linear-gradient(180deg, transparent 55%, rgba(233,30,140,0.35) 55% 85%, transparent 85%)'
-                        : i % 3 === 1
-                        ? 'linear-gradient(180deg, transparent 55%, rgba(255,221,0,0.7) 55% 85%, transparent 85%)'
-                        : 'linear-gradient(180deg, transparent 55%, rgba(168,230,207,0.7) 55% 85%, transparent 85%)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <span aria-hidden style={{ color: 'var(--pv-magenta)', fontSize: 14 }}>✦</span>
-                    {f}
-                  </span>
-                ))}
+              <div
+                style={{
+                  marginTop: 18,
+                  position: 'relative',
+                  background: 'var(--pv-cream-warm, #FFF4E5)',
+                  backgroundImage:
+                    'radial-gradient(circle at 10% 20%, rgba(233,30,140,0.35) 0, rgba(233,30,140,0.35) 2px, transparent 2.5px), ' +
+                    'radial-gradient(circle at 85% 15%, rgba(255,221,0,0.7) 0, rgba(255,221,0,0.7) 2.5px, transparent 3px), ' +
+                    'radial-gradient(circle at 25% 85%, rgba(168,230,207,0.85) 0, rgba(168,230,207,0.85) 2.5px, transparent 3px), ' +
+                    'radial-gradient(circle at 92% 75%, rgba(233,30,140,0.3) 0, rgba(233,30,140,0.3) 2px, transparent 2.5px), ' +
+                    'radial-gradient(circle at 50% 48%, rgba(255,221,0,0.55) 0, rgba(255,221,0,0.55) 1.5px, transparent 2px)',
+                  border: '3px solid var(--pv-ink)',
+                  boxShadow: '6px 6px 0 var(--pv-magenta)',
+                  padding: '22px 18px 18px',
+                }}
+              >
+                {/* Corner tape ribbon */}
+                <div
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    top: -14,
+                    left: 16,
+                    background: 'var(--pv-yellow)',
+                    border: '2px solid var(--pv-ink)',
+                    padding: '4px 12px',
+                    transform: 'rotate(-3deg)',
+                    fontFamily: 'var(--pv-f-mono)',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color: 'var(--pv-ink)',
+                    boxShadow: '2px 2px 0 var(--pv-ink)',
+                  }}
+                >
+                  ✦ What&apos;s in the box
+                </div>
+                {/* Variant sub-title */}
+                <div
+                  style={{
+                    fontFamily: 'var(--pv-f-display, var(--pv-f-body))',
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: 'var(--pv-ink)',
+                    marginBottom: 12,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {selectedVariant.name}
+                </div>
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    margin: 0,
+                    padding: 0,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '10px 16px',
+                  }}
+                >
+                  {selectedVariant.features.map((f, i) => {
+                    const colours = [
+                      'var(--pv-magenta)',
+                      'var(--pv-ink)',
+                      '#06b6d4',
+                      'var(--pv-yellow)',
+                    ];
+                    const bg = colours[i % colours.length];
+                    const textColor = bg === 'var(--pv-yellow)' ? 'var(--pv-ink)' : '#fff';
+                    return (
+                      <li
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          fontFamily: 'var(--pv-f-body)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                          color: 'var(--pv-ink)',
+                          background: 'rgba(255,255,255,0.75)',
+                          border: '1.5px solid var(--pv-ink)',
+                          padding: '8px 10px',
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          style={{
+                            flexShrink: 0,
+                            width: 22,
+                            height: 22,
+                            border: '2px solid var(--pv-ink)',
+                            background: bg,
+                            color: textColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 12,
+                            fontWeight: 900,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✓
+                        </span>
+                        <span>{f}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
 

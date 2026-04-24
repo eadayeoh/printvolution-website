@@ -125,6 +125,20 @@ export function GiftMockupPreviewInteractive({
 
   const canAdjust = !!bounds;
 
+  // Measure the stage width so we can set a reliable font-size for the
+  // draggable text overlay (in px, not container queries — those were
+  // collapsing the whole preview on some browsers).
+  const [stageWidth, setStageWidth] = useState(400);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const update = () => setStageWidth(stage.getBoundingClientRect().width || 400);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(stage);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div
       ref={stageRef}
@@ -136,7 +150,7 @@ export function GiftMockupPreviewInteractive({
         border: '2px solid #0a0a0a',
         userSelect: 'none',
         touchAction: 'none',
-        containerType: 'inline-size',
+        width: '100%',
       }}
     >
       <img
@@ -238,7 +252,7 @@ export function GiftMockupPreviewInteractive({
             transform: 'translate(-50%, -50%)',
             cursor: onTextChange ? (drag?.mode === 'text' ? 'grabbing' : 'grab') : 'default',
             fontFamily: textLayer.fontFamily,
-            fontSize: `${textLayer.sizePct}cqw`,
+            fontSize: `${Math.max(10, (textLayer.sizePct / 100) * stageWidth)}px`,
             color: textLayer.color,
             whiteSpace: 'nowrap',
             userSelect: 'none',
