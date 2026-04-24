@@ -76,6 +76,32 @@ function validateModes(p: { mode?: string; secondary_mode?: string | null }) {
   return null;
 }
 
+/** Resolve the effective thumbnail_url to write. Admin-set value
+ *  wins; falls back to product.mockup_url (already on the row being
+ *  saved), then to the first active variant's mockup_url. Keeps the
+ *  thumbnail_url column populated so all catalogue surfaces
+ *  (homepage tiles, mega menu cards, cart line icons) keep working
+ *  without admin uploading the same shot twice. */
+async function resolveGiftThumbnail(
+  sb: Awaited<ReturnType<typeof requireAdmin>>,
+  productId: string | null,
+  incoming: { thumbnail_url?: string | null; mockup_url?: string | null },
+): Promise<string | null | undefined> {
+  if (typeof incoming.thumbnail_url === 'string' && incoming.thumbnail_url.trim()) return incoming.thumbnail_url;
+  if (typeof incoming.mockup_url === 'string' && incoming.mockup_url.trim()) return incoming.mockup_url;
+  if (!productId) return incoming.thumbnail_url;
+  const { data: variants } = await sb
+    .from('gift_product_variants')
+    .select('mockup_url')
+    .eq('gift_product_id', productId)
+    .eq('is_active', true)
+    .order('display_order')
+    .limit(1);
+  const first = variants?.[0]?.mockup_url;
+  if (typeof first === 'string' && first.trim()) return first;
+  return incoming.thumbnail_url ?? null;
+}
+
 /** Resolve the effective base_price_cents to write. Admin-set positive
  *  value wins. When admin left it at 0 AND the product has variants
  *  with positive prices, auto-derive as the lowest variant price so
@@ -118,7 +144,16 @@ export async function updateGiftProduct(id: string, input: Partial<z.input<typeo
   if (err) return { ok: false as const, error: err };
   // Auto-derive base price from variants when admin saves with 0.
   const effectiveBase = await resolveBasePrice(sb, id, input.base_price_cents);
-  const patch = { ...input, ...(effectiveBase !== undefined ? { base_price_cents: effectiveBase } : {}) };
+  // Auto-derive thumbnail: admin value → mockup_url → first variant.
+  const effectiveThumb = await resolveGiftThumbnail(sb, id, {
+    thumbnail_url: input.thumbnail_url ?? null,
+    mockup_url: input.mockup_url ?? null,
+  });
+  const patch = {
+    ...input,
+    ...(effectiveBase !== undefined ? { base_price_cents: effectiveBase } : {}),
+    thumbnail_url: effectiveThumb ?? null,
+  };
   const { error } = await sb.from('gift_products').update(patch as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
@@ -483,20 +518,34 @@ const VariantSchema = z.object({
 
 /** If the parent product's base_price_cents is still at 0, recompute
  *  it from the lowest active variant price. Leaves admin-set
- *  non-zero values alone (manual override wins). */
+ *  non-zero values alone (manual override wins). Also backfills the
+ *  thumbnail_url when parent has no mockup + no explicit thumbnail
+ *  yet — a fresh variant's mockup becomes the catalogue tile. */
 async function maybeRecomputeParentBase(
   sb: Awaited<ReturnType<typeof requireAdmin>>,
   giftProductId: string,
 ) {
   const { data: parent } = await sb
-    .from('gift_products').select('base_price_cents').eq('id', giftProductId).maybeSingle();
+    .from('gift_products').select('base_price_cents, thumbnail_url, mockup_url').eq('id', giftProductId).maybeSingle();
   if (!parent) return;
-  // Only auto-fill when admin left it at 0 — respects any manual
-  // override by bailing out early.
-  if ((parent.base_price_cents ?? 0) > 0) return;
-  const resolved = await resolveBasePrice(sb, giftProductId, 0);
-  if (typeof resolved === 'number' && resolved > 0) {
-    await sb.from('gift_products').update({ base_price_cents: resolved }).eq('id', giftProductId);
+  const patch: Record<string, unknown> = {};
+
+  // Price: only auto-fill when admin left it at 0.
+  if ((parent.base_price_cents ?? 0) === 0) {
+    const resolved = await resolveBasePrice(sb, giftProductId, 0);
+    if (typeof resolved === 'number' && resolved > 0) patch.base_price_cents = resolved;
+  }
+
+  // Thumbnail: only fill when there's nothing on the parent (no
+  // explicit thumbnail AND no product-level mockup). Any manual value
+  // survives untouched.
+  if (!parent.thumbnail_url && !parent.mockup_url) {
+    const thumb = await resolveGiftThumbnail(sb, giftProductId, { thumbnail_url: null, mockup_url: null });
+    if (thumb) patch.thumbnail_url = thumb;
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await sb.from('gift_products').update(patch).eq('id', giftProductId);
   }
 }
 

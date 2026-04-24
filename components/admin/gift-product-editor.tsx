@@ -109,7 +109,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       category_id: categoryId || null,
       description: description.trim() || null,
       tagline: tagline.trim() || null,
-      thumbnail_url: thumbnail || null,
+      // Auto-derive thumbnail: explicit value wins, else fall back to
+      // the product mockup shot. Variants can't be read here (client
+      // component) — variant-level fallback kicks in server-side via
+      // resolveGiftThumbnail() in the admin action.
+      thumbnail_url: thumbnail || mockupUrl || null,
       width_mm: parseFloat(widthMm) || 100,
       height_mm: parseFloat(heightMm) || 100,
       bleed_mm: parseFloat(bleedMm) || 0,
@@ -238,10 +242,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             <span className="mb-1 block text-xs font-bold text-ink">Description</span>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
           </label>
-          <div>
-            <span className="mb-1 block text-xs font-bold text-ink">Thumbnail</span>
-            <ImageUpload value={thumbnail} onChange={setThumbnail} prefix={`gift-${slug || 'new'}`} aspect={1} size="md" label="Thumbnail" />
-          </div>
+          {/* Thumbnail upload removed — auto-derived on save from the
+              product mockup (or first variant mockup if no product-level
+              mockup is set). Keeps admin from having to upload the same
+              shot twice. Column stays populated for legacy consumers. */}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             <span className="font-semibold text-ink">Active (visible to customers)</span>

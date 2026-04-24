@@ -204,7 +204,10 @@ export function GiftTemplateEditor({
       name: name.trim(),
       group_name: groupName.trim() || null,
       description: description.trim() || null,
-      thumbnail_url: thumbnail || null,
+      // Thumbnail auto-derives from the background image. Admin never
+      // uploads a separate one; the template picker card reuses the
+      // background shot. Column stays populated for legacy consumers.
+      thumbnail_url: thumbnail || background || null,
       background_url: background || null,
       foreground_url: foreground || null,
       zones_json: zones,
@@ -336,16 +339,15 @@ export function GiftTemplateEditor({
 
           <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-4">
             <div className="text-xs font-bold text-ink">Template assets</div>
+            {/* Thumbnail is auto-derived from the Background image on
+                save. Admins upload Background once; the template picker
+                card reuses that same shot. */}
             <div>
-              <div className="mb-1 text-[11px] text-neutral-600">1. Thumbnail <span className="text-neutral-400">(template picker card)</span></div>
-              <ImageUpload value={thumbnail} onChange={setThumbnail} prefix="tpl-thumb" aspect={1} size="md" label="Thumbnail" />
-            </div>
-            <div>
-              <div className="mb-1 text-[11px] text-neutral-600">2. Background <span className="text-neutral-400">(behind customer photo + text)</span></div>
+              <div className="mb-1 text-[11px] text-neutral-600">1. Background <span className="text-neutral-400">(behind customer photo + text · doubles as the picker thumbnail)</span></div>
               <ImageUpload value={background} onChange={setBackground} prefix="tpl-bg" aspect={1} size="md" label="Background" />
             </div>
             <div>
-              <div className="mb-1 text-[11px] text-neutral-600">3. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
+              <div className="mb-1 text-[11px] text-neutral-600">2. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
               <ImageUpload value={foreground} onChange={setForeground} prefix="tpl-fg" aspect={1} size="md" label="Foreground" />
             </div>
           </div>
