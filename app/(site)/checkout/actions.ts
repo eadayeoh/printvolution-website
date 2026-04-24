@@ -219,6 +219,8 @@ const OrderSchema = z.object({
       personalisation_notes: z.string().optional(),
       gift_image_url: z.string().optional(),
       gift_variant_id: z.string().uuid().optional(),
+      shape_kind: z.enum(['cutout', 'rectangle', 'template']).nullable().optional(),
+      shape_template_id: z.string().uuid().nullable().optional(),
       surfaces: z.array(z.object({
         id: z.string().min(1),
         label: z.string().min(1),
@@ -430,6 +432,8 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
         mode: info.mode,
         product_name_snapshot: i.product_name,
         production_status: 'pending' as const,
+        shape_kind: i.shape_kind ?? null,
+        shape_template_id: i.shape_kind === 'template' ? (i.shape_template_id ?? null) : null,
       };
     });
     const { data: insertedGifts, error: giErr } = await sb
