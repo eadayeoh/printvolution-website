@@ -26,6 +26,9 @@ import {
   removePreviewHit,
   type PreviewHit,
 } from '@/lib/gifts/preview-history';
+import { GiftShapePicker } from './gift-shape-picker';
+import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
+import { shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
 
 type Props = {
   product: GiftProduct;
@@ -65,6 +68,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     setCustomerArea(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantId]);
+
+  // Shape picker (cutout / rectangle / template) — enabled on products
+  // that have a non-empty `shape_options` column. Customer picks a shape
+  // under the big preview; Regenerate button fires when the tab drifts
+  // from the last rendered combination.
+  const shapeOptions: ShapeOption[] = (product.shape_options ?? []) as ShapeOption[];
+  const shapePickerActive = shapeOptions.length > 0;
+  const defaultShape: ShapeKind = shapeOptions[0]?.kind ?? 'rectangle';
+  const [selectedShapeKind, setSelectedShapeKind] = useState<ShapeKind>(defaultShape);
+  const [selectedShapeTemplateId, setSelectedShapeTemplateId] = useState<string | null>(() => {
+    const tpl = shapeOptions.find((o) => o.kind === 'template');
+    return tpl && tpl.kind === 'template' ? tpl.template_ids[0] ?? null : null;
+  });
+  const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
+  const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
@@ -159,6 +177,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
     if (selectedVariantId) fd.append('variant_id', selectedVariantId);
     if (cropRect) fd.append('crop_rect', JSON.stringify(cropRect));
+    if (shapePickerActive) {
+      fd.append('shape_kind', selectedShapeKind);
+      if (selectedShapeKind === 'template' && selectedShapeTemplateId) {
+        fd.append('shape_template_id', selectedShapeTemplateId);
+      }
+    }
     try {
       const r = await uploadAndPreviewGift(fd);
       if (!r || typeof r !== 'object') {
@@ -166,8 +190,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       } else if (r.ok === true) {
         setPreview(r);
         setLastGeneratedPromptId(selectedPromptId);
+        if (shapePickerActive) {
+          setLastRenderedShape(selectedShapeKind);
+          setLastRenderedShapeTemplateId(selectedShapeKind === 'template' ? selectedShapeTemplateId : null);
+        }
         setHistory(appendPreviewHit(product.slug, {
           promptId: selectedPromptId,
+          shapeKind: shapePickerActive ? selectedShapeKind : null,
+          templateId: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
           sourceAssetId: r.sourceAssetId,
           previewAssetId: r.previewAssetId,
           previewUrl: r.previewUrl,
@@ -193,6 +223,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (selectedTemplateId) fd.append('template_id', selectedTemplateId);
     if (selectedPromptId) fd.append('prompt_id', selectedPromptId);
     if (selectedVariantId) fd.append('variant_id', selectedVariantId);
+    if (shapePickerActive) {
+      fd.append('shape_kind', selectedShapeKind);
+      if (selectedShapeKind === 'template' && selectedShapeTemplateId) {
+        fd.append('shape_template_id', selectedShapeTemplateId);
+      }
+    }
     // Per-zone files: `file_<zone_id>`. Also emit the first file as
     // the legacy `file` key so the server action can register a primary
     // source asset for cart-tracking regardless of zone layout.
@@ -214,8 +250,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       } else if (r.ok === true) {
         setPreview(r);
         setLastGeneratedPromptId(selectedPromptId);
+        if (shapePickerActive) {
+          setLastRenderedShape(selectedShapeKind);
+          setLastRenderedShapeTemplateId(selectedShapeKind === 'template' ? selectedShapeTemplateId : null);
+        }
         setHistory(appendPreviewHit(product.slug, {
           promptId: selectedPromptId,
+          shapeKind: shapePickerActive ? selectedShapeKind : null,
+          templateId: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
           sourceAssetId: r.sourceAssetId,
           previewAssetId: r.previewAssetId,
           previewUrl: r.previewUrl,
@@ -231,7 +273,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   }
 
   async function doRestyle() {
-    if (!preview || !selectedPromptId) return;
+    // Regenerate fires when either the style (prompt) or the shape
+    // (tab / selected template) drifts from what's currently rendered.
+    // Customers without a style picker can still regenerate a shape.
+    if (!preview) return;
+    if (!selectedPromptId && !shapePickerActive) return;
     setErr(null);
     setRestyling(true);
     try {
@@ -240,12 +286,20 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         source_asset_id: preview.sourceAssetId,
         prompt_id: selectedPromptId,
         variant_id: selectedVariantId,
+        shape_kind: shapePickerActive ? selectedShapeKind : null,
+        shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
       });
       if (r.ok) {
         setPreview(r);
         setLastGeneratedPromptId(selectedPromptId);
+        if (shapePickerActive) {
+          setLastRenderedShape(selectedShapeKind);
+          setLastRenderedShapeTemplateId(selectedShapeKind === 'template' ? selectedShapeTemplateId : null);
+        }
         setHistory(appendPreviewHit(product.slug, {
           promptId: selectedPromptId,
+          shapeKind: shapePickerActive ? selectedShapeKind : null,
+          templateId: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
           sourceAssetId: r.sourceAssetId,
           previewAssetId: r.previewAssetId,
           previewUrl: r.previewUrl,
@@ -755,11 +809,53 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
+            {/* Customer-facing shape picker — tabs under the preview, with
+                a second-level template sub-grid when the Template tab is
+                active. Only renders on products that opted in via the
+                admin editor's "Shape options" block. */}
+            {shapePickerActive && (
+              <GiftShapePicker
+                options={shapeOptions}
+                allTemplates={templates}
+                selectedKind={selectedShapeKind}
+                selectedTemplateId={selectedShapeTemplateId}
+                onSelectKind={setSelectedShapeKind}
+                onSelectTemplate={setSelectedShapeTemplateId}
+              />
+            )}
+
             {/* Regenerate CTA — surfaces when the customer switches the
                 style picker after a generation, so the visible preview
                 is now in the *old* style. Re-runs the pipeline against
                 the already-uploaded source with the new prompt. */}
-            {preview && showPromptPicker && selectedPromptId && selectedPromptId !== lastGeneratedPromptId && (
+            {(() => {
+              const styleDrift = showPromptPicker && selectedPromptId != null
+                && selectedPromptId !== lastGeneratedPromptId;
+              const shapeDrift = shapePickerActive && lastRenderedShape != null
+                && (selectedShapeKind !== lastRenderedShape
+                  || (selectedShapeKind === 'template' && selectedShapeTemplateId !== lastRenderedShapeTemplateId));
+              if (!preview || (!styleDrift && !shapeDrift)) return null;
+              const ctaParts: string[] = [];
+              if (styleDrift) {
+                ctaParts.push(`${prompts.find((p) => p.id === selectedPromptId)?.name ?? 'the new style'}`);
+              }
+              if (shapeDrift) {
+                const shapeName = selectedShapeKind === 'template'
+                  ? templates.find((t) => t.id === selectedShapeTemplateId)?.name ?? 'Template'
+                  : selectedShapeKind.charAt(0).toUpperCase() + selectedShapeKind.slice(1);
+                ctaParts.push(shapeName);
+              }
+              const oldParts: string[] = [];
+              if (styleDrift) oldParts.push(prompts.find((p) => p.id === lastGeneratedPromptId)?.name ?? 'the old style');
+              if (shapeDrift) {
+                const oldShapeName = lastRenderedShape === 'template'
+                  ? templates.find((t) => t.id === lastRenderedShapeTemplateId)?.name ?? 'Template'
+                  : lastRenderedShape
+                    ? lastRenderedShape.charAt(0).toUpperCase() + lastRenderedShape.slice(1)
+                    : 'the old shape';
+                oldParts.push(oldShapeName);
+              }
+              return (
               <div
                 style={{
                   marginTop: 14,
@@ -784,9 +880,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     lineHeight: 1.4,
                   }}
                 >
-                  Preview is still <b>{prompts.find((p) => p.id === lastGeneratedPromptId)?.name ?? 'the old style'}</b>.
+                  Preview is still <b>{oldParts.join(' · ')}</b>.
                   <br />
-                  Regenerate with <b>{prompts.find((p) => p.id === selectedPromptId)?.name ?? 'the new style'}</b>?
+                  Regenerate with <b>{ctaParts.join(' · ')}</b>?
                 </div>
                 <button
                   type="button"
@@ -809,7 +905,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   {restyling ? 'Regenerating…' : '↻ Regenerate'}
                 </button>
               </div>
-            )}
+              );
+            })()}
 
             {/* Cross-style generation history — every earlier hit for this
                 product (both Line Art and Realistic, across photo swaps).
@@ -889,6 +986,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       const styleName = h.promptId
                         ? prompts.find((p) => p.id === h.promptId)?.name ?? 'Style'
                         : 'Preview';
+                      const shapeName =
+                        h.shapeKind === 'cutout' ? 'Cutout'
+                        : h.shapeKind === 'rectangle' ? 'Rectangle'
+                        : h.shapeKind === 'template'
+                          ? templates.find((t) => t.id === h.templateId)?.name ?? 'Template'
+                          : null;
+                      const hitLabel = shapeName ? `${shapeName} · ${styleName}` : styleName;
                       return (
                         <div key={h.id} style={{ position: 'relative', flexShrink: 0, width: 80 }}>
                           <button
@@ -905,6 +1009,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                               // Regenerate button only surfaces on a real
                               // style drift, not right after a restore.
                               setLastGeneratedPromptId(h.promptId);
+                              if (h.shapeKind) {
+                                setSelectedShapeKind(h.shapeKind);
+                                setSelectedShapeTemplateId(h.templateId);
+                                setLastRenderedShape(h.shapeKind);
+                                setLastRenderedShapeTemplateId(h.templateId);
+                              }
                             }}
                             style={{
                               width: 80,
@@ -917,11 +1027,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                               display: 'block',
                               overflow: 'hidden',
                             }}
-                            title={`${styleName} · ${new Date(h.ts).toLocaleString()}`}
+                            title={`${hitLabel} · ${new Date(h.ts).toLocaleString()}`}
                           >
                             <img
                               src={h.previewUrl}
-                              alt={`${styleName} preview`}
+                              alt={`${hitLabel} preview`}
                               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             />
                           </button>
@@ -940,7 +1050,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                               textOverflow: 'ellipsis',
                             }}
                           >
-                            {styleName}
+                            {hitLabel}
                           </div>
                           <button
                             type="button"
