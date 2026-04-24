@@ -80,6 +80,15 @@ const GiftProductSchema = z.object({
     price_delta_cents: z.number().int().min(0).default(0),
     template_ids: z.array(z.string().uuid()).optional(),
   })).nullable().optional(),
+  figurine_options: z.array(z.object({
+    slug: z.string().regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, hyphens only'),
+    name: z.string().min(1),
+    image_url: z.string().min(1),
+    price_delta_cents: z.number().int().min(0).default(0),
+  })).nullable().optional(),
+  figurine_area: z.object({
+    x: z.number(), y: z.number(), width: z.number(), height: z.number(),
+  }).nullable().optional(),
   // Migration 0035 additions
   pipeline_id: z.string().uuid().nullable().optional(),
   // Migration 0047 — pipeline override for the secondary mode.

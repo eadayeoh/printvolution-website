@@ -29,6 +29,7 @@ import {
 import { GiftShapePicker } from './gift-shape-picker';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
+import { GiftFigurinePicker } from './gift-figurine-picker';
 
 type Props = {
   product: GiftProduct;
@@ -66,6 +67,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Pan offset (%) used when the selected variant's photo_pan_mode is on.
   // 50/50 = centred, matches the default background-position.
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+
+  // Figurine picker (migration 0060) — null when the product has
+  // figurine_options disabled OR the customer hasn't chosen one yet.
+  const figurineOptions = Array.isArray(product.figurine_options) ? product.figurine_options : [];
+  const figurinePickerActive = figurineOptions.length > 0 && !!product.figurine_area;
+  const [selectedFigurineSlug, setSelectedFigurineSlug] = useState<string | null>(null);
+  const selectedFigurine = selectedFigurineSlug
+    ? figurineOptions.find((o) => o.slug === selectedFigurineSlug) ?? null
+    : null;
 
   // Ref to the preview-stage DIV — lets handleAddToCart snapshot the
   // composited live-preview (mockup + positioned photo + text overlay)
@@ -223,6 +233,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (variants.length >= 2) m.variants = String.fromCharCode(65 + i++);
     if (shapePickerActive) m.shape = String.fromCharCode(65 + i++);
     if (sortedSizes.length > 0) m.size = String.fromCharCode(65 + i++);
+    if (figurinePickerActive) m.figurine = String.fromCharCode(65 + i++);
     if (showPromptPicker) m.style = String.fromCharCode(65 + i++);
     if (showTextStep) m.text = String.fromCharCode(65 + i++);
     return m;
@@ -464,9 +475,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     const shapeDelta = shapePickerActive
       ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind)
       : 0;
+    const figurineDelta = selectedFigurine?.price_delta_cents ?? 0;
     const unit = (selectedVariant?.base_price_cents || product.base_price_cents)
       + (selectedSize?.price_delta_cents ?? 0)
-      + shapeDelta;
+      + shapeDelta
+      + figurineDelta;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
@@ -475,6 +488,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       config.Shape = selectedShapeKind === 'template'
         ? `Template — ${templates.find((t) => t.id === selectedShapeTemplateId)?.name ?? 'Template'}`
         : selectedShapeKind.charAt(0).toUpperCase() + selectedShapeKind.slice(1);
+    }
+    if (selectedFigurine) {
+      config.Figurine = selectedFigurine.name;
     }
     if (selectedVariant) {
       config.Base = selectedVariant.name;
@@ -601,6 +617,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       gift_variant_id: selectedVariant?.id,
       shape_kind: shapePickerActive ? selectedShapeKind : null,
       shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
+      figurine_slug: selectedFigurineSlug,
     });
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
@@ -897,6 +914,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         panMode={selectedVariant?.photo_pan_mode === true}
                         panOffset={panOffset}
                         onPanOffsetChange={setPanOffset}
+                        figurineLayer={selectedFigurine && product.figurine_area ? {
+                          imageUrl: selectedFigurine.image_url,
+                          area: product.figurine_area,
+                        } : null}
                       />
                     </div>
                   ) : (
@@ -933,6 +954,25 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         filter: nightMode ? 'brightness(0.8) contrast(1.1)' : undefined,
                       }}
                     />
+                    {/* Figurine overlay also shows on the pre-upload mockup
+                        so the customer can see where the figurine sits even
+                        before they add their photo. */}
+                    {selectedFigurine && product.figurine_area && (
+                      <img
+                        src={selectedFigurine.image_url}
+                        alt=""
+                        draggable={false}
+                        style={{
+                          position: 'absolute',
+                          left: `${product.figurine_area.x}%`,
+                          top: `${product.figurine_area.y}%`,
+                          width: `${product.figurine_area.width}%`,
+                          height: `${product.figurine_area.height}%`,
+                          objectFit: 'contain',
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
                     <div
                       style={{
                         position: 'absolute',
@@ -1724,6 +1764,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
 
+              {/* Figurine picker — small decorative overlay on the
+                  mockup. Only rendered when the product has
+                  figurine_options configured (e.g. Figurine Photo Frame). */}
+              {figurinePickerActive && (
+                <ComposeSection letter={sectionLetters.figurine ?? 'D'} title="Pick your figurine">
+                  <GiftFigurinePicker
+                    options={figurineOptions}
+                    selectedSlug={selectedFigurineSlug}
+                    onSelect={setSelectedFigurineSlug}
+                  />
+                </ComposeSection>
+              )}
+
               {/* Step C: Style picker (AI prompts) */}
               {showPromptPicker && (
                 <ComposeSection letter={sectionLetters.style ?? 'C'} title="Pick art style">
@@ -2008,6 +2061,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       (selectedVariant?.base_price_cents || product.base_price_cents)
                       + (selectedSize?.price_delta_cents ?? 0)
                       + (shapePickerActive ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind) : 0)
+                      + (selectedFigurine?.price_delta_cents ?? 0)
                     ) * qty)}
                   </div>
                 </div>

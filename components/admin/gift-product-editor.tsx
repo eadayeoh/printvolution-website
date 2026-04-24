@@ -14,6 +14,7 @@ import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { GiftVariantsPanel, type GiftVariantsPanelHandle } from './gift-variants-panel';
 import { GiftShapeOptionsEditor } from './gift-shape-options-editor';
 import type { ShapeOption } from '@/lib/gifts/shape-options';
+import { GiftFigurineOptionsEditor, type FigurineOption, type FigurineArea } from './gift-figurine-options-editor';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -122,6 +123,16 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     (product?.shape_options ?? []) as ShapeOption[],
   );
 
+  const [figurinePickerEnabled, setFigurinePickerEnabled] = useState<boolean>(
+    Array.isArray(product?.figurine_options) && (product!.figurine_options!.length ?? 0) > 0,
+  );
+  const [figurineOptions, setFigurineOptions] = useState<FigurineOption[]>(
+    (product?.figurine_options ?? []) as FigurineOption[],
+  );
+  const [figurineArea, setFigurineArea] = useState<FigurineArea>(
+    (product?.figurine_area as FigurineArea) ?? { x: 10, y: 60, width: 25, height: 30 },
+  );
+
   function autoSlugFromName() {
     setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60));
   }
@@ -190,6 +201,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         .map((s, i) => ({ ...s, display_order: i }))
         .filter((s) => s.slug && s.name && s.width_mm > 0 && s.height_mm > 0),
       shape_options: shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null,
+      figurine_options: figurinePickerEnabled && figurineOptions.filter((o) => o.slug && o.name && o.image_url).length > 0
+        ? figurineOptions.filter((o) => o.slug && o.name && o.image_url)
+        : null,
+      figurine_area: figurinePickerEnabled && figurineOptions.length > 0 ? figurineArea : null,
     };
     if (!modeLocked) payload.mode = mode;
     payload.secondary_mode = secondaryMode;
@@ -905,6 +920,20 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             value={shapeOptions}
             onChange={setShapeOptions}
             allTemplates={allTemplates}
+          />
+
+          {/* Figurine overlay picker — used by the Figurine Photo Frame.
+              Each option is a transparent PNG composited onto the mockup
+              at figurine_area. Default off; only turn on for products
+              with a dedicated figurine slot on the mockup. */}
+          <GiftFigurineOptionsEditor
+            enabled={figurinePickerEnabled}
+            onEnabledChange={setFigurinePickerEnabled}
+            value={figurineOptions}
+            onChange={setFigurineOptions}
+            area={figurineArea}
+            onAreaChange={setFigurineArea}
+            productSlug={slug || 'new-product'}
           />
         </div>
       )}

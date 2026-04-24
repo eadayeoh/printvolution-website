@@ -40,6 +40,9 @@ export type CartItem = {
   /** Only set when shape_kind === 'template'. Picks which gift_template
    *  row the laser composites into at fan-out time. */
   shape_template_id?: string | null;
+  /** Migration 0060 — picked figurine slug (from product.figurine_options).
+   *  NULL when the product has no figurine picker. */
+  figurine_slug?: string | null;
 };
 
 type CartState = {

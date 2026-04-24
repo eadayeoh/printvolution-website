@@ -37,6 +37,7 @@ export function GiftMockupPreviewInteractive({
   panMode,
   panOffset,
   onPanOffsetChange,
+  figurineLayer,
 }: {
   mockupUrl: string;
   previewUrl: string;
@@ -59,6 +60,13 @@ export function GiftMockupPreviewInteractive({
    *  50 = centre, 100 = bottom/right). Only meaningful in panMode. */
   panOffset?: { x: number; y: number };
   onPanOffsetChange?: (next: { x: number; y: number }) => void;
+  /** Migration 0060 — optional figurine overlay. Composites the given
+   *  image at the given area (% of mockup image) on top of everything
+   *  else. Non-interactive. Used by Figurine Photo Frame. */
+  figurineLayer?: {
+    imageUrl: string;
+    area: Rect;
+  } | null;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
@@ -288,6 +296,25 @@ export function GiftMockupPreviewInteractive({
           />
         )}
       </div>
+      {/* Figurine overlay — non-interactive, composites on top of the
+          photo at the admin-configured area. Only present when the
+          product has figurine_options enabled + a selection. */}
+      {figurineLayer && figurineLayer.imageUrl && (
+        <img
+          src={figurineLayer.imageUrl}
+          alt=""
+          draggable={false}
+          style={{
+            position: 'absolute',
+            left: `${figurineLayer.area.x}%`,
+            top: `${figurineLayer.area.y}%`,
+            width: `${figurineLayer.area.width}%`,
+            height: `${figurineLayer.area.height}%`,
+            objectFit: 'contain',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       {/* Customer's text — draggable */}
       {textLayer && textLayer.text.trim() && (
         <div

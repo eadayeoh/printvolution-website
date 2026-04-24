@@ -109,6 +109,16 @@ export type GiftProduct = {
   // Migration 0056 — per-product customer-facing shape picker.
   // NULL / empty = disabled (legacy behaviour).
   shape_options?: import('./shape-options').ShapeOption[] | null;
+  // Migration 0060 — per-product figurine-overlay picker. Only a
+  // couple of products (Figurine Photo Frame) use this — every other
+  // product leaves it NULL.
+  figurine_options?: Array<{
+    slug: string;
+    name: string;
+    image_url: string;
+    price_delta_cents?: number;
+  }> | null;
+  figurine_area?: { x: number; y: number; width: number; height: number } | null;
   // Migration 0035 additions
   pipeline_id?: string | null;
   /** Override for the SECONDARY mode's pipeline. Paired with
