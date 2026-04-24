@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { serviceClient, GIFT_BUCKETS, makeKey } from '@/lib/gifts/storage';
+import { serviceClient, GIFT_BUCKETS, makeKey, putObject } from '@/lib/gifts/storage';
 import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
@@ -249,6 +249,38 @@ export async function restylePreviewFromSource(input: {
   } catch (e: any) {
     console.error('[gift restyle] uncaught error');
     return { ok: false, error: 'Server error during restyle' };
+  }
+}
+
+/**
+ * Upload a client-captured composite screenshot (the fully-arranged
+ * live preview: mockup + positioned photo + text overlay) so it can
+ * appear as the cart-line thumbnail. The upload is trusted by shape
+ * only — MIME must be a PNG, size must be under a sensible cap.
+ * Returns the public URL of the saved image.
+ */
+export async function uploadGiftCartSnapshot(formData: FormData): Promise<
+  { ok: true; url: string } | { ok: false; error: string }
+> {
+  try {
+    const file = formData.get('file');
+    const productSlug = (formData.get('product_slug') || '').toString();
+    if (!(file instanceof File)) return { ok: false, error: 'No file' };
+    if (file.size === 0) return { ok: false, error: 'Empty file' };
+    if (file.size > 8 * 1024 * 1024) return { ok: false, error: 'Snapshot too large (max 8 MB)' };
+    if (!productSlug) return { ok: false, error: 'Product slug missing' };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detected = detectImage(bytes);
+    if (!detected || detected.mime !== 'image/png') {
+      return { ok: false, error: 'Expected a PNG snapshot' };
+    }
+    const key = makeKey(`cart-${productSlug}`, 'png');
+    const { publicUrl } = await putObject(GIFT_BUCKETS.previews, key, bytes, 'image/png');
+    if (!publicUrl) return { ok: false, error: 'No public URL available' };
+    return { ok: true, url: publicUrl };
+  } catch (e: any) {
+    console.error('[gift cart-snapshot] uncaught error');
+    return { ok: false, error: 'Server error during snapshot upload' };
   }
 }
 

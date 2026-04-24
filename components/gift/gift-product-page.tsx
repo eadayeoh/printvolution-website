@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource } from '@/app/(site)/gift/actions';
+import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
@@ -63,6 +63,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // variant changes so selecting a new base doesn't carry stale offsets.
   const defaultArea = (selectedVariant?.mockup_area as any) ?? (product.mockup_area as any) ?? null;
   const [customerArea, setCustomerArea] = useState<{ x: number; y: number; width: number; height: number } | null>(defaultArea);
+
+  // Ref to the preview-stage DIV — lets handleAddToCart snapshot the
+  // composited live-preview (mockup + positioned photo + text overlay)
+  // via html2canvas so the cart thumbnail reflects what the customer
+  // actually arranged, not just the raw AI preview.
+  const previewStageRef = useRef<HTMLDivElement | null>(null);
+  const [capturingSnapshot, setCapturingSnapshot] = useState(false);
 
   // Shape picker (cutout / rectangle / template) — enabled on products
   // that have a non-empty `shape_options` column. Customer picks a shape
@@ -499,6 +506,41 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       notes += `${notes ? ';' : ''}area:${customerArea.x.toFixed(2)},${customerArea.y.toFixed(2)},${customerArea.width.toFixed(2)},${customerArea.height.toFixed(2)}`;
     }
 
+    // Snapshot the live preview AS THE CUSTOMER ARRANGED IT. Gives the
+    // cart thumbnail a concrete "this is my design" image instead of
+    // the raw AI preview (which doesn't show mockup, position, or text).
+    // Fails open: if html2canvas or the upload errors, fall back to the
+    // existing preview URL so cart-add never blocks on a screenshot.
+    let snapshotUrl: string | null = null;
+    if (previewStageRef.current && preview) {
+      try {
+        setCapturingSnapshot(true);
+        // Wait a frame so React repaints without the editor chrome.
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+        const { default: html2canvas } = await import('html2canvas');
+        const canvas = await html2canvas(previewStageRef.current, {
+          backgroundColor: '#FFF4E5',
+          useCORS: true,
+          logging: false,
+          scale: 2,
+        });
+        const blob: Blob | null = await new Promise((res) =>
+          canvas.toBlob((b) => res(b), 'image/png'),
+        );
+        if (blob) {
+          const fd = new FormData();
+          fd.append('file', new File([blob], 'cart.png', { type: 'image/png' }));
+          fd.append('product_slug', product.slug);
+          const r = await uploadGiftCartSnapshot(fd);
+          if (r.ok) snapshotUrl = r.url;
+        }
+      } catch (e) {
+        console.warn('[gift cart] snapshot failed, falling back to preview', e);
+      } finally {
+        setCapturingSnapshot(false);
+      }
+    }
+
     addToCart({
       product_slug: product.slug,
       product_name: product.name,
@@ -508,6 +550,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       unit_price_cents: unit,
       line_total_cents: lineTotal,
       gift_image_url:
+        snapshotUrl ??
         preview?.previewUrl ??
         selectedVariant?.mockup_url ??
         product.thumbnail_url ??
@@ -706,6 +749,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   so the shell never collapses to a thin strip while
                   an async preview is loading / re-rendering. */}
               <div
+                ref={previewStageRef}
                 style={{
                   background: 'var(--pv-cream-warm, #FFF4E5)',
                   display: 'flex',
@@ -765,6 +809,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           color: '#0a0a0a',
                         } : null}
                         onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
+                        captureMode={capturingSnapshot}
                       />
                     </div>
                   ) : (

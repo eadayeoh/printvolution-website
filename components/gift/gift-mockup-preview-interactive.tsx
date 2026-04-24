@@ -33,6 +33,7 @@ export function GiftMockupPreviewInteractive({
   onAreaChange,
   textLayer,
   onTextChange,
+  captureMode,
 }: {
   mockupUrl: string;
   previewUrl: string;
@@ -42,6 +43,10 @@ export function GiftMockupPreviewInteractive({
   /** Optional draggable text overlay. Null = no text. */
   textLayer?: TextLayer | null;
   onTextChange?: (next: TextLayer) => void;
+  /** When true, hide all editor chrome (dashed bounds, safe-zone label,
+   *  magenta design outline, resize handle, text dashed outline) so a
+   *  DOM snapshot only captures the final composited visual. */
+  captureMode?: boolean;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
@@ -160,7 +165,7 @@ export function GiftMockupPreviewInteractive({
         style={{ display: 'block', width: '100%', height: 'auto' }}
       />
       {/* Bounds guide + label — explains what the dashed box is */}
-      {bounds && (
+      {bounds && !captureMode && (
         <>
           <div
             aria-hidden
@@ -212,12 +217,12 @@ export function GiftMockupPreviewInteractive({
           backgroundImage: `url(${previewUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          outline: canAdjust ? '2px solid rgba(233,30,140,0.6)' : undefined,
+          outline: canAdjust && !captureMode ? '2px solid rgba(233,30,140,0.6)' : undefined,
           outlineOffset: 1,
           transition: drag ? undefined : 'outline-color 0.2s',
         }}
       >
-        {canAdjust && (
+        {canAdjust && !captureMode && (
           <div
             onPointerDown={startResize}
             aria-label="Drag to resize"
@@ -258,7 +263,7 @@ export function GiftMockupPreviewInteractive({
             userSelect: 'none',
             textShadow: '0 0 2px rgba(255,255,255,0.5)',
             padding: '2px 6px',
-            outline: onTextChange ? '1px dashed rgba(233,30,140,0.6)' : undefined,
+            outline: onTextChange && !captureMode ? '1px dashed rgba(233,30,140,0.6)' : undefined,
             outlineOffset: 2,
             lineHeight: 1,
             pointerEvents: 'auto',
