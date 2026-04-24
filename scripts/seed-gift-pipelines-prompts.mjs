@@ -152,31 +152,20 @@ try {
     }
   }
 
-  console.log('\n→ Upserting prompts…');
+  console.log('\n→ Inserting prompts (skipping any that already exist — never overwrites your edits)…');
   for (const pr of PROMPTS) {
     const [pipeline] = await sql`select id from gift_pipelines where slug = ${pr.pipeline_slug}`;
     if (!pipeline) { console.log(`  ✗ skip ${pr.name} — pipeline ${pr.pipeline_slug} missing`); continue; }
     const existing = await sql`select id from gift_prompts where mode = ${pr.mode} and name = ${pr.name}`;
     if (existing.length > 0) {
-      await sql`
-        update gift_prompts
-           set transformation_prompt = ${pr.transformation_prompt},
-               negative_prompt = ${pr.negative_prompt},
-               pipeline_id = ${pipeline.id},
-               style = ${pr.style},
-               display_order = ${pr.display_order},
-               is_active = true,
-               updated_at = now()
-         where id = ${existing[0].id}
-      `;
-      console.log(`  ✓ updated [${pr.mode}] ${pr.name}`);
-    } else {
-      await sql`
-        insert into gift_prompts (mode, name, transformation_prompt, negative_prompt, pipeline_id, style, display_order, is_active, params)
-        values (${pr.mode}, ${pr.name}, ${pr.transformation_prompt}, ${pr.negative_prompt}, ${pipeline.id}, ${pr.style}, ${pr.display_order}, true, '{}'::jsonb)
-      `;
-      console.log(`  + inserted [${pr.mode}] ${pr.name}`);
+      console.log(`  · skipped [${pr.mode}] ${pr.name} — already exists, prompt text left untouched`);
+      continue;
     }
+    await sql`
+      insert into gift_prompts (mode, name, transformation_prompt, negative_prompt, pipeline_id, style, display_order, is_active, params)
+      values (${pr.mode}, ${pr.name}, ${pr.transformation_prompt}, ${pr.negative_prompt}, ${pipeline.id}, ${pr.style}, ${pr.display_order}, true, '{}'::jsonb)
+    `;
+    console.log(`  + inserted [${pr.mode}] ${pr.name}`);
   }
 
   console.log('\nFinal state:');
