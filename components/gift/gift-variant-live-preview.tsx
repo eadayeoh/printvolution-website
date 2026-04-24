@@ -163,34 +163,8 @@ export function GiftVariantLivePreview({
                       {chosenSwatch.name}
                     </div>
                   )}
-                  {v.features && v.features.length > 0 && (
-                    <ul
-                      style={{
-                        margin: '8px 0 0',
-                        padding: 0,
-                        listStyle: 'none',
-                        display: 'grid',
-                        gap: 3,
-                      }}
-                    >
-                      {v.features.slice(0, 5).map((f, i) => (
-                        <li
-                          key={i}
-                          style={{
-                            fontFamily: 'var(--pv-f-body)',
-                            fontSize: 11,
-                            lineHeight: 1.35,
-                            color: 'var(--pv-muted)',
-                            display: 'flex',
-                            gap: 6,
-                          }}
-                        >
-                          <span aria-hidden style={{ color: 'var(--pv-magenta)' }}>•</span>
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {/* Features render below the main preview now, not here — kept
+                      variant tiles compact so the grid scans as "pick a base". */}
                 </div>
               </button>
               {v.colour_swatches.length > 0 && (

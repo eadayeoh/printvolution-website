@@ -527,14 +527,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </span>
               </div>
               {/* Preview stage — sized to the mockup so there's no
-                  empty space above / below the image. */}
+                  empty space above / below the image. Safety minHeight
+                  so the shell never collapses to a thin strip while
+                  an async preview is loading / re-rendering. */}
               <div
                 style={{
                   background: 'var(--pv-cream-warm, #FFF4E5)',
                   display: 'flex',
-                  alignItems: 'stretch',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
+                  minHeight: 320,
                 }}
               >
                 {uploading && (
@@ -679,6 +682,39 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     draggable layer — no separate overlay here. */}
               </div>
             </div>
+
+            {/* Selected variant's features — highlighter-style chips.
+                Admin writes them per variant; only the active one shows
+                so customers see what they're actually buying. */}
+            {selectedVariant && selectedVariant.features && selectedVariant.features.length > 0 && (
+              <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {selectedVariant.features.map((f, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      position: 'relative',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      fontFamily: 'var(--pv-f-body)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: 'var(--pv-ink)',
+                      background: i % 3 === 0
+                        ? 'linear-gradient(180deg, transparent 55%, rgba(233,30,140,0.35) 55% 85%, transparent 85%)'
+                        : i % 3 === 1
+                        ? 'linear-gradient(180deg, transparent 55%, rgba(255,221,0,0.7) 55% 85%, transparent 85%)'
+                        : 'linear-gradient(180deg, transparent 55%, rgba(168,230,207,0.7) 55% 85%, transparent 85%)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span aria-hidden style={{ color: 'var(--pv-magenta)', fontSize: 14 }}>✦</span>
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
 
           </div>
 
