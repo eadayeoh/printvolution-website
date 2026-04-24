@@ -113,6 +113,13 @@ export function GiftVariantsPanel({
       setErr('Each variant needs a mockup image. Sizes are set at the product level under the Sizes tab.');
       return;
     }
+    // Catch duplicate slugs client-side instead of surfacing the raw
+    // Postgres "gift_product_variants_gift_product_id_slug_key" error.
+    const slugClash = drafts.find((other, j) => j !== i && other.slug.trim() === d.slug.trim());
+    if (slugClash) {
+      setErr(`A variant with slug "${d.slug.trim()}" already exists${slugClash.name ? ` (“${slugClash.name}”)` : ''}. Pick a different slug or edit the existing variant instead.`);
+      return;
+    }
     // Validate swatches up-front so the Zod error on the server doesn't
     // surface as an opaque blob.
     for (const [si, s] of d.colour_swatches.entries()) {
@@ -176,7 +183,15 @@ export function GiftVariantsPanel({
     }
     startTransition(async () => {
       const r = await upsertGiftVariant(payload);
-      if (!r.ok) { setErr(r.error); return; }
+      if (!r.ok) {
+        // Humanise common Postgres constraint errors so admin doesn't
+        // see raw SQL messages.
+        const msg = r.error.includes('gift_product_id_slug_key')
+          ? `A variant with slug "${d.slug.trim()}" already exists on this product. Pick a different slug.`
+          : r.error;
+        setErr(msg);
+        return;
+      }
       if (!d.id) {
         // refresh to pull back the newly-created row with id
         router.refresh();
@@ -277,8 +292,7 @@ export function GiftVariantsPanel({
           <div>
             <div className="text-xs font-bold text-ink">Variants</div>
             <div className="text-[11px] text-neutral-500">
-              Pick a kind per variant — <b>Base</b> (different physical mockup, e.g. LED stand A/B/C),{' '}
-              <b>Size</b> (A3/A4/A5/A6 — sets the print dimensions), <b>Colour</b>, or <b>Material</b>. Mix kinds freely.
+              Each variant is a mockup tile (e.g. Wood Rectangle, Black Base, Wood Circle). Sizes are set at the product level under the Sizes section below and apply to every variant.
             </div>
           </div>
           <button
