@@ -469,7 +469,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
             >
               <span>★ Personalised · {modeLabel}</span>
               <span style={{ color: 'var(--pv-rule)' }}>•</span>
-              <span>Ships in 5 days</span>
+              <span>
+                Ready in {product.lead_time_days ?? 5} working day
+                {(product.lead_time_days ?? 5) === 1 ? '' : 's'}
+              </span>
               <span style={{ color: 'var(--pv-rule)' }}>•</span>
               <span>From {formatSGD(product.base_price_cents)}</span>
             </div>
@@ -1639,7 +1642,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   border: '1px dashed rgba(255,255,255,0.2)',
                 }}
               >
-                5-day turnaround · <b style={{ color: 'var(--pv-yellow)' }}>Free delivery over S$150</b>
+                Ready in {product.lead_time_days ?? 5} working day
+                {(product.lead_time_days ?? 5) === 1 ? '' : 's'} · islandwide delivery or collection
               </div>
             </div>
           </div>
