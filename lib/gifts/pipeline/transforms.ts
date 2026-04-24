@@ -71,10 +71,54 @@ export async function runAiTransform(
   opts?: { prompt?: string | null; negativePrompt?: string | null },
 ): Promise<Buffer> {
   const sharp = await loadSharp();
-  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | undefined;
+  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | 'local_edge' | 'local_bw' | undefined;
 
   if (provider === 'passthrough') {
     return renderPhotoResize(input, product, null, preview);
+  }
+
+  if (provider === 'local_edge' || provider === 'local_bw') {
+    // Deterministic local transforms. No AI call — preserves the actual
+    // subject in the photo (unlike generative models that hallucinate
+    // new faces from a canny hint). Exactly what laser engraving wants.
+    const totalW = product.width_mm + product.bleed_mm * 2;
+    const totalH = product.height_mm + product.bleed_mm * 2;
+    const dpi = preview ? 150 : 300;
+    const targetW = Math.round((totalW / 25.4) * dpi);
+    const targetH = Math.round((totalH / 25.4) * dpi);
+
+    let img = sharp(input).rotate();
+    if (provider === 'local_edge') {
+      // Line-art via Laplacian edge detection. Blur to kill noise, run
+      // a 3×3 Laplacian, stretch contrast, invert so lines are black on
+      // white. Produces a printable sketch that still looks like the
+      // actual person.
+      img = img
+        .greyscale()
+        .blur(0.6)
+        .convolve({
+          width: 3,
+          height: 3,
+          kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+          scale: 1,
+          offset: 128,
+        })
+        .linear(2.2, -180)
+        .negate({ alpha: false });
+    } else {
+      // High-contrast black-and-white photo for greyscale laser
+      // engraving. Keeps tonal range (not pure threshold) so faces stay
+      // recognisable at depth.
+      img = img
+        .greyscale()
+        .normalise()
+        .linear(1.3, -15)
+        .modulate({ brightness: 1.05 });
+    }
+    return img
+      .resize({ width: targetW, height: targetH, fit: 'cover' })
+      .png()
+      .toBuffer();
   }
 
   if (provider === 'replicate') {

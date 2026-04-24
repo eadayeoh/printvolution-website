@@ -47,19 +47,28 @@ export async function runReplicate(opts: ReplicateInput): Promise<Buffer> {
   const b64 = Buffer.from(opts.imageBytes).toString('base64');
   const dataUri = `data:${opts.imageMime};base64,${b64}`;
 
-  // Different Replicate models use different parameter names for the
-  // source image. flux-canny-pro wants `control_image`, most img2img
-  // models want `image`, a few want `input_image`. The pipeline's
-  // default_params can set `image_input_key` to override. Otherwise
-  // we pick a sensible default based on the model slug.
+  // Different Replicate models use different parameter shapes for the
+  // source image:
+  //   - `google/nano-banana` and some others → `image_input` (ARRAY of URIs)
+  //   - flux-canny-pro / flux-depth-pro     → `control_image`
+  //   - most img2img models                 → `image`
+  // The pipeline's default_params can set `image_input_key` + optional
+  // `image_as_array: true` to override. Otherwise we pick a sensible
+  // default based on the model slug.
   const explicitKey = typeof opts.input.image_input_key === 'string' ? opts.input.image_input_key : null;
-  const modelDefaultKey = opts.model.includes('canny') ? 'control_image'
+  const isNanoBanana = opts.model.includes('nano-banana');
+  const isGptImage  = opts.model.includes('gpt-image');
+  const modelDefaultKey = isNanoBanana ? 'image_input'
+    : isGptImage ? 'input_images'
+    : opts.model.includes('canny') ? 'control_image'
     : opts.model.includes('depth') ? 'control_image'
     : 'image';
   const imageKey = explicitKey ?? modelDefaultKey;
+  const asArray = opts.input.image_as_array === true || isNanoBanana || isGptImage;
   const input: Record<string, unknown> = { ...opts.input };
-  delete input.image_input_key; // don't leak our internal override to Replicate
-  input[imageKey] = dataUri;
+  delete input.image_input_key;
+  delete input.image_as_array;
+  input[imageKey] = asArray ? [dataUri] : dataUri;
   if (opts.prompt) input.prompt = opts.prompt;
   if (opts.negativePrompt) input.negative_prompt = opts.negativePrompt;
 
