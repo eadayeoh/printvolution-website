@@ -7,10 +7,17 @@
 // across multiple photo uploads — clicking a hit restores that source +
 // preview so the cart-add carries the right asset IDs.
 
+import type { ShapeKind } from './shape-options';
+
 export type PreviewHit = {
   id: string;
   /** null = single-style product (no prompt picker shown). */
   promptId: string | null;
+  /** Shape the customer picked for this generation. null = legacy hit
+   *  stored before the shape picker shipped — treat as rectangle. */
+  shapeKind: ShapeKind | null;
+  /** Only non-null when shapeKind === 'template'. */
+  templateId: string | null;
   sourceAssetId: string;
   previewAssetId: string;
   previewUrl: string;
@@ -32,7 +39,13 @@ export function loadPreviewHistory(productSlug: string): PreviewHit[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.v !== VERSION || !Array.isArray(parsed.hits)) return [];
-    return parsed.hits.filter(isValidHit);
+    return parsed.hits
+      .filter(isValidHit)
+      .map((h: PreviewHit) => ({
+        ...h,
+        shapeKind: h.shapeKind ?? null,
+        templateId: h.templateId ?? null,
+      }));
   } catch {
     return [];
   }
@@ -41,9 +54,20 @@ export function loadPreviewHistory(productSlug: string): PreviewHit[] {
 function isValidHit(h: unknown): h is PreviewHit {
   if (!h || typeof h !== 'object') return false;
   const r = h as Record<string, unknown>;
+  const shapeOk =
+    r.shapeKind === null ||
+    r.shapeKind === 'cutout' ||
+    r.shapeKind === 'rectangle' ||
+    r.shapeKind === 'template' ||
+    r.shapeKind === undefined; // legacy hits without the field
+  const tplOk =
+    r.templateId === null ||
+    typeof r.templateId === 'string' ||
+    r.templateId === undefined;
   return (
     typeof r.id === 'string' &&
     (r.promptId === null || typeof r.promptId === 'string') &&
+    shapeOk && tplOk &&
     typeof r.sourceAssetId === 'string' &&
     typeof r.previewAssetId === 'string' &&
     typeof r.previewUrl === 'string' &&
@@ -68,12 +92,15 @@ function writePreviewHistory(productSlug: string, hits: PreviewHit[]): void {
  *  off). Returns the new full array. */
 export function appendPreviewHit(
   productSlug: string,
-  hit: Omit<PreviewHit, 'id' | 'ts'> & { id?: string; ts?: number },
+  hit: Omit<PreviewHit, 'id' | 'ts' | 'shapeKind' | 'templateId'>
+    & { id?: string; ts?: number; shapeKind?: ShapeKind | null; templateId?: string | null },
 ): PreviewHit[] {
   const full: PreviewHit = {
     id: hit.id ?? `h_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     ts: hit.ts ?? Date.now(),
     promptId: hit.promptId,
+    shapeKind: hit.shapeKind ?? null,
+    templateId: hit.templateId ?? null,
     sourceAssetId: hit.sourceAssetId,
     previewAssetId: hit.previewAssetId,
     previewUrl: hit.previewUrl,
