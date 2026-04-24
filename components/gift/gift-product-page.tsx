@@ -724,7 +724,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     boxShadow: '2px 2px 0 var(--pv-ink)',
                   }}
                 >
-                  ✦ What&apos;s in the box
+                  ✦ Product features
                 </div>
                 {/* Variant sub-title */}
                 <div
@@ -745,57 +745,64 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     margin: 0,
                     padding: 0,
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '10px 16px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                    gap: '14px 16px',
                   }}
                 >
                   {selectedVariant.features.map((f, i) => {
                     const colours = [
-                      'var(--pv-magenta)',
-                      'var(--pv-ink)',
-                      '#06b6d4',
-                      'var(--pv-yellow)',
+                      { bg: 'var(--pv-magenta)', fg: '#fff',          shadow: 'var(--pv-ink)',     emoji: '✦' },
+                      { bg: 'var(--pv-yellow)',  fg: 'var(--pv-ink)', shadow: 'var(--pv-magenta)', emoji: '★' },
+                      { bg: '#06b6d4',           fg: '#fff',          shadow: 'var(--pv-ink)',     emoji: '◆' },
+                      { bg: '#a8e6cf',           fg: 'var(--pv-ink)', shadow: 'var(--pv-magenta)', emoji: '❋' },
+                      { bg: 'var(--pv-ink)',     fg: 'var(--pv-yellow)', shadow: '#06b6d4',        emoji: '❖' },
                     ];
-                    const bg = colours[i % colours.length];
-                    const textColor = bg === 'var(--pv-yellow)' ? 'var(--pv-ink)' : '#fff';
+                    const c = colours[i % colours.length];
+                    const rotate = [-2.5, 2, -1.5, 1.8, -2, 1.5][i % 6];
                     return (
                       <li
                         key={i}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
+                          position: 'relative',
+                          background: '#fff',
+                          border: '2.5px solid var(--pv-ink)',
+                          boxShadow: `4px 4px 0 ${c.shadow}`,
+                          padding: '14px 14px 14px 48px',
+                          transform: `rotate(${rotate}deg)`,
                           fontFamily: 'var(--pv-f-body)',
                           fontSize: 13,
-                          fontWeight: 600,
+                          fontWeight: 700,
                           lineHeight: 1.3,
                           color: 'var(--pv-ink)',
-                          background: 'rgba(255,255,255,0.75)',
-                          border: '1.5px solid var(--pv-ink)',
-                          padding: '8px 10px',
+                          transition: 'transform 0.15s',
                         }}
                       >
+                        {/* Big coloured emoji badge in the corner */}
                         <span
                           aria-hidden
                           style={{
-                            flexShrink: 0,
-                            width: 22,
-                            height: 22,
-                            border: '2px solid var(--pv-ink)',
-                            background: bg,
-                            color: textColor,
+                            position: 'absolute',
+                            top: -8,
+                            left: -8,
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            border: '2.5px solid var(--pv-ink)',
+                            background: c.bg,
+                            color: c.fg,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontFamily: 'var(--pv-f-mono)',
-                            fontSize: 12,
+                            fontSize: 18,
                             fontWeight: 900,
                             lineHeight: 1,
+                            boxShadow: '2px 2px 0 var(--pv-ink)',
+                            transform: `rotate(${-rotate * 1.5}deg)`,
                           }}
                         >
-                          ✓
+                          {c.emoji}
                         </span>
-                        <span>{f}</span>
+                        {f}
                       </li>
                     );
                   })}

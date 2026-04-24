@@ -9,6 +9,17 @@ function parseParams(raw: unknown): Record<string, unknown> {
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
+function resolveModelSlug(form: FormData): string | null {
+  // Form has `ai_model_slug_preset` (dropdown) + `ai_model_slug_custom`
+  // (text). __custom__ sentinel means "use the custom field". Anything
+  // else is the preset value. Empty string = clear.
+  const preset = String(form.get('ai_model_slug_preset') ?? '').trim();
+  const custom = String(form.get('ai_model_slug_custom') ?? '').trim();
+  if (preset === '__custom__') return custom || null;
+  if (preset === '') return null;
+  return preset;
+}
+
 export async function createPipeline(form: FormData) {
   const sb = createClient();
   const { data, error } = await sb.from('gift_pipelines').insert({
