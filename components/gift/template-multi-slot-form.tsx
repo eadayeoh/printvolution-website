@@ -51,6 +51,18 @@ type Props = {
    *  silently (debounced) whenever the zones are filled. Used for
    *  non-AI modes where the server composite matches the CSS preview. */
   autoGenerate?: boolean;
+  /** Pre-fill the form's text / colour / font / calendar state from a
+   *  saved design draft. Applied on mount only — subsequent changes
+   *  flow through the normal setters + onStateChange. */
+  initialState?: {
+    texts?: Record<string, string>;
+    textColors?: Record<string, string>;
+    textFonts?: Record<string, string>;
+    calendars?: Record<string, CalendarFill>;
+    calendarColors?: Record<string, string>;
+    foregroundColor?: string | null;
+    backgroundColor?: string | null;
+  };
 };
 
 function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
@@ -68,6 +80,7 @@ export function TemplateMultiSlotForm({
   onReset,
   currentPreviewUrl,
   autoGenerate = false,
+  initialState,
 }: Props) {
   const zones = template.zones_json ?? [];
   const imageZones = useMemo(
@@ -89,11 +102,11 @@ export function TemplateMultiSlotForm({
 
   const [files, setFiles] = useState<Record<string, File>>({});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
-  const [calendars, setCalendars] = useState<Record<string, CalendarFill>>({});
+  const [calendars, setCalendars] = useState<Record<string, CalendarFill>>(initialState?.calendars ?? {});
   // Customer-overridable calendar colour per zone. Single colour
   // overrides the zone's grid_color + header_color (the highlight
   // shape colour stays admin-controlled so it reads as an accent).
-  const [calendarColors, setCalendarColors] = useState<Record<string, string>>({});
+  const [calendarColors, setCalendarColors] = useState<Record<string, string>>(initialState?.calendarColors ?? {});
   // One hidden <input type="file"> per image zone. We store refs so the
   // "+ Label" empty-state div can open the picker programmatically —
   // clicking a filled slot is a no-op (only the X button removes).
@@ -103,26 +116,31 @@ export function TemplateMultiSlotForm({
   const initialTexts = useMemo<Record<string, string>>(() => {
     const out: Record<string, string> = {};
     for (const z of editableTextZones) out[z.id] = z.default_text ?? '';
+    // Saved-draft restore: customer's last-typed values win over template defaults.
+    if (initialState?.texts) Object.assign(out, initialState.texts);
     return out;
+  // initialState is only consulted on mount — re-running this when
+  // it changes would clobber in-progress typing. Effectively read-once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editableTextZones]);
   const [texts, setTexts] = useState<Record<string, string>>(initialTexts);
   // Customer-overridable text color per zone. Only set when the
   // customer explicitly picks a different color than the template's
   // default; missing keys fall through to z.color in the renderer.
-  const [textColors, setTextColors] = useState<Record<string, string>>({});
+  const [textColors, setTextColors] = useState<Record<string, string>>(initialState?.textColors ?? {});
   // Customer-overridable text font family per zone. Stores the
   // GIFT_FONT_FAMILIES key (e.g. 'inter', 'caveat'). Missing keys
   // fall back to z.font_family in the renderer.
-  const [textFonts, setTextFonts] = useState<Record<string, string>>({});
+  const [textFonts, setTextFonts] = useState<Record<string, string>>(initialState?.textFonts ?? {});
   // Single customer-picked colour applied to the template's foreground
   // PNG via the alpha-mask cascade (icons, heart, progress bar — every
   // pixel of the foreground PNG inherits this colour). null = use the
   // original PNG colours.
-  const [foregroundColor, setForegroundColor] = useState<string | null>(null);
+  const [foregroundColor, setForegroundColor] = useState<string | null>(initialState?.foregroundColor ?? null);
   // Customer-picked background colour. When set, overrides the
   // template's background_url with a solid fill — both in the live
   // preview and in the server composite.
-  const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
+  const [backgroundColor, setBackgroundColor] = useState<string | null>(initialState?.backgroundColor ?? null);
 
   useEffect(() => {
     onStateChange?.({ thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor });

@@ -26,6 +26,12 @@ import {
   removePreviewHit,
   type PreviewHit,
 } from '@/lib/gifts/preview-history';
+import {
+  loadDesignDraft,
+  saveDesignDraft,
+  clearDesignDraft,
+  debounceWrite,
+} from '@/lib/gifts/design-draft';
 import { GiftShapePicker } from './gift-shape-picker';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
@@ -128,6 +134,35 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   useEffect(() => {
     setHistory(loadPreviewHistory(product.slug));
   }, [product.slug]);
+
+  // Saved-draft autoload: hydrate the parent-level selectors on mount.
+  // The form's text/colour/font state is restored separately via the
+  // initialState prop on TemplateMultiSlotForm, populated from the
+  // same draft below.
+  const draftRef = useRef<ReturnType<typeof loadDesignDraft>>(null);
+  if (draftRef.current === null && typeof window !== 'undefined') {
+    // Read once before initial render so initialState lands on first paint.
+    draftRef.current = loadDesignDraft(product.slug);
+  }
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    const d = draftRef.current;
+    if (!d) return;
+    if (d.templateId) setSelectedTemplateId(d.templateId);
+    if (d.promptId) setSelectedPromptId(d.promptId);
+    if (d.variantId) setSelectedVariantId(d.variantId);
+    if (d.sizeSlug) setSelectedSizeSlug(d.sizeSlug);
+    if (d.shapeKind) setSelectedShapeKind(d.shapeKind);
+    if (d.shapeTemplateId) setSelectedShapeTemplateId(d.shapeTemplateId);
+    if (d.figurineSlug) setSelectedFigurineSlug(d.figurineSlug);
+    if (d.customerArea) setCustomerArea(d.customerArea);
+    if (d.panOffset) setPanOffset(d.panOffset);
+    setDraftRestored(true);
+    const t = setTimeout(() => setDraftRestored(false), 4500);
+    return () => clearTimeout(t);
+  // Mount-only — applying again on changes would clobber in-progress edits.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
@@ -182,6 +217,44 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
+
+  // Saved-draft autosave. Debounce a small payload of customer
+  // selections to localStorage every time anything changes. Ditched on
+  // a successful add-to-cart so a fresh visit isn't haunted by the
+  // last order.
+  const debouncedSaveRef = useRef(
+    debounceWrite((slug: string, draft: Parameters<typeof saveDesignDraft>[1]) => {
+      saveDesignDraft(slug, draft);
+    }, 600),
+  );
+  useEffect(() => {
+    debouncedSaveRef.current(product.slug, {
+      templateId: selectedTemplateId,
+      promptId: selectedPromptId,
+      variantId: selectedVariantId,
+      sizeSlug: selectedSizeSlug,
+      shapeKind: selectedShapeKind,
+      shapeTemplateId: selectedShapeTemplateId,
+      figurineSlug: selectedFigurineSlug,
+      customerArea,
+      panOffset,
+      texts: templateTexts,
+      textColors: templateTextColors,
+      textFonts: templateTextFonts,
+      calendars: templateCalendars,
+      calendarColors: templateCalendarColors,
+      foregroundColor: templateForegroundColor,
+      backgroundColor: templateBackgroundColor,
+    });
+  }, [
+    product.slug,
+    selectedTemplateId, selectedPromptId, selectedVariantId, selectedSizeSlug,
+    selectedShapeKind, selectedShapeTemplateId, selectedFigurineSlug,
+    customerArea, panOffset,
+    templateTexts, templateTextColors, templateTextFonts,
+    templateCalendars, templateCalendarColors,
+    templateForegroundColor, templateBackgroundColor,
+  ]);
   // Day/Night toggle was removed but inline styles still branch on
   // `nightMode` — keep as a fixed false until those branches are pruned.
   const nightMode = false;
@@ -643,6 +716,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
       figurine_slug: selectedFigurineSlug,
     });
+    // Order is in the cart — let the customer start a fresh design
+    // next time they revisit this page.
+    clearDesignDraft(product.slug);
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
   }
@@ -666,6 +742,53 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   return (
     <article>
+      {draftRestored && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            top: 76,
+            right: 16,
+            zIndex: 60,
+            background: 'var(--pv-ink)',
+            color: 'white',
+            padding: '10px 14px',
+            borderRadius: 8,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+            fontSize: 13,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            maxWidth: 280,
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <div>
+            <div>Saved progress restored</div>
+            <button
+              type="button"
+              onClick={() => {
+                clearDesignDraft(product.slug);
+                window.location.reload();
+              }}
+              style={{
+                marginTop: 2,
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: 11,
+                fontWeight: 600,
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
       {/* ---------- HERO ---------- */}
       <section
         style={{
@@ -1579,6 +1702,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
+                    initialState={
+                      draftRef.current && draftRef.current.templateId === activeTemplate.id
+                        ? {
+                            texts: draftRef.current.texts,
+                            textColors: draftRef.current.textColors,
+                            textFonts: draftRef.current.textFonts,
+                            calendars: draftRef.current.calendars,
+                            calendarColors: draftRef.current.calendarColors,
+                            foregroundColor: draftRef.current.foregroundColor,
+                            backgroundColor: draftRef.current.backgroundColor,
+                          }
+                        : undefined
+                    }
                     onStateChange={({ thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
