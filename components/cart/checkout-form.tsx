@@ -196,7 +196,7 @@ export function CheckoutForm() {
               }}>
                 <input type="radio" value="delivery" {...register('delivery_method')} style={{ display: 'none' }} />
                 <div style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>Delivery</div>
-                <div style={{ fontSize: 11, color: '#888' }}>Singapore-wide · S$8.00</div>
+                <div style={{ fontSize: 11, color: '#888' }}>Singapore-wide · {formatSGD(DELIVERY_FLAT_CENTS)}</div>
               </label>
             </div>
             {deliveryMethod === 'delivery' && (
@@ -230,7 +230,7 @@ export function CheckoutForm() {
               <input type="checkbox" {...register('gift_wrap')} style={{ width: 18, height: 18 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a' }}>Wrap it as a gift</div>
-                <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>+S$3.00 · matte kraft paper, ribbon, no receipt in the package.</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>+{formatSGD(GIFT_WRAP_FLAT_CENTS)} · matte kraft paper, ribbon, no receipt in the package.</div>
               </div>
             </label>
             {giftWrap && (

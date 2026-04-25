@@ -135,25 +135,24 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     setHistory(loadPreviewHistory(product.slug));
   }, [product.slug]);
 
-  // Read once before initial render so the form's initialState
-  // prop receives saved values on first paint.
-  const draftRef = useRef<ReturnType<typeof loadDesignDraft>>(null);
-  if (draftRef.current === null && typeof window !== 'undefined') {
-    draftRef.current = loadDesignDraft(product.slug);
-  }
+  // Read the saved draft once on mount so the form's initialState
+  // prop sees it on the first paint. Lazy initialiser keeps the
+  // localStorage read out of subsequent renders.
+  const [savedDraft] = useState(() =>
+    typeof window !== 'undefined' ? loadDesignDraft(product.slug) : null,
+  );
   const [draftRestored, setDraftRestored] = useState(false);
   useEffect(() => {
-    const d = draftRef.current;
-    if (!d) return;
-    if (d.templateId) setSelectedTemplateId(d.templateId);
-    if (d.promptId) setSelectedPromptId(d.promptId);
-    if (d.variantId) setSelectedVariantId(d.variantId);
-    if (d.sizeSlug) setSelectedSizeSlug(d.sizeSlug);
-    if (d.shapeKind) setSelectedShapeKind(d.shapeKind);
-    if (d.shapeTemplateId) setSelectedShapeTemplateId(d.shapeTemplateId);
-    if (d.figurineSlug) setSelectedFigurineSlug(d.figurineSlug);
-    if (d.customerArea) setCustomerArea(d.customerArea);
-    if (d.panOffset) setPanOffset(d.panOffset);
+    if (!savedDraft) return;
+    if (savedDraft.templateId) setSelectedTemplateId(savedDraft.templateId);
+    if (savedDraft.promptId) setSelectedPromptId(savedDraft.promptId);
+    if (savedDraft.variantId) setSelectedVariantId(savedDraft.variantId);
+    if (savedDraft.sizeSlug) setSelectedSizeSlug(savedDraft.sizeSlug);
+    if (savedDraft.shapeKind) setSelectedShapeKind(savedDraft.shapeKind);
+    if (savedDraft.shapeTemplateId) setSelectedShapeTemplateId(savedDraft.shapeTemplateId);
+    if (savedDraft.figurineSlug) setSelectedFigurineSlug(savedDraft.figurineSlug);
+    if (savedDraft.customerArea) setCustomerArea(savedDraft.customerArea);
+    if (savedDraft.panOffset) setPanOffset(savedDraft.panOffset);
     setDraftRestored(true);
     const t = setTimeout(() => setDraftRestored(false), 4500);
     return () => clearTimeout(t);
@@ -222,7 +221,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     }, 600),
   );
   useEffect(() => {
-    debouncedSaveRef.current(product.slug, {
+    const draft = {
       templateId: selectedTemplateId,
       promptId: selectedPromptId,
       variantId: selectedVariantId,
@@ -239,7 +238,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       calendarColors: templateCalendarColors,
       foregroundColor: templateForegroundColor,
       backgroundColor: templateBackgroundColor,
-    });
+    };
+    // Skip empty drafts — first mount before any user interaction
+    // would otherwise persist a useless "no progress" stub that the
+    // next visit reads as a saved draft.
+    const empty =
+      !draft.templateId && !draft.promptId && !draft.variantId &&
+      !draft.sizeSlug && !draft.shapeKind && !draft.shapeTemplateId &&
+      !draft.figurineSlug && !draft.customerArea && !draft.panOffset &&
+      Object.keys(draft.texts).length === 0 &&
+      Object.keys(draft.textColors).length === 0 &&
+      Object.keys(draft.textFonts).length === 0 &&
+      Object.keys(draft.calendars).length === 0 &&
+      Object.keys(draft.calendarColors).length === 0 &&
+      !draft.foregroundColor && !draft.backgroundColor;
+    if (empty) return;
+    debouncedSaveRef.current(product.slug, draft);
   }, [
     product.slug,
     selectedTemplateId, selectedPromptId, selectedVariantId, selectedSizeSlug,
@@ -1695,15 +1709,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
                     initialState={
-                      draftRef.current && draftRef.current.templateId === activeTemplate.id
+                      savedDraft && savedDraft.templateId === activeTemplate.id
                         ? {
-                            texts: draftRef.current.texts,
-                            textColors: draftRef.current.textColors,
-                            textFonts: draftRef.current.textFonts,
-                            calendars: draftRef.current.calendars,
-                            calendarColors: draftRef.current.calendarColors,
-                            foregroundColor: draftRef.current.foregroundColor,
-                            backgroundColor: draftRef.current.backgroundColor,
+                            texts: savedDraft.texts,
+                            textColors: savedDraft.textColors,
+                            textFonts: savedDraft.textFonts,
+                            calendars: savedDraft.calendars,
+                            calendarColors: savedDraft.calendarColors,
+                            foregroundColor: savedDraft.foregroundColor,
+                            backgroundColor: savedDraft.backgroundColor,
                           }
                         : undefined
                     }

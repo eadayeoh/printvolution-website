@@ -5,6 +5,9 @@ import { Trash2, Plus, Upload } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { DraggableArea } from '@/components/admin/gift-variants-panel';
 import { uploadProductImage } from '@/app/admin/upload/actions';
+import { slugify } from '@/lib/utils';
+
+const BULK_UPLOAD_CONCURRENCY = 4;
 
 export type FigurineOption = {
   slug: string;
@@ -44,7 +47,7 @@ export function GiftFigurineOptionsEditor({
 }: Props) {
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
   const bulkInputRef = useRef<HTMLInputElement>(null);
-  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   function updateRow(i: number, patch: Partial<FigurineOption>) {
     onChange(value.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -59,40 +62,46 @@ export function GiftFigurineOptionsEditor({
   async function handleBulkFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const filesArr = Array.from(files);
-    const existingSlugs = new Set(value.map((v) => v.slug).filter(Boolean));
-    setBulkProgress({ done: 0, total: filesArr.length, failed: 0 });
+    setBulkProgress({ done: 0, total: filesArr.length });
 
-    // Upload in parallel — let the browser cap at ~6 concurrent connections.
-    const results: (FigurineOption | null)[] = await Promise.all(filesArr.map(async (file) => {
+    // Assign slugs synchronously up front so a parallel race can't pick
+    // the same baseSlug-2 twice for two files with the same stem.
+    const taken = new Set(value.map((v) => v.slug).filter(Boolean));
+    const tasks = filesArr.map((file) => {
       const stem = file.name.replace(/\.[^.]+$/, '');
       const name = stem.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 60);
-      let baseSlug = stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
-      if (!baseSlug) baseSlug = 'figurine';
+      const baseSlug = slugify(stem).slice(0, 40);
       let slug = baseSlug;
-      let n = 2;
-      while (existingSlugs.has(slug)) slug = `${baseSlug}-${n++}`;
-      existingSlugs.add(slug);
+      for (let n = 2; taken.has(slug); n++) slug = `${baseSlug}-${n}`.slice(0, 40);
+      taken.add(slug);
+      return { file, name, slug };
+    });
 
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('prefix', `figurine-${productSlug}`);
-      try {
-        const r = await uploadProductImage(fd);
-        setBulkProgress((p) => p ? { ...p, done: p.done + 1, failed: p.failed + (r?.ok && r.url ? 0 : 1) } : p);
-        if (r?.ok && r.url) {
-          const row: FigurineOption = { slug, name, image_url: r.url, price_delta_cents: 0 };
-          return row;
+    const results: (FigurineOption | null)[] = new Array(tasks.length).fill(null);
+    for (let i = 0; i < tasks.length; i += BULK_UPLOAD_CONCURRENCY) {
+      const slice = tasks.slice(i, i + BULK_UPLOAD_CONCURRENCY);
+      await Promise.all(slice.map(async ({ file, name, slug }, j) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('prefix', `figurine-${productSlug}`);
+        try {
+          const r = await uploadProductImage(fd);
+          if (r?.ok && r.url) {
+            results[i + j] = { slug, name, image_url: r.url, price_delta_cents: 0 };
+          }
+        } catch {
+          // result stays null
         }
-      } catch {
-        setBulkProgress((p) => p ? { ...p, done: p.done + 1, failed: p.failed + 1 } : p);
-      }
-      return null;
-    }));
+        setBulkProgress((p) => p ? { ...p, done: p.done + 1 } : p);
+      }));
+    }
 
-    const newRows: FigurineOption[] = results.filter((r): r is FigurineOption => r !== null);
+    const newRows = results.filter((r): r is FigurineOption => r !== null);
     if (newRows.length > 0) onChange([...value, ...newRows]);
     setBulkProgress(null);
     if (bulkInputRef.current) bulkInputRef.current.value = '';
+    const failed = filesArr.length - newRows.length;
+    if (failed > 0) alert(`${failed} file${failed === 1 ? '' : 's'} failed to upload — check size + format and retry.`);
   }
 
   return (
@@ -250,8 +259,7 @@ export function GiftFigurineOptionsEditor({
             />
             {bulkProgress && (
               <span className="text-[11px] text-neutral-600">
-                Uploading {bulkProgress.done} / {bulkProgress.total}
-                {bulkProgress.failed > 0 ? ` · ${bulkProgress.failed} failed` : ''}…
+                Uploading {bulkProgress.done} / {bulkProgress.total}…
               </span>
             )}
             <span className="ml-auto text-[10px] text-neutral-400">
