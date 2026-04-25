@@ -2,16 +2,16 @@
 
 // Multi-surface configurator for a variant. When the selected variant
 // has a non-empty `surfaces` array (e.g. a 3D bar keychain's 4 sides),
-// the customer sees:
-//   - One input per surface (text / photo / both, per surface.accepts)
-//   - A tabbed live preview at the top showing the chosen surface's
-//     mockup with the customer's input overlayed at mockup_area
+// the customer gets one input per surface (text / photo / both, per
+// surface.accepts). The big LIVE PREVIEW above the configurator shows
+// the active face composited — this component owns no preview of its
+// own.
 //
 // Keeps internal state shallow: the parent owns the record of
 // "surfaceId → { text?: string; photo?: File; thumbUrl?: string }"
 // and feeds it in as `state`, so cart + generate flows can read it.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { GiftVariantSurface } from '@/lib/gifts/types';
 
 export type SurfaceFill = {
@@ -26,16 +26,6 @@ type Props = {
   surfaces: GiftVariantSurface[];
   fills: SurfaceFillMap;
   onChange: (next: SurfaceFillMap) => void;
-  /** Variant-level mockup to fall back to when a surface omits its
-   *  own mockup_url (common for text-only surfaces — admin doesn't
-   *  need to shoot a photo of each side if the whole variant mockup
-   *  works). */
-  variantMockupUrl?: string;
-  /** Variant-level mockup_area paired with `variantMockupUrl`. Used
-   *  with the fallback image so the design rectangle lines up with
-   *  the variant's base mockup instead of the surface's own area
-   *  (which was set for a different image). */
-  variantMockupArea?: { x: number; y: number; width: number; height: number };
   /** Controlled active surface id — lifted to the parent so the big
    *  live preview (in the left column) can mirror whichever face the
    *  customer last tapped. Uncontrolled = internal state. */
@@ -43,7 +33,7 @@ type Props = {
   onActiveSurfaceChange?: (id: string) => void;
 };
 
-export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl, variantMockupArea, activeSurfaceId, onActiveSurfaceChange }: Props) {
+export function GiftVariantSurfaces({ surfaces, fills, onChange, activeSurfaceId, onActiveSurfaceChange }: Props) {
   const isControlled = typeof activeSurfaceId === 'string';
   const [internalActiveId, setInternalActiveId] = useState(surfaces[0]?.id ?? '');
   const activeId = isControlled ? activeSurfaceId : internalActiveId;
@@ -57,7 +47,6 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUr
       setInternalActiveId(surfaces[0]?.id ?? '');
     }
   }, [surfaces, internalActiveId, isControlled]);
-  const activeSurface = surfaces.find((s) => s.id === activeId) ?? surfaces[0];
 
   function updateFill(surfaceId: string, patch: Partial<SurfaceFill>) {
     onChange({ ...fills, [surfaceId]: { ...(fills[surfaceId] ?? {}), ...patch } });
@@ -79,58 +68,10 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUr
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Tabbed mockup preview (the chosen side) */}
-      {activeSurface && (
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              gap: 6,
-              marginBottom: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            {surfaces.map((s) => {
-              const active = s.id === activeId;
-              const fill = fills[s.id];
-              const filled = Boolean(fill?.text?.trim() || fill?.photoThumb);
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setActiveId(s.id)}
-                  style={{
-                    background: active ? 'var(--pv-ink)' : '#fff',
-                    color: active ? '#fff' : 'var(--pv-ink)',
-                    border: '2px solid var(--pv-ink)',
-                    padding: '6px 12px',
-                    fontFamily: 'var(--pv-f-mono)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  {s.label}
-                  {filled && <span style={{ color: active ? 'var(--pv-yellow)' : 'var(--pv-green)' }}>✓</span>}
-                </button>
-              );
-            })}
-          </div>
-          <SurfacePreview
-            surface={activeSurface}
-            fill={fills[activeSurface.id] ?? {}}
-            fallbackMockupUrl={variantMockupUrl}
-            fallbackArea={variantMockupArea}
-          />
-        </div>
-      )}
-
-      {/* Per-surface input row */}
+      {/* Per-surface input row. The big LIVE PREVIEW above the
+          configurator already shows the active face composited; a
+          second mini-preview here would only duplicate it (and got
+          out of sync when the customer toggled Side 1/Side 2). */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {surfaces.map((s) => {
           const fill = fills[s.id] ?? {};
@@ -263,127 +204,3 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUr
   );
 }
 
-/** One mockup with the customer's text / photo overlayed at
- *  surface.mockup_area. Uses CSS positioning — no canvas here because
- *  the big LIVE PREVIEW up top is for presentation quality, and the
- *  server composite is what actually gets printed. */
-function SurfacePreview({
-  surface,
-  fill,
-  fallbackMockupUrl,
-  fallbackArea,
-}: {
-  surface: GiftVariantSurface;
-  fill: SurfaceFill;
-  fallbackMockupUrl?: string;
-  fallbackArea?: { x: number; y: number; width: number; height: number };
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [containerW, setContainerW] = useState(400);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width;
-      if (w) setContainerW(w);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // When the surface has no mockup of its own, the image falls back to
-  // the variant's base mockup — so the design rectangle has to fall
-  // back to the variant's base area too, otherwise the surface's
-  // coordinates land in random places on a different image.
-  const area = surface.mockup_url ? surface.mockup_area : (fallbackArea ?? surface.mockup_area);
-  const areaPx = {
-    w: (area.width / 100) * containerW,
-    h: (area.height / 100) * containerW,
-  };
-  const text = (fill.text ?? '').trim();
-  const photo = fill.photoThumb;
-
-  // Text sizing: default to ~70% of the area height if no font_size_pct
-  // set on the surface, otherwise use the admin-provided percentage.
-  const fontPx = Math.max(
-    8,
-    ((surface.font_size_pct ?? 70) / 100) * areaPx.h * 0.5,
-  );
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        aspectRatio: '1 / 1',
-        background: 'var(--pv-cream)',
-        border: '2px solid var(--pv-ink)',
-        overflow: 'hidden',
-      }}
-    >
-      {(surface.mockup_url || fallbackMockupUrl) && (
-        <img
-          src={surface.mockup_url || fallbackMockupUrl}
-          alt={surface.label}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-        />
-      )}
-      {photo && (
-        <img
-          src={photo}
-          alt=""
-          style={{
-            position: 'absolute',
-            left: `${area.x}%`,
-            top: `${area.y}%`,
-            width: `${area.width}%`,
-            height: `${area.height}%`,
-            objectFit: 'cover',
-            mixBlendMode: 'multiply',
-            pointerEvents: 'none',
-          }}
-        />
-      )}
-      {text && (
-        <div
-          style={{
-            position: 'absolute',
-            left: `${area.x}%`,
-            top: `${area.y}%`,
-            width: `${area.width}%`,
-            height: `${area.height}%`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: surface.font_family ?? 'var(--pv-f-display)',
-              fontSize: fontPx,
-              fontWeight: 600,
-              color: surface.color ?? '#0a0a0a',
-              textAlign: 'center',
-              lineHeight: 1.1,
-              letterSpacing: '0.02em',
-              textTransform: 'uppercase',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              maxWidth: '100%',
-            }}
-          >
-            {text}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}

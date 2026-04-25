@@ -111,11 +111,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   }, [selectedVariantId]);
 
   // Reset the draggable area whenever the resolved mockup area changes
-  // (variant, shape, template or prompt can all swap the backdrop).
+  // (variant, shape, template, prompt, or active surface can all swap
+  // the backdrop — and each carries its own mockup_area, so the
+  // rectangle has to follow).
   useEffect(() => {
     setCustomerArea(shapeMockup.area);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId]);
+  }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId, activeSurfaceId]);
 
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
@@ -836,18 +838,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 {(() => {
                   // Surfaces flow: no server preview — composite the
                   // customer's uploaded thumb directly onto the active
-                  // surface's mockup so flipping Front/Back updates the
-                  // big preview live without a generate call.
-                  const surfaceThumb = hasSurfaces
-                    ? surfaceFills[activeSurfaceId]?.photoThumb ?? null
-                    : null;
-                  const effectivePreviewUrl = preview?.previewUrl ?? surfaceThumb;
-                  return effectivePreviewUrl;
+                  // surface's mockup so flipping Side 1/Side 2 updates
+                  // the big preview live without a generate call.
+                  // The per-surface thumb has to WIN over preview.previewUrl
+                  // (which is the single-preview flow's global slot) — if a
+                  // restore or an earlier non-surfaces upload populated it,
+                  // every side would otherwise keep showing the same image.
+                  if (hasSurfaces) {
+                    return surfaceFills[activeSurfaceId]?.photoThumb ?? null;
+                  }
+                  return preview?.previewUrl ?? null;
                 })() ? (
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <GiftMockupPreviewInteractive
                       mockupUrl={shapeMockup.url}
-                      previewUrl={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
+                      previewUrl={hasSurfaces ? (surfaceFills[activeSurfaceId]?.photoThumb ?? '') : (preview?.previewUrl ?? '')}
                       area={customerArea}
                       bounds={shapeMockup.area ?? null}
                       onAreaChange={setCustomerArea}
@@ -871,7 +876,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     />
                   ) : (
                     <img
-                      src={preview?.previewUrl ?? (hasSurfaces ? surfaceFills[activeSurfaceId]?.photoThumb ?? '' : '')}
+                      src={hasSurfaces ? (surfaceFills[activeSurfaceId]?.photoThumb ?? '') : (preview?.previewUrl ?? '')}
                       alt="Preview"
                       style={{
                         maxWidth: '100%',
@@ -1460,8 +1465,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     surfaces={selectedVariant.surfaces}
                     fills={surfaceFills}
                     onChange={setSurfaceFills}
-                    variantMockupUrl={selectedVariant.mockup_url || undefined}
-                    variantMockupArea={selectedVariant.mockup_area ?? undefined}
                     activeSurfaceId={activeSurfaceId || selectedVariant.surfaces[0]?.id}
                     onActiveSurfaceChange={setActiveSurfaceId}
                   />
