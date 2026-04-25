@@ -1,12 +1,12 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { runProductionPipeline, runSurfaceProductionPipeline } from '@/lib/gifts/pipeline';
 import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { evaluateCouponForOrder } from '@/lib/coupons';
+import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
 
 /**
  * Public coupon-validation endpoint used by the checkout form
@@ -281,13 +281,11 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   const data = parsed.data;
 
   // Service-role client so we can insert regardless of RLS session
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const sb = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  const sb = serviceClient();
 
   // Calculate totals
   const subtotal = data.items.reduce((s, i) => s + i.line_total_cents, 0);
-  const delivery = data.delivery_method === 'delivery' ? 800 : 0; // S$8.00 flat
+  const delivery = data.delivery_method === 'delivery' ? DELIVERY_FLAT_CENTS : 0;
 
   // Server-side coupon re-validation. Trust nothing from the client —
   // re-evaluate against the freshly-computed subtotal.
@@ -302,8 +300,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     couponId = r.coupon.id;
   }
 
-  // Gift wrap is a flat S$3 add-on. Empty/false → no charge.
-  const giftWrapCents = data.gift_wrap ? 300 : 0;
+  const giftWrapCents = data.gift_wrap ? GIFT_WRAP_FLAT_CENTS : 0;
 
   const total = Math.max(0, subtotal - couponDiscount + delivery + giftWrapCents);
   // Points only earn on what the customer actually paid (post-discount).
@@ -407,7 +404,6 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
   const giftItems = data.items.filter((i) => giftSlugToInfo.has(i.product_slug));
   const printItems = data.items.filter((i) => !giftSlugToInfo.has(i.product_slug));
-  const slugToId = printSlugToId; // keep old name for existing code path
 
   // Insert the order
   const { data: order, error: oErr } = await sb
@@ -437,21 +433,21 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
   if (oErr || !order) return { ok: false, error: 'Order create failed: ' + oErr?.message };
 
-  // Record the redemption + bump the coupon's uses_count. Best-effort:
-  // a failure here doesn't roll back the order — the customer already
-  // got their discount, we just lose accounting on the coupon. Logged
-  // for admin reconciliation. Race-y under high concurrency (no
-  // increment-RPC); the admin "max_uses" is a soft cap, fine for now.
+  // Best-effort: a failure here doesn't roll back the order — the
+  // customer already got their discount, we just lose accounting.
+  // Race-y under concurrency (no increment-RPC); max_uses is a soft cap.
   if (couponId && couponDiscount > 0) {
-    const { error: redErr } = await sb.from('coupon_redemptions').insert({
-      coupon_id: couponId,
-      order_id: order.id,
-      discount_cents: couponDiscount,
-    });
-    if (redErr) console.error('[coupon] redemption insert', redErr.message);
-    const { data: cur } = await sb.from('coupons').select('uses_count').eq('id', couponId).single();
-    if (cur) {
-      await sb.from('coupons').update({ uses_count: (cur.uses_count ?? 0) + 1 }).eq('id', couponId);
+    const [redRes, curRes] = await Promise.all([
+      sb.from('coupon_redemptions').insert({
+        coupon_id: couponId,
+        order_id: order.id,
+        discount_cents: couponDiscount,
+      }),
+      sb.from('coupons').select('uses_count').eq('id', couponId).single(),
+    ]);
+    if (redRes.error) console.error('[coupon] redemption insert', redRes.error.message);
+    if (curRes.data) {
+      await sb.from('coupons').update({ uses_count: (curRes.data.uses_count ?? 0) + 1 }).eq('id', couponId);
     }
   }
 
@@ -459,7 +455,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   if (printItems.length > 0) {
     const itemRows = printItems.map((i) => ({
       order_id: order.id,
-      product_id: slugToId.get(i.product_slug) ?? null,
+      product_id: printSlugToId.get(i.product_slug) ?? null,
       product_name: i.product_name,
       product_slug: i.product_slug,
       icon: i.icon,

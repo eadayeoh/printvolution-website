@@ -9,14 +9,11 @@ const STATUS_STEPS = [
   { key: 'processing', label: 'Working on it',     icon: '🛠️' },
   { key: 'ready',      label: 'Ready / shipped',   icon: '📦' },
   { key: 'completed',  label: 'Completed',         icon: '✅' },
-];
+] as const;
 
-const STATUS_INDEX: Record<string, number> = {
-  pending: 0,
-  processing: 1,
-  ready: 2,
-  completed: 3,
-};
+const STATUS_INDEX: Record<string, number> = Object.fromEntries(
+  STATUS_STEPS.map((s, i) => [s.key, i]),
+);
 
 export function TrackForm({ initialOrderNumber }: { initialOrderNumber?: string }) {
   const [orderNumber, setOrderNumber] = useState(initialOrderNumber ?? '');

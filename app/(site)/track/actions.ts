@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export type TrackedOrder = {
@@ -20,14 +20,6 @@ export type TrackResult =
   | { ok: true; order: TrackedOrder }
   | { ok: false; error: string };
 
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
 /** Look up an order by order_number + email. Both must match — email is
  *  the soft authentication. Rate-limited per IP to deter scraping. */
 export async function trackOrder(orderNumber: string, email: string): Promise<TrackResult> {
@@ -39,7 +31,7 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
   const em = email.trim().toLowerCase();
   if (!num || !em) return { ok: false, error: 'Order number and email both required.' };
 
-  const sb = service();
+  const sb = createServiceClient();
   const { data, error } = await sb
     .from('orders')
     .select(`

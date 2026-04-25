@@ -135,13 +135,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     setHistory(loadPreviewHistory(product.slug));
   }, [product.slug]);
 
-  // Saved-draft autoload: hydrate the parent-level selectors on mount.
-  // The form's text/colour/font state is restored separately via the
-  // initialState prop on TemplateMultiSlotForm, populated from the
-  // same draft below.
+  // Read once before initial render so the form's initialState
+  // prop receives saved values on first paint.
   const draftRef = useRef<ReturnType<typeof loadDesignDraft>>(null);
   if (draftRef.current === null && typeof window !== 'undefined') {
-    // Read once before initial render so initialState lands on first paint.
     draftRef.current = loadDesignDraft(product.slug);
   }
   const [draftRestored, setDraftRestored] = useState(false);
@@ -218,10 +215,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
 
-  // Saved-draft autosave. Debounce a small payload of customer
-  // selections to localStorage every time anything changes. Ditched on
-  // a successful add-to-cart so a fresh visit isn't haunted by the
-  // last order.
+  // Cleared on add-to-cart so a fresh visit isn't haunted by the last order.
   const debouncedSaveRef = useRef(
     debounceWrite((slug: string, draft: Parameters<typeof saveDesignDraft>[1]) => {
       saveDesignDraft(slug, draft);
@@ -716,8 +710,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
       figurine_slug: selectedFigurineSlug,
     });
-    // Order is in the cart — let the customer start a fresh design
-    // next time they revisit this page.
     clearDesignDraft(product.slug);
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);

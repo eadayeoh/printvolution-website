@@ -1,5 +1,5 @@
 import 'server-only';
-import { createClient as srvClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/service';
 
 export type CouponRow = {
   id: string;
@@ -17,14 +17,6 @@ export type CouponRow = {
 export type CouponEvalResult =
   | { ok: true; coupon: CouponRow; discountCents: number }
   | { ok: false; error: string };
-
-function serviceClient() {
-  return srvClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
@@ -53,7 +45,7 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
   const code = normalizeCode(rawCode);
   if (!code) return { ok: false, error: 'Enter a code.' };
 
-  const sb = serviceClient();
+  const sb = createServiceClient();
   const { data, error } = await sb
     .from('coupons')
     .select('id, code, type, value_cents, percent, min_spend_cents, max_uses, uses_count, expires_at, is_active')
@@ -77,6 +69,6 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
     return { ok: false, error: `Minimum spend S$${dollars} not met.` };
   }
   const discountCents = computeCouponDiscountCents(c, subtotalCents);
-  if (discountCents <= 0) return { ok: false, error: 'This code wouldn\u2019t save you anything on this order.' };
+  if (discountCents <= 0) return { ok: false, error: "This code wouldn't save you anything on this order." };
   return { ok: true, coupon: c, discountCents };
 }

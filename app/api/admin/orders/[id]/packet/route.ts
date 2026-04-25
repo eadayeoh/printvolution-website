@@ -1,11 +1,4 @@
-// Print-ready packet PDF for fulfilment.
-//
-// Page 1: order header (customer, delivery, items, totals).
-// Subsequent pages: one per gift artwork — embedded production PDF if
-// available, else the production PNG, scaled into the page.
-//
-// Admin/staff only. Returns application/pdf inline; the browser shows
-// it in a new tab via target="_blank".
+// Print-ready packet PDF for fulfilment. Admin/staff only.
 
 import { NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
@@ -36,7 +29,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const helv = await doc.embedFont(StandardFonts.Helvetica);
   const helvBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  // -------- Page 1: order header --------
   const page = doc.addPage([A4.w, A4.h]);
   let y = A4.h - MARGIN;
 
@@ -116,7 +108,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if ((order.coupon_discount_cents ?? 0) > 0) tot(`Coupon${order.coupon_code ? ` (${order.coupon_code})` : ''}`, -(order.coupon_discount_cents), { color: [0, 0.5, 0] });
   tot('TOTAL', order.total_cents ?? 0, { bold: true, color: [0.85, 0.1, 0.5] });
 
-  // Gift wrap callout — fulfilment scans this when packing.
   if (order.gift_wrap) {
     y -= 16;
     drawText('🎁 GIFT WRAP', { bold: true, size: 12, color: [0.85, 0.1, 0.5] });
@@ -135,16 +126,30 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     for (const line of String(order.notes).split('\n')) drawText(line, { size: 10 });
   }
 
-  // -------- Per-gift artwork pages --------
-  for (const item of order.gift_order_items ?? []) {
+  // Fetch artwork bytes in parallel; embedding stays sequential to
+  // preserve page order.
+  const items = (order.gift_order_items ?? []) as any[];
+  const fetched = await Promise.all(items.map(async (item) => {
     const label = `${item.product_name_snapshot ?? item.gift_product?.name ?? 'Gift'} · qty ${item.qty ?? 1}`;
+    let pdfBytes: Uint8Array | null = null;
+    let pngBytes: Uint8Array | null = null;
     if (item.production_pdf?.path) {
+      try { pdfBytes = await getObject(item.production_pdf.bucket, item.production_pdf.path); }
+      catch { /* fall through to png */ }
+    }
+    if (!pdfBytes && item.production?.path) {
+      try { pngBytes = await getObject(item.production.bucket, item.production.path); }
+      catch { /* artwork unavailable */ }
+    }
+    return { label, pdfBytes, pngBytes };
+  }));
+
+  for (const { label, pdfBytes, pngBytes } of fetched) {
+    if (pdfBytes) {
       try {
-        const bytes = await getObject(item.production_pdf.bucket, item.production_pdf.path);
-        const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+        const src = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const copied = await doc.copyPages(src, src.getPageIndices());
         for (const p of copied) doc.addPage(p);
-        // Stamp a header on the FIRST embedded page so production knows what's what.
         const first = copied[0];
         if (first) {
           first.drawText(label, {
@@ -152,27 +157,24 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           });
         }
         continue;
-      } catch (err) {
+      } catch {
         // fall through to PNG
       }
     }
-    if (item.production?.path) {
-      try {
-        const bytes = await getObject(item.production.bucket, item.production.path);
-        const png = await doc.embedPng(bytes);
-        const p = doc.addPage([A4.w, A4.h]);
-        p.drawText(label, { x: MARGIN, y: A4.h - MARGIN, size: 12, font: helvBold });
-        const maxW = A4.w - MARGIN * 2;
-        const maxH = A4.h - MARGIN * 2 - 24;
-        const ratio = png.width / png.height;
-        let dw = maxW;
-        let dh = dw / ratio;
-        if (dh > maxH) { dh = maxH; dw = dh * ratio; }
-        p.drawImage(png, { x: (A4.w - dw) / 2, y: MARGIN, width: dw, height: dh });
-      } catch (err) {
-        const p = doc.addPage([A4.w, A4.h]);
-        p.drawText(`${label} — artwork unavailable`, { x: MARGIN, y: A4.h - MARGIN, size: 11, font: helv, color: rgb(0.7, 0.2, 0.2) });
-      }
+    if (pngBytes) {
+      const png = await doc.embedPng(pngBytes);
+      const p = doc.addPage([A4.w, A4.h]);
+      p.drawText(label, { x: MARGIN, y: A4.h - MARGIN, size: 12, font: helvBold });
+      const maxW = A4.w - MARGIN * 2;
+      const maxH = A4.h - MARGIN * 2 - 24;
+      const ratio = png.width / png.height;
+      let dw = maxW;
+      let dh = dw / ratio;
+      if (dh > maxH) { dh = maxH; dw = dh * ratio; }
+      p.drawImage(png, { x: (A4.w - dw) / 2, y: MARGIN, width: dw, height: dh });
+    } else if (!pdfBytes) {
+      const p = doc.addPage([A4.w, A4.h]);
+      p.drawText(`${label} — artwork unavailable`, { x: MARGIN, y: A4.h - MARGIN, size: 11, font: helv, color: rgb(0.7, 0.2, 0.2) });
     }
   }
 

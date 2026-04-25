@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { submitOrder, validateCouponForCheckout } from '@/app/(site)/checkout/actions';
+import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
 
 const FormSchema = z.object({
   customer_name: z.string().min(2, 'Name too short'),
@@ -23,7 +24,6 @@ const FormSchema = z.object({
   gift_message: z.string().max(280).optional(),
 });
 type FormValues = z.infer<typeof FormSchema>;
-const GIFT_WRAP_CENTS = 300;
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -44,10 +44,9 @@ export function CheckoutForm() {
   const deliveryMethod = watch('delivery_method');
   const giftWrap = watch('gift_wrap');
   const giftMessage = watch('gift_message') ?? '';
-  const deliveryCost = deliveryMethod === 'delivery' ? 800 : 0;
-  const giftWrapCost = giftWrap ? GIFT_WRAP_CENTS : 0;
+  const deliveryCost = deliveryMethod === 'delivery' ? DELIVERY_FLAT_CENTS : 0;
+  const giftWrapCost = giftWrap ? GIFT_WRAP_FLAT_CENTS : 0;
 
-  // Coupon state — applied is only set after the server validates.
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState<{ code: string; discountCents: number } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);

@@ -27,8 +27,7 @@ export type GiftDesignDraft = {
   figurineSlug: string | null;
   customerArea: { x: number; y: number; width: number; height: number } | null;
   panOffset: { x: number; y: number } | null;
-  // Form state — restored on remount via TemplateMultiSlotForm's
-  // initialState prop. Maps are zone-id keyed.
+  // Maps are zone-id keyed.
   texts: Record<string, string>;
   textColors: Record<string, string>;
   textFonts: Record<string, string>;

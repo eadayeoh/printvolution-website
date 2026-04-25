@@ -262,27 +262,34 @@ export async function reorderPastOrder(orderId: string): Promise<
     .maybeSingle();
   if (!order) return { ok: false, error: 'Order not found.' };
   if ((order.email ?? '').toLowerCase() !== (user.email ?? '').toLowerCase()) {
-    return { ok: false, error: 'This order isn\u2019t on your account.' };
+    return { ok: false, error: "This order isn't on your account." };
   }
 
-  const { data: items } = await sb
-    .from('order_items')
-    .select('product_slug, product_name, icon, config, qty, unit_price_cents, line_total_cents, personalisation_notes')
-    .eq('order_id', orderId);
+  // Items + gift count in parallel — both are independent of each other.
+  const [itemsRes, giftCountRes] = await Promise.all([
+    sb
+      .from('order_items')
+      .select('product_slug, product_name, icon, config, qty, unit_price_cents, line_total_cents, personalisation_notes')
+      .eq('order_id', orderId),
+    sb
+      .from('gift_order_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('order_id', orderId),
+  ]);
 
-  // Filter out items whose product is no longer active — the customer
-  // would just hit a price-mismatch error at checkout otherwise.
-  const slugs = Array.from(new Set((items ?? []).map((i: any) => i.product_slug).filter(Boolean)));
+  const items = (itemsRes.data ?? []) as any[];
+  const slugs = Array.from(new Set(items.map((i) => i.product_slug).filter(Boolean)));
   let active = new Set<string>();
   if (slugs.length) {
     const { data: prods } = await sb
       .from('products')
-      .select('slug, is_active')
-      .in('slug', slugs);
-    active = new Set(((prods ?? []) as any[]).filter((p) => p.is_active).map((p) => p.slug));
+      .select('slug')
+      .in('slug', slugs)
+      .eq('is_active', true);
+    active = new Set(((prods ?? []) as any[]).map((p) => p.slug));
   }
 
-  const reorderItems: ReorderItem[] = ((items ?? []) as any[])
+  const reorderItems: ReorderItem[] = items
     .filter((i) => active.has(i.product_slug))
     .map((i) => ({
       product_slug: i.product_slug,
@@ -295,12 +302,5 @@ export async function reorderPastOrder(orderId: string): Promise<
       personalisation_notes: i.personalisation_notes ?? undefined,
     }));
 
-  // Count gift items so the UI can warn the customer they're not
-  // copied — they need to re-upload via the gift product page.
-  const { count: giftCount } = await sb
-    .from('gift_order_items')
-    .select('*', { count: 'exact', head: true })
-    .eq('order_id', orderId);
-
-  return { ok: true, items: reorderItems, gift_count: giftCount ?? 0 };
+  return { ok: true, items: reorderItems, gift_count: giftCountRes.count ?? 0 };
 }
