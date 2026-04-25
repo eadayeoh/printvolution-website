@@ -78,6 +78,10 @@ export type CompositeInput = {
    *  When set, the foreground renders as an alpha mask filled with
    *  this colour. #RRGGBB validated upstream. */
   foregroundColor?: string;
+  /** Customer-picked background fill. When set, the canvas base is
+   *  painted in this colour and the template's background_url is
+   *  skipped entirely. #RRGGBB validated upstream. */
+  backgroundColor?: string;
 };
 
 export type CompositeOutput = {
@@ -90,7 +94,7 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, calendarColorsByZoneId, textColorsByZoneId, foregroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, calendarColorsByZoneId, textColorsByZoneId, foregroundColor, backgroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
   // Effective zone mode: zone.mode wins, fall back to productMode, else null.
   const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
     (z.mode ?? productMode ?? null) as GiftMode | null;
@@ -114,17 +118,29 @@ export async function renderTemplateComposite(
   const zoneToPx = (v: number, axis: 'x' | 'y') =>
     Math.round((v / CANVAS_UNITS) * (axis === 'x' ? outW : outH));
 
-  // Base canvas — white by default. The template's background_url, if
-  // set, is laid down first.
+  // Base canvas — customer-picked backgroundColor wins; otherwise
+  // white. Validated #RRGGBB upstream.
+  const baseColor = (() => {
+    if (backgroundColor && /^#[0-9A-Fa-f]{6}$/.test(backgroundColor)) {
+      return {
+        r: parseInt(backgroundColor.slice(1, 3), 16),
+        g: parseInt(backgroundColor.slice(3, 5), 16),
+        b: parseInt(backgroundColor.slice(5, 7), 16),
+        alpha: 1,
+      };
+    }
+    return { r: 255, g: 255, b: 255, alpha: 1 };
+  })();
   let base: Buffer = await sharp({
-    create: { width: outW, height: outH, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+    create: { width: outW, height: outH, channels: 4, background: baseColor },
   }).png().toBuffer();
 
   // Decorative background/foreground only apply to the preview
   // composite. Fan-out passes (onlyMode set) skip them — production
   // passes should carry only the content that THIS mode's machine
-  // will reproduce.
-  if (!onlyMode && template.background_url) {
+  // will reproduce. Customer-picked backgroundColor also overrides
+  // the template's background_url — solid fill is already in `base`.
+  if (!onlyMode && template.background_url && !backgroundColor) {
     const bgBytes = await fetchAsBuffer(template.background_url);
     if (bgBytes) {
       const bgResized = await sharp(bgBytes)

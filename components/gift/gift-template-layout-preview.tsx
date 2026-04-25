@@ -44,6 +44,10 @@ type Props = {
    *  foreground PNG renders as an alpha mask filled with this colour
    *  (icons, hearts, progress bar — every opaque pixel inherits it). */
   foregroundColor?: string | null;
+  /** Customer-picked background colour. When set, replaces the
+   *  template's background_url with a solid fill underneath every
+   *  zone. */
+  backgroundColor?: string | null;
   /** Real-world canvas dimensions (from the product / variant) so the
    *  preview matches the print aspect — NOT the zones_json 0..200 grid,
    *  which is just percentage coordinates. */
@@ -51,7 +55,7 @@ type Props = {
   heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, calendarColors, foregroundColor, widthMm, heightMm }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -79,12 +83,17 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
         position: 'relative',
         width: '100%',
         aspectRatio: `${widthMm} / ${heightMm}`,
-        background: '#fafaf7',
+        // Customer's backgroundColor wins over the template's. Falls
+        // back to the editor's cream so empty templates still look
+        // intentional.
+        background: backgroundColor ?? '#fafaf7',
         border: '2px solid var(--pv-ink)',
         overflow: 'hidden',
       }}
     >
-      {template.background_url && (
+      {/* Skip the template background_url when the customer picked
+          their own background — solid fill via the wrapper above. */}
+      {!backgroundColor && template.background_url && (
         <img
           src={template.background_url}
           alt=""

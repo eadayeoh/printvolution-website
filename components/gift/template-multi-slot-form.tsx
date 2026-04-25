@@ -28,11 +28,13 @@ type Props = {
     calendars: Record<string, CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
+    backgroundColor: string | null;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
    *  the parent can render a live layout preview (dataURLs + text +
    *  text-color overrides + calendar fills + calendar-colour overrides
-   *  + theme colour) before the server composite runs. */
+   *  + theme colour + background colour) before the server composite
+   *  runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
@@ -40,6 +42,7 @@ type Props = {
     calendars: Record<string, CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
+    backgroundColor: string | null;
   }) => void;
   onReset?: () => void;
   currentPreviewUrl?: string | null;
@@ -111,10 +114,14 @@ export function TemplateMultiSlotForm({
   // pixel of the foreground PNG inherits this colour). null = use the
   // original PNG colours.
   const [foregroundColor, setForegroundColor] = useState<string | null>(null);
+  // Customer-picked background colour. When set, overrides the
+  // template's background_url with a solid fill — both in the live
+  // preview and in the server composite.
+  const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor });
-  }, [thumbs, texts, textColors, calendars, calendarColors, foregroundColor, onStateChange]);
+    onStateChange?.({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor });
+  }, [thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -130,6 +137,8 @@ export function TemplateMultiSlotForm({
   textColorsRef.current = textColors;
   const foregroundColorRef = useRef(foregroundColor);
   foregroundColorRef.current = foregroundColor;
+  const backgroundColorRef = useRef(backgroundColor);
+  backgroundColorRef.current = backgroundColor;
   const calendarsRef = useRef(calendars);
   calendarsRef.current = calendars;
   const calendarColorsRef = useRef(calendarColors);
@@ -148,7 +157,7 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
     }, 800);
     return () => clearTimeout(t);
     // NOTE: deps are FILES ONLY — not text or calendar fills, and not
@@ -171,7 +180,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -206,7 +215,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts, textColors, calendars, calendarColors, foregroundColor });
+    onGeneratePreview({ files, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor });
   }
 
   return (
@@ -650,6 +659,90 @@ export function TemplateMultiSlotForm({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Background colour — solid fill that sits behind the photos
+          and replaces the template's background_url. Only shown when
+          admin has opted in via customer_can_recolor. */}
+      {template.customer_can_recolor && (
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--pv-f-mono)',
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--pv-ink)',
+              }}
+            >
+              Background color
+            </span>
+            {backgroundColor && (
+              <button
+                type="button"
+                onClick={() => setBackgroundColor(null)}
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontFamily: 'var(--pv-f-mono)', fontSize: 9,
+                  fontWeight: 700, letterSpacing: '0.06em',
+                  textTransform: 'uppercase', color: 'var(--pv-magenta)',
+                  cursor: 'pointer', padding: 0,
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <label
+            title="Pick the colour for the magnet's background"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 12px',
+              border: '2px solid var(--pv-ink)',
+              background: '#fff',
+              cursor: 'pointer',
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              color: 'var(--pv-ink)',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 28, height: 28,
+                background: backgroundColor ?? 'transparent',
+                border: '2px solid var(--pv-ink)',
+                flexShrink: 0,
+                backgroundImage: backgroundColor ? 'none' : 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 8px 8px',
+              }}
+            />
+            <span style={{ flex: 1 }}>
+              {backgroundColor ? backgroundColor.toUpperCase() : 'Default (template background)'}
+            </span>
+            <span style={{ color: 'var(--pv-muted)', textTransform: 'uppercase', fontSize: 10 }}>
+              Click to pick
+            </span>
+            <input
+              type="color"
+              value={backgroundColor ?? '#ffffff'}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+            />
+          </label>
         </div>
       )}
 

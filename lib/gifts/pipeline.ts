@@ -104,6 +104,10 @@ export type PreviewInput = {
    *  alpha-mask recolour. #RRGGBB; null/undefined leaves the original
    *  PNG untouched. */
   foregroundColor?: string;
+  /** Customer-picked solid background fill. When set, replaces the
+   *  template's background_url with this colour underneath every
+   *  zone. */
+  backgroundColor?: string;
   /** Customer-picked shape from the product's shape_options config.
    *  null / undefined = legacy behaviour (rectangle-equivalent).
    *  Drives a dispatcher below — 'cutout' runs the new bg-remove stage,
@@ -147,6 +151,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       calendarsByZoneId: input.calendarsByZoneId,
       calendarColorsByZoneId: input.calendarColorsByZoneId,
       foregroundColor: input.foregroundColor,
+      backgroundColor: input.backgroundColor,
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,
       kind: 'preview',

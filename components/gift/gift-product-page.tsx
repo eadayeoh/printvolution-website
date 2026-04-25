@@ -164,6 +164,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // PNG via the alpha-mask cascade. null = use the template's original
   // colours.
   const [templateForegroundColor, setTemplateForegroundColor] = useState<string | null>(null);
+  // Customer-picked background colour. When set, replaces the
+  // template's background_url with a solid fill.
+  const [templateBackgroundColor, setTemplateBackgroundColor] = useState<string | null>(null);
   // Customer-picked calendar zone fills, keyed by zone id. Both the
   // live preview and the server composite read from this.
   const [templateCalendars, setTemplateCalendars] = useState<Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>>({});
@@ -278,6 +281,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     calendars: Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
+    backgroundColor: string | null;
   }) {
     setErr(null);
     setUploading(true);
@@ -311,6 +315,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     }
     if (payload.foregroundColor) {
       fd.append('foreground_color', payload.foregroundColor);
+    }
+    if (payload.backgroundColor) {
+      fd.append('background_color', payload.backgroundColor);
     }
     // Calendar fills travel as JSON-encoded `calendar_<zone_id>`
     // entries. Server pipeline picks them up in Step 5 — until then
@@ -914,6 +921,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       calendars={templateCalendars}
                       calendarColors={templateCalendarColors}
                       foregroundColor={templateForegroundColor}
+                      backgroundColor={templateBackgroundColor}
                       widthMm={selectedVariant?.width_mm || product.width_mm}
                       heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
@@ -1557,13 +1565,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
-                    onStateChange={({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor }) => {
+                    onStateChange={({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
                       setTemplateTextColors(textColors);
                       setTemplateCalendars(calendars);
                       setTemplateCalendarColors(calendarColors);
                       setTemplateForegroundColor(foregroundColor);
+                      setTemplateBackgroundColor(backgroundColor);
                     }}
                   />
                   {err && (

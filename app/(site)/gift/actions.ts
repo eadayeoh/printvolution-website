@@ -325,6 +325,8 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // inject CSS-like values into the rendered output.
   const foregroundColorRaw = (formData.get('foreground_color') || '').toString().trim();
   const foregroundColor = /^#[0-9A-Fa-f]{6}$/.test(foregroundColorRaw) ? foregroundColorRaw : null;
+  const backgroundColorRaw = (formData.get('background_color') || '').toString().trim();
+  const backgroundColor = /^#[0-9A-Fa-f]{6}$/.test(backgroundColorRaw) ? backgroundColorRaw : null;
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
   if (file.size > MAX_BYTES) return { ok: false, error: 'File too large (max 20 MB)' };
@@ -548,6 +550,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       calendarsByZoneId: Object.keys(zoneCalendars).length > 0 ? zoneCalendars : undefined,
       calendarColorsByZoneId: Object.keys(zoneCalendarColors).length > 0 ? zoneCalendarColors : undefined,
       foregroundColor: foregroundColor ?? undefined,
+      backgroundColor: backgroundColor ?? undefined,
       // Only run the AI transform path when the customer actually
       // picked a style. Template-driven products without a chosen
       // prompt should composite the photo as-is — no Replicate, no
