@@ -64,6 +64,29 @@ export async function uploadProductImage(
 }
 
 /**
+ * Delete an image from the product-images bucket. Admin-gated.
+ * Filename is the bare object key (no path traversal — we restrict
+ * to characters the upload action emits).
+ */
+export async function deleteProductImage(
+  filename: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  if (typeof filename !== 'string' || filename.length === 0 || filename.length > 200) {
+    return { ok: false, error: 'Invalid filename' };
+  }
+  // Reject path traversal / nested keys; the upload action emits flat
+  // names like `prefix-1234-abcdef.png`.
+  if (filename.includes('/') || filename.includes('..')) {
+    return { ok: false, error: 'Invalid filename' };
+  }
+  const sb = createServiceClient();
+  const { error } = await sb.storage.from(BUCKET).remove([filename]);
+  if (error) return { ok: false, error: 'Delete failed' };
+  return { ok: true };
+}
+
+/**
  * Browse already-uploaded images. Powers the "Pick from library" UI on
  * ImageUpload so admin doesn't have to re-upload the same artwork into
  * every product / variant / template slot. Returns most-recent first.

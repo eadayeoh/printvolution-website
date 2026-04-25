@@ -6,8 +6,8 @@
 // out templates / variants / mockups.
 
 import { useEffect, useState } from 'react';
-import { X, Search, Loader2 } from 'lucide-react';
-import { listProductImages } from '@/app/admin/upload/actions';
+import { X, Search, Loader2, Trash2 } from 'lucide-react';
+import { listProductImages, deleteProductImage } from '@/app/admin/upload/actions';
 
 type Item = { name: string; url: string; createdAt: string };
 
@@ -22,6 +22,7 @@ export function MediaLibraryPicker({ open, onClose, onPick }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -45,6 +46,21 @@ export function MediaLibraryPicker({ open, onClose, onPick }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  async function handleDelete(it: Item) {
+    if (!window.confirm(`Delete "${it.name}" from the media library? This cannot be undone, and any product / template still pointing at this URL will show a broken image.`)) return;
+    setDeleting(it.name);
+    try {
+      const r = await deleteProductImage(it.name);
+      if (!r.ok) {
+        setError(r.error ?? 'Delete failed');
+      } else {
+        setItems((prev) => prev.filter((x) => x.name !== it.name));
+      }
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   if (!open) return null;
 
@@ -135,46 +151,86 @@ export function MediaLibraryPicker({ open, onClose, onPick }: Props) {
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
               gap: 8,
             }}>
-              {filtered.map((it) => (
-                <button
-                  key={it.name}
-                  type="button"
-                  onClick={() => { onPick(it.url); onClose(); }}
-                  style={{
-                    background: '#fafaf7',
-                    border: '2px solid #e5e5e5',
-                    borderRadius: 6,
-                    padding: 0,
-                    cursor: 'pointer',
-                    overflow: 'hidden',
-                    transition: 'border-color .15s, transform .15s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E91E8C'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e5e5'; }}
-                  title={it.name}
-                >
-                  <div style={{ aspectRatio: '1 / 1', background: '#fff', overflow: 'hidden' }}>
-                    <img
-                      src={it.url}
-                      alt={it.name}
-                      loading="lazy"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
+              {filtered.map((it) => {
+                const isDeleting = deleting === it.name;
+                return (
+                  <div
+                    key={it.name}
+                    style={{
+                      position: 'relative',
+                      background: '#fafaf7',
+                      border: '2px solid #e5e5e5',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      transition: 'border-color .15s, transform .15s',
+                      opacity: isDeleting ? 0.5 : 1,
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#E91E8C'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e5e5'; }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => { onPick(it.url); onClose(); }}
+                      disabled={isDeleting}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: 0,
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: isDeleting ? 'wait' : 'pointer',
+                        textAlign: 'left',
+                      }}
+                      title={it.name}
+                    >
+                      <div style={{ aspectRatio: '1 / 1', background: '#fff', overflow: 'hidden' }}>
+                        <img
+                          src={it.url}
+                          alt={it.name}
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      </div>
+                      <div style={{
+                        fontSize: 10,
+                        color: '#666',
+                        padding: '6px 8px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontFamily: 'var(--pv-f-mono)',
+                      }}>
+                        {it.name}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(it)}
+                      disabled={isDeleting}
+                      title="Delete from library (irreversible)"
+                      aria-label={`Delete ${it.name}`}
+                      style={{
+                        position: 'absolute',
+                        top: 6,
+                        right: 6,
+                        width: 26,
+                        height: 26,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.95)',
+                        border: '1px solid #e5e5e5',
+                        cursor: isDeleting ? 'wait' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#dc2626',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    </button>
                   </div>
-                  <div style={{
-                    fontSize: 10,
-                    color: '#666',
-                    padding: '6px 8px',
-                    textAlign: 'left',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontFamily: 'var(--pv-f-mono)',
-                  }}>
-                    {it.name}
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
