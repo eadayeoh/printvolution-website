@@ -1457,6 +1457,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     fills={surfaceFills}
                     onChange={setSurfaceFills}
                     variantMockupUrl={selectedVariant.mockup_url || undefined}
+                    variantMockupArea={selectedVariant.mockup_area ?? undefined}
                     activeSurfaceId={activeSurfaceId || selectedVariant.surfaces[0]?.id}
                     onActiveSurfaceChange={setActiveSurfaceId}
                   />

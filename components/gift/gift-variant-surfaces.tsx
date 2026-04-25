@@ -31,6 +31,11 @@ type Props = {
    *  need to shoot a photo of each side if the whole variant mockup
    *  works). */
   variantMockupUrl?: string;
+  /** Variant-level mockup_area paired with `variantMockupUrl`. Used
+   *  with the fallback image so the design rectangle lines up with
+   *  the variant's base mockup instead of the surface's own area
+   *  (which was set for a different image). */
+  variantMockupArea?: { x: number; y: number; width: number; height: number };
   /** Controlled active surface id — lifted to the parent so the big
    *  live preview (in the left column) can mirror whichever face the
    *  customer last tapped. Uncontrolled = internal state. */
@@ -38,7 +43,7 @@ type Props = {
   onActiveSurfaceChange?: (id: string) => void;
 };
 
-export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl, activeSurfaceId, onActiveSurfaceChange }: Props) {
+export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUrl, variantMockupArea, activeSurfaceId, onActiveSurfaceChange }: Props) {
   const isControlled = typeof activeSurfaceId === 'string';
   const [internalActiveId, setInternalActiveId] = useState(surfaces[0]?.id ?? '');
   const activeId = isControlled ? activeSurfaceId : internalActiveId;
@@ -120,6 +125,7 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange, variantMockupUr
             surface={activeSurface}
             fill={fills[activeSurface.id] ?? {}}
             fallbackMockupUrl={variantMockupUrl}
+            fallbackArea={variantMockupArea}
           />
         </div>
       )}
@@ -265,10 +271,12 @@ function SurfacePreview({
   surface,
   fill,
   fallbackMockupUrl,
+  fallbackArea,
 }: {
   surface: GiftVariantSurface;
   fill: SurfaceFill;
   fallbackMockupUrl?: string;
+  fallbackArea?: { x: number; y: number; width: number; height: number };
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -283,7 +291,11 @@ function SurfacePreview({
     return () => ro.disconnect();
   }, []);
 
-  const area = surface.mockup_area;
+  // When the surface has no mockup of its own, the image falls back to
+  // the variant's base mockup — so the design rectangle has to fall
+  // back to the variant's base area too, otherwise the surface's
+  // coordinates land in random places on a different image.
+  const area = surface.mockup_url ? surface.mockup_area : (fallbackArea ?? surface.mockup_area);
   const areaPx = {
     w: (area.width / 100) * containerW,
     h: (area.height / 100) * containerW,
