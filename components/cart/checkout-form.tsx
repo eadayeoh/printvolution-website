@@ -19,8 +19,11 @@ const FormSchema = z.object({
   delivery_method: z.enum(['pickup', 'delivery']),
   delivery_address: z.string().optional(),
   notes: z.string().optional(),
+  gift_wrap: z.boolean().optional(),
+  gift_message: z.string().max(280).optional(),
 });
 type FormValues = z.infer<typeof FormSchema>;
+const GIFT_WRAP_CENTS = 300;
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -35,11 +38,14 @@ export function CheckoutForm() {
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { delivery_method: 'pickup' },
+    defaultValues: { delivery_method: 'pickup', gift_wrap: false, gift_message: '' },
   });
 
   const deliveryMethod = watch('delivery_method');
+  const giftWrap = watch('gift_wrap');
+  const giftMessage = watch('gift_message') ?? '';
   const deliveryCost = deliveryMethod === 'delivery' ? 800 : 0;
+  const giftWrapCost = giftWrap ? GIFT_WRAP_CENTS : 0;
 
   // Coupon state — applied is only set after the server validates.
   const [couponInput, setCouponInput] = useState('');
@@ -61,7 +67,7 @@ export function CheckoutForm() {
   }, [subtotal, coupon?.code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const couponDiscount = coupon?.discountCents ?? 0;
-  const total = Math.max(0, subtotal - couponDiscount + deliveryCost);
+  const total = Math.max(0, subtotal - couponDiscount + deliveryCost + giftWrapCost);
 
   function applyCoupon() {
     setCouponErr(null);
@@ -89,6 +95,8 @@ export function CheckoutForm() {
       const result = await submitOrder({
         ...values,
         coupon_code: coupon?.code ?? null,
+        gift_wrap: !!values.gift_wrap,
+        gift_message: values.gift_wrap ? (values.gift_message?.trim() || null) : null,
         items: items.map((i) => ({
           product_slug: i.product_slug,
           product_name: i.product_name,
@@ -205,6 +213,46 @@ export function CheckoutForm() {
         <div className="co-card">
           <div className="co-card-head">
             <span className="co-card-num">03</span>
+            <h2 className="co-card-title">Gift wrap <span style={{ fontSize: 11, fontWeight: 400, color: '#aaa', marginLeft: 8 }}>optional</span></h2>
+          </div>
+          <div className="co-card-body">
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: 14,
+                borderRadius: 8,
+                border: `2px solid ${giftWrap ? '#E91E8C' : '#e5e5e5'}`,
+                background: giftWrap ? 'rgba(233,30,140,.05)' : '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              <input type="checkbox" {...register('gift_wrap')} style={{ width: 18, height: 18 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a' }}>Wrap it as a gift</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>+S$3.00 · matte kraft paper, ribbon, no receipt in the package.</div>
+              </div>
+            </label>
+            {giftWrap && (
+              <div style={{ marginTop: 12 }}>
+                <Field label={`Handwritten message (max 280 chars · ${giftMessage.length}/280)`}>
+                  <textarea
+                    {...register('gift_message')}
+                    rows={3}
+                    maxLength={280}
+                    className={inputCls}
+                    placeholder="Happy birthday Mum — love, J."
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="co-card">
+          <div className="co-card-head">
+            <span className="co-card-num">04</span>
             <h2 className="co-card-title">Notes <span style={{ fontSize: 11, fontWeight: 400, color: '#aaa', marginLeft: 8 }}>optional</span></h2>
           </div>
           <div className="co-card-body">
@@ -255,6 +303,12 @@ export function CheckoutForm() {
               <span>Delivery</span>
               <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{deliveryCost === 0 ? 'Free' : formatSGD(deliveryCost)}</span>
             </div>
+            {giftWrap && (
+              <div className="co-sum-row">
+                <span>Gift wrap</span>
+                <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{formatSGD(giftWrapCost)}</span>
+              </div>
+            )}
           </div>
 
           <div style={{ padding: '8px 0' }}>

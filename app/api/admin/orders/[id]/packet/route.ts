@@ -111,9 +111,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   };
   tot('Subtotal', order.subtotal_cents ?? 0);
   tot('Delivery', order.delivery_cents ?? 0);
+  if (order.gift_wrap) tot('Gift wrap', order.gift_wrap_cents ?? 0);
   if ((order.points_discount_cents ?? 0) > 0) tot(`Points (${order.points_redeemed} pts)`, -(order.points_discount_cents), { color: [0, 0.5, 0] });
   if ((order.coupon_discount_cents ?? 0) > 0) tot(`Coupon${order.coupon_code ? ` (${order.coupon_code})` : ''}`, -(order.coupon_discount_cents), { color: [0, 0.5, 0] });
   tot('TOTAL', order.total_cents ?? 0, { bold: true, color: [0.85, 0.1, 0.5] });
+
+  // Gift wrap callout — fulfilment scans this when packing.
+  if (order.gift_wrap) {
+    y -= 16;
+    drawText('🎁 GIFT WRAP', { bold: true, size: 12, color: [0.85, 0.1, 0.5] });
+    if (order.gift_message) {
+      drawText('Handwritten message:', { size: 9, color: [0.4, 0.4, 0.4] });
+      for (const line of String(order.gift_message).split('\n')) drawText(line, { size: 11, x: MARGIN + 8 });
+    } else {
+      drawText('No message — just wrap.', { size: 10, color: [0.4, 0.4, 0.4] });
+    }
+  }
 
   // Notes
   if (order.notes) {

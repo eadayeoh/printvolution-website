@@ -91,6 +91,21 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             </div>
           </section>
 
+          {/* Gift wrap + handwritten message */}
+          {order.gift_wrap && (
+            <section className="rounded-lg border-2 border-pink/40 bg-pink/5 p-4">
+              <h2 className="mb-2 font-bold text-ink">🎁 Gift wrap requested</h2>
+              {order.gift_message ? (
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Handwritten message</div>
+                  <p className="mt-1 text-sm italic text-ink whitespace-pre-wrap">&ldquo;{order.gift_message}&rdquo;</p>
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-600">No message — just wrap it.</p>
+              )}
+            </section>
+          )}
+
           {/* Notes */}
           {order.notes && (
             <section className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -132,6 +147,12 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                 <span className="text-neutral-600">Delivery</span>
                 <span className="text-ink">{order.delivery_cents > 0 ? formatSGD(order.delivery_cents) : 'Free'}</span>
               </div>
+              {order.gift_wrap && (
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">🎁 Gift wrap</span>
+                  <span className="text-ink">{formatSGD(order.gift_wrap_cents ?? 0)}</span>
+                </div>
+              )}
               {order.points_discount_cents > 0 && (
                 <div className="flex justify-between text-green-700">
                   <span>Points discount ({order.points_redeemed} pts)</span>

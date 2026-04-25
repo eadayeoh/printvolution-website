@@ -228,6 +228,8 @@ const OrderSchema = z.object({
   delivery_address: z.string().max(500).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
   coupon_code: z.string().max(60).optional().nullable(),
+  gift_wrap: z.boolean().default(false),
+  gift_message: z.string().max(280).optional().nullable(),
   items: z.array(
     z.object({
       product_slug: z.string(),
@@ -300,7 +302,10 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     couponId = r.coupon.id;
   }
 
-  const total = Math.max(0, subtotal - couponDiscount + delivery);
+  // Gift wrap is a flat S$3 add-on. Empty/false → no charge.
+  const giftWrapCents = data.gift_wrap ? 300 : 0;
+
+  const total = Math.max(0, subtotal - couponDiscount + delivery + giftWrapCents);
   // Points only earn on what the customer actually paid (post-discount).
   const pointsEarned = Math.floor(Math.max(0, subtotal - couponDiscount) / 100); // 1 point per S$1
 
@@ -421,6 +426,9 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       total_cents: total,
       coupon_code: couponCode,
       coupon_discount_cents: couponDiscount,
+      gift_wrap: data.gift_wrap,
+      gift_wrap_cents: giftWrapCents,
+      gift_message: data.gift_message?.trim() || null,
       points_earned: pointsEarned,
       status: 'pending',
     })
