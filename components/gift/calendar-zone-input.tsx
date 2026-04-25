@@ -8,6 +8,7 @@
 // onChange. State stays at the form level so cart submission is
 // straightforward.
 
+import { useEffect, useState } from 'react';
 import type { GiftTemplateCalendarZone } from '@/lib/gifts/types';
 import { daysInMonth, resolveCalendarFill, type CalendarFill } from '@/lib/gifts/pipeline/calendar-svg';
 
@@ -34,11 +35,27 @@ export function CalendarZoneInput({ zone, fill, onChange, now = new Date() }: Pr
   function set(patch: Partial<CalendarFill>) {
     onChange({ ...resolved, ...patch });
   }
-  function setYear(value: string) {
-    const n = parseInt(value, 10);
-    if (!Number.isFinite(n)) return;
+
+  // Year input is buffered locally so the customer can clear the
+  // field and type a new value without each keystroke being clamped
+  // back to the min ("2" → 2 → clamped to 1900 → input snaps to
+  // 1900"). Commit happens on blur or Enter; until then yearText is
+  // free-form. Sync down whenever the canonical year changes
+  // externally (e.g. parent reset).
+  const [yearText, setYearText] = useState(String(resolved.year));
+  useEffect(() => {
+    setYearText(String(resolved.year));
+  }, [resolved.year]);
+
+  function commitYear() {
+    const n = parseInt(yearText, 10);
+    if (!Number.isFinite(n)) {
+      setYearText(String(resolved.year));
+      return;
+    }
     const clamped = Math.min(2100, Math.max(1900, n));
-    set({ year: clamped });
+    if (clamped !== resolved.year) set({ year: clamped });
+    setYearText(String(clamped));
   }
 
   return (
@@ -75,8 +92,10 @@ export function CalendarZoneInput({ zone, fill, onChange, now = new Date() }: Pr
             min={1900}
             max={2100}
             step={1}
-            value={resolved.year}
-            onChange={(e) => setYear(e.target.value)}
+            value={yearText}
+            onChange={(e) => setYearText(e.target.value)}
+            onBlur={commitYear}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
             style={selectStyle}
           />
         </label>
