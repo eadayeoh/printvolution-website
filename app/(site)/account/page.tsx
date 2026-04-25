@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { formatSGD } from '@/lib/utils';
 import { SignOutButton } from '@/components/account/sign-out-button';
+import { ReorderButton } from '@/components/account/reorder-button';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My account' };
@@ -90,7 +91,7 @@ export default async function AccountPage() {
           ) : (
             (orders ?? []).map((o: any, i, arr) => (
               <div key={o.id} style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'center',
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto auto auto', gap: 12, alignItems: 'center',
                 padding: '14px 18px', borderBottom: i < arr.length - 1 ? '1px solid #eee' : 'none',
                 fontSize: 13,
               }}>
@@ -107,6 +108,14 @@ export default async function AccountPage() {
                   </span>
                 </div>
                 <div style={{ fontWeight: 800, color: '#E91E8C' }}>{formatSGD(o.total_cents)}</div>
+                <Link
+                  href={`/track?order=${encodeURIComponent(o.order_number)}`}
+                  style={{
+                    padding: '6px 10px', fontSize: 11, fontWeight: 700, color: '#0a0a0a',
+                    border: '1px solid #ddd', borderRadius: 999, textDecoration: 'none',
+                  }}
+                >Track</Link>
+                <ReorderButton orderId={o.id} orderNumber={o.order_number} />
               </div>
             ))
           )}

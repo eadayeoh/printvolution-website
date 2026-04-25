@@ -229,3 +229,78 @@ export async function changeMyPassword(input: { currentPassword: string; newPass
   }
   return { ok: true as const };
 }
+
+// Reorder: pull a past order's PRINT line items back as cart-shaped
+// rows. Gift items aren't reorderable directly — they reference
+// uploaded photos + AI-generated previews that may have been purged
+// after the source-retention window. Customers re-create those via
+// the gift configurator. PRINT items are stateless and can replay.
+export type ReorderItem = {
+  product_slug: string;
+  product_name: string;
+  icon: string | null;
+  config: Record<string, string>;
+  qty: number;
+  unit_price_cents: number;
+  line_total_cents: number;
+  personalisation_notes?: string;
+  gift_image_url?: string;
+};
+
+export async function reorderPastOrder(orderId: string): Promise<
+  | { ok: true; items: ReorderItem[]; gift_count: number }
+  | { ok: false; error: string }
+> {
+  const sb = createClient();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { ok: false, error: 'Sign in to reorder.' };
+
+  const { data: order } = await sb
+    .from('orders')
+    .select('id, email')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!order) return { ok: false, error: 'Order not found.' };
+  if ((order.email ?? '').toLowerCase() !== (user.email ?? '').toLowerCase()) {
+    return { ok: false, error: 'This order isn\u2019t on your account.' };
+  }
+
+  const { data: items } = await sb
+    .from('order_items')
+    .select('product_slug, product_name, icon, config, qty, unit_price_cents, line_total_cents, personalisation_notes')
+    .eq('order_id', orderId);
+
+  // Filter out items whose product is no longer active — the customer
+  // would just hit a price-mismatch error at checkout otherwise.
+  const slugs = Array.from(new Set((items ?? []).map((i: any) => i.product_slug).filter(Boolean)));
+  let active = new Set<string>();
+  if (slugs.length) {
+    const { data: prods } = await sb
+      .from('products')
+      .select('slug, is_active')
+      .in('slug', slugs);
+    active = new Set(((prods ?? []) as any[]).filter((p) => p.is_active).map((p) => p.slug));
+  }
+
+  const reorderItems: ReorderItem[] = ((items ?? []) as any[])
+    .filter((i) => active.has(i.product_slug))
+    .map((i) => ({
+      product_slug: i.product_slug,
+      product_name: i.product_name,
+      icon: i.icon,
+      config: i.config ?? {},
+      qty: i.qty,
+      unit_price_cents: i.unit_price_cents,
+      line_total_cents: i.line_total_cents,
+      personalisation_notes: i.personalisation_notes ?? undefined,
+    }));
+
+  // Count gift items so the UI can warn the customer they're not
+  // copied — they need to re-upload via the gift product page.
+  const { count: giftCount } = await sb
+    .from('gift_order_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('order_id', orderId);
+
+  return { ok: true, items: reorderItems, gift_count: giftCount ?? 0 };
+}
