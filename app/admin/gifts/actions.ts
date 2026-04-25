@@ -397,6 +397,34 @@ export async function deleteTemplate(id: string) {
   return { ok: true as const };
 }
 
+// Clone a template's row. Same zones / assets, new id, prefixed name,
+// inactive by default so it doesn't ship to customers until reviewed.
+// Product assignments (gift_product_templates) are NOT copied — admin
+// re-assigns the duplicate where they want it.
+export async function duplicateTemplate(id: string) {
+  const sb = await requireAdmin();
+  const { data: src, error: readErr } = await sb
+    .from('gift_templates')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (readErr || !src) return { ok: false as const, error: readErr?.message ?? 'Not found' };
+  const { id: _drop, created_at: _c, updated_at: _u, ...rest } = src as any;
+  const copy = {
+    ...rest,
+    name: `Copy of ${src.name}`,
+    is_active: false,
+  };
+  const { data: created, error } = await sb
+    .from('gift_templates')
+    .insert(copy)
+    .select('id')
+    .single();
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/templates');
+  return { ok: true as const, id: created.id };
+}
+
 // ---------------------------------------------------------------------------
 // ASSET UPLOAD — admin-side (for template backgrounds, thumbnails, etc.)
 // ---------------------------------------------------------------------------

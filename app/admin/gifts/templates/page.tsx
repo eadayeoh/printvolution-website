@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { listAllTemplatesAdmin } from '@/lib/gifts/data';
+import { GiftTemplateDuplicateButton } from '@/components/admin/gift-template-duplicate-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,8 @@ export default async function TemplatesListPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
                       {list.map((t) => (
-                        <Link key={t.id} href={`/admin/gifts/templates/${t.id}`} className="block overflow-hidden rounded-lg border border-neutral-200 bg-white hover:border-pink">
+                        <Link key={t.id} href={`/admin/gifts/templates/${t.id}`} className="relative block overflow-hidden rounded-lg border border-neutral-200 bg-white hover:border-pink">
+                          <GiftTemplateDuplicateButton id={t.id} name={t.name} />
                           <div className="aspect-square overflow-hidden bg-neutral-100">
                             {t.thumbnail_url ? (
                               <img src={t.thumbnail_url} alt="" className="h-full w-full object-cover" />
