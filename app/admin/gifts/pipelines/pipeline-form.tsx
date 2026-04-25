@@ -11,8 +11,9 @@ const PROVIDERS = [
 ] as const;
 
 const KNOWN_MODELS = [
+  { value: 'gpt-image-2',                         label: 'OpenAI · gpt-image-2 (latest, SOTA — use with OpenAI direct provider)' },
+  { value: 'gpt-image-1',                         label: 'OpenAI · gpt-image-1 (older, OpenAI direct)' },
   { value: 'google/nano-banana',                  label: 'Google · Nano Banana (Replicate · gemini-2.5-flash-image)' },
-  { value: 'gpt-image-1',                         label: 'OpenAI · gpt-image-1 (use with OpenAI direct provider)' },
   { value: 'openai/gpt-image-1',                  label: 'OpenAI · gpt-image-1 (via Replicate, BYO OpenAI key)' },
   { value: 'black-forest-labs/flux-canny-pro',    label: 'Flux · Canny Pro (Replicate · edge-preserving)' },
   { value: 'black-forest-labs/flux-dev',          label: 'Flux · Dev (Replicate · general img2img)' },
