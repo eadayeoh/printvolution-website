@@ -100,6 +100,7 @@ export function GiftTemplateEditor({
   const [displayOrder, setDisplayOrder] = useState(template?.display_order?.toString() ?? '0');
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
+  const [customerCanChangeFont, setCustomerCanChangeFont] = useState(template?.customer_can_change_font ?? false);
   const [refWidthMm, setRefWidthMm] = useState(
     template?.reference_width_mm ? String(template.reference_width_mm) : '',
   );

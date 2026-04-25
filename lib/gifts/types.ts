@@ -247,6 +247,9 @@ export type GiftTemplate = {
    *  template" form (Theme color + per-text-zone + per-calendar-zone).
    *  Default false — admin opts in per template. */
   customer_can_recolor?: boolean;
+  /** When true, customer sees a font-family dropdown next to each
+   *  text zone. Default false — admin opts in per template. */
+  customer_can_change_font?: boolean;
 };
 
 export type GiftCropRect = {

@@ -854,7 +854,7 @@ export function TemplateMultiSlotForm({
             }}
           >
             {isWorking
-              ? 'Building preview…'
+              ? '✓ Saving your design…'
               : currentPreviewUrl
                 ? '✓ Design saved — print-ready file generated when you add to cart'
                 : 'Preparing…'}

@@ -868,7 +868,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   minHeight: 320,
                 }}
               >
-                {(uploading || restyling) && (
+                {/* Suppress the big "Building preview…" overlay on
+                    template flows. The local CSS preview already shows
+                    the customer's image + text + calendar + colour
+                    choices the instant they happen — covering it with
+                    a 92%-opaque loader makes uploads feel slower than
+                    they are. Server composite still runs in the
+                    background for cart-payload integrity. */}
+                {(uploading || restyling) && !activeTemplate && (
                   <div
                     style={{
                       position: 'absolute',
