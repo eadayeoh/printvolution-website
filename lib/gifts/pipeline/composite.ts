@@ -70,6 +70,10 @@ export type CompositeInput = {
   /** Per-zone customer-picked text colour overrides keyed by zone id.
    *  Falls through to z.color when a key is missing. */
   textColorsByZoneId?: Record<string, string>;
+  /** Customer-picked tint applied to the template's foreground PNG.
+   *  When set, the foreground renders as an alpha mask filled with
+   *  this colour. #RRGGBB validated upstream. */
+  foregroundColor?: string;
 };
 
 export type CompositeOutput = {
@@ -82,7 +86,7 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, textColorsByZoneId, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, textColorsByZoneId, foregroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
   // Effective zone mode: zone.mode wins, fall back to productMode, else null.
   const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
     (z.mode ?? productMode ?? null) as GiftMode | null;
@@ -208,7 +212,41 @@ export async function renderTemplateComposite(
       const fgResized = await sharp(fgBytes)
         .resize(outW, outH, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .toBuffer();
-      base = await sharp(base).composite([{ input: fgResized, top: 0, left: 0 }]).png().toBuffer();
+      // Customer-picked tint: alpha-mask recolour. Pull the resized
+      // PNG's alpha as a single-channel raw buffer, build a solid-fill
+      // RGB image at the customer colour, then attach the alpha as the
+      // 4th channel — what was opaque in the original is now opaque
+      // in the customer colour, what was transparent stays transparent.
+      // Mirrors the live preview's CSS mask-image cascade so what the
+      // customer sees in preview is what gets printed.
+      let fgFinal = fgResized;
+      if (foregroundColor && /^#[0-9A-Fa-f]{6}$/.test(foregroundColor)) {
+        try {
+          const r = parseInt(foregroundColor.slice(1, 3), 16);
+          const g = parseInt(foregroundColor.slice(3, 5), 16);
+          const b = parseInt(foregroundColor.slice(5, 7), 16);
+          const alphaRaw = await sharp(fgResized)
+            .ensureAlpha()
+            .extractChannel(3)
+            .raw()
+            .toBuffer();
+          fgFinal = await sharp({
+            create: { width: outW, height: outH, channels: 3, background: { r, g, b } },
+          })
+            .raw()
+            .toBuffer()
+            .then((rgbRaw: Buffer) =>
+              sharp(rgbRaw, { raw: { width: outW, height: outH, channels: 3 } })
+                .joinChannel(alphaRaw, { raw: { width: outW, height: outH, channels: 1 } })
+                .png()
+                .toBuffer()
+            );
+        } catch {
+          // Recolour failure shouldn't abort the composite — fall
+          // back to the original PNG.
+        }
+      }
+      base = await sharp(base).composite([{ input: fgFinal, top: 0, left: 0 }]).png().toBuffer();
     }
   }
 

@@ -98,6 +98,10 @@ export type PreviewInput = {
   /** Per-zone calendar fills keyed by zone_id. Calendar zones with no
    *  entry render the zone's admin defaults / current month. */
   calendarsByZoneId?: Record<string, { month: number; year: number; highlightedDay: number | null }>;
+  /** Customer-picked tint applied to the template's foreground PNG via
+   *  alpha-mask recolour. #RRGGBB; null/undefined leaves the original
+   *  PNG untouched. */
+  foregroundColor?: string;
   /** Customer-picked shape from the product's shape_options config.
    *  null / undefined = legacy behaviour (rectangle-equivalent).
    *  Drives a dispatcher below — 'cutout' runs the new bg-remove stage,
@@ -139,6 +143,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       textByZoneId:   input.textByZoneId,
       textColorsByZoneId: input.textColorsByZoneId,
       calendarsByZoneId: input.calendarsByZoneId,
+      foregroundColor: input.foregroundColor,
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,
       kind: 'preview',

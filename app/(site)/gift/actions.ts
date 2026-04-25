@@ -320,6 +320,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     shapeKindRaw === 'cutout' || shapeKindRaw === 'rectangle' || shapeKindRaw === 'template'
       ? shapeKindRaw
       : null;
+  // Customer-picked foreground tint colour. Strict #RRGGBB; anything
+  // else falls through to "no tint" so a hand-crafted POST can't
+  // inject CSS-like values into the rendered output.
+  const foregroundColorRaw = (formData.get('foreground_color') || '').toString().trim();
+  const foregroundColor = /^#[0-9A-Fa-f]{6}$/.test(foregroundColorRaw) ? foregroundColorRaw : null;
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
   if (file.size > MAX_BYTES) return { ok: false, error: 'File too large (max 20 MB)' };
@@ -535,6 +540,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
       textColorsByZoneId: Object.keys(zoneTextColors).length > 0 ? zoneTextColors : undefined,
       calendarsByZoneId: Object.keys(zoneCalendars).length > 0 ? zoneCalendars : undefined,
+      foregroundColor: foregroundColor ?? undefined,
       // Only run the AI transform path when the customer actually
       // picked a style. Template-driven products without a chosen
       // prompt should composite the photo as-is — no Replicate, no

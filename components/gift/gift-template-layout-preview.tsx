@@ -37,6 +37,10 @@ type Props = {
   textColors?: Record<string, string>;
   /** Customer-picked calendar fills, keyed by zone id. */
   calendars?: Record<string, Partial<CalendarFill>>;
+  /** Customer-picked foreground tint colour. When set, the template's
+   *  foreground PNG renders as an alpha mask filled with this colour
+   *  (icons, hearts, progress bar — every opaque pixel inherits it). */
+  foregroundColor?: string | null;
   /** Real-world canvas dimensions (from the product / variant) so the
    *  preview matches the print aspect — NOT the zones_json 0..200 grid,
    *  which is just percentage coordinates. */
@@ -44,7 +48,7 @@ type Props = {
   heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, widthMm, heightMm }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, foregroundColor, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -161,6 +165,28 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
       })}
 
       {template.foreground_url && (
+        foregroundColor ? (
+          // Recolour cascade: treat the foreground PNG as an alpha
+          // mask, fill the unmasked area with the customer's chosen
+          // colour. Works perfectly for monochrome icon PNGs.
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: foregroundColor,
+              maskImage: `url(${template.foreground_url})`,
+              maskSize: 'cover',
+              maskRepeat: 'no-repeat',
+              WebkitMaskImage: `url(${template.foreground_url})`,
+              WebkitMaskSize: 'cover',
+              WebkitMaskRepeat: 'no-repeat',
+              pointerEvents: 'none',
+            }}
+          />
+        ) : (
         <img
           src={template.foreground_url}
           alt=""
@@ -173,6 +199,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
             pointerEvents: 'none',
           }}
         />
+        )
       )}
 
       {zones.map((z, i) => {

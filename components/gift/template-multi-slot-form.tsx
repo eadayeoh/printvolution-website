@@ -26,16 +26,18 @@ type Props = {
     texts: Record<string, string>;
     textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
+    foregroundColor: string | null;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
    *  the parent can render a live layout preview (dataURLs + text +
-   *  text-color overrides + calendar fills) before the server
-   *  composite runs. */
+   *  text-color overrides + calendar fills + theme colour) before the
+   *  server composite runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
     textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
+    foregroundColor: string | null;
   }) => void;
   onReset?: () => void;
   currentPreviewUrl?: string | null;
@@ -98,10 +100,15 @@ export function TemplateMultiSlotForm({
   // customer explicitly picks a different color than the template's
   // default; missing keys fall through to z.color in the renderer.
   const [textColors, setTextColors] = useState<Record<string, string>>({});
+  // Single customer-picked colour applied to the template's foreground
+  // PNG via the alpha-mask cascade (icons, heart, progress bar — every
+  // pixel of the foreground PNG inherits this colour). null = use the
+  // original PNG colours.
+  const [foregroundColor, setForegroundColor] = useState<string | null>(null);
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts, textColors, calendars });
-  }, [thumbs, texts, textColors, calendars, onStateChange]);
+    onStateChange?.({ thumbs, texts, textColors, calendars, foregroundColor });
+  }, [thumbs, texts, textColors, calendars, foregroundColor, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -115,6 +122,8 @@ export function TemplateMultiSlotForm({
   textsRef.current = texts;
   const textColorsRef = useRef(textColors);
   textColorsRef.current = textColors;
+  const foregroundColorRef = useRef(foregroundColor);
+  foregroundColorRef.current = foregroundColor;
   const calendarsRef = useRef(calendars);
   calendarsRef.current = calendars;
   const pendingRegenRef = useRef(false);
@@ -131,7 +140,7 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, foregroundColor: foregroundColorRef.current });
     }, 800);
     return () => clearTimeout(t);
     // NOTE: deps are FILES ONLY — not text or calendar fills, and not
@@ -154,7 +163,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, foregroundColor: foregroundColorRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -189,7 +198,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts, textColors, calendars });
+    onGeneratePreview({ files, texts, textColors, calendars, foregroundColor });
   }
 
   return (
@@ -567,6 +576,89 @@ export function TemplateMultiSlotForm({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Theme colour — single colour applied to the template's
+          foreground PNG (icons + heart + progress bar). Only shown
+          when the template actually has a foreground asset to recolour. */}
+      {template.foreground_url && (
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--pv-f-mono)',
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--pv-ink)',
+              }}
+            >
+              Theme color
+            </span>
+            {foregroundColor && (
+              <button
+                type="button"
+                onClick={() => setForegroundColor(null)}
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontFamily: 'var(--pv-f-mono)', fontSize: 9,
+                  fontWeight: 700, letterSpacing: '0.06em',
+                  textTransform: 'uppercase', color: 'var(--pv-magenta)',
+                  cursor: 'pointer', padding: 0,
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <label
+            title="Pick the colour for icons, hearts, and the player UI"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 12px',
+              border: '2px solid var(--pv-ink)',
+              background: '#fff',
+              cursor: 'pointer',
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              color: 'var(--pv-ink)',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 28, height: 28,
+                background: foregroundColor ?? '#0a0a0a',
+                border: '2px solid var(--pv-ink)',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ flex: 1 }}>
+              {foregroundColor ? foregroundColor.toUpperCase() : 'Default (template colours)'}
+            </span>
+            <span style={{ color: 'var(--pv-muted)', textTransform: 'uppercase', fontSize: 10 }}>
+              Click to pick
+            </span>
+            <input
+              type="color"
+              value={foregroundColor ?? '#0a0a0a'}
+              onChange={(e) => setForegroundColor(e.target.value)}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+            />
+          </label>
         </div>
       )}
 
