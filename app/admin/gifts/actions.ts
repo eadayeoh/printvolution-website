@@ -99,6 +99,7 @@ const GiftProductSchema = z.object({
   figurine_area: AreaSchema.nullable().optional(),
   pipeline_id: z.string().uuid().nullable().optional(),
   secondary_pipeline_id: z.string().uuid().nullable().optional(),
+  prompt_ids: z.array(z.string().uuid()).nullable().optional(),
   source_retention_days: z.number().int().min(1).default(30),
   lead_time_days: z.number().int().min(1).default(5),
   allowed_fonts: z.array(z.string().min(1)).default([]),

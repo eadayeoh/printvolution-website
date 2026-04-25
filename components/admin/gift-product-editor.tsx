@@ -29,6 +29,11 @@ type Props = {
   /** Active prompts from the modes this product supports. Fed into the
    *  variants panel so each variant can upload per-prompt mockups. */
   parentPrompts?: Array<{ id: string; name: string; mode: string }>;
+  /** EVERY active prompt matching the product's mode(s) — the full
+   *  candidate set the admin can choose from for the per-product art-
+   *  style allowlist. Independent of the existing prompt_ids
+   *  selection. */
+  allCandidatePrompts?: Array<{ id: string; name: string; mode: string; thumbnail_url: string | null }>;
 };
 
 type Tab = 'basics' | 'production' | 'design' | 'content';
@@ -44,7 +49,7 @@ const FALLBACK_MODES: GiftModeMeta[] = [
   { slug: 'uv-dtf',       label: 'UV DTF',           description: GIFT_MODE_DESCRIPTION['uv-dtf'],       icon: null, display_order: 7, is_active: true },
 ];
 
-export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [], parentPrompts = [] }: Props) {
+export function GiftProductEditor({ product, categories, allTemplates, assignedTemplateIds, pipelines = [], modes, variants = [], parentPrompts = [], allCandidatePrompts = [] }: Props) {
   const MODE_OPTIONS = (modes && modes.length > 0 ? modes : FALLBACK_MODES);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -66,6 +71,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [modeLocked] = useState(!!product?.first_ordered_at);
   const [pipelineId, setPipelineId] = useState<string>(product?.pipeline_id ?? '');
   const [secondaryPipelineId, setSecondaryPipelineId] = useState<string>(product?.secondary_pipeline_id ?? '');
+  const [promptIds, setPromptIds] = useState<string[]>(
+    Array.isArray((product as any)?.prompt_ids) ? ((product as any).prompt_ids as string[]) : [],
+  );
   const [retentionDays, setRetentionDays] = useState<string>(String(product?.source_retention_days ?? 30));
   const [leadTimeDays, setLeadTimeDays] = useState<string>(String(product?.lead_time_days ?? 5));
   const [allowedFonts, setAllowedFonts] = useState<string[]>(product?.allowed_fonts ?? []);
@@ -197,6 +205,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       mockup_area: mockupArea,
       pipeline_id: pipelineId || null,
       secondary_pipeline_id: secondaryMode ? (secondaryPipelineId || null) : null,
+      prompt_ids: promptIds.length > 0 ? promptIds : null,
       source_retention_days: Math.max(1, parseInt(retentionDays, 10) || 30),
       lead_time_days: Math.max(1, parseInt(leadTimeDays, 10) || 5),
       allowed_fonts: allowedFonts.map((f) => f.trim()).filter(Boolean),
@@ -511,6 +520,66 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   Leave on default to use whatever pipeline is marked default at the mode level.{' '}
                   <Link href="/admin/gifts/pipelines" className="underline">Manage pipelines →</Link>
                 </span>
+
+                {allCandidatePrompts.length > 0 && (
+                  <div className="mt-4 border-t border-neutral-100 pt-3">
+                    <span className="mb-1 block text-xs font-bold text-ink">Art-style allowlist</span>
+                    <p className="mb-2 text-[11px] text-neutral-500">
+                      Tick the prompts the customer can pick on this product. Leave all unticked to
+                      offer every prompt that matches the product&apos;s mode (the default).
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {allCandidatePrompts.map((p) => {
+                        const checked = promptIds.includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex cursor-pointer items-center gap-2 rounded border-2 p-2 text-xs ${
+                              checked ? 'border-pink bg-pink/5' : 'border-neutral-200 bg-white hover:border-neutral-400'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setPromptIds((prev) =>
+                                  prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id],
+                                );
+                              }}
+                            />
+                            {p.thumbnail_url ? (
+                              <img
+                                src={p.thumbnail_url}
+                                alt=""
+                                className="h-8 w-8 flex-shrink-0 rounded border border-neutral-200 object-cover"
+                              />
+                            ) : (
+                              <span
+                                aria-hidden
+                                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded border border-neutral-200 bg-neutral-50 text-base"
+                              >
+                                ✨
+                              </span>
+                            )}
+                            <span className="flex-1 truncate">
+                              <span className="block font-bold text-ink">{p.name}</span>
+                              <span className="block text-[10px] uppercase tracking-wide text-neutral-500">{p.mode}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {promptIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPromptIds([])}
+                        className="mt-2 text-[11px] font-bold uppercase tracking-wide text-pink hover:underline"
+                      >
+                        Reset to all
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               <label className="block">
                 <span className="mb-1 block text-xs font-bold text-ink">Turnaround (Ready-by calendar)</span>

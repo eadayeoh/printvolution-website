@@ -124,6 +124,11 @@ export type GiftProduct = {
   source_retention_days?: number;
   // Migration 0043 — photo upload vs text engraving vs both.
   input_mode?: GiftInputMode;
+  /** Optional curated allowlist of gift_prompts.id values. When
+   *  non-empty, the customer's art-style picker is restricted to
+   *  these prompts only. When null or empty, fall back to the
+   *  mode + pipeline filtering in listPromptsForProduct. */
+  prompt_ids?: string[] | null;
 };
 
 export type GiftTemplateZoneBase = {

@@ -44,7 +44,24 @@ export async function listPromptsForProduct(product: {
   secondary_mode?: GiftMode | null;
   pipeline_id?: string | null;
   secondary_pipeline_id?: string | null;
+  prompt_ids?: string[] | null;
 }): Promise<GiftPrompt[]> {
+  // Per-product allowlist wins over mode/pipeline filtering. When
+  // admin curates a subset, we still hit the mode-level cache (so
+  // active-flag + ordering stays consistent) and then narrow the
+  // result to the picked IDs in the order admin saved them.
+  if (Array.isArray(product.prompt_ids) && product.prompt_ids.length > 0) {
+    const modes: GiftMode[] = [
+      product.mode,
+      ...(product.secondary_mode ? [product.secondary_mode] : []),
+    ];
+    const all = await listPromptsForModes(modes);
+    const allowed = new Set(product.prompt_ids);
+    const byId = new Map(all.filter((p) => allowed.has(p.id)).map((p) => [p.id, p] as const));
+    // Preserve admin's ordering.
+    return product.prompt_ids.map((id) => byId.get(id)).filter((p): p is GiftPrompt => Boolean(p));
+  }
+
   const modes: GiftMode[] = [
     product.mode,
     ...(product.secondary_mode ? [product.secondary_mode] : []),

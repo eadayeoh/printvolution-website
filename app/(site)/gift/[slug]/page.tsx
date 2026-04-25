@@ -29,6 +29,7 @@ export default async function GiftPage({ params }: { params: { slug: string } })
       secondary_mode: product.secondary_mode,
       pipeline_id: product.pipeline_id,
       secondary_pipeline_id: product.secondary_pipeline_id,
+      prompt_ids: (product as any).prompt_ids ?? null,
     }),
     listActiveVariants(product.id),
     listActiveGiftProducts(),

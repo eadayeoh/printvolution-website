@@ -4,7 +4,8 @@ import { getGiftProductByIdAdmin, listAllTemplatesAdmin, listCategoriesForGifts 
 import { listActivePipelines } from '@/lib/gifts/pipelines';
 import { listActiveModes } from '@/lib/gifts/modes';
 import { listAllVariantsAdmin } from '@/lib/gifts/variants';
-import { listPromptsForProduct } from '@/lib/gifts/prompts';
+import { listPromptsForProduct, listPromptsForModes } from '@/lib/gifts/prompts';
+import type { GiftMode } from '@/lib/gifts/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,17 @@ export default async function EditGiftProductPage({ params }: { params: { id: st
         secondary_mode: product.secondary_mode,
         pipeline_id: product.pipeline_id,
         secondary_pipeline_id: product.secondary_pipeline_id,
+        prompt_ids: (product as any).prompt_ids ?? null,
       })).map((p) => ({ id: p.id, name: p.name, mode: p.mode }));
+  // Every active prompt that COULD apply to this product (matches the
+  // primary OR secondary mode). Drives the per-product allowlist
+  // picker — admin sees the full set, regardless of what's currently
+  // selected.
+  const allCandidatePrompts = (product.mode === 'photo-resize')
+    ? []
+    : (await listPromptsForModes(
+        [product.mode, ...(product.secondary_mode ? [product.secondary_mode as GiftMode] : [])],
+      )).map((p) => ({ id: p.id, name: p.name, mode: p.mode, thumbnail_url: p.thumbnail_url ?? null }));
   return (
     <GiftProductEditor
       product={product}
@@ -39,6 +50,7 @@ export default async function EditGiftProductPage({ params }: { params: { id: st
       modes={modes}
       variants={variants}
       parentPrompts={parentPrompts}
+      allCandidatePrompts={allCandidatePrompts}
     />
   );
 }
