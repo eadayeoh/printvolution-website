@@ -429,10 +429,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind)
       : 0;
     const figurineDelta = selectedFigurine?.price_delta_cents ?? 0;
+    // Surfaces upcharge: every surface the customer actually filled in
+    // (text typed or photo uploaded) adds its admin-set delta. Empty
+    // surfaces don't bill — matches the admin's intent that the
+    // upcharge is for *engraving / printing* the extra face, not for
+    // its mere existence.
+    const surfacesDelta = (selectedVariant?.surfaces ?? []).reduce((sum, s) => {
+      const fill = surfaceFills[s.id];
+      const filled = Boolean(fill?.text?.trim() || fill?.photoFile || fill?.photoThumb);
+      return filled ? sum + (s.price_delta_cents ?? 0) : sum;
+    }, 0);
     const unit = (selectedVariant?.base_price_cents || product.base_price_cents)
       + (selectedSize?.price_delta_cents ?? 0)
       + shapeDelta
-      + figurineDelta;
+      + figurineDelta
+      + surfacesDelta;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
@@ -2019,6 +2030,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       + (selectedSize?.price_delta_cents ?? 0)
                       + (shapePickerActive ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind) : 0)
                       + (selectedFigurine?.price_delta_cents ?? 0)
+                      + (selectedVariant?.surfaces ?? []).reduce((sum, s) => {
+                          const fill = surfaceFills[s.id];
+                          const filled = Boolean(fill?.text?.trim() || fill?.photoFile || fill?.photoThumb);
+                          return filled ? sum + (s.price_delta_cents ?? 0) : sum;
+                        }, 0)
                     ) * qty)}
                   </div>
                 </div>

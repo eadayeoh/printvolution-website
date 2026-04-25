@@ -203,6 +203,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         mockup_area: s.mockup_area, max_chars: s.max_chars ?? null,
         font_family: s.font_family ?? null, font_size_pct: s.font_size_pct ?? null,
         color: s.color ?? null, mode: s.mode ?? null,
+        price_delta_cents: s.price_delta_cents ?? 0,
       })),
       photo_pan_mode: d.photo_pan_mode,
       mockup_by_shape: (() => {
@@ -485,7 +486,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         <div className="space-y-2">
                           {d.surfaces.map((s, sIdx) => (
                             <div key={sIdx} className="rounded border border-neutral-200 bg-white p-2">
-                              <div className="grid grid-cols-[70px_1fr_90px_70px_auto] gap-2">
+                              <div className="grid grid-cols-[70px_1fr_90px_70px_90px_auto] gap-2">
                                 <label className="block">
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Id</span>
                                   <input
@@ -524,6 +525,21 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     onChange={(e) => updateSurface(i, sIdx, { max_chars: e.target.value ? Number(e.target.value) : null })}
                                     className={inputCls}
                                     placeholder="15"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Price delta (S$)</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={((s.price_delta_cents ?? 0) / 100).toFixed(2)}
+                                    onChange={(e) => {
+                                      const cents = Math.max(0, Math.round((parseFloat(e.target.value) || 0) * 100));
+                                      updateSurface(i, sIdx, { price_delta_cents: cents });
+                                    }}
+                                    className={inputCls}
+                                    placeholder="0.00"
                                   />
                                 </label>
                                 <button

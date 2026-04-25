@@ -618,6 +618,7 @@ const VariantSchema = z.object({
           .enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'])
           .nullable()
           .optional(),
+        price_delta_cents: z.number().int().nonnegative().default(0),
       }),
     )
     .default([]),

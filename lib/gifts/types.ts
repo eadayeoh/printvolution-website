@@ -307,6 +307,12 @@ export type GiftVariantSurface = {
    *  variants like "Laser-engraved figurine" vs "UV-printed figurine"
    *  under one parent. Null → inherit the parent's mode. */
   mode?: GiftMode | null;
+  /** Per-surface upcharge in cents. Added to the unit price for every
+   *  surface the customer fills (text typed or photo uploaded), on top
+   *  of the variant's base_price. Missing/0 → no surcharge. Stored as
+   *  cents to match base_price_cents and the rest of the pricing
+   *  surface; admin UI shows it as S$. */
+  price_delta_cents?: number;
 };
 
 export type GiftProductVariant = {

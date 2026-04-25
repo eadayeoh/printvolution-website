@@ -101,6 +101,11 @@ export function GiftVariantSurfaces({ surfaces, fills, onChange, activeSurfaceId
                 <span style={{ color: 'var(--pv-muted)', fontWeight: 500, marginLeft: 8 }}>
                   ({s.accepts})
                 </span>
+                {(s.price_delta_cents ?? 0) > 0 && (
+                  <span style={{ color: 'var(--pv-magenta)', fontWeight: 700, marginLeft: 8 }}>
+                    +S${((s.price_delta_cents ?? 0) / 100).toFixed(2)}
+                  </span>
+                )}
               </div>
               {acceptsText && (
                 <input
