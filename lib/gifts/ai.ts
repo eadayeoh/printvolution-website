@@ -91,6 +91,18 @@ async function runReplicateOnce(opts: ReplicateInput): Promise<Buffer> {
   if (opts.prompt) input.prompt = opts.prompt;
   if (opts.negativePrompt) input.negative_prompt = opts.negativePrompt;
 
+  // OpenAI-hosted models on Replicate (gpt-image-1) are BYO-key:
+  // Replicate forwards the request and bills the caller's OpenAI
+  // account, so the key has to be passed in the input. Read from
+  // env so it never lands in the gift_pipelines.default_params row.
+  if (opts.model.startsWith('openai/') && !input.openai_api_key) {
+    const oaiKey = process.env.OPENAI_API_KEY ?? process.env.OpenAI ?? process.env.openai;
+    if (!oaiKey) {
+      throw new Error('OpenAI model needs OPENAI_API_KEY in env (Vercel → Settings → Environment Variables).');
+    }
+    input.openai_api_key = oaiKey;
+  }
+
   // Resolve the latest version if not pinned
   let version = opts.version;
   if (!version) {
