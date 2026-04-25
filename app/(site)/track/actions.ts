@@ -16,7 +16,6 @@ export type TrackedOrder = {
   delivery_method: string;
   total_cents: number;
   customer_name: string;
-  email: string;
   gift_wrap: boolean;
   items: Array<{ qty: number; product_name: string }>;
   gifts: Array<{ qty: number; product_name: string; production_status: string }>;
@@ -53,7 +52,7 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
     .from('orders')
     .select(`
       order_number, status, created_at, delivery_method, total_cents,
-      customer_name, email, gift_wrap,
+      customer_name, gift_wrap,
       order_items(qty, product_name),
       gift_order_items(qty, product_name_snapshot, production_status, gift_product:gift_products(name))
     `)
@@ -74,7 +73,6 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
       delivery_method: o.delivery_method,
       total_cents: o.total_cents,
       customer_name: o.customer_name,
-      email: o.email,
       gift_wrap: !!o.gift_wrap,
       items: (o.order_items ?? []).map((i: any) => ({ qty: i.qty, product_name: i.product_name })),
       gifts: (o.gift_order_items ?? []).map((g: any) => ({

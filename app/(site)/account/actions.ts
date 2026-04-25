@@ -259,14 +259,18 @@ export async function reorderPastOrder(orderId: string): Promise<
   const rl = await checkRateLimit(`reorder:${user.id}`, { max: 20, windowSeconds: 600 });
   if (!rl.allowed) return { ok: false, error: `Too many tries — wait ${rl.retryAfterSeconds}s.` };
 
+  // Single message for missing-order vs not-yours so an attacker can't
+  // probe order id existence by comparing error strings.
+  const NOT_FOUND = "We couldn't find that order on your account.";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+    return { ok: false, error: NOT_FOUND };
+  }
+
   const { data: order } = await sb
     .from('orders')
     .select('id, email')
     .eq('id', orderId)
     .maybeSingle();
-  // Single message for missing-order vs not-yours so an attacker can't
-  // probe order id existence by comparing error strings.
-  const NOT_FOUND = "We couldn't find that order on your account.";
   if (!order) return { ok: false, error: NOT_FOUND };
   if ((order.email ?? '').toLowerCase() !== user.email.toLowerCase()) {
     return { ok: false, error: NOT_FOUND };

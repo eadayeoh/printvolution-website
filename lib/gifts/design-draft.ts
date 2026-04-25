@@ -72,10 +72,15 @@ function pointOrNull(v: unknown): { x: number; y: number } | null {
   const x = numOrNull(r.x), y = numOrNull(r.y);
   return x !== null && y !== null ? { x, y } : null;
 }
+// Cap entries per record so a malicious localStorage payload with
+// 100k zone keys can't blow up React state on next mount. Real
+// templates top out at ~10 zones; 64 is generous.
+const MAX_ZONE_ENTRIES = 64;
 function recordOf<T>(v: unknown, validator: (val: unknown) => T | null): Record<string, T> {
   if (!v || typeof v !== 'object') return {};
   const out: Record<string, T> = {};
   for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (Object.keys(out).length >= MAX_ZONE_ENTRIES) break;
     if (!ZONE_ID_RE.test(k)) continue;
     const validated = validator(val);
     if (validated !== null) out[k] = validated;
