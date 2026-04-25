@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
-import { submitOrder } from '@/app/(site)/checkout/actions';
+import { submitOrder, validateCouponForCheckout } from '@/app/(site)/checkout/actions';
 
 const FormSchema = z.object({
   customer_name: z.string().min(2, 'Name too short'),
@@ -40,7 +40,44 @@ export function CheckoutForm() {
 
   const deliveryMethod = watch('delivery_method');
   const deliveryCost = deliveryMethod === 'delivery' ? 800 : 0;
-  const total = subtotal + deliveryCost;
+
+  // Coupon state — applied is only set after the server validates.
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<{ code: string; discountCents: number } | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+  const [couponPending, startCouponTransition] = useTransition();
+
+  // Re-validate when subtotal changes (cart edits) so a once-valid
+  // coupon doesn't silently outlive a min_spend rule.
+  useEffect(() => {
+    if (!coupon) return;
+    let cancelled = false;
+    validateCouponForCheckout(coupon.code, subtotal).then((r) => {
+      if (cancelled) return;
+      if (r.ok) setCoupon({ code: r.code, discountCents: r.discountCents });
+      else { setCoupon(null); setCouponErr(r.error); }
+    });
+    return () => { cancelled = true; };
+  }, [subtotal, coupon?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const couponDiscount = coupon?.discountCents ?? 0;
+  const total = Math.max(0, subtotal - couponDiscount + deliveryCost);
+
+  function applyCoupon() {
+    setCouponErr(null);
+    if (!couponInput.trim()) return;
+    startCouponTransition(async () => {
+      const r = await validateCouponForCheckout(couponInput, subtotal);
+      if (r.ok) {
+        setCoupon({ code: r.code, discountCents: r.discountCents });
+        setCouponInput(r.code);
+        setCouponErr(null);
+      } else {
+        setCoupon(null);
+        setCouponErr(r.error);
+      }
+    });
+  }
 
   function onSubmit(values: FormValues) {
     if (items.length === 0) {
@@ -51,6 +88,7 @@ export function CheckoutForm() {
     startTransition(async () => {
       const result = await submitOrder({
         ...values,
+        coupon_code: coupon?.code ?? null,
         items: items.map((i) => ({
           product_slug: i.product_slug,
           product_name: i.product_name,
@@ -207,10 +245,49 @@ export function CheckoutForm() {
               <span>Subtotal</span>
               <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{formatSGD(subtotal)}</span>
             </div>
+            {coupon && (
+              <div className="co-sum-row" style={{ color: '#0f7d44' }}>
+                <span>Promo ({coupon.code})</span>
+                <span style={{ fontWeight: 700 }}>-{formatSGD(coupon.discountCents)}</span>
+              </div>
+            )}
             <div className="co-sum-row">
               <span>Delivery</span>
               <span style={{ fontWeight: 700, color: '#0a0a0a' }}>{deliveryCost === 0 ? 'Free' : formatSGD(deliveryCost)}</span>
             </div>
+          </div>
+
+          <div style={{ padding: '8px 0' }}>
+            {coupon ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#065f46', flex: 1 }}>{coupon.code} applied</span>
+                <button
+                  type="button"
+                  onClick={() => { setCoupon(null); setCouponInput(''); setCouponErr(null); }}
+                  style={{ background: 'transparent', border: 'none', color: '#065f46', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >Remove</button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponErr(null); }}
+                    placeholder="Promo code"
+                    className={inputCls}
+                    style={{ flex: 1, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={couponPending || !couponInput.trim()}
+                    style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#0a0a0a', background: '#fff', border: '2px solid #0a0a0a', borderRadius: 6, cursor: couponInput.trim() ? 'pointer' : 'not-allowed', opacity: couponPending ? 0.5 : 1 }}
+                  >{couponPending ? '…' : 'Apply'}</button>
+                </div>
+                {couponErr && <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{couponErr}</div>}
+              </div>
+            )}
           </div>
 
           <div className="co-sum-divider" />
@@ -219,7 +296,7 @@ export function CheckoutForm() {
             <span className="co-sum-total-lbl">Total</span>
             <span className="co-sum-total-val">{formatSGD(total)}</span>
           </div>
-          <div className="co-earn-row">+{Math.floor(subtotal / 100)} points on this order</div>
+          <div className="co-earn-row">+{Math.floor(Math.max(0, subtotal - couponDiscount) / 100)} points on this order</div>
 
           <button
             type="submit"

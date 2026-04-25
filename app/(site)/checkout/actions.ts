@@ -6,6 +6,26 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { runProductionPipeline, runSurfaceProductionPipeline } from '@/lib/gifts/pipeline';
 import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
+import { evaluateCouponForOrder } from '@/lib/coupons';
+
+/**
+ * Public coupon-validation endpoint used by the checkout form
+ * before submit, so customers see an error inline instead of
+ * discovering it on order placement. Rate-limited to deter
+ * brute-forcing of coupon codes.
+ */
+export async function validateCouponForCheckout(
+  code: string,
+  subtotalCents: number,
+): Promise<{ ok: true; code: string; discountCents: number } | { ok: false; error: string }> {
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`coupon:${ip}`, { max: 10, windowSeconds: 600 });
+  if (!rl.allowed) return { ok: false, error: `Too many tries. Try again in ${rl.retryAfterSeconds}s.` };
+
+  const r = await evaluateCouponForOrder(code, subtotalCents);
+  if (!r.ok) return r;
+  return { ok: true, code: r.coupon.code, discountCents: r.discountCents };
+}
 
 /**
  * Fire off the production pipeline for each gift line. Runs
@@ -207,6 +227,7 @@ const OrderSchema = z.object({
   delivery_method: z.enum(['pickup', 'delivery']),
   delivery_address: z.string().max(500).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
+  coupon_code: z.string().max(60).optional().nullable(),
   items: z.array(
     z.object({
       product_slug: z.string(),
@@ -265,8 +286,23 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // Calculate totals
   const subtotal = data.items.reduce((s, i) => s + i.line_total_cents, 0);
   const delivery = data.delivery_method === 'delivery' ? 800 : 0; // S$8.00 flat
-  const total = subtotal + delivery;
-  const pointsEarned = Math.floor(subtotal / 100); // 1 point per S$1
+
+  // Server-side coupon re-validation. Trust nothing from the client —
+  // re-evaluate against the freshly-computed subtotal.
+  let couponCode: string | null = null;
+  let couponDiscount = 0;
+  let couponId: string | null = null;
+  if (data.coupon_code && data.coupon_code.trim()) {
+    const r = await evaluateCouponForOrder(data.coupon_code, subtotal);
+    if (!r.ok) return { ok: false, error: `Promo code: ${r.error}` };
+    couponCode = r.coupon.code;
+    couponDiscount = r.discountCents;
+    couponId = r.coupon.id;
+  }
+
+  const total = Math.max(0, subtotal - couponDiscount + delivery);
+  // Points only earn on what the customer actually paid (post-discount).
+  const pointsEarned = Math.floor(Math.max(0, subtotal - couponDiscount) / 100); // 1 point per S$1
 
   // Look up both product catalogs by slug to figure out which items are
   // PRINT and which are GIFT. Each item is in exactly one of the two
@@ -383,6 +419,8 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       subtotal_cents: subtotal,
       delivery_cents: delivery,
       total_cents: total,
+      coupon_code: couponCode,
+      coupon_discount_cents: couponDiscount,
       points_earned: pointsEarned,
       status: 'pending',
     })
@@ -390,6 +428,24 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     .single();
 
   if (oErr || !order) return { ok: false, error: 'Order create failed: ' + oErr?.message };
+
+  // Record the redemption + bump the coupon's uses_count. Best-effort:
+  // a failure here doesn't roll back the order — the customer already
+  // got their discount, we just lose accounting on the coupon. Logged
+  // for admin reconciliation. Race-y under high concurrency (no
+  // increment-RPC); the admin "max_uses" is a soft cap, fine for now.
+  if (couponId && couponDiscount > 0) {
+    const { error: redErr } = await sb.from('coupon_redemptions').insert({
+      coupon_id: couponId,
+      order_id: order.id,
+      discount_cents: couponDiscount,
+    });
+    if (redErr) console.error('[coupon] redemption insert', redErr.message);
+    const { data: cur } = await sb.from('coupons').select('uses_count').eq('id', couponId).single();
+    if (cur) {
+      await sb.from('coupons').update({ uses_count: (cur.uses_count ?? 0) + 1 }).eq('id', couponId);
+    }
+  }
 
   // Insert PRINT line items into order_items (existing flow)
   if (printItems.length > 0) {
