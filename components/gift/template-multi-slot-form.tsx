@@ -13,7 +13,10 @@ import type {
   GiftTemplateZone,
   GiftTemplateImageZone,
   GiftTemplateTextZone,
+  GiftTemplateCalendarZone,
 } from '@/lib/gifts/types';
+import type { CalendarFill } from '@/lib/gifts/pipeline/calendar-svg';
+import { CalendarZoneInput } from './calendar-zone-input';
 
 type Props = {
   template: GiftTemplate;
@@ -21,13 +24,15 @@ type Props = {
   onGeneratePreview: (payload: {
     files: Record<string, File>;
     texts: Record<string, string>;
+    calendars: Record<string, CalendarFill>;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
-   *  the parent can render a live layout preview (dataURLs + text) before
-   *  the server composite runs. */
+   *  the parent can render a live layout preview (dataURLs + text +
+   *  calendar fills) before the server composite runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
+    calendars: Record<string, CalendarFill>;
   }) => void;
   onReset?: () => void;
   currentPreviewUrl?: string | null;
@@ -39,6 +44,9 @@ type Props = {
 
 function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
   return (z as GiftTemplateTextZone).type === 'text';
+}
+function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
+  return (z as GiftTemplateCalendarZone).type === 'calendar';
 }
 
 export function TemplateMultiSlotForm({
@@ -52,7 +60,7 @@ export function TemplateMultiSlotForm({
 }: Props) {
   const zones = template.zones_json ?? [];
   const imageZones = useMemo(
-    () => zones.filter((z): z is GiftTemplateImageZone => !isTextZone(z)),
+    () => zones.filter((z): z is GiftTemplateImageZone => !isTextZone(z) && !isCalendarZone(z)),
     [zones],
   );
   const editableTextZones = useMemo(
@@ -63,9 +71,14 @@ export function TemplateMultiSlotForm({
       ),
     [zones],
   );
+  const calendarZones = useMemo(
+    () => zones.filter((z): z is GiftTemplateCalendarZone => isCalendarZone(z)),
+    [zones],
+  );
 
   const [files, setFiles] = useState<Record<string, File>>({});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [calendars, setCalendars] = useState<Record<string, CalendarFill>>({});
   // One hidden <input type="file"> per image zone. We store refs so the
   // "+ Label" empty-state div can open the picker programmatically —
   // clicking a filled slot is a no-op (only the X button removes).
@@ -80,8 +93,8 @@ export function TemplateMultiSlotForm({
   const [texts, setTexts] = useState<Record<string, string>>(initialTexts);
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts });
-  }, [thumbs, texts, onStateChange]);
+    onStateChange?.({ thumbs, texts, calendars });
+  }, [thumbs, texts, calendars, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -93,6 +106,8 @@ export function TemplateMultiSlotForm({
   filesRef.current = files;
   const textsRef = useRef(texts);
   textsRef.current = texts;
+  const calendarsRef = useRef(calendars);
+  calendarsRef.current = calendars;
   const pendingRegenRef = useRef(false);
   const prevWorkingRef = useRef(isWorking);
 
@@ -107,10 +122,10 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
     }, 800);
     return () => clearTimeout(t);
-  }, [files, texts, autoGenerate, isWorking]);
+  }, [files, texts, calendars, autoGenerate, isWorking]);
 
   // When a generate finishes and changes arrived during it, fire once
   // more immediately so the server composite is always up to date.
@@ -121,7 +136,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -156,7 +171,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts });
+    onGeneratePreview({ files, texts, calendars });
   }
 
   return (
@@ -415,6 +430,56 @@ export function TemplateMultiSlotForm({
                   }}
                 />
               </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Calendar zones — month / year dropdowns + clickable day grid
+          per zone. Each picker is independent so a template can in
+          principle host two calendars (separate months). v1 designs
+          use only one. */}
+      {calendarZones.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontFamily: 'var(--pv-f-mono)',
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--pv-ink)',
+              marginBottom: 8,
+            }}
+          >
+            Calendar
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {calendarZones.map((z) => (
+              <div key={z.id}>
+                {z.label && (
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 10,
+                      color: 'var(--pv-muted)',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {z.label}
+                  </div>
+                )}
+                <CalendarZoneInput
+                  zone={z}
+                  fill={calendars[z.id]}
+                  onChange={(next) =>
+                    setCalendars((prev) => ({ ...prev, [z.id]: next }))
+                  }
+                />
+              </div>
             ))}
           </div>
         </div>

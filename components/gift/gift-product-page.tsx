@@ -156,6 +156,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // composite runs).
   const [templateThumbs, setTemplateThumbs] = useState<Record<string, string>>({});
   const [templateTexts, setTemplateTexts] = useState<Record<string, string>>({});
+  // Customer-picked calendar zone fills, keyed by zone id. Both the
+  // live preview and the server composite read from this.
+  const [templateCalendars, setTemplateCalendars] = useState<Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>>({});
   // Colour swatch picked inside the currently-selected variant tile (if
   // that variant has colour_swatches). Recorded on the cart line so the
   // admin sees "Navy" on the order, not just "T-shirt".
@@ -261,6 +264,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   async function doMultiSlotUpload(payload: {
     files: Record<string, File>;
     texts: Record<string, string>;
+    calendars: Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>;
   }) {
     setErr(null);
     setUploading(true);
@@ -288,6 +292,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     }
     for (const [zoneId, text] of Object.entries(payload.texts)) {
       fd.append(`text_${zoneId}`, text);
+    }
+    // Calendar fills travel as JSON-encoded `calendar_<zone_id>`
+    // entries. Server pipeline picks them up in Step 5 — until then
+    // they're harmless extra form fields.
+    for (const [zoneId, fill] of Object.entries(payload.calendars)) {
+      fd.append(`calendar_${zoneId}`, JSON.stringify(fill));
     }
     try {
       // Client-side timeout safety. If the server pipeline hangs (e.g.
@@ -926,6 +936,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       template={activeTemplate}
                       thumbs={templateThumbs}
                       texts={templateTexts}
+                      calendars={templateCalendars}
                       widthMm={selectedVariant?.width_mm || product.width_mm}
                       heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
@@ -1518,9 +1529,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
-                    onStateChange={({ thumbs, texts }) => {
+                    onStateChange={({ thumbs, texts, calendars }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
+                      setTemplateCalendars(calendars);
                     }}
                   />
                   {err && (
