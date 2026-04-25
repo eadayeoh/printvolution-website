@@ -3,19 +3,21 @@ import type { GiftPipeline } from '@/lib/gifts/types';
 const KINDS = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'] as const;
 
 const PROVIDERS = [
-  { value: 'replicate',  label: 'Replicate (AI model)' },
+  { value: 'replicate',  label: 'Replicate (AI model — third-party proxy)' },
+  { value: 'openai',     label: 'OpenAI direct (gpt-image-1, no Replicate hop)' },
   { value: 'passthrough', label: 'Pass-through (no AI — just crop + 300 DPI)' },
   { value: 'local_edge',  label: 'Local edge detection (free, deterministic)' },
   { value: 'local_bw',    label: 'Local greyscale (free, deterministic)' },
 ] as const;
 
 const KNOWN_MODELS = [
-  { value: 'google/nano-banana',                  label: 'Google · Nano Banana (gemini-2.5-flash-image)' },
-  { value: 'openai/gpt-image-1',                  label: 'OpenAI · GPT Image 1' },
-  { value: 'black-forest-labs/flux-canny-pro',    label: 'Flux · Canny Pro (edge-preserving)' },
-  { value: 'black-forest-labs/flux-dev',          label: 'Flux · Dev (general img2img)' },
-  { value: 'fofr/face-to-many',                   label: 'fofr · Face-to-many (cartoon / 3D / emoji)' },
-  { value: '__custom__',                          label: 'Other — type a Replicate model slug' },
+  { value: 'google/nano-banana',                  label: 'Google · Nano Banana (Replicate · gemini-2.5-flash-image)' },
+  { value: 'gpt-image-1',                         label: 'OpenAI · gpt-image-1 (use with OpenAI direct provider)' },
+  { value: 'openai/gpt-image-1',                  label: 'OpenAI · gpt-image-1 (via Replicate, BYO OpenAI key)' },
+  { value: 'black-forest-labs/flux-canny-pro',    label: 'Flux · Canny Pro (Replicate · edge-preserving)' },
+  { value: 'black-forest-labs/flux-dev',          label: 'Flux · Dev (Replicate · general img2img)' },
+  { value: 'fofr/face-to-many',                   label: 'fofr · Face-to-many (Replicate · cartoon / 3D / emoji)' },
+  { value: '__custom__',                          label: 'Other — type a model slug' },
 ] as const;
 
 export function PipelineForm({

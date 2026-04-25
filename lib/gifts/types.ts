@@ -307,7 +307,7 @@ export function giftUnitPrice(
 
 export type GiftPipelineKind = GiftMode;
 
-export type GiftPipelineProvider = 'passthrough' | 'replicate';
+export type GiftPipelineProvider = 'passthrough' | 'replicate' | 'openai';
 
 export type GiftPipeline = {
   id: string;

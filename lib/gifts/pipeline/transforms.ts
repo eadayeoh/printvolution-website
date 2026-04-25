@@ -71,10 +71,33 @@ export async function runAiTransform(
   opts?: { prompt?: string | null; negativePrompt?: string | null },
 ): Promise<Buffer> {
   const sharp = await loadSharp();
-  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | 'local_edge' | 'local_bw' | undefined;
+  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | 'openai' | 'local_edge' | 'local_bw' | undefined;
 
   if (provider === 'passthrough') {
     return renderPhotoResize(input, product, null, preview);
+  }
+
+  if (provider === 'openai') {
+    const model = (pipeline as any)?.ai_model_slug as string | undefined;
+    if (!model) throw new Error(`Pipeline ${pipeline?.slug ?? '?'} is provider=openai but has no ai_model_slug (e.g. gpt-image-1)`);
+    const { runOpenAiImageEdit } = await import('../ai');
+    const defaults = ((pipeline as any)?.default_params as Record<string, unknown> | null) ?? {};
+    const bytes = await runOpenAiImageEdit({
+      model,
+      imageBytes: input,
+      imageMime: 'image/png',
+      prompt: opts?.prompt ?? '',
+      defaults,
+    });
+    const totalW = product.width_mm + product.bleed_mm * 2;
+    const totalH = product.height_mm + product.bleed_mm * 2;
+    const dpi = preview ? 150 : 300;
+    const targetW = Math.round((totalW / 25.4) * dpi);
+    const targetH = Math.round((totalH / 25.4) * dpi);
+    return sharp(bytes).rotate()
+      .resize({ width: targetW, height: targetH, fit: 'cover' })
+      .png()
+      .toBuffer();
   }
 
   if (provider === 'local_edge' || provider === 'local_bw') {
