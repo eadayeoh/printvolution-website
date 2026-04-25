@@ -505,6 +505,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       shapeKind,
       imagesByZoneId: Object.keys(zoneFilesBytes).length > 0 ? zoneFilesBytes : undefined,
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
+      // Only run the AI transform path when the customer actually
+      // picked a style. Template-driven products without a chosen
+      // prompt should composite the photo as-is — no Replicate, no
+      // hang risk.
+      applyStyle: prompt !== null,
     });
   } catch (e: any) {
     return { ok: false, error: `preview failed: ${e.message}` };

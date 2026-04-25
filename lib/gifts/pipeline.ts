@@ -98,6 +98,12 @@ export type PreviewInput = {
    *  'template' falls through to the composite path (templateId must be
    *  set), 'rectangle' passes through the mode-default pipeline. */
   shapeKind?: 'cutout' | 'rectangle' | 'template' | null;
+  /** True when the customer picked a style prompt (or one is implied
+   *  by the product's mode). When false, the template composite path
+   *  treats every image zone as a pass-through (resize only) — no AI
+   *  call, no Replicate, no hang risk. Default true so existing AI
+   *  flows aren't affected. */
+  applyStyle?: boolean;
 };
 
 export type PreviewOutput = {
@@ -132,10 +138,14 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       // Preview: run each zone's transform so the customer sees the
       // real output on every zone (line-art in laser zones, saturated
       // colour in UV zones, etc.) — not just the raw uploaded photo.
-      transformZone: async (bytes, mode) => {
-        const p = await resolvePipelineForMode(product, mode);
-        return transformBytesForMode(bytes, mode, product, p, /*preview=*/true);
-      },
+      // When applyStyle is false (no prompt was picked), pass-through
+      // every zone — the template's job is composition, not styling.
+      transformZone: input.applyStyle === false
+        ? undefined
+        : async (bytes, mode) => {
+            const p = await resolvePipelineForMode(product, mode);
+            return transformBytesForMode(bytes, mode, product, p, /*preview=*/true);
+          },
     });
     let buf = out.buffer;
     buf = await applyWatermark(buf);

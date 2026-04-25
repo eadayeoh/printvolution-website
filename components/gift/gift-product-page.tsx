@@ -290,7 +290,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       fd.append(`text_${zoneId}`, text);
     }
     try {
-      const r = await uploadAndPreviewGift(fd);
+      // Client-side timeout safety. If the server pipeline hangs (e.g.
+      // Replicate doesn't return), the customer would otherwise see a
+      // forever-spinning loader. 60 s is generous for a 150-DPI
+      // template composite + watermark; anything past that is a real
+      // server-side failure worth surfacing.
+      const r = await Promise.race([
+        uploadAndPreviewGift(fd),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Preview took too long. Please try again or pick a smaller photo.')), 60_000),
+        ),
+      ]);
       if (!r || typeof r !== 'object') {
         setErr('Server returned no response. Please try again.');
       } else if (r.ok === true) {
@@ -846,7 +856,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     >
                       {restyling
                         ? 'Regenerating with new style…'
-                        : product.mode === 'photo-resize' ? 'Cropping and adding bleed…' : 'Stylising your photo…'}
+                        : activeTemplate
+                          ? 'Building preview…'
+                          : product.mode === 'photo-resize'
+                            ? 'Cropping and adding bleed…'
+                            : 'Stylising your photo…'}
                     </div>
                   </div>
                 )}
@@ -903,7 +917,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     />
                   )
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
-                  <div style={{ width: '100%', maxWidth: 420 }}>
+                  // Fill the preview shell width — the template canvas
+                  // already aspect-locks to widthMm/heightMm, so the
+                  // shell shrinks vertically to fit and there's no
+                  // empty padding around a square magnet.
+                  <div style={{ width: '100%' }}>
                     <GiftTemplateLayoutPreview
                       template={activeTemplate}
                       thumbs={templateThumbs}
