@@ -1068,8 +1068,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
             {/* Cross-style generation history — every earlier hit for this
                 product (both Line Art and Realistic, across photo swaps).
                 Click restores the preview AND flips the style picker to
-                match so the configurator stays coherent. */}
-            {(() => {
+                match so the configurator stays coherent.
+                Skipped on surfaces-driven products: each surface owns
+                its own photo via surfaceFills, so a single-preview
+                restore would land the photo on only one surface and
+                leave the others stranded. */}
+            {!hasSurfaces && (() => {
               const allHits = [...history].sort((a, b) => b.ts - a.ts);
               if (allHits.length === 0) return null;
               return (
