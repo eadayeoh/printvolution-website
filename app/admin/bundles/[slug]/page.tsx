@@ -55,7 +55,7 @@ export default async function EditBundlePage({ params }: { params: { slug: strin
   const [giftsRes, variantsRes, promptsRes, tmplsRes, pipesRes] = await Promise.all([
     supabase.from('gift_products').select('id, slug, name, mode').eq('is_active', true).order('name'),
     supabase.from('gift_product_variants').select('id, gift_product_id, name, is_active').order('display_order'),
-    supabase.from('gift_prompts').select('id, mode, style, pipeline_id, name').eq('is_active', true).order('display_order'),
+    supabase.from('gift_prompts').select('id, mode, pipeline_id, name').eq('is_active', true).order('display_order'),
     supabase.from('gift_templates').select('id, name, is_active').eq('is_active', true).order('name'),
     supabase.from('gift_pipelines').select('id, slug, name, kind').eq('is_active', true).order('name'),
   ]);
@@ -66,7 +66,7 @@ export default async function EditBundlePage({ params }: { params: { slug: strin
     if (!v.is_active) continue;
     (variantsByProduct[v.gift_product_id] ??= []).push({ id: v.id, gift_product_id: v.gift_product_id, name: v.name });
   }
-  const promptsByMode: Record<string, Array<{ id: string; mode: string; style: string; pipeline_id: string | null; name: string }>> = {};
+  const promptsByMode: Record<string, Array<{ id: string; mode: string; pipeline_id: string | null; name: string }>> = {};
   for (const p of (promptsRes.data ?? []) as any[]) {
     (promptsByMode[p.mode] ??= []).push(p);
   }

@@ -8,7 +8,7 @@ import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt, testGiftPrompt } 
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftPrompt } from '@/lib/gifts/prompts';
-import type { GiftMode, GiftPipeline, GiftStyle } from '@/lib/gifts/types';
+import type { GiftMode, GiftPipeline } from '@/lib/gifts/types';
 
 export function GiftPromptEditor({
   prompt,
@@ -27,7 +27,6 @@ export function GiftPromptEditor({
   const [mode, setMode] = useState<'laser' | 'uv' | 'embroidery'>(
     (prompt?.mode as any) ?? (defaultMode === 'photo-resize' ? 'uv' : defaultMode) ?? 'uv'
   );
-  const [style, setStyle] = useState<GiftStyle>((prompt?.style as GiftStyle) ?? 'line-art');
   const [pipelineId, setPipelineId] = useState<string>(prompt?.pipeline_id ?? '');
   const [name, setName] = useState(prompt?.name ?? '');
   const [description, setDescription] = useState(prompt?.description ?? '');
@@ -68,7 +67,6 @@ export function GiftPromptEditor({
     if (!name.trim()) { setErr('Name required'); return; }
     const payload: any = {
       mode,
-      style,
       pipeline_id: pipelineId || null,
       name: name.trim(),
       description: description.trim() || null,
@@ -137,32 +135,19 @@ export function GiftPromptEditor({
               {prompt && <div className="mt-1 text-[10px] text-neutral-500">Mode is fixed after creation.</div>}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-bold text-ink">Style</span>
-                <select
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value as GiftStyle)}
-                  className={inputCls}
-                >
-                  <option value="line-art">Line Art</option>
-                  <option value="realistic">Realistic</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-bold text-ink">Pipeline override</span>
-                <select
-                  value={pipelineId}
-                  onChange={(e) => setPipelineId(e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="">— Mode default ({mode}) —</option>
-                  {pipelines.filter((p) => p.kind === mode).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-ink">Pipeline override</span>
+              <select
+                value={pipelineId}
+                onChange={(e) => setPipelineId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">— Mode default ({mode}) —</option>
+                {pipelines.filter((p) => p.kind === mode).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
 
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Prompt name (shown to customers)</span>

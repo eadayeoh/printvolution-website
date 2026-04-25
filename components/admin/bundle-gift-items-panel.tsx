@@ -7,7 +7,7 @@ import { addBundleGiftItem, removeBundleGiftItem, updateBundleGiftItem } from '@
 
 type GiftProduct = { id: string; slug: string; name: string; mode: string };
 type Variant = { id: string; gift_product_id: string; name: string };
-type Prompt = { id: string; mode: string; style: string; pipeline_id: string | null; name: string };
+type Prompt = { id: string; mode: string; pipeline_id: string | null; name: string };
 type Template = { id: string; name: string };
 type Pipeline = { id: string; slug: string; name: string; kind: string };
 
@@ -191,7 +191,7 @@ export function BundleGiftItemsPanel({
             <select value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} disabled={!newGiftMode} className={inputCls}>
               <option value="">— Choose —</option>
               {newGiftMode && (promptsByMode[newGiftMode] ?? []).map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.style})</option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </label>
