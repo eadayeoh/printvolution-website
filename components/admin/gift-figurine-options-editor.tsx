@@ -1,8 +1,10 @@
 'use client';
 
-import { Trash2, Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Trash2, Plus, Upload } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { DraggableArea } from '@/components/admin/gift-variants-panel';
+import { uploadProductImage } from '@/app/admin/upload/actions';
 
 export type FigurineOption = {
   slug: string;
@@ -41,6 +43,8 @@ export function GiftFigurineOptionsEditor({
   productHeightMm,
 }: Props) {
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
+  const bulkInputRef = useRef<HTMLInputElement>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
 
   function updateRow(i: number, patch: Partial<FigurineOption>) {
     onChange(value.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -50,6 +54,45 @@ export function GiftFigurineOptionsEditor({
   }
   function addRow() {
     onChange([...value, { slug: '', name: '', image_url: '', price_delta_cents: 0 }]);
+  }
+
+  async function handleBulkFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const filesArr = Array.from(files);
+    const existingSlugs = new Set(value.map((v) => v.slug).filter(Boolean));
+    setBulkProgress({ done: 0, total: filesArr.length, failed: 0 });
+
+    // Upload in parallel — let the browser cap at ~6 concurrent connections.
+    const results: (FigurineOption | null)[] = await Promise.all(filesArr.map(async (file) => {
+      const stem = file.name.replace(/\.[^.]+$/, '');
+      const name = stem.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 60);
+      let baseSlug = stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+      if (!baseSlug) baseSlug = 'figurine';
+      let slug = baseSlug;
+      let n = 2;
+      while (existingSlugs.has(slug)) slug = `${baseSlug}-${n++}`;
+      existingSlugs.add(slug);
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('prefix', `figurine-${productSlug}`);
+      try {
+        const r = await uploadProductImage(fd);
+        setBulkProgress((p) => p ? { ...p, done: p.done + 1, failed: p.failed + (r?.ok && r.url ? 0 : 1) } : p);
+        if (r?.ok && r.url) {
+          const row: FigurineOption = { slug, name, image_url: r.url, price_delta_cents: 0 };
+          return row;
+        }
+      } catch {
+        setBulkProgress((p) => p ? { ...p, done: p.done + 1, failed: p.failed + 1 } : p);
+      }
+      return null;
+    }));
+
+    const newRows: FigurineOption[] = results.filter((r): r is FigurineOption => r !== null);
+    if (newRows.length > 0) onChange([...value, ...newRows]);
+    setBulkProgress(null);
+    if (bulkInputRef.current) bulkInputRef.current.value = '';
   }
 
   return (
@@ -181,7 +224,7 @@ export function GiftFigurineOptionsEditor({
               ))}
             </div>
           )}
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={addRow}
@@ -189,6 +232,31 @@ export function GiftFigurineOptionsEditor({
             >
               <Plus size={12} /> Add figurine
             </button>
+            <button
+              type="button"
+              onClick={() => bulkInputRef.current?.click()}
+              disabled={bulkProgress !== null}
+              className="inline-flex items-center gap-1 rounded border-2 border-pink bg-white px-3 py-1.5 text-[11px] font-bold text-pink transition-all hover:bg-pink hover:text-white disabled:opacity-50"
+            >
+              <Upload size={12} /> Bulk upload PNGs
+            </button>
+            <input
+              ref={bulkInputRef}
+              type="file"
+              accept="image/png,image/webp,image/jpeg"
+              multiple
+              hidden
+              onChange={(e) => handleBulkFiles(e.target.files)}
+            />
+            {bulkProgress && (
+              <span className="text-[11px] text-neutral-600">
+                Uploading {bulkProgress.done} / {bulkProgress.total}
+                {bulkProgress.failed > 0 ? ` · ${bulkProgress.failed} failed` : ''}…
+              </span>
+            )}
+            <span className="ml-auto text-[10px] text-neutral-400">
+              File names become display names + slugs.
+            </span>
           </div>
         </>
       )}
