@@ -62,3 +62,34 @@ export async function uploadProductImage(
   const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(filename);
   return { ok: true, url: urlData.publicUrl };
 }
+
+/**
+ * Browse already-uploaded images. Powers the "Pick from library" UI on
+ * ImageUpload so admin doesn't have to re-upload the same artwork into
+ * every product / variant / template slot. Returns most-recent first.
+ */
+export async function listProductImages(
+  opts?: { search?: string; limit?: number }
+): Promise<{
+  ok: boolean;
+  items?: Array<{ name: string; url: string; createdAt: string }>;
+  error?: string;
+}> {
+  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  const sb = createServiceClient();
+  const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
+  const { data, error } = await sb.storage.from(BUCKET).list('', {
+    limit,
+    sortBy: { column: 'created_at', order: 'desc' },
+  });
+  if (error) return { ok: false, error: 'List failed' };
+  const search = opts?.search?.trim().toLowerCase() ?? '';
+  const items = (data ?? [])
+    .filter((f) => f.name && !f.name.endsWith('/') && !f.name.startsWith('.'))
+    .filter((f) => !search || f.name.toLowerCase().includes(search))
+    .map((f) => {
+      const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(f.name);
+      return { name: f.name, url: urlData.publicUrl, createdAt: f.created_at ?? '' };
+    });
+  return { ok: true, items };
+}

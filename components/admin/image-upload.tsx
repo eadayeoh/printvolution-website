@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, X, Loader2, FolderOpen } from 'lucide-react';
 import { uploadProductImage } from '@/app/admin/upload/actions';
 import { ImageCropModal } from '@/components/admin/image-crop-modal';
+import { MediaLibraryPicker } from '@/components/admin/media-library-picker';
 
 type Props = {
   value: string;
@@ -44,6 +45,7 @@ export function ImageUpload({
   const [error, setError] = useState<string | null>(null);
   // Pending file awaiting crop confirmation
   const [pending, setPending] = useState<{ src: string; name: string; type: string } | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   // Report busy to the parent whenever we're either pushing bytes to
   // the server (uploading) OR waiting on the user to confirm the crop
@@ -226,6 +228,29 @@ export function ImageUpload({
           )}
         </div>
 
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setLibraryOpen(true); }}
+          disabled={uploading}
+          title="Pick from existing uploads"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 10px',
+            background: '#fff', border: '1px solid #e5e5e5',
+            borderRadius: 4,
+            cursor: uploading ? 'not-allowed' : 'pointer',
+            color: '#0a0a0a',
+            fontSize: 11, fontWeight: 700,
+            fontFamily: 'var(--pv-f-mono)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <FolderOpen size={12} />
+          Library
+        </button>
+
         {value && !uploading && (
           <button
             type="button"
@@ -251,6 +276,12 @@ export function ImageUpload({
           onConfirm={onCropConfirm}
         />
       )}
+
+      <MediaLibraryPicker
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        onPick={(url) => onChange(url)}
+      />
     </div>
   );
 }
