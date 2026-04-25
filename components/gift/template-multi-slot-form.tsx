@@ -24,14 +24,17 @@ type Props = {
   onGeneratePreview: (payload: {
     files: Record<string, File>;
     texts: Record<string, string>;
+    textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
    *  the parent can render a live layout preview (dataURLs + text +
-   *  calendar fills) before the server composite runs. */
+   *  text-color overrides + calendar fills) before the server
+   *  composite runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
+    textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
   }) => void;
   onReset?: () => void;
@@ -91,10 +94,14 @@ export function TemplateMultiSlotForm({
     return out;
   }, [editableTextZones]);
   const [texts, setTexts] = useState<Record<string, string>>(initialTexts);
+  // Customer-overridable text color per zone. Only set when the
+  // customer explicitly picks a different color than the template's
+  // default; missing keys fall through to z.color in the renderer.
+  const [textColors, setTextColors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts, calendars });
-  }, [thumbs, texts, calendars, onStateChange]);
+    onStateChange?.({ thumbs, texts, textColors, calendars });
+  }, [thumbs, texts, textColors, calendars, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -106,6 +113,8 @@ export function TemplateMultiSlotForm({
   filesRef.current = files;
   const textsRef = useRef(texts);
   textsRef.current = texts;
+  const textColorsRef = useRef(textColors);
+  textColorsRef.current = textColors;
   const calendarsRef = useRef(calendars);
   calendarsRef.current = calendars;
   const pendingRegenRef = useRef(false);
@@ -122,7 +131,7 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current });
     }, 800);
     return () => clearTimeout(t);
     // NOTE: deps are FILES ONLY — not text or calendar fills, and not
@@ -145,7 +154,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -180,7 +189,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts, calendars });
+    onGeneratePreview({ files, texts, textColors, calendars });
   }
 
   return (
@@ -404,42 +413,109 @@ export function TemplateMultiSlotForm({
             Text
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {editableTextZones.map((z) => (
-              <label key={z.id} style={{ display: 'block' }}>
-                <span
-                  style={{
-                    display: 'block',
-                    fontFamily: 'var(--pv-f-mono)',
-                    fontSize: 10,
-                    color: 'var(--pv-muted)',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    fontWeight: 700,
-                    marginBottom: 4,
-                  }}
-                >
-                  {z.label}
-                </span>
-                <input
-                  type="text"
-                  value={texts[z.id] ?? ''}
-                  placeholder={z.placeholder ?? z.default_text ?? ''}
-                  maxLength={z.max_chars ?? 200}
-                  onChange={(e) => setTexts((prev) => ({ ...prev, [z.id]: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '2px solid var(--pv-ink)',
-                    background: '#fff',
-                    fontFamily: 'var(--pv-f-body)',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: 'var(--pv-ink)',
-                    outline: 'none',
-                  }}
-                />
-              </label>
-            ))}
+            {editableTextZones.map((z) => {
+              const currentColor = textColors[z.id] ?? z.color ?? '#0a0a0a';
+              const isOverridden = Boolean(textColors[z.id]) && textColors[z.id] !== z.color;
+              return (
+                <div key={z.id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        color: 'var(--pv-muted)',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {z.label}
+                    </span>
+                    {isOverridden && (
+                      <button
+                        type="button"
+                        onClick={() => setTextColors((prev) => {
+                          const next = { ...prev };
+                          delete next[z.id];
+                          return next;
+                        })}
+                        style={{
+                          background: 'transparent', border: 'none',
+                          fontFamily: 'var(--pv-f-mono)', fontSize: 9,
+                          fontWeight: 700, letterSpacing: '0.06em',
+                          textTransform: 'uppercase', color: 'var(--pv-magenta)',
+                          cursor: 'pointer', padding: 0,
+                        }}
+                      >
+                        Reset color
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                    <input
+                      type="text"
+                      value={texts[z.id] ?? ''}
+                      placeholder={z.placeholder ?? z.default_text ?? ''}
+                      maxLength={z.max_chars ?? 200}
+                      onChange={(e) => setTexts((prev) => ({ ...prev, [z.id]: e.target.value }))}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '2px solid var(--pv-ink)',
+                        background: '#fff',
+                        fontFamily: 'var(--pv-f-body)',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: 'var(--pv-ink)',
+                        outline: 'none',
+                      }}
+                    />
+                    <label
+                      title="Pick text colour"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '0 10px',
+                        border: '2px solid var(--pv-ink)',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: 'var(--pv-ink)',
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 18, height: 18,
+                          background: currentColor,
+                          border: '2px solid var(--pv-ink)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      Color
+                      <input
+                        type="color"
+                        value={currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#000000'}
+                        onChange={(e) => setTextColors((prev) => ({ ...prev, [z.id]: e.target.value }))}
+                        style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

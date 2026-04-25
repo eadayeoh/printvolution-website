@@ -32,6 +32,9 @@ type Props = {
   template: GiftTemplate;
   thumbs: Record<string, string>;
   texts: Record<string, string>;
+  /** Customer-picked text colour overrides, keyed by zone id. Falls
+   *  through to z.color when a key is missing. */
+  textColors?: Record<string, string>;
   /** Customer-picked calendar fills, keyed by zone id. */
   calendars?: Record<string, Partial<CalendarFill>>;
   /** Real-world canvas dimensions (from the product / variant) so the
@@ -41,7 +44,7 @@ type Props = {
   heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts, calendars, widthMm, heightMm }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -205,7 +208,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, calendars, 
                 fontSize: fontPx,
                 fontWeight: z.font_weight ?? '700',
                 fontStyle: z.font_style ?? 'normal',
-                color: z.color ?? '#0a0a0a',
+                color: textColors?.[z.id] ?? z.color ?? '#0a0a0a',
                 textAlign: z.align ?? 'center',
                 lineHeight: z.line_height ?? 1.2,
                 letterSpacing: `${z.letter_spacing_em ?? 0}em`,
