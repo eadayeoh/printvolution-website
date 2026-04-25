@@ -174,7 +174,45 @@ export type GiftTemplateTextZone = GiftTemplateZoneBase & {
   letter_spacing_em?: number;
 };
 
-export type GiftTemplateZone = GiftTemplateImageZone | GiftTemplateTextZone;
+/** Customer picks a month + year + a single highlighted day. The
+ *  template engine renders the month grid (weekday row + 6×7 day
+ *  cells); the picked day gets a coloured shape behind its number.
+ *  Reusable: any product's template can include a calendar zone. */
+export type GiftTemplateCalendarZone = GiftTemplateZoneBase & {
+  type: 'calendar';
+
+  // "October 2024" header. Layout: above the grid, to the left of it,
+  // or hidden (admin can use a separate text zone for fancy
+  // typography).
+  header_layout?: 'above' | 'left' | 'hidden';
+  header_font_family?: string;
+  header_font_size_mm?: number;
+  header_font_weight?: '300' | '400' | '600' | '700' | '800' | '900';
+  header_color?: string;
+
+  // Day grid — weekday row + day cells.
+  grid_font_family?: string;
+  grid_font_size_mm?: number;
+  grid_color?: string;
+  week_start?: 'sunday' | 'monday';
+
+  // Highlighted-day treatment. The customer-picked day gets the shape
+  // drawn behind its number; everything else stays plain.
+  highlight_shape?: 'circle' | 'square' | 'heart';
+  highlight_fill?: string;
+  highlight_text_color?: string;
+
+  // What customers see before they pick. Null falls back to the
+  // current month / no highlight at render time.
+  default_month?: number | null;       // 1–12
+  default_year?: number | null;        // YYYY
+  default_highlighted_day?: number | null; // 1–31
+};
+
+export type GiftTemplateZone =
+  | GiftTemplateImageZone
+  | GiftTemplateTextZone
+  | GiftTemplateCalendarZone;
 
 export const GIFT_FONT_FAMILIES: Array<{ value: string; label: string; stack: string }> = [
   { value: 'inter', label: 'Inter (sans)', stack: 'Inter, ui-sans-serif, system-ui, sans-serif' },
