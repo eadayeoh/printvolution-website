@@ -27,17 +27,18 @@ type Props = {
 
 export function CalendarZoneInput({ zone, fill, onChange, now = new Date() }: Props) {
   const resolved = resolveCalendarFill(zone, fill, now);
-  const thisYear = now.getFullYear();
-  // Five years back, ten forward — covers most "anniversary" /
-  // "birthday" gift scenarios. Admin can extend if needed in v2.
-  const yearOptions: number[] = [];
-  for (let y = thisYear - 5; y <= thisYear + 10; y++) yearOptions.push(y);
 
   const dim = daysInMonth(resolved.month, resolved.year);
   const days = Array.from({ length: dim }, (_, i) => i + 1);
 
   function set(patch: Partial<CalendarFill>) {
     onChange({ ...resolved, ...patch });
+  }
+  function setYear(value: string) {
+    const n = parseInt(value, 10);
+    if (!Number.isFinite(n)) return;
+    const clamped = Math.min(2100, Math.max(1900, n));
+    set({ year: clamped });
   }
 
   return (
@@ -69,15 +70,15 @@ export function CalendarZoneInput({ zone, fill, onChange, now = new Date() }: Pr
           }}>
             Year
           </div>
-          <select
+          <input
+            type="number"
+            min={1900}
+            max={2100}
+            step={1}
             value={resolved.year}
-            onChange={(e) => set({ year: Number(e.target.value) })}
+            onChange={(e) => setYear(e.target.value)}
             style={selectStyle}
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+          />
         </label>
       </div>
 

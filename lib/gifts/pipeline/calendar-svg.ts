@@ -140,7 +140,7 @@ export function renderCalendarSvg(input: RenderCalendarSvgInput): string {
 
   // Build cells.
   const month = Math.min(12, Math.max(1, resolved.month));
-  const year = Math.min(2100, Math.max(1970, resolved.year));
+  const year = Math.min(2100, Math.max(1900, resolved.year));
   const dayCount = daysInMonth(month, year);
   const startCol = firstColumn(month, year, weekStart);
 

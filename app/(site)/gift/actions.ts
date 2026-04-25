@@ -374,7 +374,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
         if (Number.isFinite(month) && Number.isFinite(year)) {
           zoneCalendars[k.slice('calendar_'.length)] = {
             month: Math.min(12, Math.max(1, Math.round(month))),
-            year: Math.min(2100, Math.max(1970, Math.round(year))),
+            year: Math.min(2100, Math.max(1900, Math.round(year))),
             highlightedDay:
               day === null || day === undefined
                 ? null
