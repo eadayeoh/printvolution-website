@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, Eye, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import {
@@ -133,7 +133,13 @@ export function GiftTemplateEditor({
   }, []);
 
   const [activeZoneIdx, setActiveZoneIdx] = useState<number | null>(null);
-  const [showSample, setShowSample] = useState(true);
+  // Grid overlay + snap-to-grid for the live-preview canvas. Step is in
+  // canvas units (the same 0..200 grid x_mm/y_mm/width_mm/height_mm
+  // live on); 5 ≈ a comfortable nudge increment, admin can change it.
+  const [gridOn, setGridOn] = useState(false);
+  const [snapOn, setSnapOn] = useState(false);
+  const [gridStep, setGridStep] = useState(5);
+  const snapV = (v: number) => (snapOn && gridStep > 0 ? Math.round(v / gridStep) * gridStep : v);
 
   function updateZone<T extends GiftTemplateZone>(i: number, patch: Partial<T>) {
     setZones(zones.map((z, j) => (j === i ? ({ ...z, ...patch } as GiftTemplateZone) : z)));
@@ -184,12 +190,12 @@ export function GiftTemplateEditor({
     const dy = ((e.clientY - drag.startY) / canvasSize.h) * TEMPLATE_H;
     const z = drag.startZone;
     if (drag.type === 'move') {
-      const nx = clamp(z.x_mm + dx, 0, TEMPLATE_W - z.width_mm);
-      const ny = clamp(z.y_mm + dy, 0, TEMPLATE_H - z.height_mm);
+      const nx = clamp(snapV(z.x_mm + dx), 0, TEMPLATE_W - z.width_mm);
+      const ny = clamp(snapV(z.y_mm + dy), 0, TEMPLATE_H - z.height_mm);
       updateZone(drag.idx, { x_mm: nx, y_mm: ny });
     } else {
-      const nw = clamp(z.width_mm + dx, 10, TEMPLATE_W - z.x_mm);
-      const nh = clamp(z.height_mm + dy, 6, TEMPLATE_H - z.y_mm);
+      const nw = clamp(snapV(z.width_mm + dx), 10, TEMPLATE_W - z.x_mm);
+      const nh = clamp(snapV(z.height_mm + dy), 6, TEMPLATE_H - z.y_mm);
       updateZone(drag.idx, { width_mm: nw, height_mm: nh });
     }
   }
@@ -492,15 +498,34 @@ export function GiftTemplateEditor({
         {/* RIGHT: visual canvas */}
         <div className="space-y-4">
           <div className="rounded-lg border border-neutral-200 bg-white">
-            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2">
+            <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-2">
               <div>
                 <div className="text-xs font-bold text-ink">Live preview</div>
                 <div className="text-[10px] text-neutral-500">Drag any slot to move. Drag corner to resize.</div>
               </div>
-              <label className="flex items-center gap-2 text-[11px] font-semibold text-neutral-600">
-                <input type="checkbox" checked={showSample} onChange={(e) => setShowSample(e.target.checked)} />
-                <Eye size={12} /> Show sample content
-              </label>
+              <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-600">
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={gridOn} onChange={(e) => setGridOn(e.target.checked)} />
+                  Grid
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={snapOn} onChange={(e) => setSnapOn(e.target.checked)} />
+                  Snap
+                </label>
+                <label className="flex items-center gap-1.5">
+                  Step
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={gridStep}
+                    onChange={(e) => setGridStep(Math.max(1, Math.min(50, Number(e.target.value) || 5)))}
+                    className="w-12 rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[11px]"
+                    title="Grid step in canvas units (0..200). 5 ≈ 2.5% of canvas."
+                  />
+                </label>
+              </div>
             </div>
             <div
               ref={canvasRef}
@@ -514,27 +539,40 @@ export function GiftTemplateEditor({
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
               )}
 
-              {/* Render image zones with their content. Every image
-                  zone gets SOMETHING when Show-sample is on: the
-                  admin-set default_image_url if present, else a
-                  deterministic picsum placeholder seeded by zone id
-                  so the layout is always inspectable at a glance. */}
-              {showSample && zones.map((z, i) => {
+              {/* Grid overlay — drawn under the zones so handles stay
+                  on top. Lines on the canvas-unit grid (0..200), step
+                  controlled by the header. Pure visual; snap is
+                  separate. */}
+              {gridOn && gridStep > 0 && (
+                <svg
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  viewBox={`0 0 ${TEMPLATE_W} ${TEMPLATE_H}`}
+                  preserveAspectRatio="none"
+                >
+                  {Array.from({ length: Math.floor(TEMPLATE_W / gridStep) + 1 }, (_, k) => k * gridStep).map((x) => (
+                    <line key={`vx-${x}`} x1={x} y1={0} x2={x} y2={TEMPLATE_H}
+                      stroke="#0a0a0a" strokeOpacity={x % (gridStep * 4) === 0 ? 0.18 : 0.08} strokeWidth={0.3} />
+                  ))}
+                  {Array.from({ length: Math.floor(TEMPLATE_H / gridStep) + 1 }, (_, k) => k * gridStep).map((y) => (
+                    <line key={`hy-${y}`} x1={0} y1={y} x2={TEMPLATE_W} y2={y}
+                      stroke="#0a0a0a" strokeOpacity={y % (gridStep * 4) === 0 ? 0.18 : 0.08} strokeWidth={0.3} />
+                  ))}
+                </svg>
+              )}
+
+              {/* Render image zones. Admin-set default_image_url shows
+                  through; otherwise the zone is a blank placeholder
+                  with the zone label so admin can read what each slot
+                  is at a glance. No auto-fetched stock photos. */}
+              {zones.map((z, i) => {
                 if (isTextZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
-                // Fallback face placeholder — stable portrait chosen
-                // by hashing the zone id into the 1–99 range on each
-                // gender endpoint. Same zone id → same face.
-                const hash = Array.from(img.id).reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
-                const n = (Math.abs(hash) % 99) + 1;
-                const gender = hash % 2 === 0 ? 'women' : 'men';
-                const fallback = `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
-                const content = img.default_image_url || fallback;
                 const fit = img.fit_mode ?? 'cover';
+                const hasContent = Boolean(img.default_image_url);
                 return (
                   <div
                     key={`pv-${i}`}
-                    className="pointer-events-none absolute overflow-hidden"
+                    className="pointer-events-none absolute overflow-hidden flex items-center justify-center"
                     style={{
                       left: `${(z.x_mm / TEMPLATE_W) * 100}%`,
                       top: `${(z.y_mm / TEMPLATE_H) * 100}%`,
@@ -542,18 +580,32 @@ export function GiftTemplateEditor({
                       height: `${(z.height_mm / TEMPLATE_H) * 100}%`,
                       transform: `rotate(${z.rotation_deg ?? 0}deg)`,
                       transformOrigin: 'center',
-                      background: img.bg_color ?? 'transparent',
+                      background: img.bg_color ?? (hasContent ? 'transparent' : 'rgba(255,255,255,0.6)'),
+                      border: hasContent ? 'none' : '2px dashed #cfcfcf',
                       borderRadius: `${((img.border_radius_mm ?? 0) / TEMPLATE_W) * 100}%`,
                     }}
                   >
-                    <img
-                      src={content}
-                      alt=""
-                      className="h-full w-full"
-                      style={{ objectFit: fit }}
-                    />
-                    {img.mask_url && (
-                      <img src={img.mask_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    {hasContent ? (
+                      <>
+                        <img src={img.default_image_url ?? ''} alt="" className="h-full w-full" style={{ objectFit: fit }} />
+                        {img.mask_url && (
+                          <img src={img.mask_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-1 px-2 text-center">
+                        <Upload size={14} style={{ color: '#999' }} />
+                        <span style={{
+                          fontFamily: 'var(--pv-f-mono)',
+                          fontSize: 10,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          color: '#666',
+                          fontWeight: 700,
+                        }}>
+                          {img.label || 'Upload image here'}
+                        </span>
+                      </div>
                     )}
                   </div>
                 );
@@ -563,8 +615,9 @@ export function GiftTemplateEditor({
                 <img src={foreground} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
               )}
 
-              {/* Render text zones with their styling */}
-              {showSample && zones.map((z, i) => {
+              {/* Render text zones with their styling — always on so
+                  admin can see typography while authoring. */}
+              {zones.map((z, i) => {
                 if (!isTextZone(z)) return null;
                 const pxPerMm = canvasSize.w / TEMPLATE_W;
                 const fontPx = Math.max(6, (z.font_size_mm ?? 14) * pxPerMm);
