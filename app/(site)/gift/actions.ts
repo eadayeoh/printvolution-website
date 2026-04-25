@@ -339,6 +339,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   const zoneTexts: Record<string, string> = {};
   const zoneTextColors: Record<string, string> = {};
   const zoneCalendars: Record<string, { month: number; year: number; highlightedDay: number | null }> = {};
+  const zoneCalendarColors: Record<string, string> = {};
   for (const [k, v] of formData.entries()) {
     if (k.startsWith('file_') && v instanceof File && v.size > 0 && v.size <= MAX_BYTES) {
       const zoneId = k.slice('file_'.length);
@@ -356,6 +357,11 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       }
     } else if (k.startsWith('text_') && typeof v === 'string') {
       zoneTexts[k.slice('text_'.length)] = v.slice(0, 500); // hard cap
+    } else if (k.startsWith('calendar_color_') && typeof v === 'string') {
+      const c = v.trim();
+      if (/^#[0-9A-Fa-f]{6}$/.test(c)) {
+        zoneCalendarColors[k.slice('calendar_color_'.length)] = c;
+      }
     } else if (k.startsWith('calendar_') && typeof v === 'string') {
       // Customer-supplied JSON. Parse defensively + range-clamp every
       // field so a hand-crafted POST can't render bogus calendars
@@ -540,6 +546,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
       textColorsByZoneId: Object.keys(zoneTextColors).length > 0 ? zoneTextColors : undefined,
       calendarsByZoneId: Object.keys(zoneCalendars).length > 0 ? zoneCalendars : undefined,
+      calendarColorsByZoneId: Object.keys(zoneCalendarColors).length > 0 ? zoneCalendarColors : undefined,
       foregroundColor: foregroundColor ?? undefined,
       // Only run the AI transform path when the customer actually
       // picked a style. Template-driven products without a chosen

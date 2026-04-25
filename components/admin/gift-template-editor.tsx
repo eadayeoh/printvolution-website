@@ -99,6 +99,7 @@ export function GiftTemplateEditor({
   const [foreground, setForeground] = useState(template?.foreground_url ?? '');
   const [displayOrder, setDisplayOrder] = useState(template?.display_order?.toString() ?? '0');
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
+  const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
   const [refWidthMm, setRefWidthMm] = useState(
     template?.reference_width_mm ? String(template.reference_width_mm) : '',
   );
@@ -221,6 +222,7 @@ export function GiftTemplateEditor({
       is_active: isActive,
       reference_width_mm:  Number.isFinite(refWParsed) && refWParsed > 0 ? refWParsed : null,
       reference_height_mm: Number.isFinite(refHParsed) && refHParsed > 0 ? refHParsed : null,
+      customer_can_recolor: customerCanRecolor,
     };
     startTransition(async () => {
       if (template) {
@@ -491,6 +493,22 @@ export function GiftTemplateEditor({
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               <span className="font-semibold text-ink">Active (customers can pick this template)</span>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={customerCanRecolor}
+                onChange={(e) => setCustomerCanRecolor(e.target.checked)}
+              />
+              <span>
+                <span className="font-semibold text-ink">Allow customer to recolor</span>
+                <span className="block text-[11px] text-neutral-500">
+                  Adds a Theme color picker + per-text-zone + per-calendar-zone color
+                  pickers in the customer&apos;s &ldquo;Fill the template&rdquo; form. When off, the
+                  template renders entirely in the colors set here.
+                </span>
+              </span>
             </label>
           </div>
         </div>

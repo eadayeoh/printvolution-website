@@ -26,17 +26,19 @@ type Props = {
     texts: Record<string, string>;
     textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
+    calendarColors: Record<string, string>;
     foregroundColor: string | null;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
    *  the parent can render a live layout preview (dataURLs + text +
-   *  text-color overrides + calendar fills + theme colour) before the
-   *  server composite runs. */
+   *  text-color overrides + calendar fills + calendar-colour overrides
+   *  + theme colour) before the server composite runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
     textColors: Record<string, string>;
     calendars: Record<string, CalendarFill>;
+    calendarColors: Record<string, string>;
     foregroundColor: string | null;
   }) => void;
   onReset?: () => void;
@@ -84,6 +86,10 @@ export function TemplateMultiSlotForm({
   const [files, setFiles] = useState<Record<string, File>>({});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [calendars, setCalendars] = useState<Record<string, CalendarFill>>({});
+  // Customer-overridable calendar colour per zone. Single colour
+  // overrides the zone's grid_color + header_color (the highlight
+  // shape colour stays admin-controlled so it reads as an accent).
+  const [calendarColors, setCalendarColors] = useState<Record<string, string>>({});
   // One hidden <input type="file"> per image zone. We store refs so the
   // "+ Label" empty-state div can open the picker programmatically —
   // clicking a filled slot is a no-op (only the X button removes).
@@ -107,8 +113,8 @@ export function TemplateMultiSlotForm({
   const [foregroundColor, setForegroundColor] = useState<string | null>(null);
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts, textColors, calendars, foregroundColor });
-  }, [thumbs, texts, textColors, calendars, foregroundColor, onStateChange]);
+    onStateChange?.({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor });
+  }, [thumbs, texts, textColors, calendars, calendarColors, foregroundColor, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -126,6 +132,8 @@ export function TemplateMultiSlotForm({
   foregroundColorRef.current = foregroundColor;
   const calendarsRef = useRef(calendars);
   calendarsRef.current = calendars;
+  const calendarColorsRef = useRef(calendarColors);
+  calendarColorsRef.current = calendarColors;
   const pendingRegenRef = useRef(false);
   const prevWorkingRef = useRef(isWorking);
 
@@ -140,7 +148,7 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, foregroundColor: foregroundColorRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current });
     }, 800);
     return () => clearTimeout(t);
     // NOTE: deps are FILES ONLY — not text or calendar fills, and not
@@ -163,7 +171,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, foregroundColor: foregroundColorRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -198,7 +206,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts, textColors, calendars, foregroundColor });
+    onGeneratePreview({ files, texts, textColors, calendars, calendarColors, foregroundColor });
   }
 
   return (
@@ -447,7 +455,7 @@ export function TemplateMultiSlotForm({
                     >
                       {z.label}
                     </span>
-                    {isOverridden && (
+                    {template.customer_can_recolor && isOverridden && (
                       <button
                         type="button"
                         onClick={() => setTextColors((prev) => {
@@ -486,41 +494,43 @@ export function TemplateMultiSlotForm({
                         outline: 'none',
                       }}
                     />
-                    <label
-                      title="Pick text colour"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '0 10px',
-                        border: '2px solid var(--pv-ink)',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--pv-ink)',
-                      }}
-                    >
-                      <span
-                        aria-hidden
+                    {template.customer_can_recolor && (
+                      <label
+                        title="Pick text colour"
                         style={{
-                          width: 18, height: 18,
-                          background: currentColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '0 10px',
                           border: '2px solid var(--pv-ink)',
-                          flexShrink: 0,
+                          background: '#fff',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--pv-f-mono)',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          color: 'var(--pv-ink)',
                         }}
-                      />
-                      Color
-                      <input
-                        type="color"
-                        value={currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#000000'}
-                        onChange={(e) => setTextColors((prev) => ({ ...prev, [z.id]: e.target.value }))}
-                        style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
-                      />
-                    </label>
+                      >
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 18, height: 18,
+                            background: currentColor,
+                            border: '2px solid var(--pv-ink)',
+                            flexShrink: 0,
+                          }}
+                        />
+                        Color
+                        <input
+                          type="color"
+                          value={currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#000000'}
+                          onChange={(e) => setTextColors((prev) => ({ ...prev, [z.id]: e.target.value }))}
+                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
               );
@@ -573,6 +583,70 @@ export function TemplateMultiSlotForm({
                     setCalendars((prev) => ({ ...prev, [z.id]: next }))
                   }
                 />
+                {template.customer_can_recolor && (() => {
+                  const fallback = z.grid_color ?? '#0a0a0a';
+                  const currentColor = calendarColors[z.id] ?? fallback;
+                  const isOverridden = Boolean(calendarColors[z.id]) && calendarColors[z.id] !== fallback;
+                  return (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                        marginBottom: 4,
+                      }}>
+                        <span style={{
+                          fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 800,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          color: 'var(--pv-muted)',
+                        }}>
+                          Calendar color
+                        </span>
+                        {isOverridden && (
+                          <button
+                            type="button"
+                            onClick={() => setCalendarColors((prev) => {
+                              const next = { ...prev };
+                              delete next[z.id];
+                              return next;
+                            })}
+                            style={{
+                              background: 'transparent', border: 'none',
+                              fontFamily: 'var(--pv-f-mono)', fontSize: 9,
+                              fontWeight: 700, letterSpacing: '0.06em',
+                              textTransform: 'uppercase', color: 'var(--pv-magenta)',
+                              cursor: 'pointer', padding: 0,
+                            }}
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </div>
+                      <label
+                        title="Pick the colour for the month name and day numbers"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 10px',
+                          border: '2px solid var(--pv-ink)', background: '#fff',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--pv-f-mono)', fontSize: 11,
+                          fontWeight: 700, color: 'var(--pv-ink)',
+                        }}
+                      >
+                        <span aria-hidden style={{
+                          width: 22, height: 22, background: currentColor,
+                          border: '2px solid var(--pv-ink)', flexShrink: 0,
+                        }} />
+                        <span style={{ flex: 1 }}>{currentColor.toUpperCase()}</span>
+                        <span style={{ color: 'var(--pv-muted)', fontSize: 9 }}>Click to pick</span>
+                        <input
+                          type="color"
+                          value={currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#000000'}
+                          onChange={(e) => setCalendarColors((prev) => ({ ...prev, [z.id]: e.target.value }))}
+                          style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                        />
+                      </label>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -581,8 +655,9 @@ export function TemplateMultiSlotForm({
 
       {/* Theme colour — single colour applied to the template's
           foreground PNG (icons + heart + progress bar). Only shown
-          when the template actually has a foreground asset to recolour. */}
-      {template.foreground_url && (
+          when the template actually has a foreground asset to recolour
+          AND admin has opted in via customer_can_recolor. */}
+      {template.foreground_url && template.customer_can_recolor && (
         <div>
           <div
             style={{

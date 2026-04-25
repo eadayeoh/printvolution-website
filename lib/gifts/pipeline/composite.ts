@@ -67,6 +67,10 @@ export type CompositeInput = {
    *  no entry fall back to the zone's admin-set defaults / current
    *  month at render time. */
   calendarsByZoneId?: Record<string, Partial<CalendarFill>>;
+  /** Per-zone customer-picked calendar colour overrides. Single colour
+   *  overrides grid_color + header_color; the highlight stays
+   *  admin-controlled so it reads as an accent. */
+  calendarColorsByZoneId?: Record<string, string>;
   /** Per-zone customer-picked text colour overrides keyed by zone id.
    *  Falls through to z.color when a key is missing. */
   textColorsByZoneId?: Record<string, string>;
@@ -86,7 +90,7 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, textColorsByZoneId, foregroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, calendarColorsByZoneId, textColorsByZoneId, foregroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
   // Effective zone mode: zone.mode wins, fall back to productMode, else null.
   const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
     (z.mode ?? productMode ?? null) as GiftMode | null;
@@ -154,6 +158,7 @@ export async function renderTemplateComposite(
         fill: calendarsByZoneId?.[zone.id],
         width: zw,
         height: zh,
+        colorOverride: calendarColorsByZoneId?.[zone.id],
       });
       const resvgBuf = await renderSvgWithFonts(svg);
       const svgBuf: Buffer = resvgBuf ?? await sharp(Buffer.from(svg)).png().toBuffer();

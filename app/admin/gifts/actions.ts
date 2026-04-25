@@ -366,6 +366,7 @@ const TemplateSchema = z.object({
   is_active: z.boolean().default(true),
   reference_width_mm:  z.number().positive().nullable().optional(),
   reference_height_mm: z.number().positive().nullable().optional(),
+  customer_can_recolor: z.boolean().default(false),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {

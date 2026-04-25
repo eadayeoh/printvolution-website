@@ -167,6 +167,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Customer-picked calendar zone fills, keyed by zone id. Both the
   // live preview and the server composite read from this.
   const [templateCalendars, setTemplateCalendars] = useState<Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>>({});
+  // Customer-picked calendar colour overrides per zone.
+  const [templateCalendarColors, setTemplateCalendarColors] = useState<Record<string, string>>({});
   // Colour swatch picked inside the currently-selected variant tile (if
   // that variant has colour_swatches). Recorded on the cart line so the
   // admin sees "Navy" on the order, not just "T-shirt".
@@ -274,6 +276,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     texts: Record<string, string>;
     textColors: Record<string, string>;
     calendars: Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>;
+    calendarColors: Record<string, string>;
     foregroundColor: string | null;
   }) {
     setErr(null);
@@ -314,6 +317,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // they're harmless extra form fields.
     for (const [zoneId, fill] of Object.entries(payload.calendars)) {
       fd.append(`calendar_${zoneId}`, JSON.stringify(fill));
+    }
+    for (const [zoneId, color] of Object.entries(payload.calendarColors)) {
+      fd.append(`calendar_color_${zoneId}`, color);
     }
     try {
       // Client-side timeout safety. If the server pipeline hangs (e.g.
@@ -906,6 +912,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       texts={templateTexts}
                       textColors={templateTextColors}
                       calendars={templateCalendars}
+                      calendarColors={templateCalendarColors}
                       foregroundColor={templateForegroundColor}
                       widthMm={selectedVariant?.width_mm || product.width_mm}
                       heightMm={selectedVariant?.height_mm || product.height_mm}
@@ -1550,11 +1557,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
-                    onStateChange={({ thumbs, texts, textColors, calendars, foregroundColor }) => {
+                    onStateChange={({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
                       setTemplateTextColors(textColors);
                       setTemplateCalendars(calendars);
+                      setTemplateCalendarColors(calendarColors);
                       setTemplateForegroundColor(foregroundColor);
                     }}
                   />

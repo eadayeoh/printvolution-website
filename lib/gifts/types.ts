@@ -243,6 +243,10 @@ export type GiftTemplate = {
   /** Admin-assigned grouping label ("Wall art", "Necklaces", …).
    *  Null = "Ungrouped". Drives the buckets in the templates list. */
   group_name?: string | null;
+  /** When true, customer sees colour pickers in the "Fill the
+   *  template" form (Theme color + per-text-zone + per-calendar-zone).
+   *  Default false — admin opts in per template. */
+  customer_can_recolor?: boolean;
 };
 
 export type GiftCropRect = {

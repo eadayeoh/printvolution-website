@@ -37,6 +37,9 @@ type Props = {
   textColors?: Record<string, string>;
   /** Customer-picked calendar fills, keyed by zone id. */
   calendars?: Record<string, Partial<CalendarFill>>;
+  /** Customer-picked calendar colour overrides, keyed by zone id.
+   *  Single colour overrides grid_color + header_color. */
+  calendarColors?: Record<string, string>;
   /** Customer-picked foreground tint colour. When set, the template's
    *  foreground PNG renders as an alpha mask filled with this colour
    *  (icons, hearts, progress bar — every opaque pixel inherits it). */
@@ -48,7 +51,7 @@ type Props = {
   heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, foregroundColor, widthMm, heightMm }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, calendarColors, foregroundColor, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -265,6 +268,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
           fill,
           width: z.width_mm,
           height: z.height_mm,
+          colorOverride: calendarColors?.[z.id],
         });
         return (
           <div

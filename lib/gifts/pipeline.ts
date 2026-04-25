@@ -98,6 +98,8 @@ export type PreviewInput = {
   /** Per-zone calendar fills keyed by zone_id. Calendar zones with no
    *  entry render the zone's admin defaults / current month. */
   calendarsByZoneId?: Record<string, { month: number; year: number; highlightedDay: number | null }>;
+  /** Per-zone calendar colour overrides keyed by zone_id. */
+  calendarColorsByZoneId?: Record<string, string>;
   /** Customer-picked tint applied to the template's foreground PNG via
    *  alpha-mask recolour. #RRGGBB; null/undefined leaves the original
    *  PNG untouched. */
@@ -143,6 +145,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       textByZoneId:   input.textByZoneId,
       textColorsByZoneId: input.textColorsByZoneId,
       calendarsByZoneId: input.calendarsByZoneId,
+      calendarColorsByZoneId: input.calendarColorsByZoneId,
       foregroundColor: input.foregroundColor,
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,

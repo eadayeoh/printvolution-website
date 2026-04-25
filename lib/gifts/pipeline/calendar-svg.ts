@@ -95,20 +95,24 @@ export type RenderCalendarSvgInput = {
   height: number;
   /** "now" for resolving defaults. Inject for deterministic tests. */
   now?: Date;
+  /** Customer-picked colour override. Overrides grid_color +
+   *  header_color when set; the highlight shape colour stays
+   *  admin-controlled so it reads as an accent. */
+  colorOverride?: string;
 };
 
 /** Returns an `<svg>` string sized to (width × height) with the
  *  calendar drawn inside. Pure — no DOM, no fetch, no side effects. */
 export function renderCalendarSvg(input: RenderCalendarSvgInput): string {
-  const { zone, fill, width: W, height: H, now } = input;
+  const { zone, fill, width: W, height: H, now, colorOverride } = input;
   const resolved = resolveCalendarFill(zone, fill, now);
   const headerLayout = zone.header_layout ?? 'above';
   const weekStart = zone.week_start ?? 'sunday';
   const weekdayLetters = weekStart === 'monday' ? WEEKDAY_LETTERS_MONDAY : WEEKDAY_LETTERS_SUNDAY;
   const gridFontFamily = giftFontStack(zone.grid_font_family);
   const headerFontFamily = giftFontStack(zone.header_font_family);
-  const gridColor = zone.grid_color ?? '#0a0a0a';
-  const headerColor = zone.header_color ?? gridColor;
+  const gridColor = colorOverride ?? zone.grid_color ?? '#0a0a0a';
+  const headerColor = colorOverride ?? zone.header_color ?? gridColor;
   const highlightShape = zone.highlight_shape ?? 'circle';
   const highlightFill = zone.highlight_fill ?? '#E91E8C';
   const highlightTextColor = zone.highlight_text_color ?? '#ffffff';
