@@ -875,7 +875,25 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
 
-                {(() => {
+                {/* Template flow: prefer the local CSS layout preview
+                    over the server composite. Text + calendar changes
+                    show up instantly and the html2canvas snapshot at
+                    add-to-cart captures whatever the customer last
+                    arranged. The server composite still runs in the
+                    background for cart-payload integrity but is never
+                    shown directly. */}
+                {activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                  <div style={{ width: '100%' }}>
+                    <GiftTemplateLayoutPreview
+                      template={activeTemplate}
+                      thumbs={templateThumbs}
+                      texts={templateTexts}
+                      calendars={templateCalendars}
+                      widthMm={selectedVariant?.width_mm || product.width_mm}
+                      heightMm={selectedVariant?.height_mm || product.height_mm}
+                    />
+                  </div>
+                ) : (() => {
                   // Surfaces flow: no server preview — composite the
                   // customer's uploaded thumb directly onto the active
                   // surface's mockup so flipping Side 1/Side 2 updates
@@ -926,21 +944,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       }}
                     />
                   )
-                ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
-                  // Fill the preview shell width — the template canvas
-                  // already aspect-locks to widthMm/heightMm, so the
-                  // shell shrinks vertically to fit and there's no
-                  // empty padding around a square magnet.
-                  <div style={{ width: '100%' }}>
-                    <GiftTemplateLayoutPreview
-                      template={activeTemplate}
-                      thumbs={templateThumbs}
-                      texts={templateTexts}
-                      calendars={templateCalendars}
-                      widthMm={selectedVariant?.width_mm || product.width_mm}
-                      heightMm={selectedVariant?.height_mm || product.height_mm}
-                    />
-                  </div>
                 ) : shapeMockup.url ? (
                   <div style={{ width: '100%', position: 'relative' }}>
                     <img

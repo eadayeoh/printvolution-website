@@ -118,8 +118,6 @@ export function TemplateMultiSlotForm({
     if (!autoGenerate) return;
     if (Object.keys(files).length === 0) return;
     if (isWorking) {
-      // Customer changed something mid-upload — flag it so the
-      // post-work effect below re-fires once the current run finishes.
       pendingRegenRef.current = true;
       return;
     }
@@ -127,14 +125,16 @@ export function TemplateMultiSlotForm({
       onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
     }, 800);
     return () => clearTimeout(t);
-    // NOTE: isWorking deliberately NOT in deps. If it were, the effect
-    // would re-fire on every upload's true→false transition and
-    // schedule another upload, which would kick off an endless loop
-    // (visible as duplicate hits in the preview-history strip). The
-    // pendingRegenRef path on the next effect handles re-firing when
-    // data actually changed mid-upload.
+    // NOTE: deps are FILES ONLY — not text or calendar fills, and not
+    // isWorking. Text + calendar changes are reflected instantly via
+    // the local layout preview; firing a server-composite roundtrip
+    // on every keystroke is wasteful and floods the preview-history
+    // strip. The server composite runs once when files arrive (so
+    // the cart payload has a real preview asset) and again at
+    // add-to-cart time (production resolution). isWorking is omitted
+    // to avoid an infinite re-upload loop on the true→false flip.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, texts, calendars, autoGenerate]);
+  }, [files, autoGenerate]);
 
   // When a generate finishes and changes arrived during it, fire once
   // more immediately so the server composite is always up to date.
@@ -518,9 +518,9 @@ export function TemplateMultiSlotForm({
             }}
           >
             {isWorking
-              ? 'Saving at print resolution…'
+              ? 'Building preview…'
               : currentPreviewUrl
-                ? '✓ Saved at print resolution'
+                ? '✓ Design saved — print-ready file generated when you add to cart'
                 : 'Preparing…'}
           </div>
         )
