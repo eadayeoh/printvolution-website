@@ -947,6 +947,15 @@ export function DraggableArea({
         dyPct: ((clientY - drag!.startY) / r.height) * 100,
       };
     }
+    // Lock the resize to the print's aspect ratio. width%/height% on
+    // the (square) stage map to the printed shape — so a 10×15 cm
+    // portrait product gets a 2:3 area, no matter how the customer
+    // drags. Pick the dominant motion axis (whichever delta is bigger)
+    // and derive the other to preserve ratio.
+    const aspectRatio =
+      productWidthMm > 0 && productHeightMm > 0
+        ? productWidthMm / productHeightMm
+        : 1;
     function onMove(e: PointerEvent) {
       const { dxPct, dyPct } = pctDelta(e.clientX, e.clientY);
       if (drag!.mode === 'move') {
@@ -957,11 +966,18 @@ export function DraggableArea({
           height: drag!.startArea.height,
         }));
       } else {
+        let nw = drag!.startArea.width + dxPct;
+        let nh = drag!.startArea.height + dyPct;
+        if (Math.abs(dxPct) >= Math.abs(dyPct)) {
+          nh = nw / aspectRatio;
+        } else {
+          nw = nh * aspectRatio;
+        }
         onChange(normalise({
           x: drag!.startArea.x,
           y: drag!.startArea.y,
-          width: drag!.startArea.width + dxPct,
-          height: drag!.startArea.height + dyPct,
+          width: nw,
+          height: nh,
         }));
       }
     }
