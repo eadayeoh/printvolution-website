@@ -24,6 +24,7 @@
 import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftTemplateCalendarZone, GiftMode } from '@/lib/gifts/types';
 import { renderSvgWithFonts } from './fonts';
 import { renderCalendarSvg, type CalendarFill } from './calendar-svg';
+import { maskPresetSvg } from '@/lib/gifts/mask-shapes';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
 const DEFAULT_DPI_PREVIEW = 150;
@@ -307,15 +308,22 @@ async function prepImageZone(
       .rotate() // auto-orient via EXIF
       .resize(zw, zh, { fit: zone.fit_mode === 'contain' ? 'contain' : 'cover' });
 
-    // Border radius via SVG mask.
-    const radiusPxX = Math.round(((zone.border_radius_mm ?? 0) / CANVAS_UNITS) * zw);
-    const radiusPx = Math.max(0, Math.min(radiusPxX, Math.floor(Math.min(zw, zh) / 2)));
-    if (radiusPx > 0) {
-      const maskSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
-        <rect x="0" y="0" width="${zw}" height="${zh}" rx="${radiusPx}" ry="${radiusPx}" fill="#fff"/>
-      </svg>`;
-      const maskBuf = await sharp(Buffer.from(maskSvg)).png().toBuffer();
+    // Mask preset (circle/heart/star) wins over border-radius — the
+    // shape silhouette already encloses any rounded corners.
+    if (zone.mask_preset) {
+      const maskBuf = await sharp(Buffer.from(maskPresetSvg(zone.mask_preset, zw, zh))).png().toBuffer();
       img = img.composite([{ input: maskBuf, blend: 'dest-in' }]).png();
+    } else {
+      // Border radius via SVG mask.
+      const radiusPxX = Math.round(((zone.border_radius_mm ?? 0) / CANVAS_UNITS) * zw);
+      const radiusPx = Math.max(0, Math.min(radiusPxX, Math.floor(Math.min(zw, zh) / 2)));
+      if (radiusPx > 0) {
+        const maskSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
+          <rect x="0" y="0" width="${zw}" height="${zh}" rx="${radiusPx}" ry="${radiusPx}" fill="#fff"/>
+        </svg>`;
+        const maskBuf = await sharp(Buffer.from(maskSvg)).png().toBuffer();
+        img = img.composite([{ input: maskBuf, blend: 'dest-in' }]).png();
+      }
     }
 
     return await img.toBuffer();

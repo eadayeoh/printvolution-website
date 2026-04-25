@@ -150,9 +150,16 @@ export type GiftTemplateZoneBase = {
   mode?: GiftMode | null;
 };
 
+/** Built-in alpha-mask shapes for an image zone. The customer's
+ *  photo is clipped to this silhouette in both the live preview and
+ *  the server composite. Independent of `mask_url` (which is a
+ *  legacy frame-overlay PNG used by hand-authored templates). */
+export type GiftImageZoneMaskPreset = 'circle' | 'heart' | 'star';
+
 export type GiftTemplateImageZone = GiftTemplateZoneBase & {
   type?: 'image';
   mask_url?: string | null;
+  mask_preset?: GiftImageZoneMaskPreset | null;
   fit_mode?: 'cover' | 'contain' | 'fill';
   bg_color?: string | null;
   border_radius_mm?: number;

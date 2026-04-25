@@ -17,6 +17,8 @@ import type {
 } from '@/lib/gifts/types';
 import { giftFontStack } from '@/lib/gifts/types';
 import { renderCalendarSvg, type CalendarFill } from '@/lib/gifts/pipeline/calendar-svg';
+import { maskClipPathCss } from '@/lib/gifts/mask-shapes';
+import { MaskShapeDefs } from './mask-shape-defs';
 import { useEffect, useRef, useState } from 'react';
 
 const CANVAS_UNITS = 200;
@@ -94,6 +96,8 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
         overflow: 'hidden',
       }}
     >
+      <MaskShapeDefs />
+
       {/* Skip the template background_url when the customer picked
           their own background — solid fill via the wrapper above. */}
       {!backgroundColor && template.background_url && (
@@ -117,6 +121,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
         const thumb = thumbs[z.id];
         const content = thumb || img.default_image_url || null;
         const fit = img.fit_mode ?? 'cover';
+        const clipPath = content ? maskClipPathCss(img.mask_preset) : undefined;
         return (
           <div
             key={`img-${i}`}
@@ -130,11 +135,13 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
               transformOrigin: 'center',
               background: img.bg_color ?? (content ? 'transparent' : 'var(--pv-cream)'),
               border: content ? 'none' : '2px dashed var(--pv-rule)',
-              borderRadius: `${((img.border_radius_mm ?? 0) / CANVAS_UNITS) * 100}%`,
+              borderRadius: img.mask_preset ? 0 : `${((img.border_radius_mm ?? 0) / CANVAS_UNITS) * 100}%`,
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              clipPath,
+              WebkitClipPath: clipPath,
             }}
           >
             {content ? (

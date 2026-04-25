@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
+import { MaskShapeDefs } from '@/components/gift/mask-shape-defs';
+import { maskClipPathCss } from '@/lib/gifts/mask-shapes';
 import {
   GIFT_FONT_FAMILIES,
   GIFT_MODE_LABEL,
@@ -571,6 +573,7 @@ export function GiftTemplateEditor({
               onPointerLeave={endDrag}
               style={{ touchAction: 'none', aspectRatio: previewAspect }}
             >
+              <MaskShapeDefs />
               {background && (
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
               )}
@@ -605,6 +608,7 @@ export function GiftTemplateEditor({
                 const img = z as GiftTemplateImageZone;
                 const fit = img.fit_mode ?? 'cover';
                 const hasContent = Boolean(img.default_image_url);
+                const clipPath = hasContent ? maskClipPathCss(img.mask_preset) : undefined;
                 return (
                   <div
                     key={`pv-${i}`}
@@ -618,7 +622,9 @@ export function GiftTemplateEditor({
                       transformOrigin: 'center',
                       background: img.bg_color ?? (hasContent ? 'transparent' : 'rgba(255,255,255,0.6)'),
                       border: hasContent ? 'none' : '2px dashed #cfcfcf',
-                      borderRadius: `${((img.border_radius_mm ?? 0) / TEMPLATE_W) * 100}%`,
+                      borderRadius: img.mask_preset ? 0 : `${((img.border_radius_mm ?? 0) / TEMPLATE_W) * 100}%`,
+                      clipPath,
+                      WebkitClipPath: clipPath,
                     }}
                   >
                     {hasContent ? (
@@ -816,6 +822,38 @@ function ImageZoneFields({ zone, onChange }: { zone: GiftTemplateImageZone; onCh
       <div>
         <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Mask (transparent overlay)</div>
         <ImageUpload value={zone.mask_url ?? ''} onChange={(v) => onChange({ mask_url: v || null })} prefix="zone-mask" aspect={1} size="sm" label="Mask" />
+      </div>
+
+      <div>
+        <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Photo shape</div>
+        <div className="flex flex-wrap gap-1">
+          {([
+            { v: null,     label: 'None',   d: null },
+            { v: 'circle', label: 'Circle', d: 'M50,0 A50,50 0 1 1 50,100 A50,50 0 1 1 50,0 Z' },
+            { v: 'heart',  label: 'Heart',  d: 'M50,90 C30,72 6,55 6,32 C6,18 17,8 30,8 C39,8 46,13 50,20 C54,13 61,8 70,8 C83,8 94,18 94,32 C94,55 70,72 50,90 Z' },
+            { v: 'star',   label: 'Star',   d: 'M50,4 L61,38 L96,38 L67,59 L78,93 L50,72 L22,93 L33,59 L4,38 L39,38 Z' },
+          ] as const).map((opt) => {
+            const active = (zone.mask_preset ?? null) === opt.v;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => onChange({ mask_preset: opt.v })}
+                className={`flex items-center gap-1.5 rounded border-2 px-2 py-1 text-[10px] font-bold uppercase ${active ? 'border-pink bg-pink text-white' : 'border-neutral-200 bg-white text-neutral-600 hover:border-pink'}`}
+              >
+                {opt.d ? (
+                  <svg width="14" height="14" viewBox="0 0 100 100"><path d={opt.d} fill={active ? '#fff' : '#525252'} /></svg>
+                ) : (
+                  <span className="inline-block h-3 w-3 rounded-sm border border-current" />
+                )}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        {zone.mask_preset && (
+          <div className="mt-1 text-[10px] text-neutral-500">Photo will be clipped to this silhouette in the customer preview and the production file. Border radius is ignored when a shape is set.</div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
