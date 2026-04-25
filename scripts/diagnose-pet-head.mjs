@@ -15,7 +15,14 @@ for (const line of env.split('\n')) {
 const sql = postgres(process.env.SUPABASE_DB_URL, { max: 1, prepare: false });
 
 try {
-  console.log('=== Pet Head pipeline (full) ===');
+  console.log('=== Default UV pipeline (uv-flat-v1) — what the test falls back to ===');
+  const def = await sql`
+    select slug, name, provider, ai_model_slug, is_active
+    from gift_pipelines where slug = 'uv-flat-v1'
+  `;
+  console.log(def);
+
+  console.log('\n=== Pet Head pipeline (full) ===');
   const pipes = await sql`
     select id, slug, name, kind, provider, ai_endpoint_url, ai_model_slug,
            default_params, is_active

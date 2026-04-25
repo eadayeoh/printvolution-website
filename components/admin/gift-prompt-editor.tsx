@@ -55,6 +55,7 @@ export function GiftPromptEditor({
     fd.append('mode', mode);
     fd.append('transformation_prompt', transformation);
     if (negative) fd.append('negative_prompt', negative);
+    if (pipelineId) fd.append('pipeline_id', pipelineId);
     try {
       const r = await testGiftPrompt(fd);
       if (r.ok && r.previewUrl) setTestPreviewUrl(r.previewUrl);

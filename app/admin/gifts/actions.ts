@@ -502,6 +502,7 @@ export async function testGiftPrompt(formData: FormData): Promise<{ ok: boolean;
   const mode = (formData.get('mode') || '').toString() as 'laser' | 'uv' | 'embroidery';
   const transformationPrompt = (formData.get('transformation_prompt') || '').toString();
   const negativePrompt = (formData.get('negative_prompt') || '').toString();
+  const pipelineId = (formData.get('pipeline_id') || '').toString() || null;
 
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (!['laser', 'uv', 'embroidery'].includes(mode)) return { ok: false, error: 'Invalid mode' };
@@ -519,6 +520,11 @@ export async function testGiftPrompt(formData: FormData): Promise<{ ok: boolean;
       ai_prompt: transformationPrompt,
       ai_negative_prompt: negativePrompt || null,
       ai_params: {},
+      // Pin to the prompt's pipeline so the test runs the same AI
+      // config the customer would hit. Without this the runtime falls
+      // back to the mode default — which may not exist in the DB,
+      // collapsing to a legacy passthrough.
+      pipeline_id: pipelineId,
     };
     const out = await runPreviewPipeline({
       product: fakeProduct,
