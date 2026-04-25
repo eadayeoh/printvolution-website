@@ -2,6 +2,12 @@
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { giftItemDisplayName } from '@/lib/gifts/types';
+
+// Escape Postgres LIKE wildcards so untrusted input can't match unrelated rows.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
 
 export type TrackedOrder = {
   order_number: string;
@@ -41,7 +47,7 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
       gift_order_items(qty, product_name_snapshot, production_status, gift_product:gift_products(name))
     `)
     .eq('order_number', num)
-    .ilike('email', em)
+    .ilike('email', escapeLike(em))
     .maybeSingle();
 
   if (error) return { ok: false, error: 'Lookup failed — try again in a moment.' };
@@ -62,7 +68,7 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
       items: (o.order_items ?? []).map((i: any) => ({ qty: i.qty, product_name: i.product_name })),
       gifts: (o.gift_order_items ?? []).map((g: any) => ({
         qty: g.qty,
-        product_name: g.product_name_snapshot ?? g.gift_product?.name ?? 'Gift',
+        product_name: giftItemDisplayName(g),
         production_status: g.production_status,
       })),
     },

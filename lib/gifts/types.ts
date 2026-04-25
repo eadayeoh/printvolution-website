@@ -448,3 +448,12 @@ export function variantFromPrice(v: Pick<GiftProductVariant, 'base_price_cents' 
   }
   return min;
 }
+
+/** Display name for a gift order item — snapshot first (frozen at
+ *  order time), then current product name, then a generic fallback. */
+export function giftItemDisplayName(item: {
+  product_name_snapshot?: string | null;
+  gift_product?: { name?: string | null } | null;
+}): string {
+  return item.product_name_snapshot ?? item.gift_product?.name ?? 'Gift';
+}

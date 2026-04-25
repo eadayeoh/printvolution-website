@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trash2, Plus, Upload } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { DraggableArea } from '@/components/admin/gift-variants-panel';
@@ -48,6 +48,8 @@ export function GiftFigurineOptionsEditor({
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
   const bulkInputRef = useRef<HTMLInputElement>(null);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   function updateRow(i: number, patch: Partial<FigurineOption>) {
     onChange(value.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -70,9 +72,10 @@ export function GiftFigurineOptionsEditor({
     const tasks = filesArr.map((file) => {
       const stem = file.name.replace(/\.[^.]+$/, '');
       const name = stem.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 60);
-      const baseSlug = slugify(stem).slice(0, 40);
+      // Cap base at 36 so any -N suffix (up to 999) still fits in 40.
+      const baseSlug = slugify(stem).slice(0, 36);
       let slug = baseSlug;
-      for (let n = 2; taken.has(slug); n++) slug = `${baseSlug}-${n}`.slice(0, 40);
+      for (let n = 2; taken.has(slug); n++) slug = `${baseSlug}-${n}`;
       taken.add(slug);
       return { file, name, slug };
     });
@@ -89,13 +92,16 @@ export function GiftFigurineOptionsEditor({
           if (r?.ok && r.url) {
             results[i + j] = { slug, name, image_url: r.url, price_delta_cents: 0 };
           }
-        } catch {
-          // result stays null
+        } catch (e) {
+          console.warn('[figurine bulk upload] failed', file.name, e);
         }
-        setBulkProgress((p) => p ? { ...p, done: p.done + 1 } : p);
+        if (mountedRef.current) {
+          setBulkProgress((p) => p ? { ...p, done: p.done + 1 } : p);
+        }
       }));
     }
 
+    if (!mountedRef.current) return;
     const newRows = results.filter((r): r is FigurineOption => r !== null);
     if (newRows.length > 0) onChange([...value, ...newRows]);
     setBulkProgress(null);

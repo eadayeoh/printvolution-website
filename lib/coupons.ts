@@ -22,6 +22,11 @@ function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
+// Escape Postgres LIKE wildcards so untrusted input can't match unrelated rows.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /** Pure: compute the discount for a given coupon + subtotal, applying
  *  the ceiling at subtotal so the order can't go negative. Returns a
  *  cents amount (0 if the coupon doesn't yield a positive discount). */
@@ -49,7 +54,7 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
   const { data, error } = await sb
     .from('coupons')
     .select('id, code, type, value_cents, percent, min_spend_cents, max_uses, uses_count, expires_at, is_active')
-    .ilike('code', code)
+    .ilike('code', escapeLike(code))
     .maybeSingle();
 
   if (error) return { ok: false, error: 'Could not check that code right now.' };

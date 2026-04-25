@@ -157,6 +157,9 @@ export async function renderTemplateComposite(
 
   // Walk zones in array order — array order = z-order.
   const overlays: Array<{ input: Buffer; top: number; left: number }> = [];
+  // Cache for raster mask buffers — multiple zones with the same
+  // shape + size share one rasterised PNG instead of re-running sharp.
+  const maskCache = new Map<string, Buffer>();
 
   for (const zone of (template.zones_json ?? [])) {
     const zoneMode = effectiveMode(zone);
@@ -229,7 +232,7 @@ export async function renderTemplateComposite(
           // fallback so the preview still works.
         }
       }
-      const img = await prepImageZone(sharp, imgZone, zw, zh, finalBytes);
+      const img = await prepImageZone(sharp, imgZone, zw, zh, finalBytes, maskCache);
       if (img) overlays.push({ input: img, top: zy, left: zx });
     }
   }
@@ -302,6 +305,7 @@ async function prepImageZone(
   zw: number,
   zh: number,
   bytes: Uint8Array,
+  maskCache: Map<string, Buffer>,
 ): Promise<Buffer | null> {
   try {
     let img = sharp(Buffer.from(bytes))
@@ -311,17 +315,26 @@ async function prepImageZone(
     // Mask preset (circle/heart/star) wins over border-radius — the
     // shape silhouette already encloses any rounded corners.
     if (zone.mask_preset) {
-      const maskBuf = await sharp(Buffer.from(maskPresetSvg(zone.mask_preset, zw, zh))).png().toBuffer();
+      const cacheKey = `preset:${zone.mask_preset}:${zw}x${zh}`;
+      const cached = maskCache.get(cacheKey);
+      const maskBuf: Buffer = cached
+        ?? await sharp(Buffer.from(maskPresetSvg(zone.mask_preset, zw, zh))).png().toBuffer();
+      if (!cached) maskCache.set(cacheKey, maskBuf);
       img = img.composite([{ input: maskBuf, blend: 'dest-in' }]).png();
     } else {
       // Border radius via SVG mask.
       const radiusPxX = Math.round(((zone.border_radius_mm ?? 0) / CANVAS_UNITS) * zw);
       const radiusPx = Math.max(0, Math.min(radiusPxX, Math.floor(Math.min(zw, zh) / 2)));
       if (radiusPx > 0) {
-        const maskSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
-          <rect x="0" y="0" width="${zw}" height="${zh}" rx="${radiusPx}" ry="${radiusPx}" fill="#fff"/>
-        </svg>`;
-        const maskBuf = await sharp(Buffer.from(maskSvg)).png().toBuffer();
+        const cacheKey = `radius:${radiusPx}:${zw}x${zh}`;
+        const cached = maskCache.get(cacheKey);
+        const maskBuf: Buffer = cached ?? await (async () => {
+          const maskSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${zw}" height="${zh}">
+            <rect x="0" y="0" width="${zw}" height="${zh}" rx="${radiusPx}" ry="${radiusPx}" fill="#fff"/>
+          </svg>`;
+          return await sharp(Buffer.from(maskSvg)).png().toBuffer();
+        })();
+        if (!cached) maskCache.set(cacheKey, maskBuf);
         img = img.composite([{ input: maskBuf, blend: 'dest-in' }]).png();
       }
     }

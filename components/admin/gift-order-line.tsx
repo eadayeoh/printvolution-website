@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { Download, RefreshCw, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { signGiftAssetUrl, rerunGiftProduction } from '@/app/admin/gifts/actions';
 import { formatSGD } from '@/lib/utils';
-import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+import { GIFT_MODE_LABEL, giftItemDisplayName } from '@/lib/gifts/types';
 
 type Asset = { id: string; bucket: string; path: string; mime_type: string | null; width_px?: number | null; height_px?: number | null; dpi?: number | null } | null;
 
@@ -75,7 +75,7 @@ export function GiftOrderLine({ line }: Props) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="font-bold text-ink">
-                {line.product_name_snapshot ?? line.gift_product?.name ?? 'Gift'}
+                {giftItemDisplayName(line)}
               </div>
               <div className="mt-0.5 flex items-center gap-2">
                 <span className="inline-flex rounded-full bg-pink/10 px-2 py-0.5 text-[10px] font-bold text-pink">

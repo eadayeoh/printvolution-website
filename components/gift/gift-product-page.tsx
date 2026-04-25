@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot } from '@/app/(site)/gift/actions';
@@ -213,6 +213,28 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
   const [surfaceFills, setSurfaceFills] = useState<SurfaceFillMap>({});
+
+  // Stable handler so TemplateMultiSlotForm's useEffect dep array
+  // doesn't re-fire on every parent render.
+  const onTemplateFormStateChange = useCallback((s: {
+    thumbs: Record<string, string>;
+    texts: Record<string, string>;
+    textColors: Record<string, string>;
+    textFonts: Record<string, string>;
+    calendars: Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>;
+    calendarColors: Record<string, string>;
+    foregroundColor: string | null;
+    backgroundColor: string | null;
+  }) => {
+    setTemplateThumbs(s.thumbs);
+    setTemplateTexts(s.texts);
+    setTemplateTextColors(s.textColors);
+    setTemplateTextFonts(s.textFonts);
+    setTemplateCalendars(s.calendars);
+    setTemplateCalendarColors(s.calendarColors);
+    setTemplateForegroundColor(s.foregroundColor);
+    setTemplateBackgroundColor(s.backgroundColor);
+  }, []);
 
   // Cleared on add-to-cart so a fresh visit isn't haunted by the last order.
   const debouncedSaveRef = useRef(
@@ -1721,16 +1743,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           }
                         : undefined
                     }
-                    onStateChange={({ thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor }) => {
-                      setTemplateThumbs(thumbs);
-                      setTemplateTexts(texts);
-                      setTemplateTextColors(textColors);
-                      setTemplateTextFonts(textFonts);
-                      setTemplateCalendars(calendars);
-                      setTemplateCalendarColors(calendarColors);
-                      setTemplateForegroundColor(foregroundColor);
-                      setTemplateBackgroundColor(backgroundColor);
-                    }}
+                    onStateChange={onTemplateFormStateChange}
                   />
                   {err && (
                     <div

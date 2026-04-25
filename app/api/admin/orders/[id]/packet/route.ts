@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getObject } from '@/lib/gifts/storage';
 import { getOrderById } from '@/lib/data/admin';
 import { formatSGD } from '@/lib/utils';
+import { giftItemDisplayName } from '@/lib/gifts/types';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,14 +16,17 @@ const MARGIN = 36;
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const sb = createClient();
-  const { data: { user } } = await sb.auth.getUser();
+  // Auth and order lookup are independent — fire in parallel.
+  const [userRes, order] = await Promise.all([
+    sb.auth.getUser(),
+    getOrderById(params.id),
+  ]);
+  const user = userRes.data.user;
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { data: prof } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
   if (!prof || !['admin', 'staff'].includes(prof.role)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-
-  const order = await getOrderById(params.id);
   if (!order) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   const doc = await PDFDocument.create();
@@ -79,7 +83,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
   for (const it of order.gift_order_items ?? []) {
     allLines.push({
-      name: `🎁 ${it.product_name_snapshot ?? it.gift_product?.name ?? 'Gift'}`,
+      name: `🎁 ${giftItemDisplayName(it)}`,
       meta: `${it.mode ?? ''}${it.production_status ? ` · ${it.production_status}` : ''}`,
       qty: it.qty ?? 1,
       line_total_cents: it.line_total_cents ?? 0,
@@ -130,16 +134,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   // preserve page order.
   const items = (order.gift_order_items ?? []) as any[];
   const fetched = await Promise.all(items.map(async (item) => {
-    const label = `${item.product_name_snapshot ?? item.gift_product?.name ?? 'Gift'} · qty ${item.qty ?? 1}`;
+    const label = `${giftItemDisplayName(item)} · qty ${item.qty ?? 1}`;
     let pdfBytes: Uint8Array | null = null;
     let pngBytes: Uint8Array | null = null;
     if (item.production_pdf?.path) {
       try { pdfBytes = await getObject(item.production_pdf.bucket, item.production_pdf.path); }
-      catch { /* fall through to png */ }
+      catch (e) { console.warn('[packet] PDF fetch failed', item.id, e); }
     }
     if (!pdfBytes && item.production?.path) {
       try { pngBytes = await getObject(item.production.bucket, item.production.path); }
-      catch { /* artwork unavailable */ }
+      catch (e) { console.warn('[packet] PNG fetch failed', item.id, e); }
     }
     return { label, pdfBytes, pngBytes };
   }));
@@ -157,8 +161,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           });
         }
         continue;
-      } catch {
-        // fall through to PNG
+      } catch (e) {
+        console.warn('[packet] PDF embed failed, falling back to PNG', e);
       }
     }
     if (pngBytes) {
