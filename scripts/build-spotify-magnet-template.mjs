@@ -138,30 +138,33 @@ if (!upRes.ok) throw new Error(`Storage upload: ${upRes.status} ${await upRes.te
 const foregroundUrl = `${BASE}/storage/v1/object/public/product-images/${filename}`;
 console.log(`✓ Uploaded → ${foregroundUrl}`);
 
-// Editable zones. Hero photo locked + full-bleed; song / artist text
-// rendered on top of the foreground gradient. mm == units in this
-// template (reference dims 100×100, units in 0..200 = 50 mm? — no,
-// reference_*_mm tells the renderer the canvas IS the product). Use
-// 200 unit canvas == 100 mm canvas, i.e. 1 unit = 0.5 mm. So zone
-// dimensions in *_mm halve.
+// Editable zones. The renderer puts x_mm/y_mm/width_mm/height_mm on a
+// 0..200 canvas grid (NOT actual mm — see the Netflix template's
+// canvas-unit comment). font_size_mm IS in real mm (printed size); the
+// renderer scales it via the assigned product's physical dimensions.
+//
+// Hero photo is full bleed (0..200 on both axes), locked so admin
+// drags don't bump it accidentally. No default_image_url — the live
+// preview falls back to the zone's label as "+ Upload image here".
 const zones = [
   {
     type: 'image',
     id: 'hero_photo',
-    label: 'Photo (full bleed)',
-    x_mm: 0, y_mm: 0, width_mm: 100, height_mm: 100,
+    label: 'Upload image here',
+    x_mm: 0, y_mm: 0, width_mm: 200, height_mm: 200,
     rotation_deg: 0,
     fit_mode: 'cover',
     border_radius_mm: 4,
     allow_rotate: false,
     allow_zoom: true,
     locked: true,
+    default_image_url: null,
   },
   {
     type: 'text',
     id: 'song_title',
     label: 'Song title',
-    x_mm: 5, y_mm: 65, width_mm: 90, height_mm: 8,
+    x_mm: 10, y_mm: 130, width_mm: 180, height_mm: 12,
     rotation_deg: 0,
     default_text: 'Beautiful',
     placeholder: 'Song title',
@@ -182,7 +185,7 @@ const zones = [
     type: 'text',
     id: 'artist',
     label: 'Artist',
-    x_mm: 5, y_mm: 73, width_mm: 90, height_mm: 6,
+    x_mm: 10, y_mm: 148, width_mm: 180, height_mm: 8,
     rotation_deg: 0,
     default_text: 'Giulio Cercato',
     placeholder: 'Artist name',
@@ -213,7 +216,8 @@ const existing = (await existingRes.json())[0];
 
 const payload = {
   description: DESCRIPTION,
-  thumbnail_url: foregroundUrl,
+  // No thumbnail — admin can capture one via the editor when ready.
+  thumbnail_url: null,
   background_url: null,
   foreground_url: foregroundUrl,
   zones_json: zones,
