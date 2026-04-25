@@ -71,8 +71,7 @@ export default async function PromptsListPage() {
                       </div>
                       <div className="p-3">
                         <div className="truncate text-sm font-bold text-ink">{p.name}</div>
-                        <div className="mt-1 flex items-center justify-between text-[11px] text-neutral-500">
-                          <span className="inline-flex rounded bg-neutral-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-neutral-700">{p.style === 'realistic' ? 'Realistic' : 'Line Art'}</span>
+                        <div className="mt-1 flex items-center justify-end text-[11px] text-neutral-500">
                           {p.is_active ? (
                             <span className="inline-flex rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700">Active</span>
                           ) : (
