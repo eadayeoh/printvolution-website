@@ -7,17 +7,21 @@ import { Trash2 } from 'lucide-react';
 import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt, testGiftPrompt } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
-import type { GiftPrompt } from '@/lib/gifts/prompts';
+import type { GiftPrompt, PromptVisibility } from '@/lib/gifts/prompts';
 import type { GiftMode, GiftPipeline } from '@/lib/gifts/types';
 
 export function GiftPromptEditor({
   prompt,
   defaultMode,
   pipelines = [],
+  visibility = [],
 }: {
   prompt: GiftPrompt | null;
   defaultMode?: GiftMode;
   pipelines?: GiftPipeline[];
+  /** For an existing prompt: which active gift products would actually
+   *  show this prompt to customers, and why. Computed server-side. */
+  visibility?: PromptVisibility[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -261,6 +265,8 @@ export function GiftPromptEditor({
             {flash && <div className="mt-2 text-xs font-bold text-green-600">✓ Saved</div>}
           </div>
 
+          {prompt && visibility.length > 0 && <VisibilityPanel visibility={visibility} />}
+
           {prompt && (
             <button onClick={remove} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white py-2 text-xs font-bold text-red-600 hover:bg-red-50">
               <Trash2 size={14} /> Delete
@@ -268,6 +274,63 @@ export function GiftPromptEditor({
           )}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function VisibilityPanel({ visibility }: { visibility: PromptVisibility[] }) {
+  const visible = visibility.filter((v) => v.visible);
+  const hidden = visibility.filter((v) => !v.visible);
+  const reasonHint: Record<PromptVisibility['reason'], string> = {
+    'mode-default': 'mode default — every product without a custom curation',
+    'curated-allowlist': "in this product's curated style list",
+    'curated-not-listed': "this product has a curated list and this prompt isn't in it",
+    'pipeline-pinned': "product is pinned to this prompt's pipeline",
+  };
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+      <div className="mb-1 text-xs font-bold text-ink">Where it shows</div>
+      <p className="mb-3 text-[11px] text-neutral-500">
+        Computed live — what the customer would actually see right now.
+      </p>
+      {visible.length === 0 ? (
+        <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">
+          ⚠ Not appearing on any product yet. Either tick this prompt in a product&apos;s
+          curated style list, pin a product&apos;s pipeline to this prompt&apos;s pipeline,
+          or leave a product fully un-curated.
+        </div>
+      ) : (
+        <ul className="space-y-1 text-[11px]">
+          {visible.map((v) => (
+            <li key={v.product_id} className="flex items-start gap-2">
+              <span className="mt-0.5 text-green-600">✓</span>
+              <span>
+                <span className="font-bold text-ink">{v.name}</span>
+                <span className="ml-1 text-neutral-400">— {reasonHint[v.reason]}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {hidden.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-[11px] font-bold text-neutral-500 hover:text-ink">
+            Why not visible on {hidden.length} product{hidden.length === 1 ? '' : 's'}
+          </summary>
+          <ul className="mt-2 space-y-1 text-[11px]">
+            {hidden.map((v) => (
+              <li key={v.product_id} className="flex items-start gap-2">
+                <span className="mt-0.5 text-neutral-300">·</span>
+                <span>
+                  <span className="text-ink">{v.name}</span>
+                  <span className="ml-1 text-neutral-400">— {reasonHint[v.reason]}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

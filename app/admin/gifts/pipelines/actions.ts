@@ -26,7 +26,21 @@ function resolveProvider(form: FormData): 'passthrough' | 'replicate' {
   return VALID_PROVIDERS.has(v) ? (v as 'passthrough' | 'replicate') : 'replicate';
 }
 
+// Reject misconfigurations at save time so admin doesn't ship a
+// silently broken pipeline (provider=replicate + no model would
+// crash on first customer use).
+function validatePipelineForm(form: FormData): string | null {
+  const provider = resolveProvider(form);
+  const model = resolveModelSlug(form);
+  if (provider === 'replicate' && !model) {
+    return 'Pick an AI model — Replicate provider needs one (try google/nano-banana).';
+  }
+  return null;
+}
+
 export async function createPipeline(form: FormData) {
+  const validationError = validatePipelineForm(form);
+  if (validationError) throw new Error(validationError);
   const sb = createClient();
   const { data, error } = await sb.from('gift_pipelines').insert({
     slug: String(form.get('slug') ?? '').trim(),
@@ -46,6 +60,8 @@ export async function createPipeline(form: FormData) {
 }
 
 export async function updatePipeline(id: string, form: FormData) {
+  const validationError = validatePipelineForm(form);
+  if (validationError) throw new Error(validationError);
   const sb = createClient();
   const { error } = await sb.from('gift_pipelines').update({
     name: String(form.get('name') ?? '').trim(),

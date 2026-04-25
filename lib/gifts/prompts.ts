@@ -122,3 +122,65 @@ export async function getPromptByIdAdmin(id: string): Promise<GiftPrompt | null>
   const { data } = await sb.from('gift_prompts').select('*').eq('id', id).maybeSingle();
   return data as GiftPrompt | null;
 }
+
+export type PromptVisibility = {
+  product_id: string;
+  slug: string;
+  name: string;
+  visible: boolean;
+  reason: 'curated-allowlist' | 'curated-not-listed' | 'pipeline-pinned' | 'mode-default';
+};
+
+/** For each active gift product, decide whether the given prompt would
+ *  appear on its art-style picker. Mirrors listPromptsForProduct's
+ *  filter logic — admin uses this to verify wiring without guessing.
+ *  Visible only to admin pages; runs the same query the customer
+ *  page would. */
+export async function listPromptVisibility(prompt: GiftPrompt): Promise<PromptVisibility[]> {
+  const sb = createClient();
+  const { data: products } = await sb
+    .from('gift_products')
+    .select('id, slug, name, mode, secondary_mode, pipeline_id, secondary_pipeline_id, prompt_ids')
+    .eq('is_active', true)
+    .order('name');
+
+  const out: PromptVisibility[] = [];
+  for (const p of (products ?? []) as any[]) {
+    const modeMatch = p.mode === prompt.mode || p.secondary_mode === prompt.mode;
+    if (!modeMatch) continue;
+
+    if (Array.isArray(p.prompt_ids) && p.prompt_ids.length > 0) {
+      const inAllowlist = p.prompt_ids.includes(prompt.id);
+      out.push({
+        product_id: p.id,
+        slug: p.slug,
+        name: p.name,
+        visible: inAllowlist,
+        reason: inAllowlist ? 'curated-allowlist' : 'curated-not-listed',
+      });
+      continue;
+    }
+
+    const pinId = p.mode === prompt.mode ? p.pipeline_id : p.secondary_pipeline_id;
+    if (pinId) {
+      const matches = prompt.pipeline_id === pinId;
+      out.push({
+        product_id: p.id,
+        slug: p.slug,
+        name: p.name,
+        visible: matches,
+        reason: 'pipeline-pinned',
+      });
+      continue;
+    }
+
+    out.push({
+      product_id: p.id,
+      slug: p.slug,
+      name: p.name,
+      visible: true,
+      reason: 'mode-default',
+    });
+  }
+  return out;
+}
