@@ -75,6 +75,10 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
   }
   const minSpend = c.min_spend_cents ?? 0;
   if (subtotalCents < minSpend) {
+    // With no real cart, treat as a probing attempt — don't leak the
+    // threshold. With a non-zero cart, tell the customer the gap so
+    // they can act on it.
+    if (subtotalCents <= 0) return { ok: false, error: NOT_VALID };
     const dollars = (minSpend / 100).toFixed(2);
     return { ok: false, error: `Minimum spend S$${dollars} not met.` };
   }

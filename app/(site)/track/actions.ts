@@ -41,6 +41,13 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
   if (!/^[A-Za-z0-9-]{3,32}$/.test(num)) return { ok: false, error: 'That doesn\'t look like an order number.' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || em.length > 254) return { ok: false, error: 'Enter a valid email.' };
 
+  // Second rate limit keyed on the order_number itself so a botnet
+  // hitting many IPs against one target order can't bypass the
+  // per-IP cap. This also covers the case where getClientIp()
+  // falls back to "unknown" and many requesters share that bucket.
+  const numRl = await checkRateLimit(`track-num:${num}`, { max: 30, windowSeconds: 600 });
+  if (!numRl.allowed) return { ok: false, error: `Too many tries — wait ${numRl.retryAfterSeconds}s.` };
+
   const sb = createServiceClient();
   const { data, error } = await sb
     .from('orders')

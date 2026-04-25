@@ -1,7 +1,7 @@
 // Print-ready packet PDF for fulfilment. Admin/staff only.
 
 import { NextResponse } from 'next/server';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFName } from 'pdf-lib';
 import { createClient } from '@/lib/supabase/server';
 import { getObject } from '@/lib/gifts/storage';
 import { getOrderById } from '@/lib/data/admin';
@@ -13,6 +13,20 @@ export const runtime = 'nodejs';
 
 const A4 = { w: 595.28, h: 841.89 };
 const MARGIN = 36;
+
+// pdf-lib's StandardFonts.Helvetica is WinAnsi-encoded; an emoji or
+// CJK character in customer-supplied text crashes drawText() and the
+// route 500s. Replace anything outside printable ASCII with `?` so
+// staff can still print the packet — fulfilment can read the original
+// text on the order detail page if they need fidelity.
+function ascii(text: string | null | undefined): string {
+  if (!text) return '';
+  return String(text).replace(/[^\x20-\x7E]/g, '?');
+}
+
+// Cap embedded artwork at 50 MB so a hostile PDF can't hang the route
+// or balloon memory. Production files are usually well under this.
+const MAX_ARTWORK_BYTES = 50 * 1024 * 1024;
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const sb = createClient();
@@ -41,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const size = opts.size ?? 10;
     const font = opts.bold ? helvBold : helv;
     const [r, g, b] = opts.color ?? [0, 0, 0];
-    page.drawText(text, { x, y, size, font, color: rgb(r, g, b) });
+    page.drawText(ascii(text), { x, y, size, font, color: rgb(r, g, b) });
     y -= size * 1.4;
   };
 
@@ -83,7 +97,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
   for (const it of order.gift_order_items ?? []) {
     allLines.push({
-      name: `🎁 ${giftItemDisplayName(it)}`,
+      name: `[gift] ${giftItemDisplayName(it)}`,
       meta: `${it.mode ?? ''}${it.production_status ? ` · ${it.production_status}` : ''}`,
       qty: it.qty ?? 1,
       line_total_cents: it.line_total_cents ?? 0,
@@ -101,7 +115,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   drawText('TOTALS', { bold: true, size: 9, color: [0.5, 0.5, 0.5] });
   const tot = (label: string, cents: number, opts: { bold?: boolean; color?: [number, number, number] } = {}) => {
     const before = y;
-    page.drawText(label, { x: MARGIN, y: before, size: 11, font: opts.bold ? helvBold : helv, color: rgb(...(opts.color ?? [0, 0, 0])) });
+    page.drawText(ascii(label), { x: MARGIN, y: before, size: 11, font: opts.bold ? helvBold : helv, color: rgb(...(opts.color ?? [0, 0, 0])) });
     page.drawText(formatSGD(cents), { x: A4.w - MARGIN - 80, y: before, size: 11, font: opts.bold ? helvBold : helv, color: rgb(...(opts.color ?? [0, 0, 0])) });
     y -= 14;
   };
@@ -114,7 +128,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   if (order.gift_wrap) {
     y -= 16;
-    drawText('🎁 GIFT WRAP', { bold: true, size: 12, color: [0.85, 0.1, 0.5] });
+    drawText('** GIFT WRAP **', { bold: true, size: 12, color: [0.85, 0.1, 0.5] });
     if (order.gift_message) {
       drawText('Handwritten message:', { size: 9, color: [0.4, 0.4, 0.4] });
       for (const line of String(order.gift_message).split('\n')) drawText(line, { size: 11, x: MARGIN + 8 });
@@ -138,12 +152,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     let pdfBytes: Uint8Array | null = null;
     let pngBytes: Uint8Array | null = null;
     if (item.production_pdf?.path) {
-      try { pdfBytes = await getObject(item.production_pdf.bucket, item.production_pdf.path); }
-      catch (e) { console.warn('[packet] PDF fetch failed', item.id, e); }
+      try {
+        const bytes = await getObject(item.production_pdf.bucket, item.production_pdf.path);
+        if (bytes.byteLength <= MAX_ARTWORK_BYTES) pdfBytes = bytes;
+        else console.warn('[packet] PDF skipped — too large', item.id, bytes.byteLength);
+      } catch (e) { console.warn('[packet] PDF fetch failed', item.id, e); }
     }
     if (!pdfBytes && item.production?.path) {
-      try { pngBytes = await getObject(item.production.bucket, item.production.path); }
-      catch (e) { console.warn('[packet] PNG fetch failed', item.id, e); }
+      try {
+        const bytes = await getObject(item.production.bucket, item.production.path);
+        if (bytes.byteLength <= MAX_ARTWORK_BYTES) pngBytes = bytes;
+        else console.warn('[packet] PNG skipped — too large', item.id, bytes.byteLength);
+      } catch (e) { console.warn('[packet] PNG fetch failed', item.id, e); }
     }
     return { label, pdfBytes, pngBytes };
   }));
@@ -153,10 +173,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       try {
         const src = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const copied = await doc.copyPages(src, src.getPageIndices());
-        for (const p of copied) doc.addPage(p);
+        // Strip annotations (URI actions, JS, embedded files) from
+        // any third-party PDF before adding to our packet.
+        for (const p of copied) {
+          p.node.delete(PDFName.of('Annots'));
+          doc.addPage(p);
+        }
         const first = copied[0];
         if (first) {
-          first.drawText(label, {
+          first.drawText(ascii(label), {
             x: MARGIN, y: first.getHeight() - MARGIN / 2, size: 9, font: helv, color: rgb(0.4, 0.4, 0.4),
           });
         }
@@ -168,7 +193,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     if (pngBytes) {
       const png = await doc.embedPng(pngBytes);
       const p = doc.addPage([A4.w, A4.h]);
-      p.drawText(label, { x: MARGIN, y: A4.h - MARGIN, size: 12, font: helvBold });
+      p.drawText(ascii(label), { x: MARGIN, y: A4.h - MARGIN, size: 12, font: helvBold });
       const maxW = A4.w - MARGIN * 2;
       const maxH = A4.h - MARGIN * 2 - 24;
       const ratio = png.width / png.height;
@@ -178,7 +203,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       p.drawImage(png, { x: (A4.w - dw) / 2, y: MARGIN, width: dw, height: dh });
     } else if (!pdfBytes) {
       const p = doc.addPage([A4.w, A4.h]);
-      p.drawText(`${label} — artwork unavailable`, { x: MARGIN, y: A4.h - MARGIN, size: 11, font: helv, color: rgb(0.7, 0.2, 0.2) });
+      p.drawText(ascii(`${label} - artwork unavailable`), { x: MARGIN, y: A4.h - MARGIN, size: 11, font: helv, color: rgb(0.7, 0.2, 0.2) });
     }
   }
 
