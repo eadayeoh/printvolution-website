@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { MaskShapeDefs } from '@/components/gift/mask-shape-defs';
@@ -16,8 +16,10 @@ import {
   type GiftTemplateZone,
   type GiftTemplateImageZone,
   type GiftTemplateTextZone,
+  type GiftTemplateCalendarZone,
   type GiftMode,
 } from '@/lib/gifts/types';
+import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -40,6 +42,10 @@ function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
   return z.type === 'text';
 }
 
+function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
+  return (z as GiftTemplateCalendarZone).type === 'calendar';
+}
+
 function makeImageZone(n: number): GiftTemplateImageZone {
   return {
     type: 'image',
@@ -51,6 +57,32 @@ function makeImageZone(n: number): GiftTemplateImageZone {
     border_radius_mm: 0,
     allow_rotate: false,
     allow_zoom: true,
+  };
+}
+
+function makeCalendarZone(n: number): GiftTemplateCalendarZone {
+  const today = new Date();
+  return {
+    type: 'calendar',
+    id: `cal${n}`,
+    label: `Calendar ${n}`,
+    x_mm: 30, y_mm: 60, width_mm: 140, height_mm: 110,
+    rotation_deg: 0,
+    header_layout: 'above',
+    header_font_family: 'fraunces',
+    header_font_size_mm: 12,
+    header_font_weight: '700',
+    header_color: '#0a0a0a',
+    grid_font_family: 'inter',
+    grid_font_size_mm: 6,
+    grid_color: '#0a0a0a',
+    week_start: 'sunday',
+    highlight_shape: 'circle',
+    highlight_fill: '#ec4899',
+    highlight_text_color: '#ffffff',
+    default_month: today.getMonth() + 1,
+    default_year: today.getFullYear(),
+    default_highlighted_day: today.getDate(),
   };
 }
 
@@ -161,6 +193,12 @@ export function GiftTemplateEditor({
     setActiveZoneIdx(zones.length);
   }
 
+  function addCalendarZone() {
+    const n = zones.filter(isCalendarZone).length + 1;
+    setZones([...zones, makeCalendarZone(n)]);
+    setActiveZoneIdx(zones.length);
+  }
+
   function duplicateZone(i: number) {
     const z = zones[i];
     const copy: GiftTemplateZone = {
@@ -253,8 +291,9 @@ export function GiftTemplateEditor({
 
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
 
-  const imageCount = zones.filter((z) => !isTextZone(z)).length;
+  const imageCount = zones.filter((z) => !isTextZone(z) && !isCalendarZone(z)).length;
   const textCount = zones.filter(isTextZone).length;
+  const calendarCount = zones.filter(isCalendarZone).length;
 
   return (
     <div className="p-6">
@@ -369,7 +408,7 @@ export function GiftTemplateEditor({
               <div>
                 <div className="text-xs font-bold text-ink">Template slots</div>
                 <div className="text-[11px] text-neutral-500">
-                  {imageCount} image · {textCount} text
+                  {imageCount} image · {textCount} text{calendarCount > 0 && ` · ${calendarCount} calendar`}
                 </div>
               </div>
               <div className="flex gap-1.5">
@@ -378,6 +417,9 @@ export function GiftTemplateEditor({
                 </button>
                 <button type="button" onClick={addTextZone} className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-neutral-700">
                   <Type size={11} /> Text
+                </button>
+                <button type="button" onClick={addCalendarZone} className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-amber-600">
+                  <CalendarIcon size={11} /> Calendar
                 </button>
               </div>
             </div>
@@ -390,6 +432,8 @@ export function GiftTemplateEditor({
                 {zones.map((z, i) => {
                   const active = activeZoneIdx === i;
                   const isText = isTextZone(z);
+                  const isCal = isCalendarZone(z);
+                  const badgeBg = isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
                   return (
                     <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''}`}>
                       <div className="flex w-full items-center justify-between gap-2 p-3">
@@ -398,8 +442,8 @@ export function GiftTemplateEditor({
                           onClick={() => setActiveZoneIdx(active ? null : i)}
                           className="flex min-w-0 flex-1 items-center gap-2 text-left"
                         >
-                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isText ? 'bg-ink text-white' : 'bg-pink text-white'}`}>
-                            {isText ? <Type size={12} /> : <ImageIcon size={12} />}
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-white ${badgeBg}`}>
+                            {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : <ImageIcon size={12} />}
                           </span>
                           <span className="text-sm font-bold text-ink truncate">{z.label || 'Untitled'}</span>
                           {isText && (z as GiftTemplateTextZone).editable === false && (
@@ -426,9 +470,11 @@ export function GiftTemplateEditor({
                       </div>
                       {active && (
                         <div className="space-y-3 border-t border-neutral-200 p-3">
-                          {isText
-                            ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
-                            : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
+                          {isCal
+                            ? <CalendarZoneFields zone={z as GiftTemplateCalendarZone} onChange={(p) => updateZone<GiftTemplateCalendarZone>(i, p)} />
+                            : isText
+                              ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
+                              : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
 
                           <div className="grid grid-cols-4 gap-1.5 border-t border-neutral-200 pt-3">
                             <NumField label="X" value={z.x_mm} onChange={(v) => updateZone(i, { x_mm: v })} />
@@ -604,7 +650,7 @@ export function GiftTemplateEditor({
                   with the zone label so admin can read what each slot
                   is at a glance. No auto-fetched stock photos. */}
               {zones.map((z, i) => {
-                if (isTextZone(z)) return null;
+                if (isTextZone(z) || isCalendarZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
                 const fit = img.fit_mode ?? 'cover';
                 const hasContent = Boolean(img.default_image_url);
@@ -650,6 +696,36 @@ export function GiftTemplateEditor({
                       </div>
                     )}
                   </div>
+                );
+              })}
+
+              {/* Calendar zones — rendered via the same SVG generator
+                  the customer + server pipelines use, so the editor
+                  preview matches what ships. */}
+              {zones.map((z, i) => {
+                if (!isCalendarZone(z)) return null;
+                const svg = renderCalendarSvg({
+                  zone: z,
+                  fill: undefined,
+                  width: z.width_mm,
+                  height: z.height_mm,
+                });
+                const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+                return (
+                  <img
+                    key={`cv-${i}`}
+                    src={dataUrl}
+                    alt=""
+                    className="pointer-events-none absolute"
+                    style={{
+                      left: `${(z.x_mm / TEMPLATE_W) * 100}%`,
+                      top: `${(z.y_mm / TEMPLATE_H) * 100}%`,
+                      width: `${(z.width_mm / TEMPLATE_W) * 100}%`,
+                      height: `${(z.height_mm / TEMPLATE_H) * 100}%`,
+                      transform: `rotate(${z.rotation_deg ?? 0}deg)`,
+                      transformOrigin: 'center',
+                    }}
+                  />
                 );
               })}
 
@@ -1098,6 +1174,131 @@ function TextZoneFields({ zone, onChange }: { zone: GiftTemplateTextZone; onChan
         </label>
       </div>
     </div>
+  );
+}
+
+function CalendarZoneFields({ zone, onChange }: { zone: GiftTemplateCalendarZone; onChange: (p: Partial<GiftTemplateCalendarZone>) => void }) {
+  return (
+    <div className="space-y-3">
+      <label className="block">
+        <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">Label (admin only)</span>
+        <input
+          type="text"
+          value={zone.label ?? ''}
+          onChange={(e) => onChange({ label: e.target.value })}
+          className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs focus:border-pink focus:outline-none"
+        />
+      </label>
+
+      <div>
+        <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Header layout</div>
+        <div className="flex gap-1">
+          {(['above', 'left', 'hidden'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onChange({ header_layout: v })}
+              className={`rounded border-2 px-2 py-1 text-[10px] font-bold uppercase ${
+                (zone.header_layout ?? 'above') === v ? 'border-pink bg-pink text-white' : 'border-neutral-200 bg-white text-neutral-600'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">Header font</span>
+          <select
+            value={zone.header_font_family ?? 'fraunces'}
+            onChange={(e) => onChange({ header_font_family: e.target.value })}
+            className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs"
+          >
+            {GIFT_FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </label>
+        <NumField label="Header size (mm)" value={zone.header_font_size_mm ?? 12} onChange={(v) => onChange({ header_font_size_mm: v })} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">Grid font</span>
+          <select
+            value={zone.grid_font_family ?? 'inter'}
+            onChange={(e) => onChange({ grid_font_family: e.target.value })}
+            className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs"
+          >
+            {GIFT_FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </label>
+        <NumField label="Grid size (mm)" value={zone.grid_font_size_mm ?? 6} onChange={(v) => onChange({ grid_font_size_mm: v })} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <ColourPicker label="Header colour" value={zone.header_color ?? '#0a0a0a'} onChange={(v) => onChange({ header_color: v })} />
+        <ColourPicker label="Grid colour"   value={zone.grid_color ?? '#0a0a0a'}   onChange={(v) => onChange({ grid_color: v })} />
+        <ColourPicker label="Highlight"     value={zone.highlight_fill ?? '#ec4899'} onChange={(v) => onChange({ highlight_fill: v })} />
+      </div>
+
+      <div>
+        <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Highlight shape</div>
+        <div className="flex gap-1">
+          {(['circle', 'square', 'heart'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onChange({ highlight_shape: v })}
+              className={`rounded border-2 px-2 py-1 text-[10px] font-bold uppercase ${
+                (zone.highlight_shape ?? 'circle') === v ? 'border-pink bg-pink text-white' : 'border-neutral-200 bg-white text-neutral-600'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Week starts on</div>
+        <div className="flex gap-1">
+          {(['sunday', 'monday'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onChange({ week_start: v })}
+              className={`rounded border-2 px-2 py-1 text-[10px] font-bold uppercase ${
+                (zone.week_start ?? 'sunday') === v ? 'border-pink bg-pink text-white' : 'border-neutral-200 bg-white text-neutral-600'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 border-t border-neutral-200 pt-3">
+        <NumField label="Default month (1–12)" value={zone.default_month ?? 0} onChange={(v) => onChange({ default_month: v ? clamp(v, 1, 12) : null })} />
+        <NumField label="Default year"          value={zone.default_year ?? 0}  onChange={(v) => onChange({ default_year: v || null })} />
+        <NumField label="Default day (1–31)"   value={zone.default_highlighted_day ?? 0} onChange={(v) => onChange({ default_highlighted_day: v ? clamp(v, 1, 31) : null })} />
+      </div>
+      <div className="text-[10px] text-neutral-500">Defaults appear before the customer touches the picker. Leave the day blank for no highlight at first.</div>
+    </div>
+  );
+}
+
+function ColourPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-[9px] font-bold uppercase text-neutral-500">{label}</span>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-7 w-full cursor-pointer rounded border-2 border-neutral-200"
+      />
+    </label>
   );
 }
 
