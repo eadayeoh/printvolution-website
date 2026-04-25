@@ -332,6 +332,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   const zoneFilesBytes: Record<string, Uint8Array> = {};
   const zoneFileMetas: Record<string, { mime: string; size: number; key?: string }> = {};
   const zoneTexts: Record<string, string> = {};
+  const zoneCalendars: Record<string, { month: number; year: number; highlightedDay: number | null }> = {};
   for (const [k, v] of formData.entries()) {
     if (k.startsWith('file_') && v instanceof File && v.size > 0 && v.size <= MAX_BYTES) {
       const zoneId = k.slice('file_'.length);
@@ -343,6 +344,26 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       }
     } else if (k.startsWith('text_') && typeof v === 'string') {
       zoneTexts[k.slice('text_'.length)] = v.slice(0, 500); // hard cap
+    } else if (k.startsWith('calendar_') && typeof v === 'string') {
+      // Customer-supplied JSON. Parse defensively + range-clamp every
+      // field so a hand-crafted POST can't render bogus calendars
+      // (year=99999, month=0, etc.) into the production composite.
+      try {
+        const parsed = JSON.parse(v);
+        const month = Number(parsed?.month);
+        const year = Number(parsed?.year);
+        const day = parsed?.highlightedDay;
+        if (Number.isFinite(month) && Number.isFinite(year)) {
+          zoneCalendars[k.slice('calendar_'.length)] = {
+            month: Math.min(12, Math.max(1, Math.round(month))),
+            year: Math.min(2100, Math.max(1970, Math.round(year))),
+            highlightedDay:
+              day === null || day === undefined
+                ? null
+                : Math.min(31, Math.max(1, Math.round(Number(day)))),
+          };
+        }
+      } catch { /* ignore malformed */ }
     }
   }
 
@@ -505,6 +526,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       shapeKind,
       imagesByZoneId: Object.keys(zoneFilesBytes).length > 0 ? zoneFilesBytes : undefined,
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
+      calendarsByZoneId: Object.keys(zoneCalendars).length > 0 ? zoneCalendars : undefined,
       // Only run the AI transform path when the customer actually
       // picked a style. Template-driven products without a chosen
       // prompt should composite the photo as-is — no Replicate, no

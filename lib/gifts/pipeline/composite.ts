@@ -21,8 +21,9 @@
 //     preview; final fidelity needs a TTF bundle which is a separate
 //     piece of infra work.
 
-import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftMode } from '@/lib/gifts/types';
+import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftTemplateCalendarZone, GiftMode } from '@/lib/gifts/types';
 import { renderSvgWithFonts } from './fonts';
+import { renderCalendarSvg, type CalendarFill } from './calendar-svg';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
 const DEFAULT_DPI_PREVIEW = 150;
@@ -62,6 +63,10 @@ export type CompositeInput = {
    *  this file. Return the transformed bytes (same dimensions are
    *  fine — the composite resizes to fit the zone anyway). */
   transformZone?: (bytes: Uint8Array, mode: GiftMode) => Promise<Uint8Array>;
+  /** Per-zone calendar fills. Keyed by zone id. Calendar zones with
+   *  no entry fall back to the zone's admin-set defaults / current
+   *  month at render time. */
+  calendarsByZoneId?: Record<string, Partial<CalendarFill>>;
 };
 
 export type CompositeOutput = {
@@ -74,7 +79,7 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
   // Effective zone mode: zone.mode wins, fall back to productMode, else null.
   const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
     (z.mode ?? productMode ?? null) as GiftMode | null;
@@ -132,7 +137,21 @@ export async function renderTemplateComposite(
     const zh = zoneToPx(zone.height_mm, 'y');
     if (zw <= 0 || zh <= 0) continue;
 
-    if (isText(zone)) {
+    if (isCalendar(zone)) {
+      // Calendar zones use the same SVG generator the live preview
+      // calls — single source of truth so what the customer sees in
+      // preview is what gets printed. Render at the zone's pixel
+      // dimensions so font sizes scale with DPI.
+      const svg = renderCalendarSvg({
+        zone,
+        fill: calendarsByZoneId?.[zone.id],
+        width: zw,
+        height: zh,
+      });
+      const resvgBuf = await renderSvgWithFonts(svg);
+      const svgBuf: Buffer = resvgBuf ?? await sharp(Buffer.from(svg)).png().toBuffer();
+      overlays.push({ input: svgBuf, top: zy, left: zx });
+    } else if (isText(zone)) {
       const svg = textZoneSvg(zone, zw, zh, textByZoneId?.[zone.id]);
       // Prefer resvg-with-fonts so Playfair / Inter etc. resolve
       // against the .ttf files in public/fonts/. Falls back to sharp's
@@ -193,6 +212,9 @@ export async function renderTemplateComposite(
 
 function isText(z: GiftTemplateZone): z is GiftTemplateTextZone {
   return (z as GiftTemplateTextZone).type === 'text';
+}
+function isCalendar(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
+  return (z as GiftTemplateCalendarZone).type === 'calendar';
 }
 
 async function prepImageZone(

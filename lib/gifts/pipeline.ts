@@ -92,6 +92,9 @@ export type PreviewInput = {
   /** Per-zone text overrides keyed by zone_id. Defaults to the
    *  template zone's default_text when a key is absent. */
   textByZoneId?: Record<string, string>;
+  /** Per-zone calendar fills keyed by zone_id. Calendar zones with no
+   *  entry render the zone's admin defaults / current month. */
+  calendarsByZoneId?: Record<string, { month: number; year: number; highlightedDay: number | null }>;
   /** Customer-picked shape from the product's shape_options config.
    *  null / undefined = legacy behaviour (rectangle-equivalent).
    *  Drives a dispatcher below — 'cutout' runs the new bg-remove stage,
@@ -131,6 +134,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       sourceBytes: input.sourceBytes,
       imagesByZoneId: input.imagesByZoneId,
       textByZoneId:   input.textByZoneId,
+      calendarsByZoneId: input.calendarsByZoneId,
       targetWidthMm:  product.width_mm,
       targetHeightMm: product.height_mm,
       kind: 'preview',
