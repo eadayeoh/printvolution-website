@@ -118,6 +118,8 @@ export function TemplateMultiSlotForm({
     if (!autoGenerate) return;
     if (Object.keys(files).length === 0) return;
     if (isWorking) {
+      // Customer changed something mid-upload — flag it so the
+      // post-work effect below re-fires once the current run finishes.
       pendingRegenRef.current = true;
       return;
     }
@@ -125,7 +127,14 @@ export function TemplateMultiSlotForm({
       onGenRef.current({ files: filesRef.current, texts: textsRef.current, calendars: calendarsRef.current });
     }, 800);
     return () => clearTimeout(t);
-  }, [files, texts, calendars, autoGenerate, isWorking]);
+    // NOTE: isWorking deliberately NOT in deps. If it were, the effect
+    // would re-fire on every upload's true→false transition and
+    // schedule another upload, which would kick off an endless loop
+    // (visible as duplicate hits in the preview-history strip). The
+    // pendingRegenRef path on the next effect handles re-firing when
+    // data actually changed mid-upload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, texts, calendars, autoGenerate]);
 
   // When a generate finishes and changes arrived during it, fire once
   // more immediately so the server composite is always up to date.
