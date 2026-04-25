@@ -180,7 +180,6 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     for (const [si, s] of d.surfaces.entries()) {
       if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) { setErr(`Surface #${si + 1} id must be lowercase-slug.`); return false; }
       if (!s.label.trim()) { setErr(`Surface #${si + 1} needs a label.`); return false; }
-      if (s.accepts === 'photo' && !s.mockup_url) { setErr(`Surface "${s.label || s.id}" accepts photo — needs a mockup.`); return false; }
     }
     const payload = {
       id: d.id,
@@ -539,7 +538,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                               <div className="mt-2 space-y-2">
                                 <div>
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
-                                    Mockup{s.accepts === 'photo' ? '' : ' (optional)'}
+                                    Mockup (optional)
                                   </span>
                                   <ImageUpload
                                     value={s.mockup_url}
@@ -549,11 +548,9 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     size="sm"
                                     label="Mockup"
                                   />
-                                  {s.accepts !== 'photo' && (
-                                    <div className="mt-1 text-[10px] text-neutral-500">
-                                      Used for the customer preview only. Text-only surfaces render fine without one.
-                                    </div>
-                                  )}
+                                  <div className="mt-1 text-[10px] text-neutral-500">
+                                    Leave blank to fall back to the variant&apos;s main mockup above.
+                                  </div>
                                 </div>
                                 <div>
                                   <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
