@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { serviceClient, GIFT_BUCKETS, makeKey, putObject } from '@/lib/gifts/storage';
 import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
+import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 
 /**
@@ -340,6 +341,8 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   const zoneFileMetas: Record<string, { mime: string; size: number; key?: string }> = {};
   const zoneTexts: Record<string, string> = {};
   const zoneTextColors: Record<string, string> = {};
+  const zoneTextFonts: Record<string, string> = {};
+  const allowedFontKeys = new Set(GIFT_FONT_FAMILIES.map((f) => f.value));
   const zoneCalendars: Record<string, { month: number; year: number; highlightedDay: number | null }> = {};
   const zoneCalendarColors: Record<string, string> = {};
   for (const [k, v] of formData.entries()) {
@@ -356,6 +359,14 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       const c = v.trim();
       if (/^#[0-9A-Fa-f]{6}$/.test(c)) {
         zoneTextColors[k.slice('text_color_'.length)] = c;
+      }
+    } else if (k.startsWith('text_font_') && typeof v === 'string') {
+      // Whitelist against the ship-shipped GIFT_FONT_FAMILIES keys —
+      // anything else could be a CSS-injection vector or a font we
+      // don't have available on the server.
+      const f = v.trim();
+      if (allowedFontKeys.has(f)) {
+        zoneTextFonts[k.slice('text_font_'.length)] = f;
       }
     } else if (k.startsWith('text_') && typeof v === 'string') {
       zoneTexts[k.slice('text_'.length)] = v.slice(0, 500); // hard cap
@@ -547,6 +558,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       imagesByZoneId: Object.keys(zoneFilesBytes).length > 0 ? zoneFilesBytes : undefined,
       textByZoneId:   Object.keys(zoneTexts).length > 0 ? zoneTexts : undefined,
       textColorsByZoneId: Object.keys(zoneTextColors).length > 0 ? zoneTextColors : undefined,
+      textFontsByZoneId:  Object.keys(zoneTextFonts).length > 0 ? zoneTextFonts : undefined,
       calendarsByZoneId: Object.keys(zoneCalendars).length > 0 ? zoneCalendars : undefined,
       calendarColorsByZoneId: Object.keys(zoneCalendarColors).length > 0 ? zoneCalendarColors : undefined,
       foregroundColor: foregroundColor ?? undefined,

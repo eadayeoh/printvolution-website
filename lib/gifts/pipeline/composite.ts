@@ -74,6 +74,10 @@ export type CompositeInput = {
   /** Per-zone customer-picked text colour overrides keyed by zone id.
    *  Falls through to z.color when a key is missing. */
   textColorsByZoneId?: Record<string, string>;
+  /** Per-zone customer-picked font-family key overrides. Validated
+   *  upstream against GIFT_FONT_FAMILIES — falls through to
+   *  z.font_family when a key is missing. */
+  textFontsByZoneId?: Record<string, string>;
   /** Customer-picked tint applied to the template's foreground PNG.
    *  When set, the foreground renders as an alpha mask filled with
    *  this colour. #RRGGBB validated upstream. */
@@ -94,7 +98,7 @@ export async function renderTemplateComposite(
   sharp: SharpModule,
   input: CompositeInput,
 ): Promise<CompositeOutput> {
-  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, calendarColorsByZoneId, textColorsByZoneId, foregroundColor, backgroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
+  const { template, sourceBytes, imagesByZoneId, textByZoneId, calendarsByZoneId, calendarColorsByZoneId, textColorsByZoneId, textFontsByZoneId, foregroundColor, backgroundColor, targetWidthMm, targetHeightMm, kind, productMode, onlyMode, transformZone } = input;
   // Effective zone mode: zone.mode wins, fall back to productMode, else null.
   const effectiveMode = (z: GiftTemplateZone): GiftMode | null =>
     (z.mode ?? productMode ?? null) as GiftMode | null;
@@ -180,10 +184,18 @@ export async function renderTemplateComposite(
       const svgBuf: Buffer = resvgBuf ?? await sharp(Buffer.from(svg)).png().toBuffer();
       overlays.push({ input: svgBuf, top: zy, left: zx });
     } else if (isText(zone)) {
-      // Customer-picked colour wins over admin default. Validated #RRGGBB
-      // upstream in the upload action.
+      // Customer-picked colour + font win over admin defaults.
+      // Validated upstream (#RRGGBB / GIFT_FONT_FAMILIES key).
       const customerColor = textColorsByZoneId?.[zone.id];
-      const zoneForRender = customerColor ? { ...zone, color: customerColor } : zone;
+      const customerFont = textFontsByZoneId?.[zone.id];
+      const zoneForRender =
+        customerColor || customerFont
+          ? {
+              ...zone,
+              color: customerColor ?? zone.color,
+              font_family: customerFont ?? zone.font_family,
+            }
+          : zone;
       const svg = textZoneSvg(zoneForRender, zw, zh, textByZoneId?.[zone.id]);
       // Prefer resvg-with-fonts so Playfair / Inter etc. resolve
       // against the .ttf files in public/fonts/. Falls back to sharp's

@@ -95,6 +95,9 @@ export type PreviewInput = {
   /** Per-zone text colour overrides keyed by zone_id. Customer-picked
    *  via the colour picker; falls through to z.color when missing. */
   textColorsByZoneId?: Record<string, string>;
+  /** Per-zone font-family key overrides. Validated upstream against
+   *  GIFT_FONT_FAMILIES.value — falls through to z.font_family. */
+  textFontsByZoneId?: Record<string, string>;
   /** Per-zone calendar fills keyed by zone_id. Calendar zones with no
    *  entry render the zone's admin defaults / current month. */
   calendarsByZoneId?: Record<string, { month: number; year: number; highlightedDay: number | null }>;
@@ -148,6 +151,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       imagesByZoneId: input.imagesByZoneId,
       textByZoneId:   input.textByZoneId,
       textColorsByZoneId: input.textColorsByZoneId,
+      textFontsByZoneId:  input.textFontsByZoneId,
       calendarsByZoneId: input.calendarsByZoneId,
       calendarColorsByZoneId: input.calendarColorsByZoneId,
       foregroundColor: input.foregroundColor,

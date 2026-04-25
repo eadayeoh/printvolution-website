@@ -15,6 +15,7 @@ import type {
   GiftTemplateTextZone,
   GiftTemplateCalendarZone,
 } from '@/lib/gifts/types';
+import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import type { CalendarFill } from '@/lib/gifts/pipeline/calendar-svg';
 import { CalendarZoneInput } from './calendar-zone-input';
 
@@ -25,20 +26,20 @@ type Props = {
     files: Record<string, File>;
     texts: Record<string, string>;
     textColors: Record<string, string>;
+    textFonts: Record<string, string>;
     calendars: Record<string, CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
     backgroundColor: string | null;
   }) => void;
   /** Fires whenever the customer's in-progress zone content changes so
-   *  the parent can render a live layout preview (dataURLs + text +
-   *  text-color overrides + calendar fills + calendar-colour overrides
-   *  + theme colour + background colour) before the server composite
-   *  runs. */
+   *  the parent can render a live layout preview before the server
+   *  composite runs. */
   onStateChange?: (state: {
     thumbs: Record<string, string>;
     texts: Record<string, string>;
     textColors: Record<string, string>;
+    textFonts: Record<string, string>;
     calendars: Record<string, CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
@@ -109,6 +110,10 @@ export function TemplateMultiSlotForm({
   // customer explicitly picks a different color than the template's
   // default; missing keys fall through to z.color in the renderer.
   const [textColors, setTextColors] = useState<Record<string, string>>({});
+  // Customer-overridable text font family per zone. Stores the
+  // GIFT_FONT_FAMILIES key (e.g. 'inter', 'caveat'). Missing keys
+  // fall back to z.font_family in the renderer.
+  const [textFonts, setTextFonts] = useState<Record<string, string>>({});
   // Single customer-picked colour applied to the template's foreground
   // PNG via the alpha-mask cascade (icons, heart, progress bar — every
   // pixel of the foreground PNG inherits this colour). null = use the
@@ -120,8 +125,8 @@ export function TemplateMultiSlotForm({
   const [backgroundColor, setBackgroundColor] = useState<string | null>(null);
 
   useEffect(() => {
-    onStateChange?.({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor });
-  }, [thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor, onStateChange]);
+    onStateChange?.({ thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor });
+  }, [thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor, onStateChange]);
 
   // Auto-generate: in non-AI modes we want the server composite to run
   // silently as the customer edits, so Add to Cart is always ready.
@@ -135,6 +140,8 @@ export function TemplateMultiSlotForm({
   textsRef.current = texts;
   const textColorsRef = useRef(textColors);
   textColorsRef.current = textColors;
+  const textFontsRef = useRef(textFonts);
+  textFontsRef.current = textFonts;
   const foregroundColorRef = useRef(foregroundColor);
   foregroundColorRef.current = foregroundColor;
   const backgroundColorRef = useRef(backgroundColor);
@@ -157,7 +164,7 @@ export function TemplateMultiSlotForm({
       return;
     }
     const t = setTimeout(() => {
-      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
+      onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, textFonts: textFontsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
     }, 800);
     return () => clearTimeout(t);
     // NOTE: deps are FILES ONLY — not text or calendar fills, and not
@@ -180,7 +187,7 @@ export function TemplateMultiSlotForm({
     if (wasWorking && !isWorking && pendingRegenRef.current) {
       pendingRegenRef.current = false;
       if (Object.keys(filesRef.current).length > 0) {
-        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
+        onGenRef.current({ files: filesRef.current, texts: textsRef.current, textColors: textColorsRef.current, textFonts: textFontsRef.current, calendars: calendarsRef.current, calendarColors: calendarColorsRef.current, foregroundColor: foregroundColorRef.current, backgroundColor: backgroundColorRef.current });
       }
     }
   }, [isWorking, autoGenerate]);
@@ -215,7 +222,7 @@ export function TemplateMultiSlotForm({
   const canGenerate = filledImageCount > 0 && !isWorking;
 
   function submit() {
-    onGeneratePreview({ files, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor });
+    onGeneratePreview({ files, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor });
   }
 
   return (
@@ -541,6 +548,31 @@ export function TemplateMultiSlotForm({
                       </label>
                     )}
                   </div>
+                  {template.customer_can_change_font && (
+                    <div style={{ marginTop: 6 }}>
+                      <select
+                        value={textFonts[z.id] ?? z.font_family ?? 'inter'}
+                        onChange={(e) => setTextFonts((prev) => ({ ...prev, [z.id]: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          padding: '6px 10px',
+                          border: '2px solid var(--pv-ink)',
+                          background: '#fff',
+                          fontFamily: 'var(--pv-f-body)',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: 'var(--pv-ink)',
+                          outline: 'none',
+                        }}
+                      >
+                        {GIFT_FONT_FAMILIES.map((f) => (
+                          <option key={f.value} value={f.value}>
+                            {f.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               );
             })}

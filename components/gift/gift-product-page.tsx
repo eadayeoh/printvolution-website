@@ -160,6 +160,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // these on top of z.color; server composite picks them up at
   // production time so the printed file matches.
   const [templateTextColors, setTemplateTextColors] = useState<Record<string, string>>({});
+  // Customer-picked font-family overrides per text zone.
+  const [templateTextFonts, setTemplateTextFonts] = useState<Record<string, string>>({});
   // Customer-picked theme colour applied to the template's foreground
   // PNG via the alpha-mask cascade. null = use the template's original
   // colours.
@@ -278,6 +280,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     files: Record<string, File>;
     texts: Record<string, string>;
     textColors: Record<string, string>;
+    textFonts: Record<string, string>;
     calendars: Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>;
     calendarColors: Record<string, string>;
     foregroundColor: string | null;
@@ -312,6 +315,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     }
     for (const [zoneId, color] of Object.entries(payload.textColors)) {
       fd.append(`text_color_${zoneId}`, color);
+    }
+    for (const [zoneId, font] of Object.entries(payload.textFonts)) {
+      fd.append(`text_font_${zoneId}`, font);
     }
     if (payload.foregroundColor) {
       fd.append('foreground_color', payload.foregroundColor);
@@ -925,6 +931,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       thumbs={templateThumbs}
                       texts={templateTexts}
                       textColors={templateTextColors}
+                      textFonts={templateTextFonts}
                       calendars={templateCalendars}
                       calendarColors={templateCalendarColors}
                       foregroundColor={templateForegroundColor}
@@ -1572,10 +1579,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     onReset={() => setPreview(null)}
                     onGeneratePreview={doMultiSlotUpload}
                     autoGenerate={isNonAiMode}
-                    onStateChange={({ thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor }) => {
+                    onStateChange={({ thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor }) => {
                       setTemplateThumbs(thumbs);
                       setTemplateTexts(texts);
                       setTemplateTextColors(textColors);
+                      setTemplateTextFonts(textFonts);
                       setTemplateCalendars(calendars);
                       setTemplateCalendarColors(calendarColors);
                       setTemplateForegroundColor(foregroundColor);

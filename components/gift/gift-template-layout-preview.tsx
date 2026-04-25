@@ -35,6 +35,9 @@ type Props = {
   /** Customer-picked text colour overrides, keyed by zone id. Falls
    *  through to z.color when a key is missing. */
   textColors?: Record<string, string>;
+  /** Customer-picked font-family overrides, keyed by zone id. Stores
+   *  GIFT_FONT_FAMILIES keys; falls through to z.font_family. */
+  textFonts?: Record<string, string>;
   /** Customer-picked calendar fills, keyed by zone id. */
   calendars?: Record<string, Partial<CalendarFill>>;
   /** Customer-picked calendar colour overrides, keyed by zone id.
@@ -55,7 +58,7 @@ type Props = {
   heightMm: number;
 };
 
-export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, calendars, calendarColors, foregroundColor, backgroundColor, widthMm, heightMm }: Props) {
+export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors, textFonts, calendars, calendarColors, foregroundColor, backgroundColor, widthMm, heightMm }: Props) {
   const zones = template.zones_json ?? [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerW, setContainerW] = useState(400);
@@ -243,7 +246,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
           >
             <span
               style={{
-                fontFamily: giftFontStack(z.font_family),
+                fontFamily: giftFontStack(textFonts?.[z.id] ?? z.font_family),
                 fontSize: fontPx,
                 fontWeight: z.font_weight ?? '700',
                 fontStyle: z.font_style ?? 'normal',
