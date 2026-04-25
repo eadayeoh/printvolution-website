@@ -20,6 +20,12 @@ function resolveModelSlug(form: FormData): string | null {
   return preset;
 }
 
+const VALID_PROVIDERS = new Set(['passthrough', 'replicate']);
+function resolveProvider(form: FormData): 'passthrough' | 'replicate' {
+  const v = String(form.get('provider') ?? '').trim();
+  return VALID_PROVIDERS.has(v) ? (v as 'passthrough' | 'replicate') : 'replicate';
+}
+
 export async function createPipeline(form: FormData) {
   const sb = createClient();
   const { data, error } = await sb.from('gift_pipelines').insert({
@@ -27,8 +33,9 @@ export async function createPipeline(form: FormData) {
     name: String(form.get('name') ?? '').trim(),
     description: (String(form.get('description') ?? '').trim()) || null,
     kind: String(form.get('kind') ?? ''),
+    provider: resolveProvider(form),
     ai_endpoint_url: (String(form.get('ai_endpoint_url') ?? '').trim()) || null,
-    ai_model_slug: (String(form.get('ai_model_slug') ?? '').trim()) || null,
+    ai_model_slug: resolveModelSlug(form),
     default_params: parseParams(form.get('default_params')),
     thumbnail_url: (String(form.get('thumbnail_url') ?? '').trim()) || null,
     is_active: form.get('is_active') === 'on',
@@ -44,8 +51,9 @@ export async function updatePipeline(id: string, form: FormData) {
     name: String(form.get('name') ?? '').trim(),
     description: (String(form.get('description') ?? '').trim()) || null,
     kind: String(form.get('kind') ?? ''),
+    provider: resolveProvider(form),
     ai_endpoint_url: (String(form.get('ai_endpoint_url') ?? '').trim()) || null,
-    ai_model_slug: (String(form.get('ai_model_slug') ?? '').trim()) || null,
+    ai_model_slug: resolveModelSlug(form),
     default_params: parseParams(form.get('default_params')),
     thumbnail_url: (String(form.get('thumbnail_url') ?? '').trim()) || null,
     is_active: form.get('is_active') === 'on',

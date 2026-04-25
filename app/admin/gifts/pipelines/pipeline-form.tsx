@@ -27,12 +27,18 @@ export function PipelineForm({
   action: (fd: FormData) => void | Promise<void>;
   isNew?: boolean;
 }) {
-  const params = pipeline?.default_params ? JSON.stringify(pipeline.default_params, null, 2) : '{}';
+  const defaultParamsJson = '{\n  "aspect_ratio": "match_input_image",\n  "output_format": "png"\n}';
+  const params = pipeline?.default_params
+    ? JSON.stringify(pipeline.default_params, null, 2)
+    : isNew ? defaultParamsJson : '{}';
   const currentModel = pipeline?.ai_model_slug ?? '';
   const isKnownModel = KNOWN_MODELS.some((m) => m.value === currentModel);
-  // If the stored model isn't in our dropdown, preselect "Other" and
-  // pre-fill the custom field so admin sees what's currently configured.
-  const modelSelectValue = currentModel === '' ? '' : isKnownModel ? currentModel : '__custom__';
+  // For a new pipeline, default to the model every other UV/laser pipeline
+  // already uses. For an existing one, reflect what's stored — preselecting
+  // "Other" + pre-filling the custom field if it's not in our dropdown.
+  const modelSelectValue = currentModel === ''
+    ? (isNew ? 'google/nano-banana' : '')
+    : isKnownModel ? currentModel : '__custom__';
   return (
     <form action={action} className="grid max-w-3xl gap-4">
       <label className="block">
