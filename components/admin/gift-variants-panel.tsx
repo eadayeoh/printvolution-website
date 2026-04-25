@@ -61,7 +61,7 @@ function toDraft(v?: GiftProductVariant): Draft {
     is_active: v?.is_active ?? true,
     colour_swatches: (v?.colour_swatches ?? []).map((s) => ({ ...s })),
     surfaces: (v?.surfaces ?? []).map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
-    photo_pan_mode: v?.photo_pan_mode ?? false,
+    photo_pan_mode: v?.photo_pan_mode ?? true,
     mockup_by_shape: v?.mockup_by_shape
       ? Object.fromEntries(
           Object.entries(v.mockup_by_shape).map(([k, entry]) => [
@@ -440,11 +440,12 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         onChange={(e) => updateDraft(i, { photo_pan_mode: e.target.checked })}
                       />
                       <span>
-                        <b>Customer pans photo inside fixed area</b>
+                        <b>Customer pans photo inside fixed area</b> <span className="text-[10px] text-pink">(default)</span>
                         <span className="block text-[10px] text-neutral-500">
-                          Area rectangle is locked. Customer drags the photo within it instead
-                          of moving the whole rectangle around. Use for frames with a fixed
-                          photo-panel slot.
+                          ON: area is locked, customer drags the photo within it (right for
+                          frames, magnets, mugs — most gift products). OFF: legacy free-
+                          placement where the customer moves + resizes the rectangle on the
+                          mockup (only useful when placement itself is part of the design).
                         </span>
                       </span>
                     </label>
