@@ -22,7 +22,17 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           <h1 className="text-2xl font-black text-ink">{order.order_number}</h1>
           <p className="text-sm text-neutral-500">Placed {new Date(order.created_at).toLocaleString('en-SG')}</p>
         </div>
-        <OrderStatusUpdater orderId={order.id} currentStatus={order.status} />
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/api/admin/orders/${order.id}/packet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-4 py-1.5 text-xs font-bold uppercase text-ink hover:bg-ink hover:text-white"
+          >
+            ⤓ Print packet
+          </a>
+          <OrderStatusUpdater orderId={order.id} currentStatus={order.status} />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

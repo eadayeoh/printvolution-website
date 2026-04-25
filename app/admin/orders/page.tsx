@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { listOrders } from '@/lib/data/admin';
+import { listOrders, getAdminStats } from '@/lib/data/admin';
 import { OrdersTable } from '@/components/admin/orders-table';
+import { formatSGD } from '@/lib/utils';
 
 export const metadata = { title: 'Orders' };
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,12 @@ export default async function OrdersPage({
 }) {
   const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1);
   const pageSize = 25;
-  const { rows, total } = await listOrders({ status: searchParams.status, search: searchParams.q, page, pageSize });
+  const [{ rows, total }, stats] = await Promise.all([
+    listOrders({ status: searchParams.status, search: searchParams.q, page, pageSize }),
+    getAdminStats(),
+  ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const openCount = stats.pending_count + stats.processing_count + stats.ready_count;
 
   function pageHref(p: number): string {
     const sp = new URLSearchParams();
@@ -33,6 +38,14 @@ export default async function OrdersPage({
             Showing {rows.length ? (page - 1) * pageSize + 1 : 0}–{(page - 1) * pageSize + rows.length} of {total}
           </p>
         </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Stat label="Total orders" value={String(stats.total_orders)} />
+        <Stat label="Open" value={String(openCount)} sub={`${stats.pending_count} pending · ${stats.processing_count} processing · ${stats.ready_count} ready`} />
+        <Stat label="Completed" value={String(stats.completed_count)} />
+        <Stat label="Revenue (completed)" value={formatSGD(stats.revenue_cents)} />
+        <Stat label="Active members / products" value={`${stats.total_members} / ${stats.total_products}`} />
       </div>
 
       <OrdersTable orders={rows} initialStatus={searchParams.status ?? 'all'} initialSearch={searchParams.q ?? ''} />
@@ -66,6 +79,16 @@ function pageNumbers(current: number, total: number): (number | '…')[] {
   if (current < total - 2) out.push('…');
   out.push(total);
   return out;
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{label}</div>
+      <div className="mt-1 text-lg font-black text-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-[10px] text-neutral-500">{sub}</div>}
+    </div>
+  );
 }
 
 function PageLink({ href, children, active, disabled }: { href: string; children: React.ReactNode; active?: boolean; disabled?: boolean }) {
