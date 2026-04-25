@@ -7,9 +7,10 @@ import { formatSGD } from '@/lib/utils';
 export const metadata: Metadata = {
   title: 'Personalised Gifts',
   description: 'Personalised photo gifts in Singapore — laser engraving, UV print, embroidery, and custom photo prints. Upload a photo and we handle the rest.',
+  alternates: { canonical: 'https://printvolution.sg/gifts' },
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 const MODE_ORDER = ['uv', 'laser', 'embroidery', 'photo-resize'] as const;
 

@@ -5,6 +5,7 @@ import { formatSGD } from '@/lib/utils';
 export const metadata = {
   title: 'Bundles',
   description: 'Curated bundles for launches, weddings, and corporate gifting.',
+  alternates: { canonical: 'https://printvolution.sg/bundles' },
 };
 
 export default async function BundlesPage() {

@@ -6,13 +6,21 @@ import { getProductRoutes, productHref } from '@/lib/data/navigation';
 import { formatSGD } from '@/lib/utils';
 import { BundleFAQ } from '@/components/product/bundle-faq';
 import { BundleGiftConfig } from '@/components/bundle/bundle-gift-config';
+import { ProductSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const bundle = await getBundleBySlug(params.slug);
   if (!bundle) return { title: 'Not found' };
+  const description = bundle.description ?? bundle.tagline ?? undefined;
   return {
     title: bundle.name,
-    description: bundle.description ?? bundle.tagline ?? undefined,
+    description,
+    alternates: { canonical: `https://printvolution.sg/bundle/${bundle.slug}` },
+    openGraph: {
+      title: bundle.name,
+      description,
+      type: 'website',
+    },
   };
 }
 
@@ -34,6 +42,20 @@ export default async function BundlePage({ params }: { params: { slug: string } 
 
   return (
     <>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', item: 'https://printvolution.sg/' },
+          { name: 'Bundles', item: 'https://printvolution.sg/bundles' },
+          { name: bundle.name, item: `https://printvolution.sg/bundle/${bundle.slug}` },
+        ]}
+      />
+      <ProductSchema
+        name={bundle.name}
+        urlPath={`/bundle/${bundle.slug}`}
+        description={bundle.description ?? bundle.tagline ?? null}
+        category="Bundle"
+        priceFromCents={bundle.price_cents > 0 ? bundle.price_cents : null}
+      />
       {/* Hero — emphasise the bundle pitch + savings, NOT a product grid */}
       <section className="relative overflow-hidden bg-ink px-6 py-16 text-white lg:px-12 lg:py-24">
         <div className="pointer-events-none absolute inset-0 opacity-10">

@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { getPostBySlug, listPublishedPosts } from '@/lib/data/blog';
 import { sanitizeHtml } from '@/lib/security/sanitize';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 type Props = { params: { slug: string } };
 
@@ -14,6 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.seo_title || post.title,
     description: post.seo_desc || post.excerpt || undefined,
+    alternates: { canonical: `https://printvolution.sg/blog/${post.slug}` },
     openGraph: {
       title: post.title,
       description: post.excerpt || undefined,

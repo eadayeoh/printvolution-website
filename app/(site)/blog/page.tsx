@@ -5,9 +5,10 @@ import { listPublishedPosts } from '@/lib/data/blog';
 export const metadata: Metadata = {
   title: 'Blog',
   description: 'Printing tips, product deep-dives, and business stationery guides from Printvolution Singapore.',
+  alternates: { canonical: 'https://printvolution.sg/blog' },
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 function formatDate(iso: string | null) {
   if (!iso) return '';

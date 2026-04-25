@@ -1,5 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { OrganizationAndWebSiteSchema } from '@/components/seo/json-ld';
 
 export const metadata: Metadata = {
   title: {
@@ -13,8 +14,16 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'Printvolution',
     locale: 'en_SG',
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Printvolution' }],
   },
-  twitter: { card: 'summary_large_image' },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-default.png'],
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
   // SITE IS UNDER CONSTRUCTION — block all search engines until launch.
   // To re-enable indexing later, remove the `robots` field below AND update
   // /app/robots.ts to allow crawling.
@@ -23,6 +32,12 @@ export const metadata: Metadata = {
     follow: false,
     googleBot: { index: false, follow: false },
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0a0a0a',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -37,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <OrganizationAndWebSiteSchema />
         <div className="cmyk-bar">
           <div /><div /><div /><div />
         </div>

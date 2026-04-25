@@ -14,7 +14,7 @@ import { Location, type LocationItem, type LocationHeader } from '@/components/h
 import { FinalCta, type FinalCtaItem } from '@/components/home/final-cta';
 
 export const metadata = {
-  title: 'Printvolution | Printing Services Singapore · Name Cards, Flyers, Banners & Gifts',
+  title: 'Printvolution — Printing & Personalised Gifts Singapore',
   description:
     'Printing services Singapore at Paya Lebar Square. Name cards from $28, flyers, banners, custom embroidery, personalised gifts, NFC business cards. WhatsApp for instant quote. Same-day express available.',
   alternates: { canonical: 'https://printvolution.sg/' },

@@ -4,6 +4,8 @@ import { GiftProductPage } from '@/components/gift/gift-product-page';
 import { getGiftProductBySlug, listActiveGiftProducts, listTemplatesForProduct } from '@/lib/gifts/data';
 import { listPromptsForProduct } from '@/lib/gifts/prompts';
 import { listActiveVariants } from '@/lib/gifts/variants';
+import { ProductSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
+import { giftFromPrice } from '@/lib/gifts/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +15,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   // Bypass the "%s | Printvolution" template when the DB value already
   // includes the brand suffix (all rewritten SEO titles do).
   const rawTitle = p.seo_title || p.name;
+  const description = p.seo_desc || p.tagline || p.description || undefined;
+  const heroImage = p.thumbnail_url || undefined;
   return {
     title: p.seo_title ? { absolute: rawTitle } : rawTitle,
-    description: p.seo_desc || p.tagline || p.description || undefined,
+    description,
+    alternates: { canonical: `https://printvolution.sg/gift/${p.slug}` },
+    openGraph: {
+      title: rawTitle,
+      description,
+      type: 'website',
+      images: heroImage ? [{ url: heroImage, alt: p.name }] : undefined,
+    },
   };
 }
 
@@ -38,13 +49,31 @@ export default async function GiftPage({ params }: { params: { slug: string } })
   const sameMode = allGifts.filter((g) => g.slug !== product.slug && g.mode === product.mode);
   const otherMode = allGifts.filter((g) => g.slug !== product.slug && g.mode !== product.mode);
   const relatedGifts = [...sameMode, ...otherMode].slice(0, 4);
+  const fromCents = giftFromPrice(product);
   return (
-    <GiftProductPage
-      product={product}
-      templates={templates}
-      prompts={prompts}
-      variants={variants}
-      relatedGifts={relatedGifts}
-    />
+    <>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', item: 'https://printvolution.sg/' },
+          { name: 'Gifts', item: 'https://printvolution.sg/gifts' },
+          { name: product.name, item: `https://printvolution.sg/gift/${product.slug}` },
+        ]}
+      />
+      <ProductSchema
+        name={product.name}
+        urlPath={`/gift/${product.slug}`}
+        description={product.tagline ?? product.description ?? null}
+        category="Personalised Gift"
+        imageUrl={product.thumbnail_url ?? null}
+        priceFromCents={fromCents > 0 ? fromCents : null}
+      />
+      <GiftProductPage
+        product={product}
+        templates={templates}
+        prompts={prompts}
+        variants={variants}
+        relatedGifts={relatedGifts}
+      />
+    </>
   );
 }

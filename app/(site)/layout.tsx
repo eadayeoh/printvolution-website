@@ -2,10 +2,13 @@ import { Header } from '@/components/nav/header';
 import { Footer } from '@/components/footer/footer';
 import { AnnounceBar } from '@/components/announce/announce-bar';
 
-// Header pulls the nav/mega-menu on every request (admin edits should
-// land instantly). Force-dynamic disables any static-generation cache
-// Vercel might otherwise apply to this shared layout.
-export const dynamic = 'force-dynamic';
+// Header pulls the nav/mega-menu on every request — but admin edits
+// only need to propagate within a minute, not instantly. Switching
+// from force-dynamic to revalidate=60 lets static pages stay
+// cacheable while still picking up nav changes. Pages that genuinely
+// need request-time data (cart, auth, product pricing) still set
+// their own `dynamic = 'force-dynamic'`.
+export const revalidate = 60;
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
