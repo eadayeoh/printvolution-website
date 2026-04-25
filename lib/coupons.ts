@@ -58,15 +58,20 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
     .maybeSingle();
 
   if (error) return { ok: false, error: 'Could not check that code right now.' };
-  if (!data) return { ok: false, error: 'No such code.' };
+  // Generic "not valid" message for missing / inactive / expired /
+  // exhausted codes — distinct messages would let an attacker map the
+  // coupons table by trying codes. Min-spend stays specific because
+  // it's actionable for the customer.
+  const NOT_VALID = 'Not a valid code.';
+  if (!data) return { ok: false, error: NOT_VALID };
 
   const c = data as CouponRow;
-  if (c.is_active === false) return { ok: false, error: 'This code is no longer active.' };
+  if (c.is_active === false) return { ok: false, error: NOT_VALID };
   if (c.expires_at && new Date(c.expires_at).getTime() < Date.now()) {
-    return { ok: false, error: 'This code has expired.' };
+    return { ok: false, error: NOT_VALID };
   }
   if (c.max_uses !== null && c.uses_count !== null && c.uses_count >= c.max_uses) {
-    return { ok: false, error: 'This code has been fully redeemed.' };
+    return { ok: false, error: NOT_VALID };
   }
   const minSpend = c.min_spend_cents ?? 0;
   if (subtotalCents < minSpend) {
@@ -74,6 +79,6 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
     return { ok: false, error: `Minimum spend S$${dollars} not met.` };
   }
   const discountCents = computeCouponDiscountCents(c, subtotalCents);
-  if (discountCents <= 0) return { ok: false, error: "This code wouldn't save you anything on this order." };
+  if (discountCents <= 0) return { ok: false, error: NOT_VALID };
   return { ok: true, coupon: c, discountCents };
 }

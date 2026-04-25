@@ -103,6 +103,15 @@ export type RenderCalendarSvgInput = {
 
 /** Returns an `<svg>` string sized to (width × height) with the
  *  calendar drawn inside. Pure — no DOM, no fetch, no side effects. */
+// Defence-in-depth: every colour value lands in an SVG `fill="..."`
+// attribute. If a non-hex string slipped past upstream validation it
+// could break out of the attribute. Anything not matching `#RRGGBB`
+// falls back to a neutral default.
+const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+function safeColor(value: string | null | undefined, fallback: string): string {
+  return value && COLOR_RE.test(value) ? value : fallback;
+}
+
 export function renderCalendarSvg(input: RenderCalendarSvgInput): string {
   const { zone, fill, width: W, height: H, now, colorOverride } = input;
   const resolved = resolveCalendarFill(zone, fill, now);
@@ -111,11 +120,11 @@ export function renderCalendarSvg(input: RenderCalendarSvgInput): string {
   const weekdayLetters = weekStart === 'monday' ? WEEKDAY_LETTERS_MONDAY : WEEKDAY_LETTERS_SUNDAY;
   const gridFontFamily = giftFontStack(zone.grid_font_family);
   const headerFontFamily = giftFontStack(zone.header_font_family);
-  const gridColor = colorOverride ?? zone.grid_color ?? '#0a0a0a';
-  const headerColor = colorOverride ?? zone.header_color ?? gridColor;
+  const gridColor = safeColor(colorOverride ?? zone.grid_color, '#0a0a0a');
+  const headerColor = safeColor(colorOverride ?? zone.header_color, gridColor);
   const highlightShape = zone.highlight_shape ?? 'circle';
-  const highlightFill = zone.highlight_fill ?? '#E91E8C';
-  const highlightTextColor = zone.highlight_text_color ?? '#ffffff';
+  const highlightFill = safeColor(zone.highlight_fill, '#E91E8C');
+  const highlightTextColor = safeColor(zone.highlight_text_color, '#ffffff');
 
   // Lay out header + grid box. Coordinates here are in the zone-local
   // space; SVG viewBox is `0 0 W H`.

@@ -254,15 +254,22 @@ export async function reorderPastOrder(orderId: string): Promise<
   const sb = createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { ok: false, error: 'Sign in to reorder.' };
+  if (!user.email) return { ok: false, error: 'Account email missing — contact support.' };
+
+  const rl = await checkRateLimit(`reorder:${user.id}`, { max: 20, windowSeconds: 600 });
+  if (!rl.allowed) return { ok: false, error: `Too many tries — wait ${rl.retryAfterSeconds}s.` };
 
   const { data: order } = await sb
     .from('orders')
     .select('id, email')
     .eq('id', orderId)
     .maybeSingle();
-  if (!order) return { ok: false, error: 'Order not found.' };
-  if ((order.email ?? '').toLowerCase() !== (user.email ?? '').toLowerCase()) {
-    return { ok: false, error: "This order isn't on your account." };
+  // Single message for missing-order vs not-yours so an attacker can't
+  // probe order id existence by comparing error strings.
+  const NOT_FOUND = "We couldn't find that order on your account.";
+  if (!order) return { ok: false, error: NOT_FOUND };
+  if ((order.email ?? '').toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false, error: NOT_FOUND };
   }
 
   // Items + gift count in parallel — both are independent of each other.

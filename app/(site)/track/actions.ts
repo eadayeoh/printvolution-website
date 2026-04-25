@@ -36,6 +36,10 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
   const num = orderNumber.trim();
   const em = email.trim().toLowerCase();
   if (!num || !em) return { ok: false, error: 'Order number and email both required.' };
+  // Cheap shape gate so junk input doesn't burn a rate-limit slot
+  // and doesn't widen our query surface.
+  if (!/^[A-Za-z0-9-]{3,32}$/.test(num)) return { ok: false, error: 'That doesn\'t look like an order number.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || em.length > 254) return { ok: false, error: 'Enter a valid email.' };
 
   const sb = createServiceClient();
   const { data, error } = await sb
