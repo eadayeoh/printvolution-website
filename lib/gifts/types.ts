@@ -223,6 +223,27 @@ export function giftFromPrice(p: Pick<GiftProduct, 'base_price_cents' | 'price_t
   return min;
 }
 
+/** Unit price at a given quantity. Walks the tier ladder and returns
+ *  the price_cents from the highest tier whose qty ≤ requested. Below
+ *  the first tier — base_price_cents. Tiers are stored as
+ *  {qty, price_cents} where qty is "from this quantity onwards". */
+export function giftUnitPrice(
+  base_price_cents: number,
+  tiers: GiftPriceTier[] | null | undefined,
+  qty: number,
+): number {
+  let unit = base_price_cents;
+  let bestQty = 0;
+  for (const t of tiers ?? []) {
+    if (typeof t.qty === 'number' && typeof t.price_cents === 'number'
+      && t.qty <= qty && t.qty > bestQty) {
+      bestQty = t.qty;
+      unit = t.price_cents;
+    }
+  }
+  return unit;
+}
+
 // ---------------------------------------------------------------------------
 // Pipelines (migration 0033) + product/prompt extensions (migration 0035)
 // ---------------------------------------------------------------------------

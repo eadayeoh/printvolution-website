@@ -6,7 +6,7 @@ import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
-import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+import { GIFT_MODE_LABEL, giftUnitPrice, giftFromPrice } from '@/lib/gifts/types';
 import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect, GiftVariantColourSwatch } from '@/lib/gifts/types';
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
@@ -439,7 +439,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       const filled = Boolean(fill?.text?.trim() || fill?.photoFile || fill?.photoThumb);
       return filled ? sum + (s.price_delta_cents ?? 0) : sum;
     }, 0);
-    const unit = (selectedVariant?.base_price_cents || product.base_price_cents)
+    // Tiered base: variant tiers if a variant is picked, else product
+    // tiers. Falls back to base_price_cents below the first tier.
+    const tieredBase = selectedVariant
+      ? giftUnitPrice(selectedVariant.base_price_cents, selectedVariant.price_tiers, qty)
+      : giftUnitPrice(product.base_price_cents, product.price_tiers, qty);
+    const unit = tieredBase
       + (selectedSize?.price_delta_cents ?? 0)
       + shapeDelta
       + figurineDelta
@@ -681,7 +686,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 {(product.lead_time_days ?? 5) === 1 ? '' : 's'}
               </span>
               <span style={{ color: 'var(--pv-rule)' }}>•</span>
-              <span>From {formatSGD(product.base_price_cents)}</span>
+              <span>From {formatSGD(giftFromPrice(product))}</span>
             </div>
           </div>
           {(() => {
@@ -1982,6 +1987,61 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
               </div>
             </div>
 
+            {/* Bulk pricing ladder — surfaces the volume tiers admin
+                set so the customer can see the breakpoints without
+                guessing qty. Highlights the active row. */}
+            {(() => {
+              const tiers = (selectedVariant?.price_tiers ?? product.price_tiers ?? [])
+                .filter((t) => t.qty > 0)
+                .slice()
+                .sort((a, b) => a.qty - b.qty);
+              if (tiers.length === 0) return null;
+              const baseCents = selectedVariant?.base_price_cents || product.base_price_cents;
+              const activeQty = (() => {
+                let best = 0;
+                for (const t of tiers) if (t.qty <= qty && t.qty > best) best = t.qty;
+                return best;
+              })();
+              const rows = [{ qty: 1, price: baseCents }, ...tiers.map((t) => ({ qty: t.qty, price: t.price_cents }))];
+              return (
+                <div style={{ marginTop: 12, padding: '12px 14px', background: '#fff', border: '2px solid var(--pv-ink)' }}>
+                  <div style={{
+                    fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 800,
+                    letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--pv-muted)',
+                    marginBottom: 8,
+                  }}>
+                    Bulk pricing
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 6 }}>
+                    {rows.map((r) => {
+                      const isActive = (r.qty === activeQty) || (r.qty === 1 && activeQty === 0);
+                      return (
+                        <button
+                          key={r.qty}
+                          type="button"
+                          onClick={() => setQty(r.qty)}
+                          style={{
+                            background: isActive ? 'var(--pv-ink)' : 'var(--pv-cream)',
+                            color: isActive ? 'var(--pv-yellow)' : 'var(--pv-ink)',
+                            border: '2px solid var(--pv-ink)',
+                            padding: '6px 8px',
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div style={{ fontSize: 10, letterSpacing: '0.06em' }}>{r.qty === 1 ? '1+' : `${r.qty}+`}</div>
+                          <div style={{ fontSize: 13, marginTop: 2 }}>{formatSGD(r.price)}</div>
+                          <div style={{ fontSize: 9, opacity: 0.7 }}>each</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Price box */}
             <div
               style={{
@@ -2026,7 +2086,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     }}
                   >
                     {formatSGD((
-                      (selectedVariant?.base_price_cents || product.base_price_cents)
+                      (selectedVariant
+                        ? giftUnitPrice(selectedVariant.base_price_cents, selectedVariant.price_tiers, qty)
+                        : giftUnitPrice(product.base_price_cents, product.price_tiers, qty))
                       + (selectedSize?.price_delta_cents ?? 0)
                       + (shapePickerActive ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind) : 0)
                       + (selectedFigurine?.price_delta_cents ?? 0)
