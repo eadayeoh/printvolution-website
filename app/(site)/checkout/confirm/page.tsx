@@ -43,6 +43,12 @@ export default function ConfirmPage({ searchParams }: { searchParams: { order?: 
           💬 WhatsApp us now
         </a>
         <Link
+          href={`/track?order=${encodeURIComponent(orderNumber)}`}
+          className="inline-flex items-center gap-2 rounded-full bg-pink px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark"
+        >
+          📦 Track this order
+        </Link>
+        <Link
           href="/shop"
           className="inline-flex items-center rounded-full border-2 border-ink px-6 py-3 text-sm font-bold text-ink transition-colors hover:bg-ink hover:text-white"
         >
