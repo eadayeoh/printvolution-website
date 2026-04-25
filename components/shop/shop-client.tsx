@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { formatSGD } from '@/lib/utils';
 
@@ -167,9 +168,15 @@ export function ShopClient({ items, serviceCategories, giftCategories, initialCa
               <div className="pvshop-grid">
                 {group.items.map((p) => (
                   <Link key={p.slug} href={p.href} className="pvshop-card">
-                    <div className="pvshop-card-img">
+                    <div className="pvshop-card-img" style={{ position: 'relative' }}>
                       {p.image_url ? (
-                        <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <Image
+                          src={p.image_url}
+                          alt={p.name}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          style={{ objectFit: 'cover' }}
+                        />
                       ) : (
                         <div className="ph" style={{ fontSize: 52 }}>{p.icon ?? '📦'}</div>
                       )}

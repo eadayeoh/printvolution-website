@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { listActiveGiftProducts } from '@/lib/gifts/data';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import { formatSGD } from '@/lib/utils';
@@ -64,9 +65,15 @@ export default async function GiftsLandingPage() {
             {group.items.map((p) => (
               <Link key={p.id} href={`/gift/${p.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{ background: '#fff', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', transition: 'border-color .15s' }}>
-                  <div style={{ aspectRatio: '1/1', background: '#fafaf7', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', aspectRatio: '1/1', background: '#fafaf7', overflow: 'hidden' }}>
                     {p.thumbnail_url ? (
-                      <img src={p.thumbnail_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image
+                        src={p.thumbnail_url}
+                        alt={p.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 220px"
+                        style={{ objectFit: 'cover' }}
+                      />
                     ) : (
                       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 42 }}>🎁</div>
                     )}

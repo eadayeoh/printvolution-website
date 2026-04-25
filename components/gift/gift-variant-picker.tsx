@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import type { GiftProductVariant } from '@/lib/gifts/types';
 import { formatSGD } from '@/lib/utils';
 
@@ -27,13 +28,25 @@ export function GiftVariantPicker({
             }`}
           >
             {v.variant_thumbnail_url ? (
-              <img
-                src={v.variant_thumbnail_url}
-                alt={v.name}
-                className="mb-2 aspect-square w-full object-cover"
-              />
+              <div className="relative mb-2 aspect-square w-full">
+                <Image
+                  src={v.variant_thumbnail_url}
+                  alt={v.name}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 200px"
+                  className="object-cover"
+                />
+              </div>
             ) : v.mockup_url ? (
-              <img src={v.mockup_url} alt={v.name} className="mb-2 aspect-square w-full object-cover" />
+              <div className="relative mb-2 aspect-square w-full">
+                <Image
+                  src={v.mockup_url}
+                  alt={v.name}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 200px"
+                  className="object-cover"
+                />
+              </div>
             ) : (
               <div className="mb-2 aspect-square w-full bg-neutral-100" />
             )}

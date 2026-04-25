@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Trash2 } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD, isImageUrl } from '@/lib/utils';
@@ -42,16 +43,29 @@ export function CartView() {
               }}
             >
               <div style={{
+                position: 'relative',
                 width: 72, height: 72, background: '#f5f2ea', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 36, overflow: 'hidden', borderRadius: 8,
               }}>
                 {item.gift_image_url ? (
                   // Gift: show the customer's configured/transformed preview
-                  <img src={item.gift_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image
+                    src={item.gift_image_url}
+                    alt={item.product_name}
+                    fill
+                    sizes="72px"
+                    style={{ objectFit: 'cover' }}
+                  />
                 ) : isImageUrl(item.icon) ? (
                   // Print product with uploaded thumbnail
-                  <img src={item.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image
+                    src={item.icon as string}
+                    alt={item.product_name}
+                    fill
+                    sizes="72px"
+                    style={{ objectFit: 'cover' }}
+                  />
                 ) : (
                   // Fallback: emoji
                   <span>{item.icon ?? '📦'}</span>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot } from '@/app/(site)/gift/actions';
 import { useCart } from '@/lib/cart-store';
@@ -1671,9 +1672,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                             textAlign: 'left',
                           }}
                         >
-                          <div style={{ aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
+                          <div style={{ position: 'relative', aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
                             {t.thumbnail_url ? (
-                              <img src={t.thumbnail_url} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <Image
+                                src={t.thumbnail_url}
+                                alt={t.name}
+                                fill
+                                sizes="120px"
+                                style={{ objectFit: 'cover' }}
+                              />
                             ) : (
                               <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
                             )}
@@ -2018,6 +2025,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         >
                           <div
                             style={{
+                              position: 'relative',
                               aspectRatio: 1,
                               border: '1.5px solid var(--pv-ink)',
                               background: 'var(--pv-cream)',
@@ -2031,7 +2039,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                             }}
                           >
                             {p.thumbnail_url ? (
-                              <img src={p.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <Image
+                                src={p.thumbnail_url}
+                                alt={p.name}
+                                fill
+                                sizes="100px"
+                                style={{ objectFit: 'cover' }}
+                              />
                             ) : (
                               <span>✦</span>
                             )}
@@ -2655,6 +2669,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 <div
                   key={i}
                   style={{
+                    position: 'relative',
                     aspectRatio: 1,
                     border: '2px solid var(--pv-ink)',
                     boxShadow: '5px 5px 0 var(--pv-ink)',
@@ -2662,7 +2677,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     background: 'var(--pv-cream)',
                   }}
                 >
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image
+                    src={img}
+                    alt={`${product.name} — gallery ${i + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 33vw, 250px"
+                    style={{ objectFit: 'cover' }}
+                  />
                 </div>
               ))}
             </div>
@@ -2783,6 +2804,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 >
                   <div
                     style={{
+                      position: 'relative',
                       aspectRatio: 1,
                       borderBottom: '2px solid var(--pv-ink)',
                       background: 'var(--pv-cream)',
@@ -2790,7 +2812,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     }}
                   >
                     {g.thumbnail_url ? (
-                      <img src={g.thumbnail_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image
+                        src={g.thumbnail_url}
+                        alt={g.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 280px"
+                        style={{ objectFit: 'cover' }}
+                      />
                     ) : (
                       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🎁</div>
                     )}

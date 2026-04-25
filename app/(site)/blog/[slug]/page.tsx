@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { getPostBySlug, listPublishedPosts } from '@/lib/data/blog';
 import { sanitizeHtml } from '@/lib/security/sanitize';
@@ -78,8 +79,15 @@ export default async function BlogPostPage({ params }: Props) {
         )}
 
         {post.featured_image_url && (
-          <div style={{ margin: '0 -24px 32px', aspectRatio: '16 / 9', background: '#fafaf7', overflow: 'hidden', borderRadius: 8 }}>
-            <img src={post.featured_image_url} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'relative', margin: '0 -24px 32px', aspectRatio: '16 / 9', background: '#fafaf7', overflow: 'hidden', borderRadius: 8 }}>
+            <Image
+              src={post.featured_image_url}
+              alt={post.title}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 800px"
+              style={{ objectFit: 'cover' }}
+            />
           </div>
         )}
 
@@ -115,8 +123,14 @@ export default async function BlogPostPage({ params }: Props) {
                 <Link key={r.id} href={`/blog/${r.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden' }}>
                     {r.featured_image_url && (
-                      <div style={{ aspectRatio: '16 / 10', overflow: 'hidden' }}>
-                        <img src={r.featured_image_url} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'relative', aspectRatio: '16 / 10', overflow: 'hidden' }}>
+                        <Image
+                          src={r.featured_image_url}
+                          alt={r.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 280px"
+                          style={{ objectFit: 'cover' }}
+                        />
                       </div>
                     )}
                     <div style={{ padding: 18 }}>

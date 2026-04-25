@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { listPublishedPosts } from '@/lib/data/blog';
 
 export const metadata: Metadata = {
@@ -53,9 +54,15 @@ export default async function BlogIndexPage() {
               style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
             >
               <article style={{ background: '#fff', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ aspectRatio: '16 / 10', background: '#fafaf7', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', aspectRatio: '16 / 10', background: '#fafaf7', overflow: 'hidden' }}>
                   {p.featured_image_url ? (
-                    <img src={p.featured_image_url} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <Image
+                      src={p.featured_image_url}
+                      alt={p.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      style={{ objectFit: 'cover' }}
+                    />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 40 }}>
                       ✍️

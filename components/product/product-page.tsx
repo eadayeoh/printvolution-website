@@ -71,6 +71,7 @@ function DateTile({
   );
 }
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { useCart } from '@/lib/cart-store';
 import { evaluateFormula } from '@/lib/pricing';
@@ -829,7 +830,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
         <div style={{ maxWidth: 1560, margin: '0 auto', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             {heroImg ? (
-              <img src={heroImg} alt="" style={{ width: 36, height: 36, border: '2px solid var(--pv-ink)', objectFit: 'cover' }} />
+              <Image
+                src={heroImg}
+                alt=""
+                width={36}
+                height={36}
+                style={{ border: '2px solid var(--pv-ink)', objectFit: 'cover' }}
+              />
             ) : (
               <span style={{ fontSize: 24 }}>{product.icon && !iconIsUrl ? product.icon : '📦'}</span>
             )}
@@ -1290,6 +1297,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                               <span
                                 aria-hidden
                                 style={{
+                                  position: 'relative',
                                   width: '100%',
                                   aspectRatio: '1 / 1',
                                   background: '#fff',
@@ -1298,10 +1306,12 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                                   display: 'block',
                                 }}
                               >
-                                <img
-                                  src={opt.image_url}
+                                <Image
+                                  src={opt.image_url as string}
                                   alt=""
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                  fill
+                                  sizes="160px"
+                                  style={{ objectFit: 'cover' }}
                                 />
                               </span>
                             )}
@@ -1853,6 +1863,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
               >
                 <div
                   style={{
+                    position: 'relative',
                     width: 42,
                     height: 42,
                     display: 'flex',
@@ -1868,7 +1879,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   }}
                 >
                   {f.icon_url ? (
-                    <img src={f.icon_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <Image
+                      src={f.icon_url}
+                      alt=""
+                      fill
+                      sizes="42px"
+                      style={{ objectFit: 'cover' }}
+                    />
                   ) : (
                     <span>{f.emoji ?? '✓'}</span>
                   )}
@@ -2053,6 +2070,7 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                   >
                     <div
                       style={{
+                        position: 'relative',
                         width: 56,
                         height: 56,
                         border: '2px solid var(--pv-ink)',
@@ -2065,7 +2083,13 @@ export function ProductPage({ product, productRoutes, features }: Props) {
                       }}
                     >
                       {r.image_url ? (
-                        <img src={r.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <Image
+                          src={r.image_url}
+                          alt={r.name}
+                          fill
+                          sizes="56px"
+                          style={{ objectFit: 'cover' }}
+                        />
                       ) : (
                         <span style={{ fontSize: 26 }}>{r.icon || '📦'}</span>
                       )}
