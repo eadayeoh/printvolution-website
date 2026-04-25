@@ -8,12 +8,9 @@
  * Current state (v1):
  *   - Photo Resize mode is fully implemented server-side using `sharp` (the
  *     customer-supplied crop rect is applied + bleed is auto-added).
- *   - Laser / UV / Embroidery currently fall back to a pass-through + watermark
- *     stub. The admin-configured prompt is stored on the order so the
- *     production team can render the AI-stylised output manually (or we wire
- *     up Replicate later via `lib/gifts/ai.ts`).
- *
- * When you plug in Replicate, replace the body of `runAiTransform` below.
+ *   - Laser / UV / Embroidery run through OpenAI gpt-image-2 via
+ *     `lib/gifts/ai.ts` — admin configures the model + params on the
+ *     gift_pipelines row.
  */
 
 import { GIFT_BUCKETS, putObject, makeKey } from './storage';
@@ -120,7 +117,7 @@ export type PreviewInput = {
   /** True when the customer picked a style prompt (or one is implied
    *  by the product's mode). When false, the template composite path
    *  treats every image zone as a pass-through (resize only) — no AI
-   *  call, no Replicate, no hang risk. Default true so existing AI
+   *  call, no AI hang risk. Default true so existing AI
    *  flows aren't affected. */
   applyStyle?: boolean;
 };

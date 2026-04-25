@@ -23,11 +23,10 @@ export async function getPipelineByIdAdmin(id: string): Promise<GiftPipeline | n
 
 /** Default pipeline for a mode, used when product.pipeline_id is null.
  *  Tries the canonical slug first; if it's not seeded, falls back to
- *  ANY active pipeline of the matching kind, preferring `replicate`
- *  providers over `passthrough` so AI products actually run AI.
- *  Without this fallback, a UV product with no pinned pipeline_id
- *  drops to the legacy saturation+sharpen stub at runtime — looks
- *  like the photo passed through unchanged. */
+ *  an active passthrough pipeline of the matching kind so the customer
+ *  gets a predictable photo-unchanged result. Picking a stylistic
+ *  pipeline as a global default would silently apply that style to
+ *  every uncategorised product. */
 export async function getDefaultPipelineForMode(mode: GiftMode): Promise<GiftPipeline | null> {
   const sb = createClient();
   const DEFAULT_SLUGS: Record<GiftMode, string> = {

@@ -3,22 +3,16 @@ import type { GiftPipeline } from '@/lib/gifts/types';
 const KINDS = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'] as const;
 
 const PROVIDERS = [
-  { value: 'replicate',  label: 'Replicate (AI model — third-party proxy)' },
-  { value: 'openai',     label: 'OpenAI direct (gpt-image-1, no Replicate hop)' },
+  { value: 'openai',     label: 'OpenAI direct (recommended)' },
   { value: 'passthrough', label: 'Pass-through (no AI — just crop + 300 DPI)' },
   { value: 'local_edge',  label: 'Local edge detection (free, deterministic)' },
   { value: 'local_bw',    label: 'Local greyscale (free, deterministic)' },
 ] as const;
 
 const KNOWN_MODELS = [
-  { value: 'gpt-image-2',                         label: 'OpenAI · gpt-image-2 (latest, SOTA — use with OpenAI direct provider)' },
-  { value: 'gpt-image-1',                         label: 'OpenAI · gpt-image-1 (older, OpenAI direct)' },
-  { value: 'google/nano-banana',                  label: 'Google · Nano Banana (Replicate · gemini-2.5-flash-image)' },
-  { value: 'openai/gpt-image-1',                  label: 'OpenAI · gpt-image-1 (via Replicate, BYO OpenAI key)' },
-  { value: 'black-forest-labs/flux-canny-pro',    label: 'Flux · Canny Pro (Replicate · edge-preserving)' },
-  { value: 'black-forest-labs/flux-dev',          label: 'Flux · Dev (Replicate · general img2img)' },
-  { value: 'fofr/face-to-many',                   label: 'fofr · Face-to-many (Replicate · cartoon / 3D / emoji)' },
-  { value: '__custom__',                          label: 'Other — type a model slug' },
+  { value: 'gpt-image-2',  label: 'OpenAI · gpt-image-2 (latest, SOTA)' },
+  { value: 'gpt-image-1',  label: 'OpenAI · gpt-image-1 (older)' },
+  { value: '__custom__',   label: 'Other — type a model slug' },
 ] as const;
 
 export function PipelineForm({
@@ -40,7 +34,7 @@ export function PipelineForm({
   // already uses. For an existing one, reflect what's stored — preselecting
   // "Other" + pre-filling the custom field if it's not in our dropdown.
   const modelSelectValue = currentModel === ''
-    ? (isNew ? 'google/nano-banana' : '')
+    ? (isNew ? 'gpt-image-2' : '')
     : isKnownModel ? currentModel : '__custom__';
   return (
     <form action={action} className="grid max-w-3xl gap-4">
@@ -88,14 +82,14 @@ export function PipelineForm({
         <span className="text-xs font-bold uppercase">Provider</span>
         <select
           name="provider"
-          defaultValue={(pipeline as any)?.provider ?? 'replicate'}
+          defaultValue={(pipeline as any)?.provider ?? 'openai'}
           required
           className="mt-1 w-full border-2 border-ink p-2"
         >
           {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
         <span className="mt-1 block text-[11px] text-neutral-500">
-          Replicate uses the model below. Pass-through / local-* providers ignore the model — they run a fixed transform.
+          OpenAI direct uses the model below. Pass-through / local-* providers ignore the model — they run a fixed transform.
         </span>
       </label>
       <label className="block">
@@ -109,7 +103,7 @@ export function PipelineForm({
           {KNOWN_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
         </select>
         <span className="mt-1 block text-[11px] text-neutral-500">
-          Only used when provider = Replicate. Pick a model; the code auto-maps its input parameters.
+          Only used when provider = OpenAI direct. Pick a model; the code auto-maps its input parameters.
         </span>
       </label>
       <label className="block">
@@ -127,7 +121,7 @@ export function PipelineForm({
           name="ai_endpoint_url"
           type="url"
           defaultValue={pipeline?.ai_endpoint_url ?? ''}
-          placeholder="https://api.replicate.com/v1/predictions"
+          placeholder="https://api.openai.com/v1/images/edits"
           className="mt-1 w-full border-2 border-ink p-2 font-mono text-xs"
         />
       </label>

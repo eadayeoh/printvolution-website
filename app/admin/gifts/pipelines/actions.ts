@@ -20,24 +20,21 @@ function resolveModelSlug(form: FormData): string | null {
   return preset;
 }
 
-type Provider = 'passthrough' | 'replicate' | 'openai';
-const VALID_PROVIDERS = new Set<Provider>(['passthrough', 'replicate', 'openai']);
+type Provider = 'passthrough' | 'openai';
+const VALID_PROVIDERS = new Set<Provider>(['passthrough', 'openai']);
 function resolveProvider(form: FormData): Provider {
   const v = String(form.get('provider') ?? '').trim();
-  return (VALID_PROVIDERS as Set<string>).has(v) ? (v as Provider) : 'replicate';
+  return (VALID_PROVIDERS as Set<string>).has(v) ? (v as Provider) : 'openai';
 }
 
 // Reject misconfigurations at save time so admin doesn't ship a
-// silently broken pipeline (e.g. provider=replicate + no model
+// silently broken pipeline (e.g. provider=openai + no model
 // would crash on first customer use).
 function validatePipelineForm(form: FormData): string | null {
   const provider = resolveProvider(form);
   const model = resolveModelSlug(form);
-  if (provider === 'replicate' && !model) {
-    return 'Pick an AI model — Replicate provider needs one (try google/nano-banana).';
-  }
   if (provider === 'openai' && !model) {
-    return 'Pick a model — OpenAI provider needs one (try gpt-image-1).';
+    return 'Pick a model — OpenAI provider needs one (try gpt-image-2).';
   }
   return null;
 }

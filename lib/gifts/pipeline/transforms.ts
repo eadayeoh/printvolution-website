@@ -4,9 +4,8 @@
 //
 // Each transform returns a Buffer containing a processed image.
 // renderPhotoResize handles the non-AI modes (photo-resize / eco-
-// solvent / digital / uv-dtf); runAiTransform approximates the AI
-// stylisation for the three AI modes. Replace the body of
-// runAiTransform when wiring Replicate — the signature is stable.
+// solvent / digital / uv-dtf); runAiTransform handles the three AI
+// modes via OpenAI gpt-image-2.
 
 import type { GiftProduct, GiftPipeline, GiftCropRect, GiftMode } from '@/lib/gifts/types';
 
@@ -57,8 +56,9 @@ export async function renderPhotoResize(
 /** AI stylisation dispatcher. Branches on `pipeline.provider`:
  *  - `passthrough` → crop + 300 DPI resize (no model call), same as
  *    `renderPhotoResize`.
- *  - `replicate`   → POST to replicate.com, poll for output, then
- *    resize to product dimensions.
+ *  - `openai`      → POST to api.openai.com/v1/images/edits with
+ *    gpt-image-2, then resize to product dimensions.
+ *  - `replicate`   → legacy, throws. Admin must migrate the row.
  *
  *  If `pipeline` is null or has no provider (legacy rows), falls back
  *  to the original local-sharp stub so existing products keep working.
@@ -71,7 +71,7 @@ export async function runAiTransform(
   opts?: { prompt?: string | null; negativePrompt?: string | null },
 ): Promise<Buffer> {
   const sharp = await loadSharp();
-  const provider = (pipeline as any)?.provider as 'passthrough' | 'replicate' | 'openai' | 'local_edge' | 'local_bw' | undefined;
+  const provider = (pipeline as any)?.provider as 'passthrough' | 'openai' | 'local_edge' | 'local_bw' | 'replicate' | undefined;
 
   if (provider === 'passthrough') {
     return renderPhotoResize(input, product, null, preview);
@@ -145,27 +145,10 @@ export async function runAiTransform(
   }
 
   if (provider === 'replicate') {
-    const model = (pipeline as any)?.ai_model_slug as string | undefined;
-    if (!model) throw new Error(`Pipeline ${pipeline?.slug ?? '?'} is provider=replicate but has no ai_model_slug`);
-    const { runReplicate } = await import('../ai');
-    const defaultParams = ((pipeline as any)?.default_params as Record<string, unknown> | null) ?? {};
-    const bytes = await runReplicate({
-      model,
-      input: defaultParams,
-      imageBytes: input,
-      imageMime: 'image/jpeg',
-      prompt: opts?.prompt ?? null,
-      negativePrompt: opts?.negativePrompt ?? null,
-    });
-    // Normalise to product dimensions at the right DPI.
-    const totalW = product.width_mm + product.bleed_mm * 2;
-    const totalH = product.height_mm + product.bleed_mm * 2;
-    const dpi = preview ? 150 : 300;
-    const targetW = Math.round((totalW / 25.4) * dpi);
-    const targetH = Math.round((totalH / 25.4) * dpi);
-    return sharp(bytes).rotate()
-      .resize({ width: targetW, height: targetH, fit: 'cover' })
-      .png().toBuffer();
+    // Replicate support was removed — every active pipeline now uses
+    // OpenAI direct. Old rows still tagged 'replicate' need an admin
+    // to flip them via /admin/gifts/pipelines/[id].
+    throw new Error(`Pipeline ${pipeline?.slug ?? '?'} is still on the legacy Replicate provider — switch it to "OpenAI direct" in the admin pipelines editor.`);
   }
 
   // Legacy fallback — the mode-based stub. Keeps pre-provider pipelines
