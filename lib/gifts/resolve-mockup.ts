@@ -81,12 +81,26 @@ export function resolveMockup(input: {
     url = variant?.mockup_url || product.mockup_url || '';
   }
 
-  // ── Area: independent of URL — surface > prompt > shape > variant > product ──
+  // ── Area precedence ──
+  //
+  // A surface's own area only wins when the surface ALSO has its own
+  // mockup_url. Otherwise the surface is "inheriting" from the variant —
+  // its area is the auto-seeded default {x:20,y:20,w:60,h:60} placeholder,
+  // which shouldn't pre-empt the tight box admin set on the variant.
+  //
+  // Without this guard, multi-surface variants ALWAYS rendered the 60%
+  // placeholder regardless of what admin set on the variant — the engraving
+  // box appeared in the chain area instead of on the bar.
   let area = null;
-  if (activeSurface?.mockup_area) area = activeSurface.mockup_area;
-  else if (promptOverride?.area) area = promptOverride.area;
-  else if (shapeOverride?.area) area = shapeOverride.area;
-  else area = variant?.mockup_area ?? product.mockup_area ?? null;
+  if (activeSurface?.mockup_url && activeSurface.mockup_area) {
+    area = activeSurface.mockup_area;
+  } else if (promptOverride?.area) {
+    area = promptOverride.area;
+  } else if (shapeOverride?.area) {
+    area = shapeOverride.area;
+  } else {
+    area = variant?.mockup_area ?? product.mockup_area ?? null;
+  }
 
   return { url, area };
 }
