@@ -1813,20 +1813,41 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       </select>
                     </label>
                   )}
-                  <label style={{ display: 'block' }}>
+                  <div style={{ display: 'block' }}>
                     <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
                       Photo (centred in the disc)
                     </span>
                     <input
-                      type="url" value={songPhotoUrl}
-                      onChange={(e) => setSongPhotoUrl(e.target.value)}
-                      placeholder="Paste an image URL or upload below"
-                      style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12 }}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!f) return;
+                        if (f.size > 15 * 1024 * 1024) { alert('Photo too large (max 15 MB).'); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => setSongPhotoUrl(String(reader.result));
+                        reader.onerror = () => alert('Could not read that file.');
+                        reader.readAsDataURL(f);
+                      }}
+                      style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, cursor: 'pointer' }}
                     />
+                    {songPhotoUrl && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                        <img src={songPhotoUrl} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--pv-ink)' }} />
+                        <button
+                          type="button"
+                          onClick={() => setSongPhotoUrl('')}
+                          style={{ background: 'transparent', border: '1px solid var(--pv-ink)', padding: '6px 12px', fontFamily: 'var(--pv-f-mono)', fontSize: 11, cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                     <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
-                      ✦ Direct upload coming next — for now paste a public URL or any image link.
+                      ✦ Square crop works best. The photo is masked into a circle in the centre.
                     </div>
-                  </label>
+                  </div>
                 </div>
               ) : (
               <>
