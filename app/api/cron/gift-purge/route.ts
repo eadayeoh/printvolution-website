@@ -15,6 +15,6 @@ export async function GET(req: Request) {
     return NextResponse.json(result);
   } catch (e: any) {
     reportError(e, { route: 'cron.gift-purge', action: 'purge' });
-    return NextResponse.json({ error: e.message }, { status: 200 });
+    return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
 }
