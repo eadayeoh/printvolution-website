@@ -312,3 +312,45 @@ export function orderShippedEmail(p: ShippedEmailPayload): { subject: string; ht
   `;
   return { subject, html: shell(subject, body) };
 }
+
+export type RefundedEmailPayload = {
+  order_number: string;
+  customer_name: string;
+  refund_cents: number;
+  payment_method: string | null;
+  refund_note: string | null;
+};
+
+export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const refundLabel = formatSGD(p.refund_cents);
+  const subject = p.refund_cents > 0
+    ? `Order ${p.order_number} cancelled — refund ${refundLabel}`
+    : `Order ${p.order_number} cancelled`;
+  const refundLine = p.refund_cents > 0
+    ? `<p style="font-size:14px;color:#444;margin:0 0 12px;">
+         A refund of <strong style="color:${BRAND_PINK};">${refundLabel}</strong>${p.payment_method ? ` will be processed to your <strong>${escapeHtml(p.payment_method)}</strong> within 5–10 working days` : ' will be processed within 5–10 working days'}.
+       </p>`
+    : `<p style="font-size:14px;color:#444;margin:0 0 12px;">
+         No refund is being processed for this cancellation.
+       </p>`;
+  const noteLine = p.refund_note
+    ? `<div style="background:#fafaf7;border-left:3px solid ${BRAND_PINK};padding:10px 12px;margin:12px 0;font-size:13px;color:#444;">
+         ${escapeHtml(p.refund_note)}
+       </div>`
+    : '';
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Order cancelled
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      Hi ${escapeHtml(first)} — order <strong>${escapeHtml(p.order_number)}</strong> has been cancelled.
+    </p>
+    ${refundLine}
+    ${noteLine}
+    <p style="font-size:13px;color:#666;margin:16px 0 0;line-height:1.6;">
+      If anything's off, reply within 7 days and we'll sort it out.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
