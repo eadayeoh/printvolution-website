@@ -33,7 +33,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://fastly.picsum.photos https://randomuser.me https://*.hit-pay.com`,
       "font-src 'self' data: https://fonts.gstatic.com",
-      `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.hit-pay.com https://api.sandbox.hit-pay.com`,
+      `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.hit-pay.com https://api.sandbox.hit-pay.com https://*.sentry.io https://*.ingest.sentry.io`,
       "frame-src 'self' https://hit-pay.com https://*.hit-pay.com https://www.google.com",
       "form-action 'self' https://hit-pay.com https://*.hit-pay.com",
       "frame-ancestors 'none'",
@@ -60,4 +60,17 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+const { withSentryConfig } = require('@sentry/nextjs');
+
+module.exports = withSentryConfig(nextConfig, {
+  // Build-time options — only run when a token is present.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  // Don't upload source maps in dev — only when token + project are set.
+  disableLogger: true,
+  hideSourceMaps: true,           // remove .map files from public output
+  widenClientFileUpload: true,    // upload all client-side maps
+  tunnelRoute: undefined,         // not using a tunnel — CSP allows direct sentry.io
+});
