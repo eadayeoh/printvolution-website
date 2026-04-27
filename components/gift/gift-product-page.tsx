@@ -1202,8 +1202,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     >
                       <div>
                         <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 24, marginBottom: 6, color: 'var(--pv-magenta)' }}>✦</div>
-                        Upload a photo<br />
-                        {hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}
+                        {variantHasPhotoSurface ? (
+                          <>Upload a photo<br />{hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}</>
+                        ) : (
+                          <>Type your text<br />to see a live preview</>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1230,8 +1233,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     >
                       ✦
                     </div>
-                    Upload a photo<br />
-                    {hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}
+                    {variantHasPhotoSurface ? (
+                      <>Upload a photo<br />{hasTemplates || showPromptPicker ? 'and pick a style' : 'to see a live preview'}</>
+                    ) : (
+                      <>Type your text<br />to see a live preview</>
+                    )}
                   </div>
                 )}
 

@@ -969,12 +969,11 @@ export function DraggableArea({
         dyPct: ((clientY - drag!.startY) / r.height) * 100,
       };
     }
-    // Lock the resize to the print's aspect ratio. width%/height% on
-    // the (square) stage map to the printed shape — so a 10×15 cm
-    // portrait product gets a 2:3 area, no matter how the customer
-    // drags. Pick the dominant motion axis (whichever delta is bigger)
-    // and derive the other to preserve ratio.
-    const aspectRatio =
+    // Resize is free-form — the area on the mockup is just a region the
+    // customer's photo lives inside, not a forced print medium. Hold Shift
+    // while dragging to lock to the product's physical aspect ratio for
+    // pixel-perfect alignment with rectangular prints (10×15 photo etc).
+    const lockedRatio =
       productWidthMm > 0 && productHeightMm > 0
         ? productWidthMm / productHeightMm
         : 1;
@@ -990,10 +989,13 @@ export function DraggableArea({
       } else {
         let nw = drag!.startArea.width + dxPct;
         let nh = drag!.startArea.height + dyPct;
-        if (Math.abs(dxPct) >= Math.abs(dyPct)) {
-          nh = nw / aspectRatio;
-        } else {
-          nw = nh * aspectRatio;
+        if (e.shiftKey) {
+          // Shift-drag: preserve the product's physical aspect ratio.
+          if (Math.abs(dxPct) >= Math.abs(dyPct)) {
+            nh = nw / lockedRatio;
+          } else {
+            nw = nh * lockedRatio;
+          }
         }
         onChange(normalise({
           x: drag!.startArea.x,
@@ -1064,7 +1066,7 @@ export function DraggableArea({
         <div><strong>Design size:</strong> {wMm} × {hMm} mm</div>
         <div><strong>Position:</strong> {area.x.toFixed(1)}%, {area.y.toFixed(1)}% from top-left</div>
         <div className="mt-2 text-[10px] text-neutral-400">
-          Drag the pink rectangle to move it. Drag the small square in the bottom-right to resize. Customers can fine-tune position inside this area when they upload their photo.
+          Drag the pink rectangle to move it. Drag the small square in the bottom-right to resize freely — hold <strong>Shift</strong> to lock to the product's aspect ratio. Customers can fine-tune position inside this area when they upload their photo.
         </div>
       </div>
     </div>
