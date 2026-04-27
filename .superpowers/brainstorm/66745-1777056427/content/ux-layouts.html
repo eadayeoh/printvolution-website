@@ -1,0 +1,73 @@
+<h2>Which layout handles "one upload, three shapes"?</h2>
+<p class="subtitle">Customer uploads their photo once. Then picks a shape: cutout (acrylic laser-cut to subject silhouette), rectangle, or a pre-made template. These are the three UX patterns I'd consider.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;transform:scale(.95);transform-origin:top center">
+        <div class="mockup-header">A · Shape tabs under the preview</div>
+        <div class="mockup-body">
+          <div class="placeholder" style="height:140px;display:flex;align-items:center;justify-content:center;font-size:12px">Main preview (current shape)</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <div class="mock-button" style="flex:1;background:#ff2d87;color:#fff;font-size:11px">◐ Cutout</div>
+            <div class="mock-button" style="flex:1;font-size:11px">▭ Rectangle</div>
+            <div class="mock-button" style="flex:1;font-size:11px">▦ Template</div>
+          </div>
+          <div class="label" style="margin-top:10px">Regenerate button shows when tab differs from last render</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Tabs under preview</h3>
+      <p>Matches the Line-Art / Realistic <strong>Style picker</strong> already on LED Bases. Customer clicks a tab → pipeline runs for that shape → preview swaps. If Template is picked, a second row of template thumbnails appears.</p>
+      <p class="label" style="margin-top:8px">Cheapest · familiar pattern · history strip caches every shape</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;transform:scale(.95);transform-origin:top center">
+        <div class="mockup-header">B · Three previews side-by-side</div>
+        <div class="mockup-body">
+          <div style="display:flex;gap:6px">
+            <div class="placeholder" style="flex:1;height:120px;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #ff2d87">Cutout<br>(selected)</div>
+            <div class="placeholder" style="flex:1;height:120px;display:flex;align-items:center;justify-content:center;font-size:10px">Rectangle</div>
+            <div class="placeholder" style="flex:1;height:120px;display:flex;align-items:center;justify-content:center;font-size:10px">Template</div>
+          </div>
+          <div class="label" style="margin-top:10px">All three generate on upload · customer compares at a glance</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Side-by-side all three</h3>
+      <p>Upload → backend fires <strong>all three pipelines in parallel</strong> → customer sees three mini-previews side-by-side, picks their favourite by clicking one. Picked one becomes the selected add-to-cart item.</p>
+      <p class="label" style="margin-top:8px">Most instant · 3× compute per upload · wastes 2 generations if customer knows what they want</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;transform:scale(.95);transform-origin:top center">
+        <div class="mockup-header">C · Shape-first wizard</div>
+        <div class="mockup-body">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <div class="placeholder" style="flex:1;height:60px;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid #ff2d87">◐ Cutout</div>
+            <div class="placeholder" style="flex:1;height:60px;display:flex;align-items:center;justify-content:center;font-size:10px">▭ Rectangle</div>
+            <div class="placeholder" style="flex:1;height:60px;display:flex;align-items:center;justify-content:center;font-size:10px">▦ Template</div>
+          </div>
+          <div class="placeholder" style="height:90px;display:flex;align-items:center;justify-content:center;font-size:11px">Upload area (appears after shape picked)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Pick shape first, then upload</h3>
+      <p>Customer picks shape <strong>before</strong> uploading. Upload zone reveals after. Switching shape later forces a re-upload (or offers to reuse the already-stored photo).</p>
+      <p class="label" style="margin-top:8px">Clearest for new customers · breaks if customer wants to compare shapes after uploading</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding:14px 18px;background:rgba(255,221,0,.15);border:1px dashed #999">
+  <p class="label">My recommendation</p>
+  <p><strong>Option A · Tabs under preview.</strong> Reuses the style-picker + history-strip + Regenerate pattern we shipped last hour for Line Art ↔ Realistic. Customer already gets it. Cost stays low (only picked shapes generate). Every shape a customer explores lands in the history strip so switching back is a free click.</p>
+</div>

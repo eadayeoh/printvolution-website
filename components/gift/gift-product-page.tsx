@@ -184,6 +184,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [engravedFont, setEngravedFont] = useState<string>(allowedFonts[0] ?? 'Archivo');
   const [engravedSizePct, setEngravedSizePct] = useState<number>(6); // % of preview height
   const [textPos, setTextPos] = useState<{ x: number; y: number }>({ x: 50, y: 80 });
+  // Rotation in degrees, -180..180. Shared across surfaces (mirrors how
+  // textPos / font / size are shared) so flipping between surface tabs
+  // keeps the styling consistent.
+  const [engravedRotation, setEngravedRotation] = useState<number>(0);
 
   // Pull the admin-configured Google Fonts once on mount so the picker
   // dropdown + the draggable text overlay both render in the real font.
@@ -688,6 +692,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         notes += `;text_font:${engravedFont}`;
         notes += `;text_size:${engravedSizePct}`;
         notes += `;text_pos:${textPos.x.toFixed(1)},${textPos.y.toFixed(1)}`;
+        if (engravedRotation !== 0) notes += `;text_rot:${engravedRotation}`;
       }
     }
     if (hasSurfaces && selectedVariant) {
@@ -1157,6 +1162,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           sizePct: engravedSizePct,
                           fontFamily: engravedFont,
                           color: '#0a0a0a',
+                          rotation: engravedRotation,
                         };
                       })()}
                       onTextChange={(t) => {
@@ -1781,6 +1787,84 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     activeSurfaceId={activeSurfaceId || selectedVariant.surfaces[0]?.id}
                     onActiveSurfaceChange={setActiveSurfaceId}
                   />
+                  {/* Text styling toolbar — only renders when any surface has
+                      text typed AND the active surface accepts text. The
+                      legacy "Add text" step bottom-of-page hosts the same
+                      controls but is hidden when surfaces own the input. */}
+                  {(() => {
+                    const anySurfaceHasText = Object.values(surfaceFills).some((f) => (f.text ?? '').trim());
+                    const activeSurface = selectedVariant.surfaces.find((s) => s.id === activeSurfaceId)
+                      ?? selectedVariant.surfaces[0];
+                    const activeAcceptsText = activeSurface?.accepts === 'text' || activeSurface?.accepts === 'both';
+                    if (!anySurfaceHasText || !activeAcceptsText) return null;
+                    return (
+                      <div style={{
+                        marginTop: 14,
+                        padding: '12px 14px',
+                        background: '#fafaf7',
+                        border: '1px solid var(--pv-rule)',
+                        borderRadius: 8,
+                        display: 'grid',
+                        gap: 10,
+                      }}>
+                        <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                          Text style — applies across all surfaces
+                        </div>
+                        {allowedFonts.length > 0 && (
+                          <label style={{ display: 'block' }}>
+                            <span style={{ display: 'block', marginBottom: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Font</span>
+                            <select
+                              value={engravedFont}
+                              onChange={(e) => setEngravedFont(e.target.value)}
+                              style={{ width: '100%', padding: '8px 10px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: engravedFont, fontSize: 14, fontWeight: 500 }}
+                            >
+                              {allowedFonts.map((f) => (
+                                <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        <label style={{ display: 'block' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Size</span>
+                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedSizePct}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={2}
+                            max={20}
+                            step={0.5}
+                            value={engravedSizePct}
+                            onChange={(e) => setEngravedSizePct(parseFloat(e.target.value))}
+                            style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
+                          />
+                        </label>
+                        <label style={{ display: 'block' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Rotation</span>
+                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedRotation}°</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={-180}
+                            max={180}
+                            step={1}
+                            value={engravedRotation}
+                            onChange={(e) => setEngravedRotation(parseFloat(e.target.value))}
+                            style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                            <button type="button" onClick={() => setEngravedRotation(Math.max(-180, engravedRotation - 15))} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>↺ −15°</button>
+                            <button type="button" onClick={() => setEngravedRotation(0)} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>Reset</button>
+                            <button type="button" onClick={() => setEngravedRotation(Math.min(180, engravedRotation + 15))} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>+15° ↻</button>
+                          </div>
+                        </label>
+                        <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
+                          ✦ Drag the text on the preview to position it inside the safe zone.
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </ComposeSection>
               )}
 

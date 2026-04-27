@@ -23,6 +23,8 @@ export type TextLayer = {
   sizePct: number;
   fontFamily: string;
   color: string;
+  /** Rotation in degrees, -180..180. Defaults to 0 if absent. */
+  rotation?: number;
 };
 
 export function GiftMockupPreviewInteractive({
@@ -333,7 +335,10 @@ export function GiftMockupPreviewInteractive({
             position: 'absolute',
             left: `${textLayer.x}%`,
             top: `${textLayer.y}%`,
-            transform: 'translate(-50%, -50%)',
+            // Centre the text on (x,y) AND apply customer-set rotation. Order
+            // matters: translate first to anchor at the centre, then rotate
+            // around that anchor.
+            transform: `translate(-50%, -50%) rotate(${textLayer.rotation ?? 0}deg)`,
             cursor: onTextChange ? (drag?.mode === 'text' ? 'grabbing' : 'grab') : 'default',
             fontFamily: textLayer.fontFamily,
             fontSize: `${Math.max(10, (textLayer.sizePct / 100) * stageWidth)}px`,
