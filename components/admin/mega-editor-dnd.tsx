@@ -39,10 +39,33 @@ export function MegaEditorDnd({
           section_heading: s.section_heading.trim(),
           items: s.items.filter((i) => i.product_slug && i.label.trim()),
         }));
+
+      // Count how many items + sections were filtered out so we can WARN —
+      // the previous behaviour silently dropped invalid entries and showed
+      // "✓ Saved", leaving the admin to discover later that the front end
+      // didn't match their UI.
+      const localItems = sections.flatMap((s) => s.items).length;
+      const sentItems  = payload.flatMap((s) => s.items).length;
+      const droppedItems = localItems - sentItems;
+      const droppedSecs  = sections.length - payload.length;
+
       const r = await saveMegaMenu(menuKey, payload);
       if (r.ok) {
-        setStatus('✓ Saved');
-        setTimeout(() => setStatus(null), 1600);
+        // Sync local state to the filtered payload so the UI reflects what
+        // was actually saved — otherwise the dropped chips stick around in
+        // the editor and the admin thinks they're persisted.
+        if (droppedItems > 0 || droppedSecs > 0) {
+          setSections(payload);
+          const bits = [
+            droppedSecs  > 0 ? `${droppedSecs} section${droppedSecs > 1 ? 's' : ''} (no heading)` : null,
+            droppedItems > 0 ? `${droppedItems} item${droppedItems > 1 ? 's' : ''} (missing slug or label)` : null,
+          ].filter(Boolean).join(', ');
+          setStatus(`✓ Saved — ${bits} skipped`);
+          setTimeout(() => setStatus(null), 5000);
+        } else {
+          setStatus('✓ Saved');
+          setTimeout(() => setStatus(null), 1600);
+        }
         router.refresh();
       } else {
         setStatus('✗ ' + (r.error ?? 'Failed'));

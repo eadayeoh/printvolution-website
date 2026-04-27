@@ -199,7 +199,11 @@ export async function listMediaWithUsage(): Promise<
       // gift_product_variants: tens) are small enough that the cost is negligible
       // and correctness is non-negotiable — silent miss = orphan-list lies =
       // admin deletes referenced files.
-      let queryBuilder = (sb as any).from(table).select(`id, ${col}`);
+      // NB: do NOT prefix with 'id, ' — some tables (product_extras,
+      // product_pricing) use the related FK as PK and have no `id` column,
+      // which makes the whole select 400 with "column id does not exist"
+      // — silently dropping every reference in that table from the scan.
+      let queryBuilder = (sb as any).from(table).select(`${col}`);
       if (target.kind === 'plain' || target.kind === 'html') {
         queryBuilder = queryBuilder.like(col, '%/product-images/%');
       }
@@ -218,7 +222,10 @@ export async function listMediaWithUsage(): Promise<
           target.kind === 'jsonb'
             ? extractFilenames(row[col])
             : extractFilenamesFromString(row[col] ?? '');
-        for (const fn of fns) addRef(fn, table, col, String(row.id));
+        // ref_id is informational only — orphan detection uses the filename;
+        // the UI badge counts references regardless of id. Skip it entirely
+        // so we don't have to know each table's PK.
+        for (const fn of fns) addRef(fn, table, col, '');
       }
     }
 
