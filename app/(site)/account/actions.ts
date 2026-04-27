@@ -87,8 +87,11 @@ export async function signUpWithPassword(input: { email: string; password: strin
     return { ok: false as const, error: 'Could not create account' };
   }
 
-  // Fire-and-forget welcome email — never block signup on Resend latency.
-  void (async () => {
+  // Background welcome email — registered via Vercel's waitUntil so the
+  // function is allowed to finish after the response is flushed. A bare
+  // `void (async () => ...)()` would be killed on serverless.
+  const { waitUntil } = await import('@vercel/functions');
+  waitUntil((async () => {
     try {
       const { sendEmail, welcomeEmail } = await import('@/lib/email');
       const m = welcomeEmail(email, name);
@@ -97,7 +100,7 @@ export async function signUpWithPassword(input: { email: string; password: strin
       const { reportError } = await import('@/lib/observability');
       reportError(e, { route: 'account.signup', action: 'welcome_email' });
     }
-  })();
+  })());
 
   return { ok: true as const };
 }
