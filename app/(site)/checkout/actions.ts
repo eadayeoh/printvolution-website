@@ -7,6 +7,7 @@ import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { evaluateCouponForOrder } from '@/lib/coupons';
 import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
+import { reportError } from '@/lib/observability';
 
 /**
  * Public coupon-validation endpoint used by the checkout form
@@ -99,6 +100,7 @@ async function runOne(line: { id: string; gift_product_id: string; source_asset_
       production_status: 'failed',
       production_error: e?.message ?? 'unknown production failure',
     }).eq('id', line.id);
+    reportError(e, { route: 'checkout', action: 'gift_production', extras: { line_id: line.id } });
   }
 }
 
@@ -199,6 +201,7 @@ async function runOneLineSurfaces(it: { lineId: string; gift_product_id: string 
         production_status: 'failed',
         production_error: e?.message ?? 'unknown',
       }).eq('id', row.id);
+      reportError(e, { route: 'checkout', action: 'surface_production', extras: { surface_row_id: row.id, line_id: it.lineId } });
     }
   }
 
@@ -624,7 +627,8 @@ async function sendOrderEmails(payload: import('@/lib/email').OrderEmailPayload)
       const a = adminNewOrderEmail(payload);
       await sendEmail({ to: admin, subject: a.subject, html: a.html, replyTo: payload.customer_email });
     }
-  } catch {
+  } catch (e) {
     console.error('[order email] failed');
+    reportError(e, { route: 'checkout', action: 'send_emails' });
   }
 }

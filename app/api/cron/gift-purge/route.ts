@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { purgeEligible } from '@/lib/gifts/retention';
+import { reportError } from '@/lib/observability';
 
 export const dynamic = 'force-dynamic';
 // Vercel cron hits this via HTTP GET. Protected by CRON_SECRET header.
@@ -13,6 +14,7 @@ export async function GET(req: Request) {
     const result = await purgeEligible();
     return NextResponse.json(result);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    reportError(e, { route: 'cron.gift-purge', action: 'purge' });
+    return NextResponse.json({ error: e.message }, { status: 200 });
   }
 }

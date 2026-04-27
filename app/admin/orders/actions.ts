@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/auth/admin-audit';
+import { reportError } from '@/lib/observability';
 
 const ALLOWED_STATUSES = ['pending', 'processing', 'ready', 'completed', 'cancelled'] as const;
 
@@ -39,6 +40,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
         await sendEmail({ to: before.email as string, subject: m.subject, html: m.html });
       } catch (e) {
         console.error('[status email] failed');
+        reportError(e, { route: 'admin.orders.update_status', action: 'status_email', order_id: orderId });
       }
     })();
   }
