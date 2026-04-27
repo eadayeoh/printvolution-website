@@ -292,7 +292,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   const needTemplate = product.template_mode === 'required' && !selectedTemplateId;
   const hasTemplates = templates.length > 0 && product.template_mode !== 'none';
-  const showPromptPicker = prompts.length >= 2;
+  // Hide the AI art-style picker when the selected variant has surfaces and
+  // none of them accept photos — text-only surfaces (e.g. laser-engraved
+  // metallic keychains) don't use the AI generation flow.
+  const variantSurfaces = selectedVariant?.surfaces ?? [];
+  const variantHasPhotoSurface =
+    variantSurfaces.length === 0 ||
+    variantSurfaces.some((s) => s.accepts === 'photo' || s.accepts === 'both');
+  const showPromptPicker = prompts.length >= 2 && variantHasPhotoSurface;
   const needPrompt = showPromptPicker && !selectedPromptId;
   const showTextStep = product.mode === 'laser' || product.mode === 'uv';
 
