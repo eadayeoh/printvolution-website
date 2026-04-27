@@ -145,6 +145,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     (product?.figurine_area as FigurineArea) ?? { x: 10, y: 60, width: 25, height: 30 },
   );
 
+  const [showTextStep, setShowTextStep] = useState<boolean | null>(product?.show_text_step ?? null);
+
   function autoSlugFromName() {
     setSlug(slugify(name).slice(0, 60));
   }
@@ -199,6 +201,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             .map((s) => ({ title: s.title.trim(), time: s.time.trim(), desc: s.desc.trim() }))
         : null,
       is_active: isActive,
+      show_text_step: showTextStep,
       mockup_url: mockupUrl || null,
       // mockup_area is a NOT NULL column at the DB level, so always send
       // the current value. When there's no mockup URL the coordinates
@@ -477,6 +480,31 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Legacy "Add text" step toggle */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 text-sm font-black text-ink">Customer PDP options</div>
+            <div className="space-y-1 max-w-xs">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                Legacy &ldquo;Add text&rdquo; step on PDP
+              </label>
+              <select
+                value={showTextStep === null ? 'auto' : showTextStep ? 'on' : 'off'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setShowTextStep(v === 'auto' ? null : v === 'on');
+                }}
+                className={inputCls}
+              >
+                <option value="auto">Auto (laser/UV &rarr; on)</option>
+                <option value="on">Force on</option>
+                <option value="off">Force off</option>
+              </select>
+              <div className="text-[10px] text-neutral-400">
+                Auto follows the product mode. Force off when surfaces handle all text inputs.
+              </div>
             </div>
           </div>
 

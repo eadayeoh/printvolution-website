@@ -69,6 +69,7 @@ const GiftProductSchema = z.object({
   // back to mode-based defaults.
   seo_body: z.string().nullable().optional(),
   seo_magazine: z.any().nullable().optional(),
+  show_text_step: z.boolean().nullable().optional(),
   faqs: z.array(z.object({
     question: z.string(),
     answer: z.string(),

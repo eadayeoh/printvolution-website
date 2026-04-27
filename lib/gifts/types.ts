@@ -100,6 +100,10 @@ export type GiftProduct = {
   // Mockup — product shot that the transformed design is composited onto
   mockup_url?: string | null;
   mockup_area?: { x: number; y: number; width: number; height: number } | null;
+  /** Admin override for the legacy "Add text" step on the customer PDP.
+   *  NULL = use the mode-based default (laser/uv → on, others → off).
+   *  TRUE/FALSE wins over the default. */
+  show_text_step?: boolean | null;
   // Admin-authored content overrides. NULL = use mode-based default.
   seo_body?: string | null;
   seo_magazine?: unknown;

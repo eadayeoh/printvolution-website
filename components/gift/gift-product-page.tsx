@@ -301,7 +301,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     variantSurfaces.some((s) => s.accepts === 'photo' || s.accepts === 'both');
   const showPromptPicker = prompts.length >= 2 && variantHasPhotoSurface;
   const needPrompt = showPromptPicker && !selectedPromptId;
-  const showTextStep = product.mode === 'laser' || product.mode === 'uv';
+  const showTextStep =
+    product.show_text_step !== null && product.show_text_step !== undefined
+      ? product.show_text_step
+      : (product.mode === 'laser' || product.mode === 'uv');
 
   // Right-column ComposeSection letters, computed once so adding or
   // removing a step (Shape, Style, Size …) doesn't require rethinking
