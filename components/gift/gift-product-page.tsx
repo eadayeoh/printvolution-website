@@ -17,6 +17,7 @@ import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
 import { GiftMockupPreviewInteractive } from '@/components/gift/gift-mockup-preview-interactive';
+import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
 import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
 import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
 import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
@@ -188,6 +189,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // textPos / font / size are shared) so flipping between surface tabs
   // keeps the styling consistent.
   const [engravedRotation, setEngravedRotation] = useState<number>(0);
+
+  // ── Song-lyrics-photo-frame template (special-cased product) ─────────────
+  // This product has a single template — lyrics spiraling around a centre
+  // photo with a footer block (title / names / year). We keep its inputs
+  // flat instead of squeezing them into the surfaces / templates flow.
+  const isSongLyrics = product.slug === 'song-lyrics-photo-frame';
+  const [songLyrics, setSongLyrics] = useState<string>('');
+  const [songTitle, setSongTitle]   = useState<string>('OUR SONG');
+  const [songNames, setSongNames]   = useState<string>('');
+  const [songYear, setSongYear]     = useState<string>(String(new Date().getFullYear()));
+  const [songPhotoUrl, setSongPhotoUrl] = useState<string>('');
 
   // Pull the admin-configured Google Fonts once on mount so the picker
   // dropdown + the draggable text overlay both render in the real font.
@@ -705,6 +717,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       }
     }
     if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
+    // Song-lyrics-photo-frame: serialise the four custom text fields + photo
+    // URL into the cart line so the production pipeline can re-render the
+    // SVG server-side at 300 DPI.
+    if (isSongLyrics) {
+      if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
+      if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
+      if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
+      if (songYear.trim())    notes += `${notes ? ';' : ''}song_year:${songYear.trim()}`;
+      if (songPhotoUrl.trim()) notes += `${notes ? ';' : ''}song_photo:${songPhotoUrl.trim()}`;
+      if (engravedFont)       notes += `${notes ? ';' : ''}song_font:${engravedFont}`;
+    }
     // Record the customer's adjusted area so production knows where
     // to place the design on the 300 DPI file (if they dragged/resized).
     if (selectedVariant?.photo_pan_mode && (panOffset.x !== 50 || panOffset.y !== 50)) {
@@ -1097,14 +1120,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
 
-                {/* Template flow: prefer the local CSS layout preview
-                    over the server composite. Text + calendar changes
-                    show up instantly and the html2canvas snapshot at
-                    add-to-cart captures whatever the customer last
-                    arranged. The server composite still runs in the
-                    background for cart-payload integrity but is never
-                    shown directly. */}
-                {activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                {/* Song-lyrics-photo-frame: dedicated SVG renderer wins
+                    over the standard preview tree. Lyrics flow on a spiral
+                    around the centre photo; the customer's text fields
+                    feed in directly from the inputs panel below. */}
+                {isSongLyrics ? (
+                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130' }}>
+                    <SongLyricsTemplate
+                      photoUrl={songPhotoUrl || null}
+                      lyrics={songLyrics}
+                      title={songTitle}
+                      names={songNames}
+                      year={songYear}
+                      font={engravedFont}
+                    />
+                  </div>
+                ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
                   <div style={{ width: '100%' }}>
                     <GiftTemplateLayoutPreview
                       template={activeTemplate}
@@ -1708,6 +1739,97 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 marginBottom: 14,
               }}
             >
+              {/* Song-lyrics-photo-frame: a focused single-step compose UI
+                  with the four custom text fields + a photo upload. Replaces
+                  the standard template/upload/text flow entirely. */}
+              {isSongLyrics ? (
+                <div style={{ padding: '20px 22px', display: 'grid', gap: 14 }}>
+                  <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-magenta)' }}>
+                    Make your record
+                  </div>
+                  <label style={{ display: 'block' }}>
+                    <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                      Lyrics (max 600 chars)
+                    </span>
+                    <textarea
+                      value={songLyrics}
+                      onChange={(e) => setSongLyrics(e.target.value.slice(0, 600))}
+                      placeholder={'Paste the lyric you want spiraling around the photo.\nKeep it short — long verses get tiny.'}
+                      rows={5}
+                      style={{ width: '100%', padding: '12px 14px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14, lineHeight: 1.45, resize: 'vertical' }}
+                    />
+                    <div style={{ marginTop: 4, textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: songLyrics.length >= 560 ? 'var(--pv-magenta)' : 'var(--pv-muted)' }}>
+                      {songLyrics.length} / 600
+                    </div>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block' }}>
+                      <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                        Title
+                      </span>
+                      <input
+                        type="text" value={songTitle}
+                        onChange={(e) => setSongTitle(e.target.value.slice(0, 30))}
+                        placeholder="OUR SONG"
+                        style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+                      />
+                    </label>
+                    <label style={{ display: 'block' }}>
+                      <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                        Year
+                      </span>
+                      <input
+                        type="text" value={songYear}
+                        onChange={(e) => setSongYear(e.target.value.slice(0, 4))}
+                        placeholder="2026" maxLength={4}
+                        style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+                      />
+                    </label>
+                  </div>
+                  <label style={{ display: 'block' }}>
+                    <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                      Names (e.g. Bruce &amp; Janie)
+                    </span>
+                    <input
+                      type="text" value={songNames}
+                      onChange={(e) => setSongNames(e.target.value.slice(0, 50))}
+                      placeholder="Bruce & Janie"
+                      style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+                    />
+                  </label>
+                  {allowedFonts.length > 0 && (
+                    <label style={{ display: 'block' }}>
+                      <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                        Title font
+                      </span>
+                      <select
+                        value={engravedFont}
+                        onChange={(e) => setEngravedFont(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: engravedFont, fontSize: 14 }}
+                      >
+                        {allowedFonts.map((f) => (
+                          <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label style={{ display: 'block' }}>
+                    <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                      Photo (centred in the disc)
+                    </span>
+                    <input
+                      type="url" value={songPhotoUrl}
+                      onChange={(e) => setSongPhotoUrl(e.target.value)}
+                      placeholder="Paste an image URL or upload below"
+                      style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12 }}
+                    />
+                    <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
+                      ✦ Direct upload coming next — for now paste a public URL or any image link.
+                    </div>
+                  </label>
+                </div>
+              ) : (
+              <>
               {/* Step A: Template picker — picked first so the Fill /
                   Upload section below knows whether to render the
                   multi-slot form or the legacy single-file dropzone. */}
@@ -2314,6 +2436,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     </div>
                   )}
                 </ComposeSection>
+              )}
+              </>
               )}
             </div>
 
