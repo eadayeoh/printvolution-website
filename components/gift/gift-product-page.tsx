@@ -1111,10 +1111,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   // (which is the single-preview flow's global slot) — if a
                   // restore or an earlier non-surfaces upload populated it,
                   // every side would otherwise keep showing the same image.
+                  //
+                  // Text-only surfaces have no photo, so we ALSO treat typed
+                  // text as content — otherwise the empty-state "Type your
+                  // text" placeholder stays even after the customer types.
                   if (hasSurfaces) {
-                    return surfaceFills[activeSurfaceId]?.photoThumb ?? null;
+                    const fill = surfaceFills[activeSurfaceId];
+                    return fill?.photoThumb || (fill?.text?.trim() ? 'has-text' : null);
                   }
-                  return preview?.previewUrl ?? null;
+                  return preview?.previewUrl ?? (engravedText.trim() ? 'has-text' : null);
                 })() ? (
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <GiftMockupPreviewInteractive
@@ -1123,14 +1128,24 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       area={customerArea}
                       bounds={shapeMockup.area ?? null}
                       onAreaChange={setCustomerArea}
-                      textLayer={engravedText.trim() ? {
-                        text: engravedText.trim(),
-                        x: textPos.x,
-                        y: textPos.y,
-                        sizePct: engravedSizePct,
-                        fontFamily: engravedFont,
-                        color: '#0a0a0a',
-                      } : null}
+                      textLayer={(() => {
+                        // In the surfaces flow each surface has its own text
+                        // input; the active surface's text is the source of
+                        // truth. Legacy non-surfaces flow still reads the
+                        // single engravedText field.
+                        const text = hasSurfaces
+                          ? (surfaceFills[activeSurfaceId]?.text ?? '').trim()
+                          : engravedText.trim();
+                        if (!text) return null;
+                        return {
+                          text,
+                          x: textPos.x,
+                          y: textPos.y,
+                          sizePct: engravedSizePct,
+                          fontFamily: engravedFont,
+                          color: '#0a0a0a',
+                        };
+                      })()}
                       onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
                       captureMode={capturingSnapshot}
                       panMode={selectedVariant?.photo_pan_mode === true}
