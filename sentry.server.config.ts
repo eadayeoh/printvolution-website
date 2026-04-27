@@ -18,6 +18,13 @@ if (dsn && (env === 'production' || env === 'preview')) {
   });
 }
 
+const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+const ORDER_RE = /\bPV-\d{4,}\b/g;
+
+function redactString(s: string): string {
+  return s.replace(EMAIL_RE, '[redacted-email]').replace(ORDER_RE, '[redacted-order]');
+}
+
 function scrub(event: ErrorEvent): ErrorEvent {
   const blocked = new Set([
     'customer_email', 'email', 'delivery_address', 'address',
@@ -37,6 +44,23 @@ function scrub(event: ErrorEvent): ErrorEvent {
   if (event.contexts) event.contexts = walk(event.contexts);
   if (event.request?.data)    event.request.data = walk(event.request.data);
   if (event.request?.headers) event.request.headers = walk(event.request.headers);
-  if (event.user) event.user = { id: event.user.id };
+  if (event.breadcrumbs) {
+    event.breadcrumbs = event.breadcrumbs.map(b =>
+      b.data ? { ...b, data: walk(b.data) } : b
+    );
+  }
+  if (event.exception?.values) {
+    event.exception.values = event.exception.values.map(v => ({
+      ...v,
+      value: v.value ? redactString(v.value) : v.value,
+    }));
+  }
+  if (event.message && typeof event.message === 'string') {
+    event.message = redactString(event.message);
+  }
+  if (event.user) {
+    const id = event.user.id;
+    event.user = (typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)) ? { id } : {};
+  }
   return event;
 }
