@@ -86,6 +86,19 @@ export async function signUpWithPassword(input: { email: string; password: strin
     // Generic message — don't confirm whether the email is registered.
     return { ok: false as const, error: 'Could not create account' };
   }
+
+  // Fire-and-forget welcome email — never block signup on Resend latency.
+  void (async () => {
+    try {
+      const { sendEmail, welcomeEmail } = await import('@/lib/email');
+      const m = welcomeEmail(email, name);
+      await sendEmail({ to: email, subject: m.subject, html: m.html });
+    } catch (e) {
+      const { reportError } = await import('@/lib/observability');
+      reportError(e, { route: 'account.signup', action: 'welcome_email' });
+    }
+  })();
+
   return { ok: true as const };
 }
 

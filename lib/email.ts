@@ -241,3 +241,37 @@ export function orderStatusEmail(orderNumber: string, customerName: string, stat
   `;
   return { subject, html: shell(subject, body) };
 }
+
+export function welcomeEmail(email: string, name: string | null): { subject: string; html: string } {
+  const first = (name ?? '').trim().split(/\s+/)[0] || 'there';
+  const subject = `Welcome to Printvolution, ${first}`;
+  const body = `
+    <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 8px;color:${BRAND_INK};">
+      Welcome, ${escapeHtml(first)}.
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 20px;line-height:1.6;">
+      Your account is live. Here's what it does for you:
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 24px;">
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:${BRAND_INK};">
+          <strong style="color:${BRAND_PINK};">Track every order</strong> — see status from production to delivery, no email-digging.
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #eee;font-size:13px;color:${BRAND_INK};">
+          <strong style="color:${BRAND_PINK};">Reorder in 2 clicks</strong> — past jobs are saved with the same files + specs.
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;font-size:13px;color:${BRAND_INK};">
+          <strong style="color:${BRAND_PINK};">Earn points on every order</strong> — building this now; your past orders count.
+        </td>
+      </tr>
+    </table>
+    <a href="https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'printvolution.sg'}/shop" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;">
+      Browse the shop →
+    </a>
+  `;
+  return { subject, html: shell(subject, body) };
+}
