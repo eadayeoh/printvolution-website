@@ -127,6 +127,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // rectangle has to follow).
   useEffect(() => {
     setCustomerArea(shapeMockup.area);
+    // Re-anchor the engraving text inside the new area's centre. Without
+    // this, text dragged to the bottom of a previous (larger) area stays
+    // off the new (smaller) engraving zone — the user sees text floating
+    // outside the bar instead of on it. The clamp inside onTextChange
+    // (further down) keeps it inside while dragging.
+    if (shapeMockup.area) {
+      setTextPos({
+        x: shapeMockup.area.x + shapeMockup.area.width  / 2,
+        y: shapeMockup.area.y + shapeMockup.area.height / 2,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId, activeSurfaceId]);
 
@@ -1148,7 +1159,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           color: '#0a0a0a',
                         };
                       })()}
-                      onTextChange={(t) => setTextPos({ x: t.x, y: t.y })}
+                      onTextChange={(t) => {
+                        // Clamp the dragged text to the engraving area so it
+                        // can't drift off the print zone admin defined.
+                        if (customerArea) {
+                          const x = Math.max(customerArea.x, Math.min(customerArea.x + customerArea.width,  t.x));
+                          const y = Math.max(customerArea.y, Math.min(customerArea.y + customerArea.height, t.y));
+                          setTextPos({ x, y });
+                        } else {
+                          setTextPos({ x: t.x, y: t.y });
+                        }
+                      }}
                       captureMode={capturingSnapshot}
                       panMode={selectedVariant?.photo_pan_mode === true}
                       panOffset={panOffset}
