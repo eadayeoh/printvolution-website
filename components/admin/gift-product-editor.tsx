@@ -15,6 +15,7 @@ import { GiftVariantsPanel, type GiftVariantsPanelHandle } from './gift-variants
 import { GiftShapeOptionsEditor } from './gift-shape-options-editor';
 import type { ShapeOption } from '@/lib/gifts/shape-options';
 import { GiftFigurineOptionsEditor, type FigurineOption, type FigurineArea } from './gift-figurine-options-editor';
+import { slugify } from '@/lib/utils';
 
 type Cat = { id: string; slug: string; name: string; parent_id: string | null };
 
@@ -145,7 +146,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   );
 
   function autoSlugFromName() {
-    setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60));
+    setSlug(slugify(name).slice(0, 60));
   }
 
   async function save() {
@@ -305,7 +306,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 <span className="mb-1 block text-xs font-bold text-ink">Slug</span>
                 <div className="flex items-center">
                   <span className="rounded-l border-2 border-r-0 border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500 font-mono">/gift/</span>
-                  <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${inputCls} rounded-l-none font-mono text-xs`} />
+                  <input value={slug} onChange={(e) => setSlug(slugify(e.target.value))} className={`${inputCls} rounded-l-none font-mono text-xs`} />
                 </div>
               </label>
             </div>
@@ -772,7 +773,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                           onBlur={() => {
                             if (!s.slug && s.name) {
                               const next = [...sizes];
-                              next[i] = { ...s, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) };
+                              next[i] = { ...s, slug: slugify(s.name).slice(0, 40) };
                               setSizes(next);
                             }
                           }}
@@ -786,7 +787,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                           value={s.slug}
                           onChange={(e) => {
                             const next = [...sizes];
-                            next[i] = { ...s, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40) };
+                            next[i] = { ...s, slug: slugify(e.target.value).slice(0, 40) };
                             setSizes(next);
                           }}
                           placeholder="a4-portrait"
@@ -833,7 +834,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                     key={p.label}
                     type="button"
                     onClick={() => {
-                      const slug = p.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      const slug = slugify(p.label);
                       setSizes([...sizes, { slug, name: p.label, width_mm: p.w, height_mm: p.h, price_delta_cents: 0, display_order: sizes.length }]);
                     }}
                     className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-bold text-neutral-700 hover:border-ink"

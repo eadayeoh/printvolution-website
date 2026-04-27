@@ -182,7 +182,7 @@ export function GiftFigurineOptionsEditor({
                           const name = e.target.value;
                           const patch: Partial<FigurineOption> = { name };
                           if (!row.slug) {
-                            patch.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+                            patch.slug = slugify(name).slice(0, 40);
                           }
                           updateRow(i, patch);
                         }}
@@ -197,7 +197,7 @@ export function GiftFigurineOptionsEditor({
                       <input
                         value={row.slug}
                         onChange={(e) => updateRow(i, {
-                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 40),
+                          slug: slugify(e.target.value).slice(0, 40),
                         })}
                         className={`${inputCls} font-mono text-xs`}
                         placeholder="grazing-deer"
