@@ -40,6 +40,21 @@ export default async function MediaLibraryPage() {
           Orphans are not referenced by any product, variant, or setting.
         </p>
       </div>
+      {result.warnings && result.warnings.length > 0 && (
+        <div className="mb-6 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+          <div className="text-sm font-extrabold text-amber-900">
+            ⚠ Scan incomplete — {result.warnings.length} table(s) failed.
+            <span className="font-medium"> Do not bulk-delete until this is resolved — orphan list may be wrong.</span>
+          </div>
+          <ul className="mt-2 list-disc pl-5 text-xs text-amber-800">
+            {result.warnings.map((w, i) => (
+              <li key={i}>
+                <code className="rounded bg-amber-100 px-1">{w.table}.{w.column}</code>: {w.error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <MediaLibraryManager initialItems={result.items} />
     </div>
   );

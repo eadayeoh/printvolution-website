@@ -20,6 +20,9 @@ export type MediaItem = {
   references: MediaRef[]; // empty = orphan
 };
 
+/** Scan-time failures surface to the UI so a silent miss can't ship orphans. */
+export type ScanWarning = { table: string; column: string; error: string };
+
 // ---------------------------------------------------------------------------
 // SCAN_TARGETS — single source of truth for every (table, column) that can
 // reference a product-images file. Add here once; both listMediaWithUsage
@@ -117,7 +120,7 @@ function extractFilenames(value: unknown): string[] {
 // ---------------------------------------------------------------------------
 
 export async function listMediaWithUsage(): Promise<
-  { ok: true; items: MediaItem[] } | { ok: false; error: string }
+  { ok: true; items: MediaItem[]; warnings: ScanWarning[] } | { ok: false; error: string }
 > {
   try {
     await requireAdmin();
@@ -178,6 +181,7 @@ export async function listMediaWithUsage(): Promise<
 
     // ── 3. Collect all references across every (table, column) pair ──
     const refMap = new Map<string, MediaRef[]>();
+    const warnings: ScanWarning[] = [];
 
     function addRef(filename: string, table: string, column: string, ref_id: string) {
       if (!refMap.has(filename)) refMap.set(filename, []);
@@ -185,49 +189,36 @@ export async function listMediaWithUsage(): Promise<
     }
 
     for (const target of SCAN_TARGETS) {
-      if (target.kind === 'plain') {
-        const { table, col } = target;
-        const { data: rows, error } = await (sb as any)
-          .from(table)
-          .select(`id, ${col}`)
-          .like(col, '%/product-images/%');
-        if (error) {
-          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
-          continue; // non-fatal
-        }
-        for (const row of rows ?? []) {
-          const fns = extractFilenamesFromString(row[col] ?? '');
-          for (const fn of fns) addRef(fn, table, col, String(row.id));
-        }
-      } else if (target.kind === 'jsonb') {
-        const { table, col } = target;
-        const { data: rows, error } = await (sb as any)
-          .from(table)
-          .select(`id, ${col}`)
-          .like(`${col}::text`, '%/product-images/%');
-        if (error) {
-          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
-          continue;
-        }
-        for (const row of rows ?? []) {
-          const fns = extractFilenames(row[col]);
-          for (const fn of fns) addRef(fn, table, col, String(row.id));
-        }
-      } else {
-        // kind === 'html'
-        const { table, col } = target;
-        const { data: rows, error } = await (sb as any)
-          .from(table)
-          .select(`id, ${col}`)
-          .like(col, '%/product-images/%');
-        if (error) {
-          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
-          continue;
-        }
-        for (const row of rows ?? []) {
-          const fns = extractFilenamesFromString(row[col] ?? '');
-          for (const fn of fns) addRef(fn, table, col, String(row.id));
-        }
+      const { table, col } = target;
+
+      // Build the query. Plain text + html columns can use a `like` pre-filter
+      // because they ARE text. JSONB columns CANNOT use `.like(`${col}::text`, ...)`
+      // — PostgREST treats `col::text` as a literal column name and 400s. So for
+      // JSONB we pull ALL rows and rely on the in-app walker. The tables involved
+      // (site_settings: 1 row, page_content: ~10 rows, gift_templates: ~few,
+      // gift_product_variants: tens) are small enough that the cost is negligible
+      // and correctness is non-negotiable — silent miss = orphan-list lies =
+      // admin deletes referenced files.
+      let queryBuilder = (sb as any).from(table).select(`id, ${col}`);
+      if (target.kind === 'plain' || target.kind === 'html') {
+        queryBuilder = queryBuilder.like(col, '%/product-images/%');
+      }
+
+      const { data: rows, error } = await queryBuilder;
+      if (error) {
+        // Surface scan failures BOTH to Sentry AND to the UI. A silently-skipped
+        // table previously made every JSONB reference look like an orphan.
+        reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
+        warnings.push({ table, column: col, error: error.message ?? String(error) });
+        continue;
+      }
+
+      for (const row of rows ?? []) {
+        const fns =
+          target.kind === 'jsonb'
+            ? extractFilenames(row[col])
+            : extractFilenamesFromString(row[col] ?? '');
+        for (const fn of fns) addRef(fn, table, col, String(row.id));
       }
     }
 
@@ -240,7 +231,7 @@ export async function listMediaWithUsage(): Promise<
       references: refMap.get(f.name) ?? [],
     }));
 
-    return { ok: true, items };
+    return { ok: true, items, warnings };
   } catch (err) {
     reportError(err, { route: 'admin.media.list' });
     return { ok: false, error: 'Unexpected error loading media library' };
@@ -252,52 +243,43 @@ export async function listMediaWithUsage(): Promise<
 // Uses the same SCAN_TARGETS constant so it can never drift out of sync.
 // ---------------------------------------------------------------------------
 
-async function buildUsageSetForFilenames(filenames: string[]): Promise<Set<string>> {
+async function buildUsageSetForFilenames(
+  filenames: string[],
+): Promise<{ used: Set<string>; failedScans: ScanWarning[] }> {
   const sb = createServiceClient();
   const used = new Set<string>();
+  const failedScans: ScanWarning[] = [];
+  const wanted = new Set(filenames);
 
   for (const target of SCAN_TARGETS) {
-    if (target.kind === 'plain') {
-      const { table, col } = target;
-      const { data: rows } = await (sb as any)
-        .from(table)
-        .select(`id, ${col}`)
-        .like(col, '%/product-images/%');
-      for (const row of rows ?? []) {
-        const fns = extractFilenamesFromString(row[col] ?? '');
-        for (const fn of fns) {
-          if (filenames.includes(fn)) used.add(fn);
-        }
-      }
-    } else if (target.kind === 'jsonb') {
-      const { table, col } = target;
-      const { data: rows } = await (sb as any)
-        .from(table)
-        .select(`id, ${col}`)
-        .like(`${col}::text`, '%/product-images/%');
-      for (const row of rows ?? []) {
-        const fns = extractFilenames(row[col]);
-        for (const fn of fns) {
-          if (filenames.includes(fn)) used.add(fn);
-        }
-      }
-    } else {
-      // kind === 'html'
-      const { table, col } = target;
-      const { data: rows } = await (sb as any)
-        .from(table)
-        .select(`id, ${col}`)
-        .like(col, '%/product-images/%');
-      for (const row of rows ?? []) {
-        const fns = extractFilenamesFromString(row[col] ?? '');
-        for (const fn of fns) {
-          if (filenames.includes(fn)) used.add(fn);
-        }
+    const { table, col } = target;
+
+    // Same JSONB / plain split as listMediaWithUsage. Do NOT use ::text on JSONB
+    // — PostgREST will 400 and the silent error would make the recheck blind to
+    // every JSONB reference, defeating the safety net.
+    let queryBuilder = (sb as any).from(table).select(`id, ${col}`);
+    if (target.kind === 'plain' || target.kind === 'html') {
+      queryBuilder = queryBuilder.like(col, '%/product-images/%');
+    }
+
+    const { data: rows, error } = await queryBuilder;
+    if (error) {
+      failedScans.push({ table, column: col, error: error.message ?? String(error) });
+      continue;
+    }
+
+    for (const row of rows ?? []) {
+      const fns =
+        target.kind === 'jsonb'
+          ? extractFilenames(row[col])
+          : extractFilenamesFromString(row[col] ?? '');
+      for (const fn of fns) {
+        if (wanted.has(fn)) used.add(fn);
       }
     }
   }
 
-  return used;
+  return { used, failedScans };
 }
 
 // ---------------------------------------------------------------------------
@@ -329,8 +311,26 @@ export async function bulkDeleteMedia(filenames: string[]): Promise<
   }
 
   try {
-    // Defence-in-depth: re-check usage server-side before deleting
-    const stillUsed = await buildUsageSetForFilenames(filenames);
+    // Defence-in-depth: re-check usage server-side before deleting.
+    const { used: stillUsed, failedScans } = await buildUsageSetForFilenames(filenames);
+
+    // If ANY scan target failed, refuse the delete. An incomplete usage map
+    // could falsely report a referenced file as orphan — exactly the bug class
+    // we just fixed. Better to surface the scan failure than risk data loss.
+    if (failedScans.length > 0) {
+      const list = failedScans.slice(0, 3).map((w) => `${w.table}.${w.column}`).join(', ');
+      reportError(new Error(`scan failed: ${list}`), {
+        route: 'admin.media.bulk_delete',
+        action: 'usage_recheck',
+        extras: { failed_count: failedScans.length, count: filenames.length },
+      });
+      return {
+        ok: false,
+        error: `Cannot safely delete — usage scan failed on ${failedScans.length} table(s) (${list}). Reload and try again, or contact support.`,
+        deleted: 0,
+      };
+    }
+
     if (stillUsed.size > 0) {
       const list = [...stillUsed].slice(0, 5).join(', ');
       return {
