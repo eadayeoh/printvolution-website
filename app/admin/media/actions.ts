@@ -1,6 +1,7 @@
 'use server';
 
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { logAdminAction } from '@/lib/auth/admin-audit';
 import { reportError } from '@/lib/observability';
 
 const BUCKET = 'product-images';
@@ -20,22 +21,89 @@ export type MediaItem = {
 };
 
 // ---------------------------------------------------------------------------
+// SCAN_TARGETS — single source of truth for every (table, column) that can
+// reference a product-images file. Add here once; both listMediaWithUsage
+// and bulkDeleteMedia (via buildUsageSetForFilenames) share this constant.
+// ---------------------------------------------------------------------------
+
+type ScanTarget =
+  | { kind: 'plain'; table: string; col: string }
+  | { kind: 'jsonb'; table: string; col: string }
+  | { kind: 'html';  table: string; col: string };
+
+const SCAN_TARGETS: ScanTarget[] = [
+  // ── plain text / varchar columns ──────────────────────────────────────────
+  { kind: 'plain', table: 'product_extras',         col: 'image_url' },
+  { kind: 'plain', table: 'bundles',                col: 'image_url' },
+  { kind: 'plain', table: 'image_library',          col: 'url' },
+  { kind: 'plain', table: 'option_image_library',   col: 'url' },
+  { kind: 'plain', table: 'gift_products',          col: 'thumbnail_url' },
+  { kind: 'plain', table: 'gift_products',          col: 'mockup_url' },
+  { kind: 'plain', table: 'gift_product_variants',  col: 'mockup_url' },
+  { kind: 'plain', table: 'gift_product_variants',  col: 'variant_thumbnail_url' },
+  { kind: 'plain', table: 'site_settings',          col: 'logo_url' },
+  // Added (Fix 2):
+  { kind: 'plain', table: 'blog_posts',             col: 'featured_image_url' },
+  { kind: 'plain', table: 'gift_templates',         col: 'thumbnail_url' },
+  { kind: 'plain', table: 'gift_templates',         col: 'background_url' },
+  { kind: 'plain', table: 'gift_templates',         col: 'foreground_url' },
+  { kind: 'plain', table: 'gift_prompts',           col: 'thumbnail_url' },
+  { kind: 'plain', table: 'gift_pipelines',         col: 'thumbnail_url' },
+  { kind: 'plain', table: 'site_settings',          col: 'favicon_url' },
+  { kind: 'plain', table: 'order_items',            col: 'gift_image_url' },
+
+  // ── JSONB columns (walker recurses into arrays + objects) ─────────────────
+  { kind: 'jsonb', table: 'gift_products',          col: 'gallery_images' },
+  { kind: 'jsonb', table: 'gift_product_variants',  col: 'surfaces' },
+  { kind: 'jsonb', table: 'gift_product_variants',  col: 'mockup_by_shape' },
+  { kind: 'jsonb', table: 'gift_product_variants',  col: 'mockup_by_prompt_id' },
+  { kind: 'jsonb', table: 'gift_product_variants',  col: 'colour_swatches' },
+  // Added (Fix 2):
+  { kind: 'jsonb', table: 'page_content',           col: 'data' },
+  { kind: 'jsonb', table: 'gift_templates',         col: 'zones_json' },
+  { kind: 'jsonb', table: 'gift_products',          col: 'figurine_options' },
+  { kind: 'jsonb', table: 'product_extras',         col: 'how_we_print' },
+  { kind: 'jsonb', table: 'product_configurator',   col: 'options' },
+  { kind: 'jsonb', table: 'site_settings',          col: 'product_features' },
+
+  // ── HTML body columns (regex-extracted — cannot use plain walk) ───────────
+  { kind: 'html',  table: 'blog_posts',             col: 'content_html' },
+];
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Extract the bare filename from a full product-images public URL. */
-function filenameFromUrl(url: string): string | null {
-  if (!url || !url.includes('/product-images/')) return null;
-  const idx = url.lastIndexOf('/product-images/');
-  return url.slice(idx + '/product-images/'.length) || null;
+/**
+ * Regex that matches /product-images/<filename> and captures the filename.
+ * The character class stops at query strings, fragments, quotes, whitespace.
+ * Must be reset (lastIndex = 0) before each use because it uses the g flag.
+ */
+const PRODUCT_IMAGE_RE = /\/product-images\/([A-Za-z0-9._\-]+)/g;
+
+/**
+ * Extract all product-images filenames from a raw string (URL, HTML, JSON blob).
+ * Handles query strings, fragments, embedded HTML attributes — all correctly.
+ */
+function extractFilenamesFromString(s: string): string[] {
+  if (typeof s !== 'string') return [];
+  const out: string[] = [];
+  PRODUCT_IMAGE_RE.lastIndex = 0; // reset between calls — global regex is stateful
+  let m: RegExpExecArray | null;
+  while ((m = PRODUCT_IMAGE_RE.exec(s)) !== null) out.push(m[1]);
+  return out;
 }
 
-/** Walk a value (string | string[] | object) and collect product-images filenames. */
+/**
+ * Walk a value (string | array | object) and collect all product-images
+ * filenames. For strings, delegates to extractFilenamesFromString so the
+ * regex-based extractor handles URLs, HTML blobs, and JSONB serialisations
+ * uniformly. Recursion handles nested arrays and objects.
+ */
 function extractFilenames(value: unknown): string[] {
   const out: string[] = [];
   if (typeof value === 'string') {
-    const f = filenameFromUrl(value);
-    if (f) out.push(f);
+    out.push(...extractFilenamesFromString(value));
   } else if (Array.isArray(value)) {
     for (const el of value) out.push(...extractFilenames(el));
   } else if (value !== null && typeof value === 'object') {
@@ -61,7 +129,7 @@ export async function listMediaWithUsage(): Promise<
     const sb = createServiceClient();
 
     // ── 1. List all files in the bucket (paginate past 1 000-item limit) ──
-    const allFiles: Array<{
+    const rawFiles: Array<{
       name: string;
       metadata: Record<string, unknown>;
       created_at: string;
@@ -79,7 +147,7 @@ export async function listMediaWithUsage(): Promise<
         return { ok: false, error: 'Failed to list storage bucket' };
       }
       if (!data || data.length === 0) break;
-      allFiles.push(
+      rawFiles.push(
         ...data
           .filter((f) => f.name && !f.name.endsWith('/') && !f.name.startsWith('.'))
           .map((f) => ({
@@ -92,6 +160,15 @@ export async function listMediaWithUsage(): Promise<
       offset += 1000;
     }
 
+    // ── Fix 4: exclude files uploaded within the last hour ──
+    // Avoids a race where an admin uploads a file, it hasn't been saved to a
+    // product row yet, and a concurrent "delete orphans" sweep nukes it.
+    const ONE_HOUR_AGO = Date.now() - 60 * 60 * 1000;
+    const allFiles = rawFiles.filter((f) => {
+      const created = f.created_at ? new Date(f.created_at).getTime() : 0;
+      return created < ONE_HOUR_AGO;
+    });
+
     // ── 2. Build public URL map ──
     const urlMap = new Map<string, string>();
     for (const f of allFiles) {
@@ -100,7 +177,6 @@ export async function listMediaWithUsage(): Promise<
     }
 
     // ── 3. Collect all references across every (table, column) pair ──
-    // Map<filename, refs[]>
     const refMap = new Map<string, MediaRef[]>();
 
     function addRef(filename: string, table: string, column: string, ref_id: string) {
@@ -108,102 +184,49 @@ export async function listMediaWithUsage(): Promise<
       refMap.get(filename)!.push({ table, column, ref_id });
     }
 
-    // Plain-text / varchar columns
-    const plainCols: Array<{ table: string; col: string }> = [
-      { table: 'product_extras', col: 'image_url' },
-      { table: 'bundles', col: 'image_url' },
-      { table: 'image_library', col: 'url' },
-      { table: 'option_image_library', col: 'url' },
-      { table: 'gift_products', col: 'thumbnail_url' },
-      { table: 'gift_products', col: 'mockup_url' },
-      { table: 'gift_product_variants', col: 'mockup_url' },
-      { table: 'gift_product_variants', col: 'variant_thumbnail_url' },
-      { table: 'site_settings', col: 'logo_url' },
-    ];
-
-    for (const { table, col } of plainCols) {
-      const { data: rows, error } = await (sb as any)
-        .from(table)
-        .select(`id, ${col}`)
-        .like(col, '%/product-images/%');
-      if (error) {
-        reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
-        // Non-fatal — continue with other columns
-        continue;
-      }
-      for (const row of rows ?? []) {
-        const fn = filenameFromUrl(row[col] ?? '');
-        if (fn) addRef(fn, table, col, String(row.id));
-      }
-    }
-
-    // JSONB columns — fetch all rows that reference product-images and parse in JS
-    // gallery_images: array of strings
-    {
-      const { data: rows, error } = await sb
-        .from('gift_products')
-        .select('id, gallery_images')
-        .like('gallery_images::text', '%/product-images/%');
-      if (!error) {
-        for (const row of rows ?? []) {
-          const fns = extractFilenames(row.gallery_images);
-          for (const fn of fns) addRef(fn, 'gift_products', 'gallery_images', String(row.id));
+    for (const target of SCAN_TARGETS) {
+      if (target.kind === 'plain') {
+        const { table, col } = target;
+        const { data: rows, error } = await (sb as any)
+          .from(table)
+          .select(`id, ${col}`)
+          .like(col, '%/product-images/%');
+        if (error) {
+          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
+          continue; // non-fatal
         }
-      }
-    }
-
-    // surfaces: array of { mockup_url, ... }
-    {
-      const { data: rows, error } = await sb
-        .from('gift_product_variants')
-        .select('id, surfaces')
-        .like('surfaces::text', '%/product-images/%');
-      if (!error) {
         for (const row of rows ?? []) {
-          const fns = extractFilenames(row.surfaces);
-          for (const fn of fns) addRef(fn, 'gift_product_variants', 'surfaces', String(row.id));
+          const fns = extractFilenamesFromString(row[col] ?? '');
+          for (const fn of fns) addRef(fn, table, col, String(row.id));
         }
-      }
-    }
-
-    // mockup_by_shape: { <shape>: { url, area } }
-    {
-      const { data: rows, error } = await sb
-        .from('gift_product_variants')
-        .select('id, mockup_by_shape')
-        .like('mockup_by_shape::text', '%/product-images/%');
-      if (!error) {
-        for (const row of rows ?? []) {
-          const fns = extractFilenames(row.mockup_by_shape);
-          for (const fn of fns) addRef(fn, 'gift_product_variants', 'mockup_by_shape', String(row.id));
+      } else if (target.kind === 'jsonb') {
+        const { table, col } = target;
+        const { data: rows, error } = await (sb as any)
+          .from(table)
+          .select(`id, ${col}`)
+          .like(`${col}::text`, '%/product-images/%');
+        if (error) {
+          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
+          continue;
         }
-      }
-    }
-
-    // mockup_by_prompt_id: { <prompt_id>: { url, area } }
-    {
-      const { data: rows, error } = await sb
-        .from('gift_product_variants')
-        .select('id, mockup_by_prompt_id')
-        .like('mockup_by_prompt_id::text', '%/product-images/%');
-      if (!error) {
         for (const row of rows ?? []) {
-          const fns = extractFilenames(row.mockup_by_prompt_id);
-          for (const fn of fns) addRef(fn, 'gift_product_variants', 'mockup_by_prompt_id', String(row.id));
+          const fns = extractFilenames(row[col]);
+          for (const fn of fns) addRef(fn, table, col, String(row.id));
         }
-      }
-    }
-
-    // colour_swatches: array of { mockup_url, ... }
-    {
-      const { data: rows, error } = await sb
-        .from('gift_product_variants')
-        .select('id, colour_swatches')
-        .like('colour_swatches::text', '%/product-images/%');
-      if (!error) {
+      } else {
+        // kind === 'html'
+        const { table, col } = target;
+        const { data: rows, error } = await (sb as any)
+          .from(table)
+          .select(`id, ${col}`)
+          .like(col, '%/product-images/%');
+        if (error) {
+          reportError(error, { route: 'admin.media.list', action: `query_${table}_${col}` });
+          continue;
+        }
         for (const row of rows ?? []) {
-          const fns = extractFilenames(row.colour_swatches);
-          for (const fn of fns) addRef(fn, 'gift_product_variants', 'colour_swatches', String(row.id));
+          const fns = extractFilenamesFromString(row[col] ?? '');
+          for (const fn of fns) addRef(fn, table, col, String(row.id));
         }
       }
     }
@@ -226,59 +249,51 @@ export async function listMediaWithUsage(): Promise<
 
 // ---------------------------------------------------------------------------
 // buildUsageSet — shared logic for re-checking references before delete
+// Uses the same SCAN_TARGETS constant so it can never drift out of sync.
 // ---------------------------------------------------------------------------
 
 async function buildUsageSetForFilenames(filenames: string[]): Promise<Set<string>> {
   const sb = createServiceClient();
   const used = new Set<string>();
 
-  function markIfMatch(value: unknown, targets: string[]) {
-    const fns = extractFilenames(value);
-    for (const fn of fns) {
-      if (targets.includes(fn)) used.add(fn);
-    }
-  }
-
-  // Plain-text columns
-  const plainCols: Array<{ table: string; col: string }> = [
-    { table: 'product_extras', col: 'image_url' },
-    { table: 'bundles', col: 'image_url' },
-    { table: 'image_library', col: 'url' },
-    { table: 'option_image_library', col: 'url' },
-    { table: 'gift_products', col: 'thumbnail_url' },
-    { table: 'gift_products', col: 'mockup_url' },
-    { table: 'gift_product_variants', col: 'mockup_url' },
-    { table: 'gift_product_variants', col: 'variant_thumbnail_url' },
-    { table: 'site_settings', col: 'logo_url' },
-  ];
-
-  for (const { table, col } of plainCols) {
-    const { data: rows } = await (sb as any)
-      .from(table)
-      .select(`id, ${col}`)
-      .like(col, '%/product-images/%');
-    for (const row of rows ?? []) {
-      const fn = filenameFromUrl(row[col] ?? '');
-      if (fn && filenames.includes(fn)) used.add(fn);
-    }
-  }
-
-  // JSONB columns
-  const jsonbCols: Array<{ table: string; col: string }> = [
-    { table: 'gift_products', col: 'gallery_images' },
-    { table: 'gift_product_variants', col: 'surfaces' },
-    { table: 'gift_product_variants', col: 'mockup_by_shape' },
-    { table: 'gift_product_variants', col: 'mockup_by_prompt_id' },
-    { table: 'gift_product_variants', col: 'colour_swatches' },
-  ];
-
-  for (const { table, col } of jsonbCols) {
-    const { data: rows } = await (sb as any)
-      .from(table)
-      .select(`id, ${col}`)
-      .like(`${col}::text`, '%/product-images/%');
-    for (const row of rows ?? []) {
-      markIfMatch(row[col], filenames);
+  for (const target of SCAN_TARGETS) {
+    if (target.kind === 'plain') {
+      const { table, col } = target;
+      const { data: rows } = await (sb as any)
+        .from(table)
+        .select(`id, ${col}`)
+        .like(col, '%/product-images/%');
+      for (const row of rows ?? []) {
+        const fns = extractFilenamesFromString(row[col] ?? '');
+        for (const fn of fns) {
+          if (filenames.includes(fn)) used.add(fn);
+        }
+      }
+    } else if (target.kind === 'jsonb') {
+      const { table, col } = target;
+      const { data: rows } = await (sb as any)
+        .from(table)
+        .select(`id, ${col}`)
+        .like(`${col}::text`, '%/product-images/%');
+      for (const row of rows ?? []) {
+        const fns = extractFilenames(row[col]);
+        for (const fn of fns) {
+          if (filenames.includes(fn)) used.add(fn);
+        }
+      }
+    } else {
+      // kind === 'html'
+      const { table, col } = target;
+      const { data: rows } = await (sb as any)
+        .from(table)
+        .select(`id, ${col}`)
+        .like(col, '%/product-images/%');
+      for (const row of rows ?? []) {
+        const fns = extractFilenamesFromString(row[col] ?? '');
+        for (const fn of fns) {
+          if (filenames.includes(fn)) used.add(fn);
+        }
+      }
     }
   }
 
@@ -292,8 +307,9 @@ async function buildUsageSetForFilenames(filenames: string[]): Promise<Set<strin
 export async function bulkDeleteMedia(filenames: string[]): Promise<
   { ok: true; deleted: number } | { ok: false; error: string; deleted: number }
 > {
+  let actor;
   try {
-    await requireAdmin();
+    actor = (await requireAdmin()).actor;
   } catch (e: any) {
     return { ok: false, error: e?.message ?? 'Forbidden', deleted: 0 };
   }
@@ -330,6 +346,17 @@ export async function bulkDeleteMedia(filenames: string[]): Promise<
       reportError(error, { route: 'admin.media.bulk_delete', extras: { count: filenames.length } });
       return { ok: false, error: 'Storage delete failed', deleted: 0 };
     }
+
+    // Fix 5: Audit log — record every bulk delete in admin_audit
+    await logAdminAction(actor, {
+      action: 'media.bulk_delete',
+      targetType: 'storage',
+      targetId: 'product-images',
+      metadata: {
+        filenames: filenames.slice(0, 50), // cap to keep the row reasonable
+        count: filenames.length,
+      },
+    });
 
     return { ok: true, deleted: filenames.length };
   } catch (err) {

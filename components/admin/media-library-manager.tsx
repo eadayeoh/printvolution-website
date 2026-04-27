@@ -91,6 +91,10 @@ export function MediaLibraryManager({ initialItems }: { initialItems: MediaItem[
     (fn) => (items.find((i) => i.filename === fn)?.references.length ?? 0) > 0,
   );
 
+  const selectedUsedCount = [...selected].filter(
+    (fn) => (items.find((i) => i.filename === fn)?.references.length ?? 0) > 0,
+  ).length;
+
   return (
     <div>
       {/* Flash */}
@@ -140,6 +144,9 @@ export function MediaLibraryManager({ initialItems }: { initialItems: MediaItem[
             </button>
           ))}
         </div>
+        <span className="text-xs text-neutral-400 italic">
+          Recently uploaded files are excluded for 1 hour
+        </span>
 
         {/* Select all / clear */}
         <button
@@ -333,8 +340,9 @@ export function MediaLibraryManager({ initialItems }: { initialItems: MediaItem[
             </p>
             {!selectedOrphansOnly && (
               <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                Warning: your selection includes images that are currently referenced by products or settings.
-                Double-check before proceeding.
+                Warning: {selectedUsedCount} of your {selected.size} selected file{selected.size === 1 ? '' : 's'}{' '}
+                {selectedUsedCount === 1 ? 'is' : 'are'} currently referenced by products / pages — deleting{' '}
+                {selectedUsedCount === 1 ? 'it' : 'them'} will break those references.
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
