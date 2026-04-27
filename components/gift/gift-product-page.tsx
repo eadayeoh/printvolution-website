@@ -100,6 +100,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Declared before shapeMockup so the resolver below can read it —
   // prevents a temporal-dead-zone crash in the minified prod bundle.
   const [activeSurfaceId, setActiveSurfaceId] = useState<string>('');
+  // Colour swatch must also be declared above resolveMockup — when the
+  // customer picks a swatch, its mockup_url replaces the visible image.
+  const [selectedColour, setSelectedColour] = useState<GiftVariantColourSwatch | null>(null);
 
   const shapeMockup = resolveMockup({
     product,
@@ -108,6 +111,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     selectedPromptId,
     shapePickerActive,
     selectedShapeKind,
+    selectedColourMockupUrl: selectedColour?.mockup_url ?? null,
   });
 
   // Reset variant-only state when the variant flips.
@@ -206,10 +210,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [templateCalendars, setTemplateCalendars] = useState<Record<string, import('@/lib/gifts/pipeline/calendar-svg').CalendarFill>>({});
   // Customer-picked calendar colour overrides per zone.
   const [templateCalendarColors, setTemplateCalendarColors] = useState<Record<string, string>>({});
-  // Colour swatch picked inside the currently-selected variant tile (if
-  // that variant has colour_swatches). Recorded on the cart line so the
-  // admin sees "Navy" on the order, not just "T-shirt".
-  const [selectedColour, setSelectedColour] = useState<GiftVariantColourSwatch | null>(null);
+  // (selectedColour state hoisted above the resolveMockup call — see top
+  // of the component. Cart payload + line note read it via the same name.)
   // Per-surface fills (text / photo) when the selected variant has
   // surfaces[] configured. Keyed by surface.id. Cart payload reads from
   // this map; the big LIVE PREVIEW follows the selected surface tab.
