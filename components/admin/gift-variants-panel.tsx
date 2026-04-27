@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
 import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
@@ -128,6 +128,17 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
 }, ref) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
+  const [collapsed, setCollapsed] = useState<{ [k: string]: boolean }>({});
+  const toggleCollapsed = (key: string) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
+  const moveDraft = (from: number, to: number) => {
+    if (to < 0 || to >= drafts.length) return;
+    setDrafts((list) => {
+      const next = list.slice();
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next.map((d, i) => ({ ...d, display_order: String(i) }));
+    });
+  };
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -391,10 +402,48 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
           <div className="space-y-4">
             {drafts.map((d, i) => (
               <div key={d.id ?? `new-${i}`} className="rounded-lg border-2 border-neutral-200 p-4">
-                <div className="mb-3 flex items-center justify-between text-[11px] font-bold text-neutral-500">
-                  <span>{d.id ? `Variant #${i + 1}` : 'New variant (unsaved)'}</span>
-                  {flashId === d.id && <span className="text-green-600">✓ Saved</span>}
+                <div className="mb-3 flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-500">
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapsed(d.id ?? `new-${i}`)}
+                    className="flex flex-1 items-center gap-2 text-left hover:text-ink"
+                    title={collapsed[d.id ?? `new-${i}`] ? 'Expand' : 'Collapse'}
+                  >
+                    {collapsed[d.id ?? `new-${i}`] ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    <span className="text-ink">
+                      {d.name?.trim() || (d.id ? `Variant #${i + 1}` : 'New variant (unsaved)')}
+                    </span>
+                    {d.id && (
+                      <span className="text-neutral-400">
+                        {' · '}{d.slug || '—'}{' · S$'}{d.base_price || '0.00'}
+                        {!d.is_active && ' · (hidden)'}
+                      </span>
+                    )}
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {flashId === d.id && <span className="text-green-600">✓ Saved</span>}
+                    <button
+                      type="button"
+                      onClick={() => moveDraft(i, i - 1)}
+                      disabled={i === 0}
+                      className="rounded border border-neutral-200 p-1 text-neutral-500 hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                      title="Move up"
+                    >
+                      <ArrowUp size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveDraft(i, i + 1)}
+                      disabled={i === drafts.length - 1}
+                      className="rounded border border-neutral-200 p-1 text-neutral-500 hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                      title="Move down"
+                    >
+                      <ArrowDown size={12} />
+                    </button>
+                  </div>
                 </div>
+                {!collapsed[d.id ?? `new-${i}`] && (
+                <>
                 <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
                   <div className="space-y-3">
                     <div className="grid grid-cols-[2fr_1fr] gap-2">
@@ -917,6 +966,8 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                     </span>
                   )}
                 </div>
+                </>
+                )}
               </div>
             ))}
           </div>
