@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSbClient } from '@supabase/supabase-js';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import type { NavItem, MegaMenuSection, ProductLookup } from './navigation-types';
@@ -11,12 +12,27 @@ export { productHref } from './navigation-types';
  * moment a change is saved, instead of waiting on the layout's revalidate. */
 export const NAVIGATION_TAG = 'navigation';
 
+// IMPORTANT: the cached fetch must NOT call createClient() from
+// '@/lib/supabase/server' because that reads cookies(), and Next.js throws
+// "cookies inside unstable_cache" at runtime — crashes the layout, surfaces
+// as a global-error "Application error: client-side exception" to visitors.
+//
+// Nav + mega-menu data is public (header is shown to anonymous visitors),
+// so a fresh anon-key client without cookies is the right tool here.
+function publicAnonClient() {
+  return createSbClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
+
 // unstable_cache: cross-request data cache, busted by tag on admin save.
 // react cache(): per-request memoisation so multiple Header sub-components
 // in the same render don't re-execute the wrapper.
 const fetchNavigationCached = unstable_cache(
   async (): Promise<NavItem[]> => {
-    const supabase = createClient();
+    const supabase = publicAnonClient();
     const { data, error } = await supabase
       .from('navigation')
       .select('label, type, action, mega_key, display_order')
@@ -33,7 +49,7 @@ export const getNavigation = cache(async (): Promise<NavItem[]> => fetchNavigati
 
 const fetchMegaMenusCached = unstable_cache(
   async (): Promise<Record<string, MegaMenuSection[]>> => {
-    const supabase = createClient();
+    const supabase = publicAnonClient();
     const { data, error } = await supabase
       .from('mega_menus')
       .select(`
