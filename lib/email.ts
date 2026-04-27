@@ -327,9 +327,14 @@ export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; 
   const subject = p.refund_cents > 0
     ? `Order ${p.order_number} cancelled — refund ${refundLabel}`
     : `Order ${p.order_number} cancelled`;
+  const PAYMENT_METHOD_LABELS: Record<string, string> = {
+    manual: 'original payment method',
+    hitpay: 'card / PayNow',
+  };
+  const methodLabel = p.payment_method ? PAYMENT_METHOD_LABELS[p.payment_method] ?? null : null;
   const refundLine = p.refund_cents > 0
     ? `<p style="font-size:14px;color:#444;margin:0 0 12px;">
-         A refund of <strong style="color:${BRAND_PINK};">${refundLabel}</strong>${p.payment_method ? ` will be processed to your <strong>${escapeHtml(p.payment_method)}</strong> within 5–10 working days` : ' will be processed within 5–10 working days'}.
+         A refund of <strong style="color:${BRAND_PINK};">${refundLabel}</strong>${methodLabel ? ` will be processed to your <strong>${methodLabel}</strong> within 5–10 working days` : ' will be processed within 5–10 working days'}.
        </p>`
     : `<p style="font-size:14px;color:#444;margin:0 0 12px;">
          No refund is being processed for this cancellation.

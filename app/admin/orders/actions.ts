@@ -32,8 +32,12 @@ export async function updateOrderStatus(
   const patch: Record<string, any> = { status };
   if (status === 'shipped') {
     if (!extras.tracking_number) return { ok: false, error: 'Tracking number required to mark shipped' };
+    const url = (extras.tracking_url ?? '').trim().slice(0, 500);
+    if (url && !/^https?:\/\//i.test(url)) {
+      return { ok: false, error: 'Tracking URL must start with http:// or https://' };
+    }
     patch.tracking_number = extras.tracking_number.trim().slice(0, 200);
-    patch.tracking_url    = (extras.tracking_url ?? '').trim().slice(0, 500) || null;
+    patch.tracking_url    = url || null;
     patch.shipped_at      = new Date().toISOString();
   }
   if (status === 'cancelled') {
