@@ -275,3 +275,40 @@ export function welcomeEmail(email: string, name: string | null): { subject: str
   `;
   return { subject, html: shell(subject, body) };
 }
+
+export type ShippedEmailPayload = {
+  order_number: string;
+  customer_name: string;
+  tracking_number: string | null;
+  tracking_url: string | null;
+};
+
+export function orderShippedEmail(p: ShippedEmailPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `Your Printvolution order is on the way — ${p.order_number}`;
+  const trackingUrl = p.tracking_url
+    || `https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'printvolution.sg'}/track?order=${encodeURIComponent(p.order_number)}`;
+  const trackingPill = p.tracking_number
+    ? `<div style="display:inline-block;background:#fafaf7;border:1px dashed #ccc;border-radius:8px;padding:10px 14px;font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:${BRAND_INK};margin:12px 0;">
+         ${escapeHtml(p.tracking_number)}
+       </div>`
+    : '';
+  const body = `
+    <h1 style="font-size:24px;font-weight:900;letter-spacing:-0.02em;margin:0 0 8px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — your order is on the way.
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      Order <strong>${escapeHtml(p.order_number)}</strong> shipped today.
+    </p>
+    ${trackingPill}
+    <div>
+      <a href="${escapeHtml(trackingUrl)}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin-top:8px;">
+        Track shipment →
+      </a>
+    </div>
+    <p style="font-size:12px;color:#888;margin:18px 0 0;line-height:1.6;">
+      If anything's off, reply to this email or WhatsApp ${escapeHtml(SITE.whatsappDisplay)}.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
