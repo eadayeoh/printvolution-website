@@ -359,3 +359,28 @@ export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; 
   `;
   return { subject, html: shell(subject, body) };
 }
+
+/**
+ * Branded HTML for Supabase Auth → Email Templates → "Reset Password".
+ *
+ * Supabase substitutes {{ .ConfirmationURL }} server-side at send time.
+ * Leave that token raw — do NOT escapeHtml it (it would break the template).
+ */
+export function passwordResetEmailHtml(): string {
+  const subject = 'Reset your Printvolution password';
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Reset your password
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 16px;">
+      Click the button below to set a new password. The link expires in 1 hour.
+    </p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin:4px 0 16px;">
+      Reset password →
+    </a>
+    <p style="font-size:12px;color:#888;margin:16px 0 0;line-height:1.6;">
+      Didn't ask for this? You can safely ignore this email — your password won't change.
+    </p>
+  `;
+  return shell(subject, body);
+}
