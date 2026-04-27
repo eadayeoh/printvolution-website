@@ -344,11 +344,29 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     if (s) updateDraft(i, { slug: s });
   }
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (err && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [err]);
+
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
 
   return (
-    <div className="space-y-4">
+    <div ref={panelRef} className="space-y-4">
       <div className="rounded-lg border border-neutral-200 bg-white p-6">
+        {err && (
+          <div className="mb-4 rounded-md border-2 border-red-300 bg-red-50 p-3">
+            <div className="flex items-start gap-2">
+              <span className="text-base font-black text-red-700">⚠</span>
+              <div className="flex-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-red-700">Variants couldn&apos;t save</div>
+                <div className="mt-1 text-sm font-medium text-red-900">{err}</div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mb-3 flex items-center justify-between gap-4">
           <div>
             <div className="text-xs font-bold text-ink">Variants</div>
@@ -683,6 +701,9 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   size="sm"
                                   label="Mockup"
                                 />
+                                {!s.mockup_url && (
+                                  <div className="mt-1 text-[11px] text-amber-700">⚠ Mockup image required — upload above to save this swatch.</div>
+                                )}
                               </div>
                               <button
                                 type="button"
