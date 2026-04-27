@@ -182,23 +182,13 @@ export function ImageUpload({
 
       <div
         onClick={(e) => { e.stopPropagation(); if (!uploading) inputRef.current?.click(); }}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: 14, border: '2px solid #e5e5e5', borderRadius: 6,
-          background: '#fff', cursor: uploading ? 'wait' : 'pointer',
-          transition: 'border-color .15s',
-        }}
-        onMouseEnter={(e) => { if (!uploading) (e.currentTarget as HTMLDivElement).style.borderColor = '#E91E8C'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e5e5'; }}
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 sm:p-3.5 border-2 border-neutral-200 rounded-md bg-white transition-colors hover:border-pink"
+        style={{ cursor: uploading ? 'wait' : 'pointer' }}
       >
         {/* Preview */}
         <div
-          style={{
-            width: dim, height: dim, flexShrink: 0,
-            background: '#fafaf7', border: '1px solid #eee',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', position: 'relative',
-          }}
+          className="flex-shrink-0 mx-auto sm:mx-0 flex items-center justify-center overflow-hidden relative bg-neutral-50 border border-neutral-200"
+          style={{ width: dim, height: dim }}
         >
           {uploading ? (
             <Loader2 size={28} className="animate-spin" style={{ color: '#888' }} />
@@ -210,11 +200,11 @@ export function ImageUpload({
         </div>
 
         {/* Info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <div className="text-xs font-extrabold text-neutral-900 mb-1">
             {value ? label + ' uploaded' : `Upload ${label.toLowerCase()}`}
           </div>
-          <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>
+          <div className="text-[11px] text-neutral-500 leading-snug">
             {uploading
               ? 'Uploading…'
               : value
@@ -222,48 +212,37 @@ export function ImageUpload({
                 : 'Click to browse · Max 20 MB · JPG / PNG / WebP / HEIC · Cropped to ' + (aspect === 1 ? 'square' : `${aspect.toFixed(2)}:1`)}
           </div>
           {error && (
-            <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+            <div className="text-[11px] text-red-600 mt-1">
               ✗ {error}
             </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setLibraryOpen(true); }}
-          disabled={uploading}
-          title="Pick from existing uploads"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 10px',
-            background: '#fff', border: '1px solid #e5e5e5',
-            borderRadius: 4,
-            cursor: uploading ? 'not-allowed' : 'pointer',
-            color: '#0a0a0a',
-            fontSize: 11, fontWeight: 700,
-            fontFamily: 'var(--pv-f-mono)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <FolderOpen size={12} />
-          Library
-        </button>
-
-        {value && !uploading && (
+        {/* Buttons — keep on one row, recenter on mobile */}
+        <div className="flex items-center justify-center sm:justify-end gap-2 flex-shrink-0">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onChange(''); }}
-            style={{
-              padding: 6, background: '#fff', border: '1px solid #e5e5e5',
-              borderRadius: 4, cursor: 'pointer', color: '#666',
-            }}
-            aria-label="Remove"
+            onClick={(e) => { e.stopPropagation(); setLibraryOpen(true); }}
+            disabled={uploading}
+            title="Pick from existing uploads"
+            className="inline-flex items-center gap-1.5 rounded border border-neutral-200 bg-white px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-900 disabled:cursor-not-allowed whitespace-nowrap"
+            style={{ fontFamily: 'var(--pv-f-mono)' }}
           >
-            <X size={14} />
+            <FolderOpen size={12} />
+            Library
           </button>
-        )}
+
+          {value && !uploading && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(''); }}
+              className="rounded border border-neutral-200 bg-white p-1.5 text-neutral-500"
+              aria-label="Remove"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {pending && (
