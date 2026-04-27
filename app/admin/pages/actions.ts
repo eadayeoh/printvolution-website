@@ -1,8 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { requireAdmin, createServiceClient as adminClient } from '@/lib/auth/require-admin';
+import { NAVIGATION_TAG } from '@/lib/data/navigation';
 
 const PageSectionSchema = z.object({
   page_key: z.string(),
@@ -79,6 +80,10 @@ export async function saveNavigation(items: z.infer<typeof NavItemSchema>[]) {
     const { error } = await sb.from('navigation').insert(rows);
     if (error) return { ok: false, error: error.message };
   }
+  // Bust the cached fetch first (cross-request data cache), then invalidate
+  // every page under the root layout so visitors see the new nav on the next
+  // hit instead of waiting on the layout's revalidate window.
+  revalidateTag(NAVIGATION_TAG);
   revalidatePath('/', 'layout');
   return { ok: true };
 }
@@ -143,6 +148,7 @@ export async function saveMegaMenu(
     }
   }
 
+  revalidateTag(NAVIGATION_TAG);
   revalidatePath('/', 'layout');
   return { ok: true };
 }

@@ -2,13 +2,13 @@ import { Header } from '@/components/nav/header';
 import { Footer } from '@/components/footer/footer';
 import { AnnounceBar } from '@/components/announce/announce-bar';
 
-// Header pulls the nav/mega-menu on every request — but admin edits
-// only need to propagate within a minute, not instantly. Switching
-// from force-dynamic to revalidate=60 lets static pages stay
-// cacheable while still picking up nav changes. Pages that genuinely
-// need request-time data (cart, auth, product pricing) still set
-// their own `dynamic = 'force-dynamic'`.
-export const revalidate = 60;
+// Header pulls the nav/mega-menu on every request — but the layout has to
+// be cacheable so static pages stay fast. 5s strikes a balance: nav edits
+// surface within a hard refresh or two, page-level ISR for other pages
+// (where individual routes set their own revalidate) still works. The
+// admin save actions ALSO call revalidatePath/revalidateTag to short-circuit
+// this for the first visitor after a change.
+export const revalidate = 5;
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
