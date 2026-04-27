@@ -107,6 +107,9 @@ export default async function AdminDashboard() {
               <Link href="/admin/promos" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
                 🎟️ Manage promos
               </Link>
+              <Link href="/admin/media" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
+                🖼️ Media library
+              </Link>
             </div>
           </div>
         </div>
