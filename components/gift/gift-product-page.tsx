@@ -1192,14 +1192,20 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     />
                   )
                 ) : shapeMockup.url ? (
-                  <div style={{ width: '100%', position: 'relative' }}>
+                  // Stage forced 1:1 + image object-contain so the bare-mockup
+                  // path matches the GiftMockupPreviewInteractive layout. Without
+                  // this, switching from bare-mockup to interactive (when text
+                  // or photo is added) makes the whole preview shift size, and
+                  // admin's mockup_area % positions don't line up here either.
+                  <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden' }}>
                     <img
                       src={shapeMockup.url}
                       alt={product.name}
                       style={{
                         display: 'block',
                         width: '100%',
-                        height: 'auto',
+                        height: '100%',
+                        objectFit: 'contain',
                         filter: nightMode ? 'brightness(0.8) contrast(1.1)' : undefined,
                       }}
                     />

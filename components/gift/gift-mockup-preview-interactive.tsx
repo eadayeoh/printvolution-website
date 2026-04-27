@@ -186,13 +186,23 @@ export function GiftMockupPreviewInteractive({
         userSelect: 'none',
         touchAction: 'none',
         width: '100%',
+        // Force 1:1 stage to match the admin editor (which forces aspectRatio
+        // 1/1). Without this, the customer stage stretches to the image's
+        // natural aspect, so an area at e.g. (23.9%, 83.1%) lands on a
+        // different physical pixel here than admin saw, and the SAFE ZONE
+        // appears in the wrong place.
+        aspectRatio: '1 / 1',
       }}
     >
       <img
         src={mockupUrl}
         alt=""
         draggable={false}
-        style={{ display: 'block', width: '100%', height: 'auto' }}
+        // object-contain matches admin's letterbox behaviour so admin's
+        // % coordinates map to the same physical position on the customer
+        // preview. Without this the image fills width and overflows
+        // height, breaking the area placement.
+        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
       />
       {/* Bounds guide + label — explains what the dashed box is */}
       {bounds && !captureMode && !panMode && (
