@@ -42,7 +42,7 @@ const fetchNavigationCached = unstable_cache(
     return (data ?? []) as NavItem[];
   },
   ['navigation-list'],
-  { tags: [NAVIGATION_TAG] },
+  { tags: [NAVIGATION_TAG], revalidate: 5 },
 );
 
 export const getNavigation = cache(async (): Promise<NavItem[]> => fetchNavigationCached());
@@ -76,7 +76,7 @@ const fetchMegaMenusCached = unstable_cache(
     return grouped;
   },
   ['mega-menus'],
-  { tags: [NAVIGATION_TAG] },
+  { tags: [NAVIGATION_TAG], revalidate: 5 },
 );
 
 export const getMegaMenus = cache(async (): Promise<Record<string, MegaMenuSection[]>> => fetchMegaMenusCached());
