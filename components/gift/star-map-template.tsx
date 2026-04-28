@@ -45,6 +45,10 @@ type Props = {
    *  Star map renderer reads disk position from the render_anchor and
    *  footer text positions/fonts/sizes from named text zones. */
   zones?: GiftTemplateZone[] | null;
+  /** Template's reference dimensions in mm — locks the SVG canvas
+   *  aspect to these so the rendered output matches the admin's
+   *  variant-editor preview without letterboxing. */
+  templateRefDims?: { width_mm: number; height_mm: number } | null;
 };
 
 export function StarMapTemplate({
@@ -66,6 +70,7 @@ export function StarMapTemplate({
   foilColor,
   materialColor,
   zones,
+  templateRefDims,
 }: Props) {
   // Scene is the only expensive bit (190 stars × atan2/sin/cos + constellation
   // segments). Recompute only when the inputs that affect it change.
@@ -95,8 +100,9 @@ export function StarMapTemplate({
       foilColor,
       materialColor,
       zones,
+      templateRefDims,
     }),
-    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones],
+    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones, templateRefDims],
   );
 
   return (

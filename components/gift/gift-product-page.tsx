@@ -1556,6 +1556,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       // position + footer text positions / fonts /
                       // sizes / colours come from here.
                       zones={(templates.find((t) => (t as { renderer?: string }).renderer === 'star_map')?.zones_json as any) ?? null}
+                      // Template ref dims drive the SVG canvas aspect so
+                      // the rendered output matches admin's variant
+                      // editor preview (no letterbox in the design rect).
+                      templateRefDims={(() => {
+                        const t = templates.find((t) => (t as { renderer?: string }).renderer === 'star_map');
+                        const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
+                        const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
+                        return w && h ? { width_mm: w, height_mm: h } : null;
+                      })()}
                     />
                   );
 

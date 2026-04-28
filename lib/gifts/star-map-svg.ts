@@ -252,6 +252,12 @@ export type BuildStarMapSvgInput = {
    *  found in zones falls back to the renderer's hardcoded defaults so
    *  existing call sites and templates without zones keep working. */
   zones?: GiftTemplateZone[] | null;
+  /** Template's reference dimensions in mm (e.g. A3 297×420). When set,
+   *  the renderer's canvas aspect locks to these dims so the SVG fills
+   *  any container drawn at the same aspect (no letterbox). Disk and
+   *  footer text positions stay zone-driven so they keep their relative
+   *  layout regardless of canvas height. */
+  templateRefDims?: { width_mm: number; height_mm: number } | null;
 };
 
 // ── Zone helpers ────────────────────────────────────────────────────────────
@@ -367,13 +373,19 @@ export function buildStarMapSvg({
   foilColor,
   materialColor,
   zones,
+  templateRefDims,
 }: BuildStarMapSvgInput): string {
   const isPoster = layout === 'poster';
 
-  // Layout-driven palette + canvas. The astronomy compute is identical;
-  // only chrome and colours change.
-  const W = isPoster ? 100 : SM_GEOM.W;
-  const H = isPoster ? 140 : SM_GEOM.H;
+  // Canvas: fix W=100 and derive H from the template's reference dims
+  // (e.g. A3 297×420 → H=141.4) so the SVG aspect matches the container
+  // it's rendered into. Falls back to the layout's hardcoded H when no
+  // template ref is supplied. Existing zone-driven positions stay
+  // zone-driven, so the disk and footer keep their relative layout.
+  const W = 100;
+  const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
+    ? (templateRefDims.height_mm / templateRefDims.width_mm) * W
+    : (isPoster ? 140 : SM_GEOM.H);
   // Default disk position. If the template carries a render_anchor with
   // anchor_kind='star_disk', we let the admin override the disk's
   // centre + radius — the editor in 0..200 canvas units, scaled into

@@ -305,6 +305,8 @@ export function GiftTemplateEditor({
       // trip. Pass the current zones so the preview reflects whatever
       // the admin has dragged for disk position + footer text layout.
       const scene = buildStarMapScene(1.29, 103.85, new Date());
+      const refW = parseFloat(refWidthMm);
+      const refH = parseFloat(refHeightMm);
       return buildStarMapSvg({
         scene,
         dateUtc: new Date(),
@@ -315,6 +317,10 @@ export function GiftTemplateEditor({
         coordinates: '1.29° N · 103.85° E',
         showLines: true,
         zones,
+        templateRefDims:
+          Number.isFinite(refW) && Number.isFinite(refH) && refW > 0 && refH > 0
+            ? { width_mm: refW, height_mm: refH }
+            : null,
       });
     }
     // song_lyrics — return null and fall back to the explanatory banner

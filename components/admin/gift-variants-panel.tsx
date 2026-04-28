@@ -179,6 +179,8 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     const zones = (t.zones_json as GiftTemplateZone[] | null | undefined) ?? null;
     if (t.renderer === 'star_map') {
       const scene = buildStarMapScene(1.29, 103.85, new Date());
+      const tw = (t as { reference_width_mm?: number | null }).reference_width_mm;
+      const th = (t as { reference_height_mm?: number | null }).reference_height_mm;
       return buildStarMapSvg({
         scene, dateUtc: new Date(),
         names: 'EVA & JOHN', event: 'THE NIGHT WE MET',
@@ -186,6 +188,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         coordinates: '1.29° N · 103.85° E',
         showLines: true,
         zones,
+        templateRefDims: tw && th ? { width_mm: tw, height_mm: th } : null,
       });
     }
     if (t.renderer === 'city_map') {
