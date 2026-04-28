@@ -10,9 +10,24 @@
  * Customer can also paste raw "lat, lng" coords directly.
  */
 
-import { useState } from 'react';
-import { geocodeAddress, fetchCityMapPaths } from '@/app/(site)/gift/actions';
+import { useState, useEffect, useRef } from 'react';
+import { geocodeAddress, searchAddresses, fetchCityMapPaths } from '@/app/(site)/gift/actions';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
+
+type AddressSuggestion = { lat: number; lng: number; label: string; displayName: string };
+
+/** Quick-pick chips. Each entry maps to an iconic landmark so the rendered
+ *  map shows what customers visually associate with the city — not the
+ *  geocoder's geographic centroid (e.g., "Singapore" → middle of the
+ *  island, all HDB; vs Marina Bay, which is the iconic skyline). */
+const QUICK_CITIES: Array<{ name: string; query: string }> = [
+  { name: 'Singapore',  query: 'Marina Bay Sands, Singapore' },
+  { name: 'London',     query: 'Westminster, London, UK' },
+  { name: 'New York',   query: 'Times Square, New York' },
+  { name: 'Paris',      query: 'Eiffel Tower, Paris' },
+  { name: 'Tokyo',      query: 'Shibuya Crossing, Tokyo' },
+  { name: 'Sydney',     query: 'Sydney Opera House, Sydney' },
+];
 
 type Props = {
   /** Coords + label flow up so the parent can persist them in cart notes. */
@@ -60,6 +75,33 @@ export function CityMapInputs({
   const [resolving, setResolving] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localNotice, setLocalNotice] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const debounceRef = useRef<number | null>(null);
+
+  // Debounced autocomplete — Nominatim usage policy is 1 req/sec, so 300ms
+  // debounce keeps us comfortably under that even when the customer types
+  // continuously. Suggestions are also fetch-cached server-side per query.
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    const trimmed = address.trim();
+    // Hide suggestions for very short input or when address looks like raw
+    // lat,lng coords (no point geocoding "1.35, 103.82").
+    if (trimmed.length < 2 || /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(trimmed)) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = window.setTimeout(async () => {
+      const res = await searchAddresses(trimmed);
+      if (res.ok) {
+        setSuggestions(res.results);
+        setShowSuggestions(true);
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [address]);
 
   async function resolveLocation(rawLat: number, rawLng: number, label: string, radius: number) {
     setLocalError(null);
@@ -79,6 +121,36 @@ export function CityMapInputs({
       setLocalNotice(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data for this city.`);
     } else {
       setLocalNotice(null);
+    }
+  }
+
+  async function pickSuggestion(s: AddressSuggestion) {
+    setShowSuggestions(false);
+    setAddress(s.label);
+    setResolving(true);
+    setLocalError(null);
+    setLocalNotice(null);
+    try {
+      if (!cityLabel.trim()) onCityLabel(s.label.split(',')[0]);
+      await resolveLocation(s.lat, s.lng, s.label, radiusKm);
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  async function pickQuickCity(c: { name: string; query: string }) {
+    setShowSuggestions(false);
+    setAddress(c.query);
+    setResolving(true);
+    setLocalError(null);
+    setLocalNotice(null);
+    try {
+      const g = await geocodeAddress(c.query);
+      if (!g.ok) { setLocalError(g.error); return; }
+      onCityLabel(c.name.toUpperCase());
+      await resolveLocation(g.lat, g.lng, g.label, radiusKm);
+    } finally {
+      setResolving(false);
     }
   }
 
@@ -131,28 +203,73 @@ export function CityMapInputs({
         Make your map
       </div>
 
-      <label style={{ display: 'block' }}>
-        <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-          City or address
-        </span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleResolve(); } }}
-            placeholder="London, UK   ·   or paste 51.5074, -0.1278"
-            style={{ flex: 1, padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
-          />
-          <button
-            type="button"
-            onClick={handleResolve}
-            disabled={busy || !address.trim()}
-            style={{ padding: '10px 16px', background: 'var(--pv-ink)', color: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}
+      <div style={{ position: 'relative' }}>
+        <label style={{ display: 'block' }}>
+          <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+            City or address
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => { if (suggestions.length) setShowSuggestions(true); }}
+              onBlur={() => { setTimeout(() => setShowSuggestions(false), 150); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleResolve(); } if (e.key === 'Escape') setShowSuggestions(false); }}
+              placeholder="Start typing — e.g. Marina Bay, Singapore"
+              autoComplete="off"
+              style={{ flex: 1, padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+            />
+            <button
+              type="button"
+              onClick={handleResolve}
+              disabled={busy || !address.trim()}
+              style={{ padding: '10px 16px', background: 'var(--pv-ink)', color: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}
+            >
+              {busy ? 'Loading…' : 'Find'}
+            </button>
+          </div>
+        </label>
+
+        {showSuggestions && suggestions.length > 0 && !busy && (
+          <ul
+            role="listbox"
+            style={{
+              position: 'absolute',
+              left: 0, right: 80, top: '100%',
+              marginTop: 2,
+              background: '#fff',
+              border: '2px solid var(--pv-ink)',
+              boxShadow: '4px 4px 0 var(--pv-ink)',
+              listStyle: 'none',
+              padding: 0,
+              maxHeight: 240,
+              overflowY: 'auto',
+              zIndex: 20,
+            }}
           >
-            {busy ? 'Loading…' : 'Find'}
-          </button>
-        </div>
+            {suggestions.map((s, i) => (
+              <li key={`${s.lat}-${s.lng}-${i}`}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); void pickSuggestion(s); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '8px 12px', background: 'transparent', border: 'none',
+                    borderBottom: i < suggestions.length - 1 ? '1px solid var(--pv-rule)' : 'none',
+                    fontFamily: 'var(--pv-f-body)', fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {s.displayName}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {errorMsg && (
           <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: '#c00' }}>{errorMsg}</div>
         )}
@@ -163,7 +280,7 @@ export function CityMapInputs({
           <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
             {lat != null && lng != null
               ? `✦ ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-              : '↩ Press Enter or click Find — dense cities may take 5–15 seconds.'}
+              : 'Pick a suggestion as you type, or hit Enter to search.'}
           </div>
         )}
         {busy && (
@@ -171,7 +288,27 @@ export function CityMapInputs({
             ↻ Loading map data — this can take 5–15 seconds for big cities…
           </div>
         )}
-      </label>
+      </div>
+
+      {/* Quick-pick chips. Each landmark is curated so the rendered map shows
+          the iconic part of that city (Marina Bay, Westminster, Times Sq…) —
+          not the geocoder's geographic centroid. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)', alignSelf: 'center' }}>
+          Quick pick:
+        </span>
+        {QUICK_CITIES.map((c) => (
+          <button
+            key={c.name}
+            type="button"
+            disabled={busy}
+            onClick={() => void pickQuickCity(c)}
+            style={{ padding: '5px 10px', background: '#fff', color: 'var(--pv-ink)', border: '1.5px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
 
       <label style={{ display: 'block' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>

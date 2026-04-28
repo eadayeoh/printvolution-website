@@ -667,6 +667,48 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
  * Nominatim's usage policy requires a real User-Agent and at most 1 req/s.
  * Customer-driven so the rate is fine; cache is keyed on the query string.
  */
+/**
+ * Multi-result address search for the autocomplete dropdown. Returns up to
+ * 5 OSM Nominatim hits — customer picks one to drive the map render.
+ *
+ * Distinct from `geocodeAddress` (single best match) because the autocomplete
+ * UI needs to show options as the customer types, not commit to one.
+ */
+export async function searchAddresses(query: string): Promise<
+  | { ok: true; results: Array<{ lat: number; lng: number; label: string; displayName: string }> }
+  | { ok: false; error: string }
+> {
+  const q = query.trim();
+  if (q.length < 2) return { ok: true, results: [] };
+  if (q.length > 200) return { ok: false, error: 'Query too long' };
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&q=${encodeURIComponent(q)}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'PrintVolution-CityMapGift/1.0 (multipleaddictions@gmail.com)',
+        'Accept-Language': 'en',
+      },
+      // Cache per-query for an hour — gives the impression of an instant
+      // autocomplete on repeat searches without spamming the geocoder.
+      next: { revalidate: 60 * 60 },
+    });
+    if (!res.ok) return { ok: false, error: `geocoder ${res.status}` };
+    const arr = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+    const results = arr.map((r) => {
+      const display = r.display_name;
+      // Short label = first two components of display_name. Used as the
+      // city-label default when the customer picks this row.
+      const label = display.split(',').slice(0, 2).join(',').trim();
+      return { lat: parseFloat(r.lat), lng: parseFloat(r.lon), label, displayName: display };
+    });
+    return { ok: true, results };
+  } catch (e: any) {
+    console.error('[searchAddresses] error', e?.message);
+    return { ok: false, error: 'Geocoder unavailable' };
+  }
+}
+
 export async function geocodeAddress(query: string): Promise<
   { ok: true; lat: number; lng: number; label: string } | { ok: false; error: string }
 > {

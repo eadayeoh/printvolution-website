@@ -164,13 +164,27 @@ export async function fetchCityMapVectors(
   const bbox = bboxFor(lat, lng, radiusKm);
   const query = overpassQuery(bbox.minLat, bbox.minLng, bbox.maxLat, bbox.maxLng);
 
+  // Hard ceiling per attempt — beyond ~12 s the radius is almost certainly
+  // too dense for this city. The caller's auto-retry chain takes over with
+  // a smaller bbox.
+  const TIMEOUT_MS = 12_000;
+
   let lastErr: unknown = null;
   for (const url of OVERPASS_ENDPOINTS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          // OSM mirrors return 403 to requests without a real UA — Vercel's
+          // serverless egress sends nothing useful by default, so set one
+          // matching the geocoder action's UA.
+          'User-Agent': 'PrintVolution-CityMapGift/1.0 (multipleaddictions@gmail.com)',
+        },
         body: `data=${encodeURIComponent(query)}`,
+        signal: ctrl.signal,
         // Do NOT use Next.js fetch cache here — Overpass responses can be
         // 10+ MB for dense cities and Vercel's cache silently fails for
         // bodies over ~2 MB. Use 'no-store' so the runtime doesn't try.
@@ -182,8 +196,10 @@ export async function fetchCityMapVectors(
       }
       const json = (await res.json()) as OverpassResponse;
       return parseOverpass(json, bbox);
-    } catch (err) {
-      lastErr = err;
+    } catch (err: any) {
+      lastErr = err?.name === 'AbortError' ? new Error('overpass timeout') : err;
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw new Error(`city-map: all Overpass endpoints failed (${lastErr instanceof Error ? lastErr.message : 'unknown'})`);
@@ -310,14 +326,11 @@ export function buildCityMapSvg({
   body += `<g clip-path="url(#cityMapClip)">`;
 
   if (vectors) {
-    // Water polygons — fill in foil. Drawn before roads so roads cross over.
-    if (vectors.waterPolys.length) {
-      body += `<g fill="${foilColor}" fill-opacity="0.35" stroke="none">`;
-      for (const d of vectors.waterPolys) {
-        body += `<path d="${d}"/>`;
-      }
-      body += `</g>`;
-    }
+    // Water polygons are intentionally NOT filled — Singapore-style island
+    // coastlines produce huge OSM polygons that extend far past the bbox
+    // and create wedge-shaped fill artifacts under SVG clipping. Rivers
+    // and waterway lines below carry the water signal, which matches the
+    // single-stroke aesthetic we want for foil printing anyway.
 
     // Waterway lines (rivers) — heavier stroke than residential roads.
     if (vectors.waterLines.length) {
