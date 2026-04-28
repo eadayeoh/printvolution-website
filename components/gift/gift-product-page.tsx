@@ -324,8 +324,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Detect via the seeded gift_template (renderer='song_lyrics') so any
   // product the admin links the template to gets the special PDP. Falls
   // back to the legacy slug check so existing data still works.
+  //
+  // When a product offers MULTIPLE renderer-driven templates (e.g.
+  // /gift/led-bases offers Spotify + heart collage + grids), the
+  // active renderer must come from the *selected* template, not from
+  // "any template on this product has renderer X" — otherwise the page
+  // gets stuck in whichever renderer-specific UI was matched first.
+  const activeRenderer: string | null = (() => {
+    if (!selectedTemplateId) return null;
+    const t = templates.find((t) => t.id === selectedTemplateId) as { renderer?: string } | undefined;
+    return t?.renderer ?? null;
+  })();
   const isSongLyrics =
-    templates.some((t) => (t as { renderer?: string }).renderer === 'song_lyrics')
+    activeRenderer === 'song_lyrics'
     || product.slug === 'song-lyrics-photo-frame';
   const [songLayout, setSongLayout] = useState<'song' | 'wedding' | 'foil'>('song');
   const [songSubtitle, setSongSubtitle] = useState<string>('');
@@ -351,21 +362,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // Detect via renderer='spotify_plaque'. Customer pastes any Spotify
   // URL — track ID is parsed and the official Spotify scannable code
   // is hot-linked from scannables.scdn.co (no API key required).
-  const isSpotifyPlaque =
-    templates.some((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
+  const isSpotifyPlaque = activeRenderer === 'spotify_plaque';
   const [spotifySongTitle, setSpotifySongTitle] = useState<string>('');
   const [spotifyArtistName, setSpotifyArtistName] = useState<string>('');
   const [spotifyUrl, setSpotifyUrl] = useState<string>('');
   const [spotifyPhotoUrl, setSpotifyPhotoUrl] = useState<string>('');
   const [spotifyPhotoAssetId, setSpotifyPhotoAssetId] = useState<string>('');
   const [spotifyTextColor, setSpotifyTextColor] = useState<string>('#0a0a0a');
-  const [spotifyScanCodeColor, setSpotifyScanCodeColor] = useState<'black' | 'white'>('black');
 
   // ── City Map Photo Frame (special-cased product) ──────────────────────────
   // Detect by renderer='city_map' so any product the admin links the template
   // to gets the special PDP. Same shape as song-lyrics above.
   const isCityMap =
-    templates.some((t) => (t as { renderer?: string }).renderer === 'city_map')
+    activeRenderer === 'city_map'
     || product.slug === 'city-map-photo-frame';
   const [cityLat, setCityLat] = useState<number | null>(null);
   const [cityLng, setCityLng] = useState<number | null>(null);
@@ -389,7 +398,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // is computed entirely client-side from the bundled catalogue — no
   // network round-trip, so there's no fetching state.
   const isStarMap =
-    templates.some((t) => (t as { renderer?: string }).renderer === 'star_map')
+    activeRenderer === 'star_map'
     || product.slug === 'star-map-photo-frame'
     || product.slug === 'star-map-poster';
   const [starLat, setStarLat] = useState<number | null>(null);
@@ -1043,7 +1052,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (trackId)                  notes += `${notes ? ';' : ''}spotify_track_id:${trackId}`;
       if (spotifyPhotoAssetId)      notes += `${notes ? ';' : ''}spotify_photo_asset:${spotifyPhotoAssetId}`;
       if (spotifyTextColor)         notes += `${notes ? ';' : ''}spotify_text_color:${spotifyTextColor}`;
-      if (spotifyScanCodeColor)     notes += `${notes ? ';' : ''}spotify_scan_color:${spotifyScanCodeColor}`;
     }
     // City Map Photo Frame: serialise the coords + footer text + radius so
     // the admin can regenerate the foil-printable SVG from the order.
@@ -1619,7 +1627,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       artistName={spotifyArtistName}
                       spotifyTrackId={parseSpotifyTrackId(spotifyUrl)}
                       textColor={spotifyTextColor}
-                      scanCodeColor={spotifyScanCodeColor}
                       templateRefDims={(() => {
                         const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
                         const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
@@ -2561,7 +2568,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   onPhotoAssetId={setSpotifyPhotoAssetId}
                   productSlug={product.slug}
                   textColor={spotifyTextColor} onTextColor={setSpotifyTextColor}
-                  scanCodeColor={spotifyScanCodeColor} onScanCodeColor={setSpotifyScanCodeColor}
                 />
               ) : (
               <>
