@@ -4,8 +4,12 @@ import { useEffect, useState } from 'react';
 
 // Business-day math — weekends skipped, public holidays not (lead
 // time is a quote, admin bumps the day count to absorb them).
+// Production starts the day AFTER today, regardless of whether today
+// is a weekday — matches the footer copy ("starts the next working
+// day") and prevents same-day order/ready dates for 1-day jobs.
 function nextBusinessDay(from: Date): Date {
   const d = new Date(from);
+  d.setDate(d.getDate() + 1);
   while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
   return d;
 }
@@ -95,8 +99,11 @@ export function GiftReadyByCard({ leadTimeDays }: { leadTimeDays: number }) {
         borderTop: '1px dashed var(--pv-rule, #e0dcd0)',
         padding: '10px 14px', fontFamily: 'var(--pv-f-mono)', fontSize: 10,
         color: 'var(--pv-muted, #888)', letterSpacing: '0.06em', textAlign: 'center',
+        lineHeight: 1.6,
       }}>
         Production clock starts the next working day. Weekends and file revisions add time.
+        <br />
+        <strong style={{ color: 'var(--pv-ink)' }}>Delivery is on top</strong> — add 1–3 working days for courier, or pick self-collection at checkout for the date above.
       </div>
     </div>
   );
