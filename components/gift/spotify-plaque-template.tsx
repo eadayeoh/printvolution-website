@@ -16,6 +16,7 @@ import {
   buildSpotifyPlaqueSvg,
   spotifyScannableUrl,
   spotifyPlaqueScanRect,
+  type SpotifyScanCodeColor,
 } from '@/lib/gifts/spotify-plaque-svg';
 
 type Props = {
@@ -24,6 +25,11 @@ type Props = {
   artistName: string;
   spotifyTrackId: string | null;
   templateRefDims?: { width_mm: number; height_mm: number } | null;
+  /** Hex colour for title, artist, controls, progress bar, time markers.
+   *  Defaults to near-black ink. */
+  textColor?: string;
+  /** Black (default) or white scan-code bars. */
+  scanCodeColor?: SpotifyScanCodeColor;
 };
 
 export function SpotifyPlaqueTemplate({
@@ -32,6 +38,8 @@ export function SpotifyPlaqueTemplate({
   artistName,
   spotifyTrackId,
   templateRefDims,
+  textColor,
+  scanCodeColor = 'black',
 }: Props) {
   const svgMarkup = useMemo(
     () => buildSpotifyPlaqueSvg({
@@ -41,11 +49,16 @@ export function SpotifyPlaqueTemplate({
       spotifyTrackId,
       templateRefDims,
       omitScanCode: true,
+      textColor,
+      scanCodeColor,
     }),
-    [photoUrl, songTitle, artistName, spotifyTrackId, templateRefDims],
+    [photoUrl, songTitle, artistName, spotifyTrackId, templateRefDims, textColor, scanCodeColor],
   );
 
   const scanRect = spotifyPlaqueScanRect(templateRefDims);
+  // darken keeps the black bars + drops the white background; lighten
+  // does the inverse for a white scan code on its black background.
+  const scanBlend = scanCodeColor === 'white' ? 'lighten' : 'darken';
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -68,20 +81,18 @@ export function SpotifyPlaqueTemplate({
       >
         {spotifyTrackId ? (
           <img
-            src={spotifyScannableUrl(spotifyTrackId)}
+            src={spotifyScannableUrl(spotifyTrackId, scanCodeColor)}
             alt=""
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'contain',
               display: 'block',
-              // Spotify's scannable PNG bakes in a white background.
-              // multiply blends white pixels into whatever sits behind
-              // (white × bg = bg) while keeping the black logo + bars
-              // intact (black × bg = black) — so the plaque looks
-              // truly transparent without us having to fetch+strip
-              // the SVG version server-side.
-              mixBlendMode: 'multiply',
+              // Spotify's scannable PNG bakes in an opaque background.
+              // darken (black bars) / lighten (white bars) blends that
+              // background into whatever sits behind the plaque while
+              // preserving the scan bars + logo.
+              mixBlendMode: scanBlend,
             }}
           />
         ) : (

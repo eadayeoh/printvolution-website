@@ -21,9 +21,18 @@ export function parseSpotifyTrackId(input: string): string | null {
   return m ? m[1] : null;
 }
 
-export function spotifyScannableUrl(trackId: string): string {
-  // Public no-auth endpoint. White bg, black bars, 640px PNG.
-  return `https://scannables.scdn.co/uri/plain/png/FFFFFF/black/640/spotify:track:${trackId}`;
+export type SpotifyScanCodeColor = 'black' | 'white';
+
+export function spotifyScannableUrl(
+  trackId: string,
+  codeColor: SpotifyScanCodeColor = 'black',
+): string {
+  // Public no-auth endpoint. The opposite-tone background gives the bars
+  // contrast inside the PNG; the React preview knocks the background out
+  // with mix-blend-mode (darken for black bars, lighten for white bars)
+  // so the plaque looks transparent regardless of the chosen colour.
+  const bg = codeColor === 'white' ? '000000' : 'FFFFFF';
+  return `https://scannables.scdn.co/uri/plain/png/${bg}/${codeColor}/640/spotify:track:${trackId}`;
 }
 
 function esc(s: string): string {
@@ -48,6 +57,12 @@ export type BuildSpotifyPlaqueSvgInput = {
    *  injected via React's dangerouslySetInnerHTML — using a plain HTML
    *  <img> dodges that. The print pipeline uses the default false. */
   omitScanCode?: boolean;
+  /** Customer-picked text + icon colour (title, artist, controls,
+   *  progress bar, time markers). Defaults to near-black ink. */
+  textColor?: string;
+  /** Black (default) or white scan-code bars. White is for darker
+   *  backgrounds — the React preview blends the inverted background out. */
+  scanCodeColor?: SpotifyScanCodeColor;
 };
 
 /** Layout constants exported so React previews can position an HTML
@@ -80,13 +95,15 @@ export function buildSpotifyPlaqueSvg({
   spotifyTrackId,
   templateRefDims,
   omitScanCode = false,
+  textColor,
+  scanCodeColor = 'black',
 }: BuildSpotifyPlaqueSvgInput): string {
   const W = 100;
   const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
     ? (templateRefDims.height_mm / templateRefDims.width_mm) * W
     : 141.4; // A4 default
 
-  const inkColor = '#0a0a0a';
+  const inkColor = textColor && textColor.trim() ? textColor : '#0a0a0a';
   const subtleGrey = '#7a7a7a';
   const trackGrey = '#d4d4d4';
 
@@ -150,7 +167,10 @@ export function buildSpotifyPlaqueSvg({
   body += `<text x="${titleX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="Archivo, sans-serif" font-weight="700" fill="${inkColor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
 
   // ── Artist ──────────────────────────────────────────────────────────────
-  body += `<text x="${titleX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="Archivo, sans-serif" fill="${subtleGrey}">${esc(artistName.trim() || "Artist's Name")}</text>`;
+  // Artist line uses the customer-picked text colour but at 65% opacity
+  // so the title still reads louder than the artist (Spotify's UI does
+  // the same — artist name is muted vs. the title).
+  body += `<text x="${titleX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">${esc(artistName.trim() || "Artist's Name")}</text>`;
 
   // ── Heart icon (red, right-aligned with title/artist block) ────────────
   // Material-icons "favorite" path scaled into viewBox units. Sits
@@ -168,9 +188,9 @@ export function buildSpotifyPlaqueSvg({
   body += `<line x1="${progLeftX}" y1="${progY}" x2="${progLeftX + progLen * progHeadPct}" y2="${progY}" stroke="${inkColor}" stroke-width="0.4" stroke-linecap="round"/>`;
   body += `<circle cx="${progLeftX + progLen * progHeadPct}" cy="${progY}" r="0.9" fill="${inkColor}"/>`;
 
-  // ── Time markers ────────────────────────────────────────────────────────
-  body += `<text x="${progLeftX}" y="${timeY}" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${subtleGrey}">0:36</text>`;
-  body += `<text x="${progRightX}" y="${timeY}" text-anchor="end" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${subtleGrey}">2:15</text>`;
+  // ── Time markers (muted via 65% opacity, same hue as the title) ────────
+  body += `<text x="${progLeftX}" y="${timeY}" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">0:36</text>`;
+  body += `<text x="${progRightX}" y="${timeY}" text-anchor="end" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">2:15</text>`;
 
   // ── Transport controls (shuffle, prev, play, next, repeat) ──────────────
   const cy = ctrlY;

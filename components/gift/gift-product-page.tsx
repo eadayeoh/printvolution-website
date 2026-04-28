@@ -358,6 +358,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [spotifyUrl, setSpotifyUrl] = useState<string>('');
   const [spotifyPhotoUrl, setSpotifyPhotoUrl] = useState<string>('');
   const [spotifyPhotoAssetId, setSpotifyPhotoAssetId] = useState<string>('');
+  const [spotifyTextColor, setSpotifyTextColor] = useState<string>('#0a0a0a');
+  const [spotifyScanCodeColor, setSpotifyScanCodeColor] = useState<'black' | 'white'>('black');
 
   // ── City Map Photo Frame (special-cased product) ──────────────────────────
   // Detect by renderer='city_map' so any product the admin links the template
@@ -1040,6 +1042,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       const trackId = parseSpotifyTrackId(spotifyUrl);
       if (trackId)                  notes += `${notes ? ';' : ''}spotify_track_id:${trackId}`;
       if (spotifyPhotoAssetId)      notes += `${notes ? ';' : ''}spotify_photo_asset:${spotifyPhotoAssetId}`;
+      if (spotifyTextColor)         notes += `${notes ? ';' : ''}spotify_text_color:${spotifyTextColor}`;
+      if (spotifyScanCodeColor)     notes += `${notes ? ';' : ''}spotify_scan_color:${spotifyScanCodeColor}`;
     }
     // City Map Photo Frame: serialise the coords + footer text + radius so
     // the admin can regenerate the foil-printable SVG from the order.
@@ -1614,6 +1618,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       songTitle={spotifySongTitle}
                       artistName={spotifyArtistName}
                       spotifyTrackId={parseSpotifyTrackId(spotifyUrl)}
+                      textColor={spotifyTextColor}
+                      scanCodeColor={spotifyScanCodeColor}
                       templateRefDims={(() => {
                         const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
                         const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
@@ -2554,6 +2560,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   photoUrl={spotifyPhotoUrl} onPhotoUrl={setSpotifyPhotoUrl}
                   onPhotoAssetId={setSpotifyPhotoAssetId}
                   productSlug={product.slug}
+                  textColor={spotifyTextColor} onTextColor={setSpotifyTextColor}
+                  scanCodeColor={spotifyScanCodeColor} onScanCodeColor={setSpotifyScanCodeColor}
                 />
               ) : (
               <>

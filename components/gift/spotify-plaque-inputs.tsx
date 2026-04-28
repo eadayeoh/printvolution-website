@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { uploadSongLyricsPhoto } from '@/app/(site)/gift/actions';
-import { parseSpotifyTrackId } from '@/lib/gifts/spotify-plaque-svg';
+import { parseSpotifyTrackId, type SpotifyScanCodeColor } from '@/lib/gifts/spotify-plaque-svg';
 
 type Props = {
   songTitle: string;
@@ -16,7 +16,19 @@ type Props = {
   onPhotoUrl: (s: string) => void;
   onPhotoAssetId: (id: string) => void;
   productSlug: string;
+  textColor: string;
+  onTextColor: (c: string) => void;
+  scanCodeColor: SpotifyScanCodeColor;
+  onScanCodeColor: (c: SpotifyScanCodeColor) => void;
 };
+
+const TEXT_COLOUR_PRESETS: Array<{ hex: string; label: string }> = [
+  { hex: '#0a0a0a', label: 'Black' },
+  { hex: '#ffffff', label: 'White' },
+  { hex: '#c0a062', label: 'Gold' },
+  { hex: '#b76e79', label: 'Rose' },
+  { hex: '#1db954', label: 'Spotify' },
+];
 
 export function SpotifyPlaqueInputs({
   songTitle, onSongTitle,
@@ -24,6 +36,8 @@ export function SpotifyPlaqueInputs({
   spotifyUrl, onSpotifyUrl,
   photoUrl, onPhotoUrl, onPhotoAssetId,
   productSlug,
+  textColor, onTextColor,
+  scanCodeColor, onScanCodeColor,
 }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -155,6 +169,83 @@ export function SpotifyPlaqueInputs({
           </div>
         )}
       </label>
+
+      {/* Text colour picker — applies to title, artist, controls,
+          progress bar, time markers. Heart stays red, scan code is
+          driven by its own toggle below. */}
+      <div>
+        <span style={labelStyle}>Text colour</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <input
+            type="color"
+            value={textColor}
+            onChange={(e) => onTextColor(e.target.value)}
+            aria-label="Pick a text colour"
+            style={{
+              width: 44,
+              height: 36,
+              border: '2px solid var(--pv-ink)',
+              padding: 0,
+              background: '#fff',
+              cursor: 'pointer',
+            }}
+          />
+          {TEXT_COLOUR_PRESETS.map((p) => {
+            const isActive = p.hex.toLowerCase() === textColor.toLowerCase();
+            return (
+              <button
+                key={p.hex}
+                type="button"
+                onClick={() => onTextColor(p.hex)}
+                title={p.label}
+                aria-label={p.label}
+                style={{
+                  width: 28, height: 28,
+                  borderRadius: '50%',
+                  background: p.hex,
+                  border: isActive ? '3px solid var(--pv-magenta)' : '2px solid var(--pv-ink)',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scan-code colour toggle — Spotify only offers black or white
+          bars; the React preview blends out the opposite background so
+          either choice sits flat on the plaque. */}
+      <div>
+        <span style={labelStyle}>Scan code colour</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['black', 'white'] as const).map((c) => {
+            const isActive = scanCodeColor === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => onScanCodeColor(c)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: isActive ? 'var(--pv-ink)' : '#fff',
+                  color: isActive ? '#fff' : 'var(--pv-ink)',
+                  border: '2px solid var(--pv-ink)',
+                  cursor: 'pointer',
+                }}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
