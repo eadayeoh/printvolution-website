@@ -495,6 +495,12 @@ export type GiftProductVariant = {
    *  the photo inside it. Used when the panel slot has a fixed
    *  position on the mockup (e.g. Figurine Photo Frame). */
   photo_pan_mode?: boolean;
+  /** Per-variant overrides keyed by `gift_products.sizes[].slug`. Each
+   *  entry can flip `available: false` to hide that size when the
+   *  customer picks this variant, and/or override the product-level
+   *  `price_delta_cents` for that variant × size combo. Missing key =
+   *  inherit product defaults. Empty object = all defaults. */
+  size_overrides?: Record<string, { available?: boolean; price_delta_cents?: number }>;
 };
 
 export type MockupArea = { x: number; y: number; width: number; height: number };

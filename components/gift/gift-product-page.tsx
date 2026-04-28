@@ -70,10 +70,40 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
   const productSizes = product.sizes ?? [];
   const sortedSizes = [...productSizes].sort((a, b) => a.display_order - b.display_order);
+  // When a variant ships per-variant size_overrides, an entry with
+  // `available: false` hides that size from the picker. Returns the
+  // sizes the customer can actually pick for the currently-selected
+  // variant — falls back to all sizes when no variant has been picked
+  // yet OR when the variant has no overrides.
+  const availableSizes = sortedSizes.filter((s) => {
+    const ov = selectedVariant?.size_overrides?.[s.slug];
+    return ov?.available !== false;
+  });
   const [selectedSizeSlug, setSelectedSizeSlug] = useState<string | null>(
-    sortedSizes.length > 0 ? sortedSizes[0].slug : null,
+    availableSizes.length > 0 ? availableSizes[0].slug : null,
   );
-  const selectedSize = sortedSizes.find((s) => s.slug === selectedSizeSlug) ?? null;
+  // If the selected size disappears (e.g. customer flipped to a variant
+  // that doesn't offer that size), bounce them onto the first available
+  // option so the cart payload is never inconsistent.
+  useEffect(() => {
+    if (availableSizes.length === 0) {
+      if (selectedSizeSlug !== null) setSelectedSizeSlug(null);
+      return;
+    }
+    if (!availableSizes.some((s) => s.slug === selectedSizeSlug)) {
+      setSelectedSizeSlug(availableSizes[0].slug);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantId]);
+  const selectedSize = availableSizes.find((s) => s.slug === selectedSizeSlug) ?? null;
+  // Effective price delta for the selected variant×size combo: the
+  // variant's override wins when set, else the product-level delta.
+  const effectiveSizeDeltaCents = (() => {
+    if (!selectedSize) return 0;
+    const ovDelta = selectedVariant?.size_overrides?.[selectedSize.slug]?.price_delta_cents;
+    if (typeof ovDelta === 'number') return ovDelta;
+    return selectedSize.price_delta_cents ?? 0;
+  })();
 
   // Customer can drag/resize the design inside the variant's bounds.
   // Reset back to the variant's default starting area whenever the
@@ -758,7 +788,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       ? giftUnitPrice(selectedVariant.base_price_cents, selectedVariant.price_tiers, qty)
       : giftUnitPrice(product.base_price_cents, product.price_tiers, qty);
     const unit = tieredBase
-      + (selectedSize?.price_delta_cents ?? 0)
+      + effectiveSizeDeltaCents
       + shapeDelta
       + figurineDelta
       + surfacesDelta;
@@ -2470,12 +2500,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
 
-              {/* Size picker — product-level. Applies to every variant. */}
-              {sortedSizes.length > 0 && (
+              {/* Size picker — product-level by default. When the
+                  selected variant carries size_overrides, sizes flagged
+                  available=false are filtered out, and per-variant
+                  price-delta overrides replace the product default. */}
+              {availableSizes.length > 0 && (
                 <ComposeSection letter={sectionLetters.size!} title="Pick a size">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {sortedSizes.map((s) => {
+                    {availableSizes.map((s) => {
                       const isSelected = s.slug === selectedSizeSlug;
+                      const ovDelta = selectedVariant?.size_overrides?.[s.slug]?.price_delta_cents;
+                      const deltaCents = typeof ovDelta === 'number' ? ovDelta : (s.price_delta_cents ?? 0);
                       return (
                         <button
                           key={s.slug}
@@ -2503,7 +2538,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           <span>{s.name}</span>
                           <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: '0.04em' }}>
                             {s.width_mm}×{s.height_mm}mm
-                            {s.price_delta_cents > 0 && ` · +S$${(s.price_delta_cents / 100).toFixed(2)}`}
+                            {deltaCents > 0 && ` · +S$${(deltaCents / 100).toFixed(2)}`}
                           </span>
                         </button>
                       );
@@ -2888,7 +2923,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       (selectedVariant
                         ? giftUnitPrice(selectedVariant.base_price_cents, selectedVariant.price_tiers, qty)
                         : giftUnitPrice(product.base_price_cents, product.price_tiers, qty))
-                      + (selectedSize?.price_delta_cents ?? 0)
+                      + effectiveSizeDeltaCents
                       + (shapePickerActive ? shapeOptionsPriceDelta(shapeOptions, selectedShapeKind) : 0)
                       + (selectedFigurine?.price_delta_cents ?? 0)
                       + (selectedVariant?.surfaces ?? []).reduce((sum, s) => {

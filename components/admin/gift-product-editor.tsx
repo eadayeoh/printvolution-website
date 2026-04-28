@@ -846,6 +846,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 productHeightMm={parseFloat(heightMm) || product.height_mm}
                 parentShapeOptions={shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null}
                 parentPrompts={parentPrompts}
+                productSizes={sizes}
                 // First assigned template that uses a code-driven
                 // renderer (city_map / star_map). The variant editor
                 // uses it to lock the mockup-area rectangle's aspect

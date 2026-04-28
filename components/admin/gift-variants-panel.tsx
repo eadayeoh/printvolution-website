@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftTemplate, GiftTemplateZone } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftTemplate, GiftTemplateZone, GiftSize } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
@@ -50,6 +50,10 @@ type Draft = {
   photo_pan_mode: boolean;
   // Migration 0061 — per-prompt mockup keyed by prompt UUID.
   mockup_by_prompt_id: Record<string, { url: string; area: { x: number; y: number; width: number; height: number } }>;
+  // Migration 0077 — per-variant size availability + price-delta
+  // overrides. Keyed by gift_products.sizes[].slug. Missing key =
+  // inherit product defaults (available, product-level delta).
+  size_overrides: Record<string, { available?: boolean; price_delta_cents?: number }>;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -90,6 +94,11 @@ function toDraft(v?: GiftProductVariant): Draft {
           ]),
         )
       : {},
+    size_overrides: v?.size_overrides
+      ? Object.fromEntries(
+          Object.entries(v.size_overrides).map(([k, entry]) => [k, { ...entry }]),
+        )
+      : {},
   };
 }
 
@@ -127,6 +136,10 @@ type GiftVariantsPanelProps = {
    *  per-variant mockup block — one slot per prompt — so the live
    *  preview can swap the mockup when the customer picks an art style. */
   parentPrompts?: Array<{ id: string; name: string; mode: string }>;
+  /** Product-level sizes (gift_products.sizes). Drives the per-variant
+   *  size availability + price-override table. Empty = product has a
+   *  single fixed size; the override table is hidden. */
+  productSizes?: GiftSize[];
   /** Renderer-driven template linked to the parent product (city_map /
    *  star_map). When set, the variant editor's mockup-area rectangle:
    *    - locks its aspect ratio to the template's reference dims
@@ -146,6 +159,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   productHeightMm,
   parentShapeOptions,
   parentPrompts,
+  productSizes,
   linkedRendererTemplate,
 }, ref) {
   // ── Renderer preview wiring ──────────────────────────────────────────
@@ -377,6 +391,22 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
           }
         }
         return Object.keys(cleaned).length > 0 ? cleaned : null;
+      })(),
+      // Strip empty/no-op overrides so the DB doesn't accumulate
+      // dead entries. An override is meaningful only when it sets
+      // available=false OR a price_delta_cents.
+      size_overrides: (() => {
+        const cleaned: Record<string, { available?: boolean; price_delta_cents?: number }> = {};
+        for (const [slug, entry] of Object.entries(d.size_overrides ?? {})) {
+          if (!entry) continue;
+          const out: { available?: boolean; price_delta_cents?: number } = {};
+          if (entry.available === false) out.available = false;
+          if (typeof entry.price_delta_cents === 'number' && entry.price_delta_cents > 0) {
+            out.price_delta_cents = entry.price_delta_cents;
+          }
+          if (Object.keys(out).length) cleaned[slug] = out;
+        }
+        return cleaned;
       })(),
     };
     // `mockup_by_shape` is a Partial<Record<>>; z.record(enum, obj)
@@ -910,6 +940,113 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         </div>
                       )}
                     </div>
+
+                    {/* Per-variant size availability + price-delta
+                        overrides. Defaults: all product sizes
+                        available, with the product-level price delta
+                        applied. Admin only fills this in for the
+                        exceptions — variants that don't carry a
+                        particular size, or that need a different
+                        delta for a specific size×variant combo. */}
+                    {(productSizes ?? []).length > 0 && (
+                      <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
+                        <div className="mb-2">
+                          <div className="text-[11px] font-bold text-ink">Sizes for this variant (optional)</div>
+                          <div className="text-[10px] text-neutral-500">
+                            By default this variant is available in every product size, with the product-level price delta. Untick a size to hide it for this variant only. Set a price override to charge a different delta on this variant × size — leave at 0.00 to inherit the product default.
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="grid grid-cols-[24px_1fr_120px_140px] gap-2 px-1 text-[10px] font-bold uppercase text-neutral-500">
+                            <span></span>
+                            <span>Size</span>
+                            <span>Dimensions</span>
+                            <span>+ Price (S$) override</span>
+                          </div>
+                          {(productSizes ?? []).map((sz) => {
+                            const ov = d.size_overrides?.[sz.slug] ?? {};
+                            const available = ov.available !== false;
+                            const overrideDeltaCents = typeof ov.price_delta_cents === 'number' ? ov.price_delta_cents : null;
+                            const productDelta = sz.price_delta_cents ?? 0;
+                            const inputDollars = overrideDeltaCents != null
+                              ? (overrideDeltaCents / 100).toFixed(2)
+                              : '';
+                            return (
+                              <div key={sz.slug} className="grid grid-cols-[24px_1fr_120px_140px] items-center gap-2 rounded border border-neutral-200 bg-white p-2">
+                                <input
+                                  type="checkbox"
+                                  checked={available}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setDrafts((list) => list.map((x, j) => {
+                                      if (j !== i) return x;
+                                      const next = { ...(x.size_overrides ?? {}) };
+                                      const cur = next[sz.slug] ?? {};
+                                      if (checked) {
+                                        // Available again — drop the
+                                        // available flag; keep any price override.
+                                        delete cur.available;
+                                      } else {
+                                        cur.available = false;
+                                      }
+                                      if (Object.keys(cur).length === 0) {
+                                        delete next[sz.slug];
+                                      } else {
+                                        next[sz.slug] = cur;
+                                      }
+                                      return { ...x, size_overrides: next };
+                                    }));
+                                  }}
+                                  title={available ? 'Available — uncheck to hide this size on this variant' : 'Hidden — check to make available'}
+                                />
+                                <div>
+                                  <div className="text-[12px] font-bold text-ink">{sz.name || sz.slug}</div>
+                                  {!available && <div className="text-[10px] text-red-600">Hidden for this variant</div>}
+                                </div>
+                                <div className="text-[11px] text-neutral-600">
+                                  {sz.width_mm}×{sz.height_mm}mm
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] text-neutral-400">$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder={(productDelta / 100).toFixed(2)}
+                                    value={inputDollars}
+                                    disabled={!available}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      setDrafts((list) => list.map((x, j) => {
+                                        if (j !== i) return x;
+                                        const next = { ...(x.size_overrides ?? {}) };
+                                        const cur = { ...(next[sz.slug] ?? {}) };
+                                        if (raw === '' || raw == null) {
+                                          delete cur.price_delta_cents;
+                                        } else {
+                                          const cents = Math.max(0, Math.round((parseFloat(raw) || 0) * 100));
+                                          cur.price_delta_cents = cents;
+                                        }
+                                        if (Object.keys(cur).length === 0) {
+                                          delete next[sz.slug];
+                                        } else {
+                                          next[sz.slug] = cur;
+                                        }
+                                        return { ...x, size_overrides: next };
+                                      }));
+                                    }}
+                                    className={`${inputCls} w-full font-mono text-xs disabled:opacity-50`}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-2 text-[10px] text-neutral-400">
+                          Empty price field = use the product-level delta ({(productSizes ?? [])[0] ? `$${((productSizes ?? [])[0].price_delta_cents / 100).toFixed(2)}` : '—'} on the first size, etc).
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3">
                     <div>

@@ -703,6 +703,18 @@ const VariantSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Per-variant overrides keyed by gift_products.sizes[].slug — flips a
+  // size off for this variant or overrides the price delta. Missing
+  // entries inherit the product defaults.
+  size_overrides: z
+    .record(
+      z.string().min(1).max(60),
+      z.object({
+        available: z.boolean().optional(),
+        price_delta_cents: z.number().int().nonnegative().optional(),
+      }),
+    )
+    .default({}),
 });
 
 /** If the parent product's base_price_cents is still at 0, recompute
