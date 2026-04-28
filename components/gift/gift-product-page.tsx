@@ -1467,14 +1467,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   const variantMockup = shapeMockup.url ?? null;
                   const variantArea   = shapeMockup.area ?? null;
 
-                  // Renderer aspect varies — keep each builder's own
-                  // physical proportions so the SVG never gets squashed
-                  // when the design area is a different aspect.
-                  const rendererAspect = isCityMap
-                    ? '100 / 130'
-                    : isStarMap
-                      ? (starLayout === 'poster' ? '100 / 140' : '100 / 130')
-                      : '100 / 130';
+                  // Preview shell aspect — product width:height drives the
+                  // shell so a 100x100mm product gets a 100x100 shell
+                  // (snug fit, no white space around the design). Falls
+                  // back to per-renderer defaults when product dims are
+                  // missing for any reason.
+                  const rendererAspect = product.width_mm > 0 && product.height_mm > 0
+                    ? `${product.width_mm} / ${product.height_mm}`
+                    : isCityMap
+                      ? '100 / 130'
+                      : isStarMap
+                        ? (starLayout === 'poster' ? '100 / 140' : '100 / 130')
+                        : '100 / 130';
 
                   const rendererBody = isSongLyrics ? (
                     <SongLyricsTemplate
@@ -1586,11 +1590,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
                   // Variant has a physical mockup + an admin-set design
                   // rectangle — slot the renderer inside it. The
+                  // When admin sets preview_max_width_px the customer
+                  // wants a snug shell at product dimensions — skip the
+                  // variant mockup wrapping (which paints wall + floor
+                  // around the frame) and just render the design at the
+                  // product's aspect.
+                  const snugMode = product.preview_max_width_px != null;
+
                   // parent stage matches the mockup image's natural
                   // aspect so the admin-drawn rectangle lines up
                   // exactly with where it'll print on the customer's
                   // PDP (same coordinate system as the variant editor).
-                  if (variantMockup && variantArea) {
+                  if (variantMockup && variantArea && !snugMode) {
                     // Stage aspect = linked renderer template's
                     // reference dimensions, so the area % saved by
                     // the admin editor's template-aspect stage
@@ -1618,7 +1629,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   // full-bleed renderer. Same look as before this
                   // change for products without a configured variant.
                   return (
-                    <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: rendererAspect, position: 'relative' }}>
+                    <div style={{ width: '100%', maxWidth: product.preview_max_width_px ?? 480, margin: '0 auto', aspectRatio: rendererAspect, position: 'relative' }}>
                       {rendererBody}
                       {cityFetchOverlay}
                     </div>
