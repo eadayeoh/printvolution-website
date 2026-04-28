@@ -587,10 +587,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     const m: Record<string, string> = {};
     let i = 0;
     if (hasTemplates) m.template = String.fromCharCode(65 + i++);
-    m.compose = String.fromCharCode(65 + i++); // Upload / Fill / Configure
+    // Variants (base / colour / material) come BEFORE compose so the
+    // customer sees them above-the-fold even when "compose" expands
+    // into a 9-slot multi-photo grid.
     if (variants.length >= 2) m.variants = String.fromCharCode(65 + i++);
     if (shapePickerActive) m.shape = String.fromCharCode(65 + i++);
     if (sortedSizes.length > 0) m.size = String.fromCharCode(65 + i++);
+    m.compose = String.fromCharCode(65 + i++); // Upload / Fill / Configure
     if (figurinePickerActive) m.figurine = String.fromCharCode(65 + i++);
     if (showPromptPicker) m.style = String.fromCharCode(65 + i++);
     if (showTextStep) m.text = String.fromCharCode(65 + i++);
@@ -2667,6 +2670,90 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 </ComposeSection>
               )}
 
+              {/* Variant picker — moved up so the customer sees their
+                  base/colour/material choice above-the-fold even when
+                  the compose step expands into a 9-slot photo grid. */}
+              {variants.length >= 2 && (() => {
+                const kinds = new Set(variants.map((v) => v.variant_kind || 'base'));
+                const singleKind = kinds.size === 1 ? [...kinds][0] : null;
+                const title =
+                  singleKind === 'size'     ? 'Pick your size' :
+                  singleKind === 'colour'   ? 'Pick your colour' :
+                  singleKind === 'material' ? 'Pick your material' :
+                  singleKind === 'base'     ? 'Pick your base' :
+                                              'Choose an option';
+                return (
+                  <ComposeSection letter={sectionLetters.variants!} title={title}>
+                    <GiftVariantLivePreview
+                      variants={variants}
+                      selectedId={selectedVariantId}
+                      onSelect={setSelectedVariantId}
+                      previewUrl={preview?.previewUrl ?? null}
+                      onColourChange={setSelectedColour}
+                      swatchOverride={swatchOverride}
+                    />
+                  </ComposeSection>
+                );
+              })()}
+
+              {/* Shape picker — moved up alongside variants. */}
+              {shapePickerActive && (
+                <ComposeSection letter={sectionLetters.shape!} title="Pick your shape">
+                  <GiftShapePicker
+                    options={shapeOptions}
+                    allTemplates={templates}
+                    selectedKind={selectedShapeKind}
+                    selectedTemplateId={selectedShapeTemplateId}
+                    onSelectKind={setSelectedShapeKind}
+                    onSelectTemplate={setSelectedShapeTemplateId}
+                  />
+                </ComposeSection>
+              )}
+
+              {/* Size picker — moved up alongside variants. */}
+              {availableSizes.length > 0 && (
+                <ComposeSection letter={sectionLetters.size!} title="Pick a size">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {availableSizes.map((s) => {
+                      const isSelected = s.slug === selectedSizeSlug;
+                      const ovDelta = selectedVariant?.size_overrides?.[s.slug]?.price_delta_cents;
+                      const deltaCents = typeof ovDelta === 'number' ? ovDelta : (s.price_delta_cents ?? 0);
+                      return (
+                        <button
+                          key={s.slug}
+                          type="button"
+                          onClick={() => setSelectedSizeSlug(s.slug)}
+                          style={{
+                            padding: '12px 18px',
+                            background: isSelected ? 'var(--pv-ink)' : '#fff',
+                            color: isSelected ? '#fff' : 'var(--pv-ink)',
+                            border: `2px solid ${isSelected ? 'var(--pv-ink)' : '#0a0a0a'}`,
+                            borderRadius: 4,
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: 4,
+                            minWidth: 140,
+                          }}
+                        >
+                          <span>{s.name}</span>
+                          <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: '0.04em' }}>
+                            {s.width_mm}×{s.height_mm}mm
+                            {deltaCents > 0 && ` · +S$${(deltaCents / 100).toFixed(2)}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ComposeSection>
+              )}
+
               {/* Multi-surface configurator — only shown when the
                   selected variant has surfaces[] set. Replaces the
                   standard Upload section below since surfaces handle
@@ -2881,98 +2968,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
               </ComposeSection>
-              )}
-
-              {/* Variant picker — label adapts to the variants' kind.
-                  If all variants share the same kind, use that kind's
-                  picker phrase; otherwise fall back to the generic
-                  "Choose an option". */}
-              {variants.length >= 2 && (() => {
-                const kinds = new Set(variants.map((v) => v.variant_kind || 'base'));
-                const singleKind = kinds.size === 1 ? [...kinds][0] : null;
-                const title =
-                  singleKind === 'size'     ? 'Pick your size' :
-                  singleKind === 'colour'   ? 'Pick your colour' :
-                  singleKind === 'material' ? 'Pick your material' :
-                  singleKind === 'base'     ? 'Pick your base' :
-                                              'Choose an option';
-                return (
-                  <ComposeSection letter={sectionLetters.variants!} title={title}>
-                    <GiftVariantLivePreview
-                      variants={variants}
-                      selectedId={selectedVariantId}
-                      onSelect={setSelectedVariantId}
-                      previewUrl={preview?.previewUrl ?? null}
-                      onColourChange={setSelectedColour}
-                      swatchOverride={swatchOverride}
-                    />
-                  </ComposeSection>
-                );
-              })()}
-
-              {/* Shape picker — cutout / rectangle / template. Only appears
-                  on products that opted in via admin shape_options. Sits
-                  between Variants and Size in the compose flow so the
-                  customer picks "which base" first, then "what shape of
-                  panel", then "what size of panel". */}
-              {shapePickerActive && (
-                <ComposeSection letter={sectionLetters.shape!} title="Pick your shape">
-                  <GiftShapePicker
-                    options={shapeOptions}
-                    allTemplates={templates}
-                    selectedKind={selectedShapeKind}
-                    selectedTemplateId={selectedShapeTemplateId}
-                    onSelectKind={setSelectedShapeKind}
-                    onSelectTemplate={setSelectedShapeTemplateId}
-                  />
-                </ComposeSection>
-              )}
-
-              {/* Size picker — product-level by default. When the
-                  selected variant carries size_overrides, sizes flagged
-                  available=false are filtered out, and per-variant
-                  price-delta overrides replace the product default. */}
-              {availableSizes.length > 0 && (
-                <ComposeSection letter={sectionLetters.size!} title="Pick a size">
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {availableSizes.map((s) => {
-                      const isSelected = s.slug === selectedSizeSlug;
-                      const ovDelta = selectedVariant?.size_overrides?.[s.slug]?.price_delta_cents;
-                      const deltaCents = typeof ovDelta === 'number' ? ovDelta : (s.price_delta_cents ?? 0);
-                      return (
-                        <button
-                          key={s.slug}
-                          type="button"
-                          onClick={() => setSelectedSizeSlug(s.slug)}
-                          style={{
-                            padding: '12px 18px',
-                            background: isSelected ? 'var(--pv-ink)' : '#fff',
-                            color: isSelected ? '#fff' : 'var(--pv-ink)',
-                            border: `2px solid ${isSelected ? 'var(--pv-ink)' : '#0a0a0a'}`,
-                            borderRadius: 4,
-                            fontFamily: 'var(--pv-f-mono)',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            gap: 4,
-                            minWidth: 140,
-                          }}
-                        >
-                          <span>{s.name}</span>
-                          <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: '0.04em' }}>
-                            {s.width_mm}×{s.height_mm}mm
-                            {deltaCents > 0 && ` · +S$${(deltaCents / 100).toFixed(2)}`}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ComposeSection>
               )}
 
               {/* Figurine picker — small decorative overlay on the
