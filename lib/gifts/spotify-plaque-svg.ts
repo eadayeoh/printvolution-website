@@ -60,45 +60,50 @@ export function buildSpotifyPlaqueSvg({
   const subtleGrey = '#7a7a7a';
   const trackGrey = '#d4d4d4';
 
-  // Layout in viewBox units (W=100). Tuned for A4 portrait (H≈141.4).
-  // Photo: top portion, square, with small margin.
+  // Layout in viewBox units (W=100). Tuned for A4 portrait (H≈141.4) so
+  // photo + title/artist/progress/controls + scannable strip stack
+  // cleanly without overlap. Anchored bottom-up: scannable strip first,
+  // then controls/text rolled up from there.
   const margin = 8;
   const photoX = margin;
   const photoW = W - margin * 2;          // 84
-  const photoY = margin;
-  const photoH = photoW;                  // square
 
-  // Title + heart line
-  const titleY = photoY + photoH + 7;     // ~99
-  const titleSize = 5;
-  const titleX = photoX;
+  // Scannable strip pinned at the bottom.
+  const scanH = 12;
+  const scanY = H - margin - scanH;
+  const scanLogoR = 3.5;
+  const scanLogoX = photoX + scanLogoR;
+  const scanCodeX = scanLogoX + scanLogoR + 3;
+  const scanCodeW = (W - margin) - scanCodeX;
 
-  // Artist line
-  const artistY = titleY + 5;
-  const artistSize = 3.6;
+  // Transport controls sit above the scannable strip.
+  const ctrlSpacing = 9;
+  const ctrlY = scanY - 6;
 
-  // Progress bar
-  const progY = artistY + 6;
+  // Time markers above the controls.
+  const timeY = ctrlY - 5;
+  const timeSize = 2.6;
+
+  // Progress bar above the time markers.
+  const progY = timeY - 3;
   const progLeftX = photoX;
   const progRightX = W - margin;
   const progLen = progRightX - progLeftX;
   const progHeadPct = 0.27;               // ~0:36 of 2:15
 
-  // Time markers
-  const timeY = progY + 4;
-  const timeSize = 2.6;
+  // Artist line above the progress bar.
+  const artistSize = 3.6;
+  const artistY = progY - 6;
 
-  // Transport controls
-  const ctrlY = timeY + 7;
-  const ctrlSpacing = 9;
+  // Title above the artist line.
+  const titleSize = 5;
+  const titleY = artistY - 5;
+  const titleX = photoX;
 
-  // Scannable strip at the bottom
-  const scanH = 16;
-  const scanY = H - margin - scanH;
-  const scanLogoR = 4;                    // Spotify circle radius
-  const scanLogoX = photoX + scanLogoR;
-  const scanCodeX = scanLogoX + scanLogoR + 4;
-  const scanCodeW = (W - margin) - scanCodeX;
+  // Photo fills the remaining top space, capped to a sensible square-ish
+  // crop so it doesn't dwarf the footer block.
+  const photoY = margin;
+  const photoH = Math.min(photoW, titleY - photoY - 4);
 
   let body = '';
 
@@ -113,21 +118,22 @@ export function buildSpotifyPlaqueSvg({
     body += `<text x="${W / 2}" y="${photoY + photoH / 2}" text-anchor="middle" font-size="3.5" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Upload your photo</text>`;
   }
 
-  // ── Title + heart icon (right) ──────────────────────────────────────────
+  // ── Title ───────────────────────────────────────────────────────────────
   body += `<text x="${titleX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="Archivo, sans-serif" font-weight="700" fill="${inkColor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
-
-  // Heart icon (right side, aligned with the title baseline area)
-  const heartCx = W - margin - 2;
-  const heartCy = titleY;
-  const heartR = 1.6;
-  body += `<path d="M ${heartCx - heartR * 1.5} ${heartCy - heartR * 0.2}
-    a ${heartR} ${heartR} 0 0 1 ${heartR * 1.5} 0
-    a ${heartR} ${heartR} 0 0 1 ${heartR * 1.5} 0
-    q 0 ${heartR * 1.5} -${heartR * 1.5} ${heartR * 2.2}
-    q -${heartR * 1.5} -${heartR * 0.7} -${heartR * 1.5} -${heartR * 2.2} z" fill="${inkColor}"/>`;
 
   // ── Artist ──────────────────────────────────────────────────────────────
   body += `<text x="${titleX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="Archivo, sans-serif" fill="${subtleGrey}">${esc(artistName.trim() || "Artist's Name")}</text>`;
+
+  // ── Heart icon (red, right-aligned with title/artist block) ────────────
+  // Material-icons "favorite" path scaled into viewBox units. Sits
+  // between the title and artist baselines, right edge flush with the
+  // progress bar's right edge so it lines up with the time stamp below.
+  const heartRed = '#FF3B5C';
+  const heartSize = 4.2;
+  const heartScale = heartSize / 24;
+  const heartX = W - margin - heartSize;
+  const heartY = (titleY + artistY) / 2 - heartSize / 2 + 0.5;
+  body += `<path transform="translate(${heartX} ${heartY}) scale(${heartScale.toFixed(4)})" d="M 12 21.35 l -1.45 -1.32 C 5.4 16.36 2 13.28 2 9.5 C 2 6.42 4.42 4 7.5 4 c 1.74 0 3.41 0.81 4.5 2.09 C 13.09 4.81 14.76 4 16.5 4 C 19.58 4 22 6.42 22 9.5 c 0 3.78 -3.4 6.86 -8.55 11.54 L 12 21.35 z" fill="${heartRed}"/>`;
 
   // ── Progress bar ────────────────────────────────────────────────────────
   body += `<line x1="${progLeftX}" y1="${progY}" x2="${progRightX}" y2="${progY}" stroke="${trackGrey}" stroke-width="0.4" stroke-linecap="round"/>`;
