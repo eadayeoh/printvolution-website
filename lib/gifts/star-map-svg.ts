@@ -366,12 +366,6 @@ export function buildStarMapSvg({
     : (isPoster ? 38 : SM_GEOM.R);
 
   const inkColor    = foilColor    ?? (isPoster ? '#1a1a1a' : '#d4af37');
-  // Footer text (names / event / location / tagline / caption) sits OUTSIDE
-  // the foil disk on the foil layout — it isn't part of the customer's
-  // foil pick, so it stays in the layout's default gold regardless of
-  // foilColor. Poster layout is single-colour digital print, so its text
-  // tracks inkColor like everything else.
-  const textColor   = isPoster ? inkColor : '#d4af37';
   const bgColor     = materialColor !== undefined ? materialColor : (isPoster ? '#ffffff' : '#1a2740');
   const lineOpacity = isPoster ? 0.85 : 0.55;
   const fontHead    = namesFont    ?? (isPoster ? 'Archivo'          : 'Archivo');
@@ -544,22 +538,21 @@ export function buildStarMapSvg({
       });
     }
   } else {
-    // Foil layout — original four-line stack. Text uses textColor
-    // (fixed gold) so the foil-disk picker doesn't retint copy.
+    // Foil layout — original four-line stack.
     body += emitZoneText(zoneNames, W, H, 1, names.trim() || 'EVA & JOHN', {
-      cx, y: 105, size: 3.6, fontFamily: fontHead, fill: textColor,
+      cx, y: 105, size: 3.6, fontFamily: fontHead, fill: inkColor,
       weight: '600', letterSpacing: 0.4,
     });
     body += emitZoneText(zoneEvent, W, H, 1, event.trim() || 'THE NIGHT WE MET', {
-      cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: textColor,
+      cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: inkColor,
       letterSpacing: 0.4,
     });
     body += emitZoneText(zoneLocation, W, H, 1, locationLabel.trim() || 'LONDON', {
-      cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: textColor,
+      cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: inkColor,
       weight: '700', letterSpacing: 0.6, transform: 'uppercase',
     });
     body += emitZoneText(zoneTagline, W, H, 1, tagline.trim() || 'Under our stars', {
-      cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: textColor,
+      cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: inkColor,
       italic: true,
     });
 
@@ -568,7 +561,7 @@ export function buildStarMapSvg({
     if (dateUtc) captionParts.push(`${fmtDate(dateUtc)} · ${fmtTime(dateUtc)}`);
     if (captionParts.length) {
       body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' · '), {
-        cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: textColor,
+        cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: inkColor,
         letterSpacing: 0.3,
       });
     }
