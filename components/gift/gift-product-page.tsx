@@ -197,7 +197,32 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // photo with a footer block (title / names / year). We keep its inputs
   // flat instead of squeezing them into the surfaces / templates flow.
   const isSongLyrics = product.slug === 'song-lyrics-photo-frame';
-  const [songLayout, setSongLayout] = useState<'song' | 'wedding'>('song');
+  const [songLayout, setSongLayout] = useState<'song' | 'wedding' | 'foil'>('song');
+  const [songSubtitle, setSongSubtitle] = useState<string>('');
+  const [songTagline, setSongTagline] = useState<string>('');
+  // Stable id so the export handler can find the rendered SVG in the DOM
+  // and serialise it for download (with materialColor stripped).
+  const SONG_SVG_ID = 'song-lyrics-svg';
+  function exportSongSvg() {
+    if (typeof document === 'undefined') return;
+    const node = document.getElementById(SONG_SVG_ID) as SVGSVGElement | null;
+    if (!node) return;
+    // Clone and drop the first <rect> (background material) so the file
+    // contains only the foil-printed paths.
+    const clone = node.cloneNode(true) as SVGSVGElement;
+    const bg = clone.querySelector('rect');
+    if (bg && bg.parentNode) bg.parentNode.removeChild(bg);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n${xml}`], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${product.slug}-foil-${Date.now()}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
   const [songLyrics, setSongLyrics] = useState<string>('');
   const [songTitle, setSongTitle]   = useState<string>('OUR SONG');
   const [songNames, setSongNames]   = useState<string>('');
@@ -734,6 +759,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (songTitleFont) notes += `;song_title_font:${songTitleFont}`;
       if (songNamesFont) notes += `;song_names_font:${songNamesFont}`;
       if (songYearFont)  notes += `;song_year_font:${songYearFont}`;
+      if (songSubtitle.trim()) notes += `;song_subtitle:${songSubtitle.trim()}`;
+      if (songTagline.trim())  notes += `;song_tagline:${songTagline.trim()}`;
       if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
       if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
       if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
@@ -1145,10 +1172,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       title={songTitle}
                       names={songNames}
                       year={songYear}
+                      subtitle={songSubtitle}
+                      tagline={songTagline}
                       titleFont={songTitleFont || engravedFont}
-                      namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')}
+                      namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : songLayout === 'foil' ? 'Dancing Script' : 'Dancing Script')}
                       yearFont={songYearFont || 'Archivo'}
                       layout={songLayout}
+                      svgId={SONG_SVG_ID}
                     />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
@@ -1764,12 +1794,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   title={songTitle} onTitle={setSongTitle}
                   names={songNames} onNames={setSongNames}
                   year={songYear} onYear={setSongYear}
+                  subtitle={songSubtitle} onSubtitle={setSongSubtitle}
+                  tagline={songTagline} onTagline={setSongTagline}
                   photoUrl={songPhotoUrl} onPhotoUrl={setSongPhotoUrl}
                   allowedFonts={allowedFonts}
                   titleFont={songTitleFont || engravedFont}  onTitleFont={setSongTitleFont}
                   namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')} onNamesFont={setSongNamesFont}
                   yearFont={songYearFont || 'Archivo'}       onYearFont={setSongYearFont}
                   layout={songLayout} onLayout={setSongLayout}
+                  onExportSvg={exportSongSvg}
                 />
               ) : (
               <>

@@ -11,6 +11,11 @@ type Props = {
   onNames: (s: string) => void;
   year: string;
   onYear: (s: string) => void;
+  /** Foil-layout extras. */
+  subtitle: string;
+  onSubtitle: (s: string) => void;
+  tagline: string;
+  onTagline: (s: string) => void;
   photoUrl: string;
   onPhotoUrl: (s: string) => void;
   allowedFonts: string[];
@@ -23,27 +28,32 @@ type Props = {
   onYearFont: (f: string) => void;
   layout: SongLyricsLayout;
   onLayout: (l: SongLyricsLayout) => void;
+  /** Foil-layout SVG export trigger. Parent owns the actual download. */
+  onExportSvg?: () => void;
 };
 
 export function SongLyricsInputs({
   lyrics, onLyrics, title, onTitle, names, onNames,
-  year, onYear, photoUrl, onPhotoUrl,
+  year, onYear, subtitle, onSubtitle, tagline, onTagline,
+  photoUrl, onPhotoUrl,
   allowedFonts,
   titleFont, onTitleFont, namesFont, onNamesFont, yearFont, onYearFont,
-  layout, onLayout,
+  layout, onLayout, onExportSvg,
 }: Props) {
   // Field labels + placeholders shift with the chosen layout so the inputs
   // match what the customer sees on the preview (year vs full date, etc).
   const isWedding = layout === 'wedding';
+  const isFoil = layout === 'foil';
   return (
     <div style={{ padding: '20px 22px', display: 'grid', gap: 14 }}>
       <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-magenta)' }}>
         Make your record
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {([
-          { v: 'song',    label: 'Song record',  hint: 'Title · Names · EST. year' },
-          { v: 'wedding', label: 'Wedding date', hint: 'Names · Date · Subtitle'   },
+          { v: 'song',    label: 'Song record',   hint: 'Photo · Title · Names · Year' },
+          { v: 'wedding', label: 'Wedding date',  hint: 'Photo · Names · Date · Sub'   },
+          { v: 'foil',    label: 'Gold foil',     hint: 'No photo · Foil-printed SVG'  },
         ] as Array<{ v: SongLyricsLayout; label: string; hint: string }>).map((opt) => {
           const active = layout === opt.v;
           return (
@@ -116,15 +126,41 @@ export function SongLyricsInputs({
       </div>
       <label style={{ display: 'block' }}>
         <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-          Names (e.g. {isWedding ? 'Mercy &amp; Adam' : 'Bruce &amp; Janie'})
+          {isFoil ? 'Greeting (e.g. "Hello Samantha Dear,")' : `Names (e.g. ${isWedding ? 'Mercy & Adam' : 'Bruce & Janie'})`}
         </span>
         <input
           type="text" value={names}
-          onChange={(e) => onNames(e.target.value.slice(0, 50))}
-          placeholder={isWedding ? 'Mercy & Adam' : 'Bruce & Janie'}
+          onChange={(e) => onNames(e.target.value.slice(0, isFoil ? 60 : 50))}
+          placeholder={isFoil ? 'Hello Samantha Dear,' : (isWedding ? 'Mercy & Adam' : 'Bruce & Janie')}
           style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
         />
       </label>
+      {isFoil && (
+        <>
+          <label style={{ display: 'block' }}>
+            <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+              Tagline (under the greeting)
+            </span>
+            <input
+              type="text" value={tagline}
+              onChange={(e) => onTagline(e.target.value.slice(0, 80))}
+              placeholder="I hope you're feelin' fine."
+              style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+            />
+          </label>
+          <label style={{ display: 'block' }}>
+            <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+              Centre subtitle (e.g. "BATON ROUGE")
+            </span>
+            <input
+              type="text" value={subtitle}
+              onChange={(e) => onSubtitle(e.target.value.slice(0, 30))}
+              placeholder="BATON ROUGE"
+              style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
+            />
+          </label>
+        </>
+      )}
       {allowedFonts.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {([
@@ -149,41 +185,52 @@ export function SongLyricsInputs({
           ))}
         </div>
       )}
-      <div style={{ display: 'block' }}>
-        <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-          Photo (centred in the disc)
-        </span>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (!f) return;
-            if (f.size > 15 * 1024 * 1024) { alert('Photo too large (max 15 MB).'); return; }
-            const reader = new FileReader();
-            reader.onload = () => onPhotoUrl(String(reader.result));
-            reader.onerror = () => alert('Could not read that file.');
-            reader.readAsDataURL(f);
-          }}
-          style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, cursor: 'pointer' }}
-        />
-        {photoUrl && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <img src={photoUrl} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--pv-ink)' }} />
-            <button
-              type="button"
-              onClick={() => onPhotoUrl('')}
-              style={{ background: 'transparent', border: '1px solid var(--pv-ink)', padding: '6px 12px', fontFamily: 'var(--pv-f-mono)', fontSize: 11, cursor: 'pointer' }}
-            >
-              Remove
-            </button>
+      {!isFoil && (
+        <div style={{ display: 'block' }}>
+          <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+            Photo (centred in the disc)
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              if (f.size > 15 * 1024 * 1024) { alert('Photo too large (max 15 MB).'); return; }
+              const reader = new FileReader();
+              reader.onload = () => onPhotoUrl(String(reader.result));
+              reader.onerror = () => alert('Could not read that file.');
+              reader.readAsDataURL(f);
+            }}
+            style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, cursor: 'pointer' }}
+          />
+          {photoUrl && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+              <img src={photoUrl} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--pv-ink)' }} />
+              <button
+                type="button"
+                onClick={() => onPhotoUrl('')}
+                style={{ background: 'transparent', border: '1px solid var(--pv-ink)', padding: '6px 12px', fontFamily: 'var(--pv-f-mono)', fontSize: 11, cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
+            ✦ Square crop works best. The photo is masked into a circle in the centre.
           </div>
-        )}
-        <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
-          ✦ Square crop works best. The photo is masked into a circle in the centre.
         </div>
-      </div>
+      )}
+      {isFoil && onExportSvg && (
+        <button
+          type="button"
+          onClick={onExportSvg}
+          style={{ marginTop: 4, padding: '12px 14px', background: 'var(--pv-ink)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'var(--pv-f-mono)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}
+        >
+          ↓ Download foil SVG
+        </button>
+      )}
     </div>
   );
 }

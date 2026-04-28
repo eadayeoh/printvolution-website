@@ -13,14 +13,16 @@
  */
 
 /**
- * Footer layouts:
- *   • 'song'    — Title (bold serif, top) / Names (script, mid) / EST. Year (sans, bottom)
- *                 Use for our-song / favourite-track style products.
- *   • 'wedding' — Names (serif italic, top, big) / Date (sans, mid) / Subtitle (serif italic, bottom)
- *                 Use for first-dance / wedding-vinyl products. The `year` field
- *                 carries the full date string ("27.08.2023") in this layout.
+ * Footer / look layouts:
+ *   • 'song'    — Title (bold serif) / Names (script) / EST. Year. Cream paper
+ *                 with vinyl photo disc. Print on photo paper.
+ *   • 'wedding' — Names (serif italic, big) / Date / Subtitle. Same paper look.
+ *   • 'foil'    — Navy background, gold spiral lyrics, gold script names + serif
+ *                 tagline. Centre is a gold disc with title/subtitle (no photo).
+ *                 Designed for metallic-foil printing — exportSvg() strips the
+ *                 navy background so the file contains only the foil layer.
  */
-export type SongLyricsLayout = 'song' | 'wedding';
+export type SongLyricsLayout = 'song' | 'wedding' | 'foil';
 
 type Props = {
   photoUrl?: string | null;
@@ -28,14 +30,26 @@ type Props = {
   title: string;
   names: string;
   year: string;
+  /** Foil-layout extras. Empty in the other layouts. */
+  subtitle?: string;
+  tagline?: string;
   /** Per-field fonts. `font` is kept as a fallback for back-compat. */
   font?: string;
   titleFont?: string;
   namesFont?: string;
   yearFont?: string;
+  taglineFont?: string;
   layout?: SongLyricsLayout;
-  /** Pink wash colour around the disc — defaults to a soft blush. */
+  /** Pink wash colour around the disc — only used by song / wedding layouts. */
   accentColor?: string;
+  /** Foil colour for the foil layout. Defaults to a warm gold. */
+  foilColor?: string;
+  /** Material colour for the foil layout (the dark canvas behind the gold).
+   *  Set to null when serialising the SVG for the printer so the output
+   *  contains only the foil paths. */
+  materialColor?: string | null;
+  /** Stable id used by the parent to find this SVG in the DOM for download. */
+  svgId?: string;
 };
 
 /**
@@ -113,12 +127,18 @@ export function SongLyricsTemplate({
   title,
   names,
   year,
+  subtitle = '',
+  tagline = '',
   font = 'Playfair Display',
   titleFont,
   namesFont,
   yearFont,
+  taglineFont,
   layout = 'song',
   accentColor = '#f7c7d8',
+  foilColor = '#d4af37',
+  materialColor = '#1a2740',
+  svgId,
 }: Props) {
   // Per-field fonts default to a sensible serif/script/sans combo when the
   // customer hasn't picked one. Falling back to the legacy `font` prop keeps
@@ -126,14 +146,24 @@ export function SongLyricsTemplate({
   const tf = titleFont ?? font;
   const nf = namesFont ?? (layout === 'wedding' ? font : 'Dancing Script');
   const yf = yearFont  ?? 'Archivo';
+  const tagF = taglineFont ?? font;
+  const isFoil = layout === 'foil';
 
   // Empty-state placeholder so the customer can see the layout before they
   // paste real lyrics. Hidden the moment they type anything.
   const lyricsForRender = lyrics.trim()
     || 'Type your song lyrics in the box on the right and they will spiral around your photo here. Long verses look great. Keep it under 600 characters for clean wrapping.';
 
+  // Colour palette switches with the layout. For foil printing the dark
+  // material colour is included only in the on-screen preview — the SVG
+  // export sets materialColor=null to drop it from the file.
+  const lyricsFill = isFoil ? foilColor : '#f4f4f4';
+  const footerInk  = isFoil ? foilColor : '#0d0d0d';
+  const subInk     = isFoil ? foilColor : '#3a3a3a';
+
   return (
     <svg
+      id={svgId}
       viewBox={`0 0 ${W} 130`}
       xmlns="http://www.w3.org/2000/svg"
       style={{ width: '100%', height: '100%', display: 'block', maxHeight: '100%' }}
@@ -150,52 +180,70 @@ export function SongLyricsTemplate({
         <path id="songLyricsSpiral" d={SPIRAL_D} />
       </defs>
 
-      {/* Paper background */}
-      <rect x="0" y="0" width={W} height="130" fill="#ffffff" />
+      {/* Material / paper background. For foil export this can be null so the
+          SVG ships only the gold layer for the foil printer. */}
+      {materialColor !== null && (
+        <rect x="0" y="0" width={W} height="130" fill={isFoil ? materialColor : '#ffffff'} />
+      )}
 
-      {/* Pink wash square (the printed acrylic background) */}
-      <rect x="0" y="0" width={W} height={FOOTER_TOP} fill={accentColor} opacity="0.18" />
-
-      {/* Soft pink halo behind vinyl */}
-      <circle cx={cx} cy={cy} r="46" fill="url(#songWash)" />
-
-      {/* Vinyl record disc */}
-      <circle cx={cx} cy={cy} r="40" fill="#0d0d0d" />
-      {/* Subtle rings on the vinyl for that LP look */}
-      {[39, 36, 30, 24, 18].map((r) => (
-        <circle key={r} cx={cx} cy={cy} r={r} fill="none" stroke="#1f1f1f" strokeWidth="0.15" />
-      ))}
-
-      {/* Photo (clipped to circle in centre of disc) */}
-      {photoUrl ? (
-        <image
-          href={photoUrl}
-          x={cx - photoR}
-          y={cy - photoR}
-          width={photoR * 2}
-          height={photoR * 2}
-          preserveAspectRatio="xMidYMid slice"
-          clipPath="url(#songPhotoClip)"
-        />
-      ) : (
+      {/* Pink wash + vinyl + photo: only in the song / wedding layouts. */}
+      {!isFoil && (
         <>
-          <circle cx={cx} cy={cy} r={photoR} fill="#2a2a2a" />
-          <text x={cx} y={cy + 1} textAnchor="middle" fontSize="2.4" fill="#777"
-                fontFamily="Archivo, sans-serif" letterSpacing="0.2">
-            PHOTO
+          <rect x="0" y="0" width={W} height={FOOTER_TOP} fill={accentColor} opacity="0.18" />
+          <circle cx={cx} cy={cy} r="46" fill="url(#songWash)" />
+          <circle cx={cx} cy={cy} r="40" fill={footerInk} />
+          {[39, 36, 30, 24, 18].map((r) => (
+            <circle key={r} cx={cx} cy={cy} r={r} fill="none" stroke="#1f1f1f" strokeWidth="0.15" />
+          ))}
+          {photoUrl ? (
+            <image
+              href={photoUrl}
+              x={cx - photoR}
+              y={cy - photoR}
+              width={photoR * 2}
+              height={photoR * 2}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath="url(#songPhotoClip)"
+            />
+          ) : (
+            <>
+              <circle cx={cx} cy={cy} r={photoR} fill="#2a2a2a" />
+              <text x={cx} y={cy + 1} textAnchor="middle" fontSize="2.4" fill="#777"
+                    fontFamily="Archivo, sans-serif" letterSpacing="0.2">
+                PHOTO
+              </text>
+            </>
+          )}
+          <circle cx={cx} cy={cy} r="0.7" fill={accentColor} />
+        </>
+      )}
+
+      {/* Foil layout centre: gold disc with title + divider + subtitle. No
+          photo, no vinyl rings — this is the foil-printed label. */}
+      {isFoil && (
+        <>
+          <circle cx={cx} cy={cy} r={photoR + 1} fill={foilColor} />
+          <text x={cx} y={cy - 1.2} textAnchor="middle" fontSize="3.2"
+                fontFamily={`${tf}, Georgia, serif`} fontWeight="700"
+                fill={materialColor ?? '#1a2740'} letterSpacing="0.4">
+            {title.trim() || "CALLIN'"}
+          </text>
+          <line x1={cx - 4} x2={cx + 4} y1={cy + 0.4} y2={cy + 0.4}
+                stroke={materialColor ?? '#1a2740'} strokeWidth="0.25" />
+          <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize="2.6"
+                fontFamily={`${tf}, Georgia, serif`} fontWeight="700"
+                fill={materialColor ?? '#1a2740'} letterSpacing="0.5">
+            {subtitle.trim() || 'BATON ROUGE'}
           </text>
         </>
       )}
 
-      {/* Centre spindle hole */}
-      <circle cx={cx} cy={cy} r="0.7" fill={accentColor} />
-
-      {/* Lyrics text spiraling on the disc (white on black). Font size auto-
-          shrinks for longer text so any paste fits without truncation. */}
+      {/* Lyrics text spiraling on the disc. Gold on navy for foil; white on
+          black for the photo layouts. Font size auto-shrinks. */}
       <text
         fontSize={autoLyricsFontSize(lyricsForRender.length)}
         fontFamily="Archivo, system-ui, sans-serif"
-        fill="#f4f4f4"
+        fill={lyricsFill}
         letterSpacing="0.02"
       >
         <textPath href="#songLyricsSpiral" startOffset="0%" lengthAdjust="spacingAndGlyphs">
@@ -204,22 +252,37 @@ export function SongLyricsTemplate({
       </text>
 
       {/* Footer block */}
-      {layout === 'wedding' ? (
+      {isFoil ? (
+        <>
+          {/* Names — gold script, e.g. "Hello Samantha Dear," */}
+          <text x={cx} y={113} textAnchor="middle" fontSize="6.5"
+                fontFamily={`'${nf}', cursive`} fontStyle="italic"
+                fill={foilColor}>
+            {names.trim() || 'Hello Samantha Dear,'}
+          </text>
+          {/* Tagline — gold serif italic, e.g. "I hope you're feelin' fine." */}
+          <text x={cx} y={122} textAnchor="middle" fontSize="4"
+                fontFamily={`${tagF}, Georgia, serif`} fontStyle="italic"
+                fill={foilColor} letterSpacing="0.2">
+            {tagline.trim() || "I hope you're feelin' fine."}
+          </text>
+        </>
+      ) : layout === 'wedding' ? (
         <>
           {/* Names — serif italic, large, top of footer */}
           <text x={cx} y={108} textAnchor="middle" fontSize="7.5"
                 fontFamily={`${nf}, Georgia, serif`} fontStyle="italic" fontWeight="600"
-                fill="#0d0d0d" letterSpacing="0.4">
+                fill={footerInk} letterSpacing="0.4">
             {names.trim() || 'Mercy & Adam'}
           </text>
           {/* Date — sans, mid */}
           <text x={cx} y={117} textAnchor="middle" fontSize="4.2"
-                fontFamily={`${yf}, sans-serif`} fill="#0d0d0d" letterSpacing="0.3">
+                fontFamily={`${yf}, sans-serif`} fill={footerInk} letterSpacing="0.3">
             {year.trim() || '27.08.2023'}
           </text>
           {/* Subtitle — serif italic, small, bottom (e.g. "OUR FIRST DANCE") */}
           <text x={cx} y={125} textAnchor="middle" fontSize="4.5"
-                fontFamily={`${tf}, Georgia, serif`} fontStyle="italic" fill="#0d0d0d"
+                fontFamily={`${tf}, Georgia, serif`} fontStyle="italic" fill={footerInk}
                 letterSpacing="0.5">
             {title.trim() || 'OUR FIRST DANCE'}
           </text>
@@ -228,19 +291,19 @@ export function SongLyricsTemplate({
         <>
           {/* Song layout: Title / Names / EST. Year */}
           <text x={cx} y={108} textAnchor="middle" fontSize="7"
-                fontFamily={`${tf}, Georgia, serif`} fontWeight="700" fill="#0d0d0d"
+                fontFamily={`${tf}, Georgia, serif`} fontWeight="700" fill={footerInk}
                 letterSpacing="0.4">
             {title.trim() || 'OUR SONG'}
           </text>
           <text x={cx} y={117} textAnchor="middle" fontSize="5.5"
-                fontFamily={`'${nf}', cursive`} fill="#0d0d0d">
+                fontFamily={`'${nf}', cursive`} fill={footerInk}>
             {names.trim() || 'Your & Their Name'}
           </text>
           {/* Hairline divider */}
-          <line x1={cx - 4} x2={cx + 4} y1={121} y2={121} stroke="#0d0d0d" strokeWidth="0.3" />
+          <line x1={cx - 4} x2={cx + 4} y1={121} y2={121} stroke={footerInk} strokeWidth="0.3" />
           <text x={cx} y={126} textAnchor="middle" fontSize="3"
                 fontFamily={`${yf}, sans-serif`} letterSpacing="0.6"
-                fill="#3a3a3a">
+                fill={subInk}>
             EST. {year.trim() || CURRENT_YEAR}
           </text>
         </>
