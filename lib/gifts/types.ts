@@ -325,7 +325,7 @@ export type GiftTemplate = {
    *  customer's inputs are defined by the renderer's React component
    *  on the product page (CityMapInputs / StarMapInputs / SongLyricsInputs).
    */
-  renderer?: 'zones' | 'song_lyrics' | 'city_map' | 'star_map';
+  renderer?: 'zones' | 'song_lyrics' | 'city_map' | 'star_map' | 'spotify_plaque';
   /** Per-template customer colour picker (migration 0079). Overrides
    *  variant.colour_swatches when customer_swatches is non-empty.
    *

@@ -46,6 +46,9 @@ import { CityMapInputs } from '@/components/gift/city-map-inputs';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
+import { SpotifyPlaqueTemplate } from '@/components/gift/spotify-plaque-template';
+import { SpotifyPlaqueInputs } from '@/components/gift/spotify-plaque-inputs';
+import { parseSpotifyTrackId } from '@/lib/gifts/spotify-plaque-svg';
 
 /** Customer-facing wrapper that composites a renderer template inside
  *  a variant's mockup_area rectangle. The parent stage matches the
@@ -343,6 +346,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // gift-sources at fulfilment time.
   const [songPhotoUrl, setSongPhotoUrl] = useState<string>('');
   const [songPhotoAssetId, setSongPhotoAssetId] = useState<string>('');
+
+  // ── Spotify Music Plaque (special-cased product) ──────────────────────────
+  // Detect via renderer='spotify_plaque'. Customer pastes any Spotify
+  // URL — track ID is parsed and the official Spotify scannable code
+  // is hot-linked from scannables.scdn.co (no API key required).
+  const isSpotifyPlaque =
+    templates.some((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
+  const [spotifySongTitle, setSpotifySongTitle] = useState<string>('');
+  const [spotifyArtistName, setSpotifyArtistName] = useState<string>('');
+  const [spotifyUrl, setSpotifyUrl] = useState<string>('');
+  const [spotifyPhotoUrl, setSpotifyPhotoUrl] = useState<string>('');
+  const [spotifyPhotoAssetId, setSpotifyPhotoAssetId] = useState<string>('');
 
   // ── City Map Photo Frame (special-cased product) ──────────────────────────
   // Detect by renderer='city_map' so any product the admin links the template
@@ -788,9 +803,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const customerPickerTemplate = (() => {
     if (activeTemplate) return activeTemplate;
     const rendererSlug =
-      isStarMap   ? 'star_map'
-    : isCityMap   ? 'city_map'
-    : isSongLyrics ? 'song_lyrics'
+      isStarMap       ? 'star_map'
+    : isCityMap       ? 'city_map'
+    : isSongLyrics    ? 'song_lyrics'
+    : isSpotifyPlaque ? 'spotify_plaque'
     : null;
     if (rendererSlug) {
       return templates.find((t) => t.renderer === rendererSlug) ?? null;
@@ -1010,6 +1026,20 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       // gift-sources via this id.
       if (songPhotoAssetId) notes += `${notes ? ';' : ''}song_photo_asset:${songPhotoAssetId}`;
       if (engravedFont)       notes += `${notes ? ';' : ''}song_font:${engravedFont}`;
+    }
+    // Spotify Music Plaque: serialise the customer text fields + the
+    // Spotify URL (full) and the parsed track ID. Production renders
+    // the SVG from these and hot-links scannables.scdn.co for the code.
+    if (isSpotifyPlaque) {
+      if (selectedSize) {
+        notes += `${notes ? ';' : ''}size_slug:${selectedSize.slug};size_w_mm:${selectedSize.width_mm};size_h_mm:${selectedSize.height_mm}`;
+      }
+      if (spotifySongTitle.trim())  notes += `${notes ? ';' : ''}spotify_title:${spotifySongTitle.trim()}`;
+      if (spotifyArtistName.trim()) notes += `${notes ? ';' : ''}spotify_artist:${spotifyArtistName.trim()}`;
+      if (spotifyUrl.trim())        notes += `${notes ? ';' : ''}spotify_url:${spotifyUrl.trim()}`;
+      const trackId = parseSpotifyTrackId(spotifyUrl);
+      if (trackId)                  notes += `${notes ? ';' : ''}spotify_track_id:${trackId}`;
+      if (spotifyPhotoAssetId)      notes += `${notes ? ';' : ''}spotify_photo_asset:${spotifyPhotoAssetId}`;
     }
     // City Map Photo Frame: serialise the coords + footer text + radius so
     // the admin can regenerate the foil-printable SVG from the order.
@@ -1476,7 +1506,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     drag/resize controls let admins position the design
                     rectangle wherever it should sit on the physical
                     product. */}
-                {(isSongLyrics || isCityMap || isStarMap) ? (() => {
+                {(isSongLyrics || isCityMap || isStarMap || isSpotifyPlaque) ? (() => {
                   const variantMockup = shapeMockup.url ?? null;
                   const variantArea   = shapeMockup.area ?? null;
 
@@ -1573,6 +1603,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       // editor preview (no letterbox in the design rect).
                       templateRefDims={(() => {
                         const t = templates.find((t) => (t as { renderer?: string }).renderer === 'star_map');
+                        const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
+                        const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
+                        return w && h ? { width_mm: w, height_mm: h } : null;
+                      })()}
+                    />
+                  ) : isSpotifyPlaque ? (
+                    <SpotifyPlaqueTemplate
+                      photoUrl={spotifyPhotoUrl || null}
+                      songTitle={spotifySongTitle}
+                      artistName={spotifyArtistName}
+                      spotifyTrackId={parseSpotifyTrackId(spotifyUrl)}
+                      templateRefDims={(() => {
+                        const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
                         const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
                         const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
                         return w && h ? { width_mm: w, height_mm: h } : null;
@@ -2260,7 +2303,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   flow entirely, so we re-emit the common pickers here
                   after each renderer-specific input. */}
               {(() => {
-                if (!(isSongLyrics || isCityMap || isStarMap)) return null;
+                if (!(isSongLyrics || isCityMap || isStarMap || isSpotifyPlaque)) return null;
                 // Drives starLayout + cart mode_override, so it sits
                 // ahead of the renderer inputs. Single-template products
                 // auto-pick and skip this UI.
@@ -2502,6 +2545,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   namesFont={starFontNames || 'Archivo'}          onNamesFont={setStarFontNames}
                   eventFont={starFontEvent || 'Archivo'}          onEventFont={setStarFontEvent}
                   taglineFont={starFontTagline || engravedFont}   onTaglineFont={setStarFontTagline}
+                />
+              ) : isSpotifyPlaque ? (
+                <SpotifyPlaqueInputs
+                  songTitle={spotifySongTitle} onSongTitle={setSpotifySongTitle}
+                  artistName={spotifyArtistName} onArtistName={setSpotifyArtistName}
+                  spotifyUrl={spotifyUrl} onSpotifyUrl={setSpotifyUrl}
+                  photoUrl={spotifyPhotoUrl} onPhotoUrl={setSpotifyPhotoUrl}
+                  onPhotoAssetId={setSpotifyPhotoAssetId}
+                  productSlug={product.slug}
                 />
               ) : (
               <>
