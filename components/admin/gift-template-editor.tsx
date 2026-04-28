@@ -201,6 +201,38 @@ export function GiftTemplateEditor({
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
   const [customerCanChangeFont, setCustomerCanChangeFont] = useState(template?.customer_can_change_font ?? false);
+  // Customer colour picker (migration 0079). Per-template — different
+  // templates on the same product can carry different swatch sets.
+  const [customerPickerRole, setCustomerPickerRole] = useState<'none' | 'mockup_swap' | 'foil_overlay'>(
+    (template?.customer_picker_role ?? 'none') as any,
+  );
+  const [customerSwatches, setCustomerSwatches] = useState<
+    Array<{ name: string; hex: string; mockup_url?: string }>
+  >(() =>
+    (template?.customer_swatches ?? []).map((s) => ({
+      name: s.name ?? '',
+      hex: s.hex ?? '#000000',
+      mockup_url: s.mockup_url ?? '',
+    })),
+  );
+  const FOIL_QUICK_ADDS: Array<{ name: string; hex: string }> = [
+    { name: 'Gold',      hex: '#FFD700' },
+    { name: 'Rose Gold', hex: '#B76E79' },
+    { name: 'Silver',    hex: '#C0C0C0' },
+    { name: 'Copper',    hex: '#B87333' },
+    { name: 'Black',     hex: '#0A0A0A' },
+    { name: 'White',     hex: '#FFFFFF' },
+  ];
+  function addCustomerSwatch(s?: { name: string; hex: string }) {
+    if (s && customerSwatches.some((x) => x.name.trim().toLowerCase() === s.name.toLowerCase())) return;
+    setCustomerSwatches((list) => [...list, { name: s?.name ?? '', hex: s?.hex ?? '#000000', mockup_url: '' }]);
+  }
+  function updateCustomerSwatch(i: number, patch: Partial<{ name: string; hex: string; mockup_url: string }>) {
+    setCustomerSwatches((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  }
+  function removeCustomerSwatch(i: number) {
+    setCustomerSwatches((list) => list.filter((_, j) => j !== i));
+  }
   const [refWidthMm, setRefWidthMm] = useState(
     template?.reference_width_mm ? String(template.reference_width_mm) : '',
   );
@@ -387,6 +419,12 @@ export function GiftTemplateEditor({
       reference_height_mm: Number.isFinite(refHParsed) && refHParsed > 0 ? refHParsed : null,
       customer_can_recolor: customerCanRecolor,
       customer_can_change_font: customerCanChangeFont,
+      customer_picker_role: customerPickerRole === 'none' ? null : customerPickerRole,
+      // Strip empty rows so admins clicking the quick-add chips +
+      // not naming them don't pollute the saved data.
+      customer_swatches: customerSwatches
+        .map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: (s.mockup_url ?? '').trim() }))
+        .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
     };
     startTransition(async () => {
       if (template) {
@@ -710,6 +748,125 @@ export function GiftTemplateEditor({
                 </span>
               </span>
             </label>
+
+            {/* ── Customer colour picker (per-template) ─────────────── */}
+            <div className="rounded-lg border-2 border-neutral-200 p-4">
+              <div className="mb-2 text-sm font-bold text-ink">Customer colour picker</div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Optional swatch row shown to customers when this template is active.
+                Lets one product carry templates with <em>different</em> colour sets —
+                e.g. Template A: Red/Blue/Green for mockup-swap; Template B:
+                Gold/Rose Gold/Silver for foil overlay.
+              </div>
+              <label className="mb-3 block">
+                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Picker role</span>
+                <select
+                  value={customerPickerRole}
+                  onChange={(e) => setCustomerPickerRole(e.target.value as any)}
+                  className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                >
+                  <option value="none">None — no picker on this template</option>
+                  <option value="mockup_swap">Mockup swap — pick swaps the displayed photo</option>
+                  <option value="foil_overlay">Foil overlay — pick retints the renderer foil/text</option>
+                </select>
+              </label>
+
+              {customerPickerRole !== 'none' && (
+                <>
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Quick add:</span>
+                    {FOIL_QUICK_ADDS.map((c) => {
+                      const exists = customerSwatches.some(
+                        (s) => s.name.trim().toLowerCase() === c.name.toLowerCase(),
+                      );
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          disabled={exists}
+                          onClick={() => addCustomerSwatch(c)}
+                          title={exists ? `${c.name} already added` : `Add ${c.name} (${c.hex})`}
+                          className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide hover:border-pink hover:text-pink disabled:opacity-40 disabled:hover:border-neutral-300 disabled:hover:text-current"
+                        >
+                          <span aria-hidden style={{ width: 11, height: 11, borderRadius: '50%', background: c.hex, border: '1px solid #0a0a0a' }} />
+                          {c.name}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => addCustomerSwatch()}
+                      className="rounded-full border border-pink bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
+                    >
+                      + custom
+                    </button>
+                  </div>
+
+                  {customerSwatches.length === 0 ? (
+                    <div className="rounded border border-dashed border-neutral-300 p-3 text-center text-[11px] text-neutral-500">
+                      No swatches yet. Quick-add a foil colour above, or click <strong>+ custom</strong> to pick any colour.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {customerSwatches.map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded border border-neutral-200 bg-white p-2">
+                          {/* Native colour picker — admins can pick any
+                              hex, not just the quick-add chips. */}
+                          <input
+                            type="color"
+                            value={/^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#000000'}
+                            onChange={(e) => updateCustomerSwatch(i, { hex: e.target.value })}
+                            className="h-9 w-9 cursor-pointer rounded border-2 border-ink"
+                            title="Pick any colour"
+                          />
+                          <input
+                            value={s.name}
+                            onChange={(e) => updateCustomerSwatch(i, { name: e.target.value })}
+                            placeholder="Name (e.g. Gold)"
+                            className="flex-1 rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                          />
+                          <input
+                            value={s.hex}
+                            onChange={(e) => updateCustomerSwatch(i, { hex: e.target.value })}
+                            className="w-[100px] rounded border-2 border-neutral-200 bg-white px-2 py-1.5 font-mono text-xs"
+                            placeholder="#FFD700"
+                          />
+                          {customerPickerRole === 'mockup_swap' && (
+                            <input
+                              value={s.mockup_url ?? ''}
+                              onChange={(e) => updateCustomerSwatch(i, { mockup_url: e.target.value })}
+                              placeholder="Mockup URL (required for swap)"
+                              className="w-[200px] rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-[11px]"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeCustomerSwatch(i)}
+                            className="rounded-full border border-red-200 p-1 text-red-600 hover:bg-red-50"
+                            title="Remove swatch"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {customerPickerRole === 'mockup_swap' && (
+                    <div className="mt-2 text-[10px] text-neutral-500">
+                      Mockup-swap mode: each swatch needs a mockup URL — the
+                      photo on the variant tile swaps when picked. Without a
+                      URL the swatch is skipped on the customer side.
+                    </div>
+                  )}
+                  {customerPickerRole === 'foil_overlay' && (
+                    <div className="mt-2 text-[10px] text-neutral-500">
+                      Foil-overlay mode: each swatch&apos;s hex retints the
+                      renderer&apos;s foil / text colour. No mockup needed.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 

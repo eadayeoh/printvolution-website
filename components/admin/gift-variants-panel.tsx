@@ -895,6 +895,32 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         </div>
                       )}
                     </div>
+                    {(() => {
+                      // When a linked renderer template owns the
+                      // customer colour picker (migration 0079), the
+                      // per-variant swatches section becomes redundant
+                      // — hide it entirely so admins configure colours
+                      // in one place. Legacy variants (no linked
+                      // renderer template, or template with no picker
+                      // role set) keep the original section.
+                      const tplPickerRole =
+                        (linkedRendererTemplate as { customer_picker_role?: string | null } | null)?.customer_picker_role ?? null;
+                      if (tplPickerRole) {
+                        return (
+                          <div className="rounded border border-dashed border-magenta/40 bg-magenta/5 p-3 text-[11px] leading-snug text-ink">
+                            <div className="font-bold uppercase tracking-wider text-magenta">
+                              Colour picker — managed by template
+                            </div>
+                            <div className="mt-1 text-neutral-600">
+                              The linked template <strong>{linkedRendererTemplate?.name}</strong> defines its own customer colour picker
+                              ({tplPickerRole === 'foil_overlay' ? 'foil overlay' : tplPickerRole === 'mockup_swap' ? 'mockup swap' : tplPickerRole}).
+                              Edit the swatches on the template, not here.
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })() || (
                     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div>
@@ -1043,6 +1069,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         </div>
                       )}
                     </div>
+                    )}
 
                     {/* Per-variant size availability + price-delta
                         overrides. Defaults: all product sizes

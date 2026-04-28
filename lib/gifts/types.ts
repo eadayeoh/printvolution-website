@@ -322,6 +322,18 @@ export type GiftTemplate = {
    *  on the product page (CityMapInputs / StarMapInputs / SongLyricsInputs).
    */
   renderer?: 'zones' | 'song_lyrics' | 'city_map' | 'star_map';
+  /** Per-template customer colour picker (migration 0079). Overrides
+   *  variant.colour_swatches when customer_swatches is non-empty.
+   *
+   *    'none' | null   — no picker for this template
+   *    'mockup_swap'   — pick swaps the displayed photo (uses .mockup_url)
+   *    'foil_overlay'  — pick retints the renderer foil (uses .hex)
+   *
+   *  Lets one product carry multiple templates with DIFFERENT swatch
+   *  sets — e.g. Template A: Red/Blue/Green for mockup-swap; Template B:
+   *  Gold/Rose Gold/Silver for foil overlay. */
+  customer_picker_role?: 'none' | 'mockup_swap' | 'foil_overlay' | null;
+  customer_swatches?: Array<{ name: string; hex: string; mockup_url?: string }>;
 };
 
 export type GiftCropRect = {

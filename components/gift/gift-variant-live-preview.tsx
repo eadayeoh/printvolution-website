@@ -36,6 +36,12 @@ type Props = {
    *  parent gets notified so it can record the choice on the cart line
    *  (or re-composite a bigger preview off this colour's mockup). */
   onColourChange?: (colour: GiftVariantColourSwatch | null) => void;
+  /** Per-template swatch override. When set (active template owns the
+   *  customer colour picker), every variant tile renders with this list
+   *  instead of its own variant.colour_swatches. Empty array hides the
+   *  swatch row entirely. Null/undefined falls back to per-variant
+   *  swatches (legacy / non-renderer products). */
+  swatchOverride?: GiftVariantColourSwatch[] | null;
 };
 
 export function GiftVariantLivePreview({
@@ -45,10 +51,25 @@ export function GiftVariantLivePreview({
   previewUrl,
   title,
   onColourChange,
+  swatchOverride,
 }: Props) {
   // Per-variant selected swatch index. Keyed by variant id so switching
   // the selected tile doesn't reset sibling tiles' swatch choices.
   const [swatchIdxByVariant, setSwatchIdxByVariant] = useState<Record<string, number>>({});
+
+  /** Resolved swatches for a variant — template override (when set)
+   *  always wins over the variant's own list. */
+  const swatchesFor = (v: GiftProductVariant): GiftVariantColourSwatch[] => {
+    if (swatchOverride !== undefined && swatchOverride !== null) {
+      // Empty array intentionally returns empty (hides the row).
+      return swatchOverride.map((s) => ({
+        name: s.name,
+        hex: s.hex,
+        mockup_url: s.mockup_url ?? '',
+      }));
+    }
+    return v.colour_swatches;
+  };
 
   function chooseSwatch(variantId: string, swatchIdx: number, swatch: GiftVariantColourSwatch) {
     setSwatchIdxByVariant((prev) => ({ ...prev, [variantId]: swatchIdx }));
@@ -58,7 +79,8 @@ export function GiftVariantLivePreview({
   function chooseVariant(v: GiftProductVariant) {
     onSelect(v.id);
     const idx = swatchIdxByVariant[v.id];
-    const s = v.colour_swatches[idx];
+    const list = swatchesFor(v);
+    const s = list[idx];
     onColourChange?.(s ?? null);
   }
 
@@ -90,7 +112,8 @@ export function GiftVariantLivePreview({
         {variants.map((v) => {
           const active = v.id === selectedId;
           const swatchIdx = swatchIdxByVariant[v.id];
-          const chosenSwatch = v.colour_swatches[swatchIdx];
+          const variantSwatches = swatchesFor(v);
+          const chosenSwatch = variantSwatches[swatchIdx];
           const displayedMockup = chosenSwatch?.mockup_url || v.mockup_url;
           return (
             <div
@@ -167,7 +190,7 @@ export function GiftVariantLivePreview({
                       variant tiles compact so the grid scans as "pick a base". */}
                 </div>
               </button>
-              {v.colour_swatches.length > 0 && (
+              {variantSwatches.length > 0 && (
                 <div
                   style={{
                     padding: '10px 10px 12px',
@@ -197,7 +220,7 @@ export function GiftVariantLivePreview({
                       flexWrap: 'wrap',
                     }}
                   >
-                    {v.colour_swatches.map((s, sIdx) => {
+                    {variantSwatches.map((s, sIdx) => {
                       const activeSwatch = sIdx === swatchIdx;
                       return (
                         <button

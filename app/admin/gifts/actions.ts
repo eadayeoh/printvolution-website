@@ -400,6 +400,17 @@ const TemplateSchema = z.object({
   reference_height_mm: z.number().positive().nullable().optional(),
   customer_can_recolor: z.boolean().default(false),
   customer_can_change_font: z.boolean().default(false),
+  // Per-template customer colour picker (migration 0079).
+  customer_picker_role: z.enum(['none', 'mockup_swap', 'foil_overlay']).nullable().optional(),
+  customer_swatches: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex must be #RRGGBB'),
+        mockup_url: z.string().default(''),
+      }),
+    )
+    .default([]),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {

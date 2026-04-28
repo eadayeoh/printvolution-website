@@ -769,6 +769,36 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     ? templates.find((t) => t.id === selectedTemplateId) ?? null
     : null;
 
+  // Effective customer-picker template — the one whose colour swatches
+  // the customer is offered. For renderer-driven products this is the
+  // template flagged with that renderer (since there's no customer
+  // template-pick step). For zones products it's whatever they picked.
+  const customerPickerTemplate = (() => {
+    const rendererSlug =
+      isStarMap   ? 'star_map'
+    : isCityMap   ? 'city_map'
+    : isSongLyrics ? 'song_lyrics'
+    : null;
+    if (rendererSlug) {
+      return templates.find((t) => (t as { renderer?: string }).renderer === rendererSlug) ?? null;
+    }
+    return activeTemplate;
+  })();
+  // Resolved swatch list:
+  //   - Template carries customer_picker_role = 'none' → empty array (hides row)
+  //   - Template carries 'mockup_swap' or 'foil_overlay' WITH swatches → those win
+  //   - Otherwise undefined → falls back to per-variant colour_swatches (legacy)
+  const customerPickerRole =
+    (customerPickerTemplate as { customer_picker_role?: string | null } | null)?.customer_picker_role ?? null;
+  const customerTemplateSwatches =
+    (customerPickerTemplate as { customer_swatches?: Array<{ name: string; hex: string; mockup_url?: string }> } | null)?.customer_swatches ?? [];
+  const swatchOverride: Array<{ name: string; hex: string; mockup_url: string }> | null =
+    customerPickerRole === 'none'
+      ? []
+      : (customerPickerRole && customerTemplateSwatches.length > 0
+          ? customerTemplateSwatches.map((s) => ({ name: s.name, hex: s.hex, mockup_url: s.mockup_url ?? '' }))
+          : null);
+
   // Multi-surface variants let the customer add to cart with text-only
   // fills — no server preview needed. For every other flow we still
   // require a server-generated preview.
@@ -2200,6 +2230,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         onSelect={setSelectedVariantId}
                         previewUrl={null}
                         onColourChange={setSelectedColour}
+                        swatchOverride={swatchOverride}
                       />
                     </ComposeSection>
                   );
@@ -2625,6 +2656,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       onSelect={setSelectedVariantId}
                       previewUrl={preview?.previewUrl ?? null}
                       onColourChange={setSelectedColour}
+                      swatchOverride={swatchOverride}
                     />
                   </ComposeSection>
                 );
