@@ -490,9 +490,14 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     // Bulk-fetch mode_override for any referenced templates so a
     // multi-SKU product (e.g. Star Map: foil vs poster) routes by the
     // customer's pick instead of the product's default mode.
-    const giftRefs = giftItems.map((i) => parseGiftRefs(i.personalisation_notes));
+    const itemsWithRefs = giftItems.map((item) => ({
+      item,
+      refs: parseGiftRefs(item.personalisation_notes),
+    }));
     const templateIds = Array.from(
-      new Set(giftRefs.map((r) => r.templateId).filter((id): id is string => !!id)),
+      new Set(
+        itemsWithRefs.map(({ refs }) => refs.templateId).filter((id): id is string => !!id),
+      ),
     );
     const templateOverrides = new Map<string, string | null>();
     if (templateIds.length > 0) {
@@ -504,10 +509,9 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
         templateOverrides.set(t.id as string, (t.mode_override as string | null) ?? null);
       }
     }
-    const giftRows = giftItems.map((i, idx) => {
-      const refs = giftRefs[idx];
+    const giftRows = itemsWithRefs.map(({ item: i, refs }) => {
       const info = giftSlugToInfo.get(i.product_slug)!;
-      const overrideMode = refs.templateId ? templateOverrides.get(refs.templateId) ?? null : null;
+      const overrideMode = refs.templateId ? templateOverrides.get(refs.templateId) : undefined;
       return {
         order_id: order.id,
         gift_product_id: info.id,

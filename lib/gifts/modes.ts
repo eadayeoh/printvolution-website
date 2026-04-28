@@ -38,3 +38,11 @@ export async function getModeBySlug(slug: GiftMode): Promise<GiftModeMeta | null
   const { data } = await sb.from('gift_modes').select('*').eq('slug', slug).maybeSingle();
   return data as GiftModeMeta | null;
 }
+
+/** Editor-friendly subset — drop fields the form doesn't need + apply a
+ *  slug fallback so dropdowns never render a blank label. */
+export function toModeOptions(
+  modes: GiftModeMeta[],
+): Array<Pick<GiftModeMeta, 'slug' | 'label'>> {
+  return modes.map((m) => ({ slug: m.slug, label: m.label || m.slug }));
+}

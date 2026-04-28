@@ -190,7 +190,7 @@ export function GiftTemplateEditor({
   /** Active gift_modes rows, used to populate the mode-override
    *  dropdown. Pulled fresh per page render so newly-added admin
    *  modes show up without a code change. */
-  availableModes?: Array<Pick<GiftModeMeta, 'slug' | 'label'>>;
+  availableModes: Array<Pick<GiftModeMeta, 'slug' | 'label'>>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -899,7 +899,7 @@ export function GiftTemplateEditor({
                 className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
               >
                 <option value="">Inherit from product</option>
-                {(availableModes ?? []).map((m) => (
+                {availableModes.map((m) => (
                   <option key={m.slug} value={m.slug}>
                     {m.label} ({m.slug})
                   </option>

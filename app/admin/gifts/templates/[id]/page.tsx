@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { GiftTemplateEditor } from '@/components/admin/gift-template-editor';
 import { getTemplateByIdAdmin, listAllTemplatesAdmin } from '@/lib/gifts/data';
-import { listAllModesAdmin } from '@/lib/gifts/modes';
+import { listAllModesAdmin, toModeOptions } from '@/lib/gifts/modes';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +19,7 @@ export default async function EditTemplatePage({ params }: { params: { id: strin
     <GiftTemplateEditor
       template={template}
       existingGroups={existingGroups}
-      availableModes={modes.map((m) => ({ slug: m.slug, label: m.label || m.slug }))}
+      availableModes={toModeOptions(modes)}
     />
   );
 }
