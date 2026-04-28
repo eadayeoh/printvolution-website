@@ -12,8 +12,6 @@
  * re-render the same component for output, since SVG scales losslessly.
  */
 
-import { useMemo } from 'react';
-
 type Props = {
   photoUrl?: string | null;
   lyrics: string;
@@ -50,6 +48,25 @@ function spiralPath(cx: number, cy: number, outerR: number, innerR: number, turn
   return `M ${pts[0]} L ${pts.slice(1).join(' L ')}`;
 }
 
+// VIEWBOX (mm). 100 wide × 130 tall = 100mm vinyl square + 30mm footer.
+// Vinyl area is 0–100; footer area is 100–130.
+const W = 100;
+const FOOTER_TOP = 100;
+
+// Spiral geometry — outer just inside the vinyl edge, inner just outside
+// the photo circle. 7 turns gives ~enough text capacity for a short verse.
+const cx = 50;
+const cy = 50;
+const outerR = 38;   // vinyl outer is ~40
+const photoR = 13;   // centre photo radius
+const innerR = photoR + 1.5; // gap between innermost text + photo edge
+const turns = 7;
+
+// Pre-computed at module load — these constants never change between renders.
+const SPIRAL_D = spiralPath(cx, cy, outerR, innerR, turns);
+
+const CURRENT_YEAR = new Date().getFullYear();
+
 export function SongLyricsTemplate({
   photoUrl,
   lyrics,
@@ -59,24 +76,6 @@ export function SongLyricsTemplate({
   font = 'Playfair Display',
   accentColor = '#f7c7d8',
 }: Props) {
-  // VIEWBOX (mm). 100 wide × 130 tall = 100mm vinyl square + 30mm footer.
-  // Vinyl area is 0–100; footer area is 100–130.
-  const W = 100;
-  const FOOTER_TOP = 100;
-
-  // Spiral geometry — outer just inside the vinyl edge, inner just outside
-  // the photo circle. 7 turns gives ~enough text capacity for a short verse.
-  const cx = 50;
-  const cy = 50;
-  const outerR = 38;   // vinyl outer is ~40
-  const photoR = 13;   // centre photo radius
-  const innerR = photoR + 1.5; // gap between innermost text + photo edge
-  const turns = 7;
-
-  const spiralD = useMemo(
-    () => spiralPath(cx, cy, outerR, innerR, turns),
-    [],
-  );
 
   // Empty-state placeholder so the customer can see the layout before they
   // paste real lyrics. Hidden the moment they type anything.
@@ -98,7 +97,7 @@ export function SongLyricsTemplate({
         <clipPath id="songPhotoClip">
           <circle cx={cx} cy={cy} r={photoR} />
         </clipPath>
-        <path id="songLyricsSpiral" d={spiralD} />
+        <path id="songLyricsSpiral" d={SPIRAL_D} />
       </defs>
 
       {/* Paper background */}
@@ -168,7 +167,7 @@ export function SongLyricsTemplate({
       <text x={cx} y={126} textAnchor="middle" fontSize="3"
             fontFamily="Archivo, sans-serif" letterSpacing="0.6"
             fill="#3a3a3a">
-        EST. {year.trim() || new Date().getFullYear()}
+        EST. {year.trim() || CURRENT_YEAR}
       </text>
     </svg>
   );
