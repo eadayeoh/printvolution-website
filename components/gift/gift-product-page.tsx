@@ -1370,6 +1370,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       namesFont={starFontNames || 'Archivo'}
                       eventFont={starFontEvent || 'Archivo'}
                       taglineFont={starFontTagline || (starLayout === 'poster' ? 'Playfair Display' : engravedFont)}
+                      // Pass admin-authored layout from the linked
+                      // gift_template (renderer='star_map'). Disk
+                      // position + footer text positions / fonts /
+                      // sizes / colours come from here.
+                      zones={(templates.find((t) => (t as { renderer?: string }).renderer === 'star_map')?.zones_json as any) ?? null}
                     />
                   );
 

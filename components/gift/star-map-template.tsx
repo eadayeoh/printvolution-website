@@ -20,6 +20,7 @@ import {
   buildStarMapScene,
   type StarMapLayout,
 } from '@/lib/gifts/star-map-svg';
+import type { GiftTemplateZone } from '@/lib/gifts/types';
 
 type Props = {
   lat: number | null;
@@ -40,6 +41,10 @@ type Props = {
   layout?: StarMapLayout;
   foilColor?: string;
   materialColor?: string | null;
+  /** Optional admin-authored layout zones from the template editor.
+   *  Star map renderer reads disk position from the render_anchor and
+   *  footer text positions/fonts/sizes from named text zones. */
+  zones?: GiftTemplateZone[] | null;
 };
 
 export function StarMapTemplate({
@@ -60,6 +65,7 @@ export function StarMapTemplate({
   layout,
   foilColor,
   materialColor,
+  zones,
 }: Props) {
   // Scene is the only expensive bit (190 stars × atan2/sin/cos + constellation
   // segments). Recompute only when the inputs that affect it change.
@@ -88,8 +94,9 @@ export function StarMapTemplate({
       layout,
       foilColor,
       materialColor,
+      zones,
     }),
-    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor],
+    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones],
   );
 
   return (

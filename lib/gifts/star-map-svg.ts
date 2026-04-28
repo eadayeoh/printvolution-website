@@ -14,6 +14,7 @@
  */
 
 import { STARS, CONSTELLATIONS, type CatStar } from './star-catalogue';
+import type { GiftTemplateZone, GiftTemplateTextZone, GiftTemplateRenderAnchorZone } from './types';
 
 // ── Geometry (mm — viewBox is 0 0 W H) ──────────────────────────────────────
 //
@@ -238,7 +239,89 @@ export type BuildStarMapSvgInput = {
   /** Material colour behind the foil. null drops the background <rect> for
    *  the foil printer (only the gold paths ship). */
   materialColor?: string | null;
+  /** Optional admin-authored layout zones from the template editor.
+   *  Recognised:
+   *    - render_anchor with anchor_kind='star_disk'  → sky disk position + size
+   *    - text zone id='star_names'    → top names line
+   *    - text zone id='star_event'    → event subtitle
+   *    - text zone id='star_location' → big location label
+   *    - text zone id='star_tagline'  → italic tagline
+   *    - text zone id='star_caption'  → coords/date caption (under disk)
+   *  Each text zone honours its own font_family / font_size_mm /
+   *  color / align / text_transform / letter_spacing_em. Anything not
+   *  found in zones falls back to the renderer's hardcoded defaults so
+   *  existing call sites and templates without zones keep working. */
+  zones?: GiftTemplateZone[] | null;
 };
+
+// ── Zone helpers ────────────────────────────────────────────────────────────
+//
+// Template zones use the editor's 0..200 canvas units for both axes. The
+// star map renderer's viewBox is 100×130 (foil) or 100×140 (poster). We
+// scale zone x → svg by W/200 and y → svg by H/200.
+
+function findTextZone(zones: GiftTemplateZone[] | null | undefined, id: string): GiftTemplateTextZone | null {
+  if (!zones) return null;
+  for (const z of zones) {
+    if (z.type === 'text' && z.id === id) return z;
+  }
+  return null;
+}
+
+function findRenderAnchor(zones: GiftTemplateZone[] | null | undefined, kind: string): GiftTemplateRenderAnchorZone | null {
+  if (!zones) return null;
+  for (const z of zones) {
+    if (z.type === 'render_anchor' && (z as GiftTemplateRenderAnchorZone).anchor_kind === kind) {
+      return z as GiftTemplateRenderAnchorZone;
+    }
+  }
+  return null;
+}
+
+function emitZoneText(
+  zone: GiftTemplateTextZone | null,
+  W: number, H: number, scale: number,
+  text: string,
+  defaults: {
+    cx: number; y: number;
+    size: number;
+    fontFamily: string;
+    fill: string;
+    weight?: string;
+    italic?: boolean;
+    letterSpacing?: number;
+    transform?: 'uppercase' | 'lowercase' | 'capitalize' | 'none';
+  },
+): string {
+  // Resolve actual draw params: zone overrides → defaults.
+  const anchor = (zone?.align ?? 'center') === 'left'
+    ? 'start' : (zone?.align ?? 'center') === 'right' ? 'end' : 'middle';
+  const x = zone
+    ? (zone.x_mm + (anchor === 'middle' ? zone.width_mm / 2 : anchor === 'end' ? zone.width_mm : 0)) * (W / 200)
+    : defaults.cx;
+  const y = zone
+    ? (zone.y_mm + zone.height_mm / 2) * (H / 200)
+    : defaults.y;
+  const size = (zone?.font_size_mm ?? defaults.size / scale) * scale;
+  const fontFamily = zone?.font_family ?? defaults.fontFamily;
+  const fill = zone?.color ?? defaults.fill;
+  const weight = zone?.font_weight ?? defaults.weight ?? '400';
+  const italic = (zone?.font_style === 'italic') || defaults.italic;
+  const letter = zone?.letter_spacing_em ?? defaults.letterSpacing ?? 0;
+  const transform = zone?.text_transform ?? defaults.transform ?? 'none';
+
+  // Apply text_transform — SVG doesn't support CSS text-transform, so
+  // we munge the string before output.
+  const munged =
+    transform === 'uppercase' ? text.toUpperCase()
+    : transform === 'lowercase' ? text.toLowerCase()
+    : transform === 'capitalize' ? text.replace(/\b\w/g, (c) => c.toUpperCase())
+    : text;
+
+  const dyForCenter = size * 0.35;   // approximate baseline shim
+  const out = `<text x="${x.toFixed(2)}" y="${(y + dyForCenter).toFixed(2)}" text-anchor="${anchor}" font-size="${size.toFixed(2)}" font-family="${fontFamily}, sans-serif" letter-spacing="${letter}"${italic ? ' font-style="italic"' : ''}${weight !== '400' ? ` font-weight="${weight}"` : ''} fill="${fill}">${esc(munged)}</text>`;
+  return out;
+}
 
 export function buildStarMapSvg({
   scene,
@@ -257,6 +340,7 @@ export function buildStarMapSvg({
   layout = 'foil',
   foilColor,
   materialColor,
+  zones,
 }: BuildStarMapSvgInput): string {
   const isPoster = layout === 'poster';
 
@@ -264,9 +348,22 @@ export function buildStarMapSvg({
   // only chrome and colours change.
   const W = isPoster ? 100 : SM_GEOM.W;
   const H = isPoster ? 140 : SM_GEOM.H;
-  const CX = W / 2;
-  const CY = isPoster ? 53 : SM_GEOM.CY;       // disk slightly higher on poster
-  const R  = isPoster ? 38 : SM_GEOM.R;         // smaller disk leaves room for the title
+  // Default disk position. If the template carries a render_anchor with
+  // anchor_kind='star_disk', we let the admin override the disk's
+  // centre + radius — the editor in 0..200 canvas units, scaled into
+  // the renderer viewBox (100 × 130/140) here.
+  const diskAnchor = findRenderAnchor(zones, 'star_disk');
+  const CX = diskAnchor
+    ? (diskAnchor.x_mm + diskAnchor.width_mm / 2) * (W / 200)
+    : W / 2;
+  const CY = diskAnchor
+    ? (diskAnchor.y_mm + diskAnchor.height_mm / 2) * (H / 200)
+    : (isPoster ? 53 : SM_GEOM.CY);
+  const R = diskAnchor
+    // Use the smaller of the two half-extents so the disk always fits
+    // inside the rectangle the admin drew.
+    ? Math.min(diskAnchor.width_mm * (W / 200), diskAnchor.height_mm * (H / 200)) / 2
+    : (isPoster ? 38 : SM_GEOM.R);
 
   const inkColor    = foilColor    ?? (isPoster ? '#1a1a1a' : '#d4af37');
   const bgColor     = materialColor !== undefined ? materialColor : (isPoster ? '#ffffff' : '#1a2740');
@@ -363,7 +460,19 @@ export function buildStarMapSvg({
   }
 
   // ── Footer ────────────────────────────────────────────────────────────────
+  //
+  // Each footer text uses a named text zone if one exists in the
+  // template (id='star_names', 'star_event', 'star_location',
+  // 'star_tagline', 'star_caption'). The zone overrides position +
+  // font + size + colour + alignment + transform. Anything not zoned
+  // falls back to the renderer's hardcoded layout so existing
+  // templates without zones keep rendering exactly as before.
   const cx = W / 2;
+  const zoneNames    = findTextZone(zones, 'star_names');
+  const zoneEvent    = findTextZone(zones, 'star_event');
+  const zoneLocation = findTextZone(zones, 'star_location');
+  const zoneTagline  = findTextZone(zones, 'star_tagline');
+  const zoneCaption  = findTextZone(zones, 'star_caption');
 
   if (isPoster) {
     // Poster layout — bold all-caps title block, em-dash flanked subtitle,
@@ -373,8 +482,11 @@ export function buildStarMapSvg({
     const captionY   = subtitleY + 6.5;
     const taglineY   = captionY + 6.5;
 
-    const titleText = (locationLabel.trim() || event.trim() || 'THE HAPPIEST DAY').toUpperCase();
-    body += `<text x="${cx}" y="${titleY}" text-anchor="middle" font-size="7.2" font-family="${fontLoc}, sans-serif" font-weight="800" letter-spacing="0.6" fill="${inkColor}">${esc(titleText)}</text>`;
+    const titleText = (locationLabel.trim() || event.trim() || 'THE HAPPIEST DAY');
+    body += emitZoneText(zoneLocation, W, H, 1, titleText, {
+      cx, y: titleY, size: 7.2, fontFamily: fontLoc, fill: inkColor,
+      weight: '800', letterSpacing: 0.6, transform: 'uppercase',
+    });
 
     // Subtitle with em-dash flanking — only emit if there's content.
     // Default convention: "STARS ABOVE <CITY>" so even an empty event
@@ -383,16 +495,21 @@ export function buildStarMapSvg({
       ? `Stars above ${locationLabel.trim()}`
       : 'Stars above the world');
     const subText = subRaw.toUpperCase();
-    // Layout: ─── SUBTITLE ───  centred. Compute approximate text width
-    // from char count so the rules sit just outside the text block.
-    const approxWidth = Math.min(60, 1.7 * subText.length);
-    const ruleLen = 8;
-    const gap = 2.5;
-    const halfText = approxWidth / 2;
-    const ruleY = subtitleY - 1.2;
-    body += `<line x1="${(cx - halfText - gap - ruleLen).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx - halfText - gap).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
-    body += `<line x1="${(cx + halfText + gap).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx + halfText + gap + ruleLen).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
-    body += `<text x="${cx}" y="${subtitleY}" text-anchor="middle" font-size="3.2" font-family="${fontEvent}, sans-serif" letter-spacing="0.5" fill="${inkColor}">${esc(subText)}</text>`;
+
+    // Em-dash rules only when the admin hasn't moved the subtitle.
+    if (!zoneEvent) {
+      const approxWidth = Math.min(60, 1.7 * subText.length);
+      const ruleLen = 8;
+      const gap = 2.5;
+      const halfText = approxWidth / 2;
+      const ruleY = subtitleY - 1.2;
+      body += `<line x1="${(cx - halfText - gap - ruleLen).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx - halfText - gap).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
+      body += `<line x1="${(cx + halfText + gap).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx + halfText + gap + ruleLen).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
+    }
+    body += emitZoneText(zoneEvent, W, H, 1, subText, {
+      cx, y: subtitleY, size: 3.2, fontFamily: fontEvent, fill: inkColor,
+      letterSpacing: 0.5,
+    });
 
     // Tiny mono caption — coords + date + names if provided.
     const captionParts: string[] = [];
@@ -400,29 +517,53 @@ export function buildStarMapSvg({
     if (dateUtc) captionParts.push(fmtDate(dateUtc));
     if (names.trim()) captionParts.push(names.trim());
     if (captionParts.length) {
-      body += `<text x="${cx}" y="${captionY}" text-anchor="middle" font-size="2.2" font-family="Archivo, sans-serif" letter-spacing="0.4" fill="${inkColor}" opacity="0.75">${esc(captionParts.join(' / '))}</text>`;
+      body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' / '), {
+        cx, y: captionY, size: 2.2, fontFamily: 'Archivo', fill: inkColor,
+        letterSpacing: 0.4,
+      });
     }
 
     if (tagline.trim()) {
-      body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="2.6" font-style="italic" font-family="${fontTagline}, Georgia, serif" fill="${inkColor}" opacity="0.85">${esc(tagline.trim())}</text>`;
+      body += emitZoneText(zoneTagline, W, H, 1, tagline.trim(), {
+        cx, y: taglineY, size: 2.6, fontFamily: fontTagline, fill: inkColor,
+        italic: true,
+      });
+    }
+    if (zoneNames && names.trim()) {
+      // Customer-supplied names are surfaced as a separate top line
+      // when the admin gave them a dedicated zone.
+      body += emitZoneText(zoneNames, W, H, 1, names.trim(), {
+        cx, y: CY - R - 6, size: 3.6, fontFamily: fontHead, fill: inkColor,
+        weight: '600', letterSpacing: 0.4, transform: 'uppercase',
+      });
     }
   } else {
     // Foil layout — original four-line stack.
-    const namesY   = 105;
-    const eventY   = 110;
-    const locY     = 119;
-    const taglineY = 125;
-
-    body += `<text x="${cx}" y="${namesY}" text-anchor="middle" font-size="3.6" font-family="${fontHead}, sans-serif" letter-spacing="0.4" fill="${inkColor}" font-weight="600">${esc(names.trim() || 'EVA & JOHN')}</text>`;
-    body += `<text x="${cx}" y="${eventY}" text-anchor="middle" font-size="3.2" font-family="${fontEvent}, sans-serif" letter-spacing="0.4" fill="${inkColor}">${esc(event.trim() || 'THE NIGHT WE MET')}</text>`;
-    body += `<text x="${cx}" y="${locY}" text-anchor="middle" font-size="6.5" font-family="${fontLoc}, Georgia, serif" font-weight="700" letter-spacing="0.6" fill="${inkColor}">${esc((locationLabel.trim() || 'LONDON').toUpperCase())}</text>`;
-    body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="3.4" font-style="italic" font-family="${fontTagline}, Georgia, serif" fill="${inkColor}">${esc(tagline.trim() || 'Under our stars')}</text>`;
+    body += emitZoneText(zoneNames, W, H, 1, names.trim() || 'EVA & JOHN', {
+      cx, y: 105, size: 3.6, fontFamily: fontHead, fill: inkColor,
+      weight: '600', letterSpacing: 0.4,
+    });
+    body += emitZoneText(zoneEvent, W, H, 1, event.trim() || 'THE NIGHT WE MET', {
+      cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: inkColor,
+      letterSpacing: 0.4,
+    });
+    body += emitZoneText(zoneLocation, W, H, 1, locationLabel.trim() || 'LONDON', {
+      cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: inkColor,
+      weight: '700', letterSpacing: 0.6, transform: 'uppercase',
+    });
+    body += emitZoneText(zoneTagline, W, H, 1, tagline.trim() || 'Under our stars', {
+      cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: inkColor,
+      italic: true,
+    });
 
     const captionParts: string[] = [];
     if (coordinates && coordinates.trim()) captionParts.push(coordinates.trim());
     if (dateUtc) captionParts.push(`${fmtDate(dateUtc)} · ${fmtTime(dateUtc)}`);
     if (captionParts.length) {
-      body += `<text x="${cx}" y="${CY + R + 4.2}" text-anchor="middle" font-size="1.7" font-family="Archivo, sans-serif" letter-spacing="0.3" fill="${inkColor}" opacity="0.75">${esc(captionParts.join(' · '))}</text>`;
+      body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' · '), {
+        cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: inkColor,
+        letterSpacing: 0.3,
+      });
     }
   }
 

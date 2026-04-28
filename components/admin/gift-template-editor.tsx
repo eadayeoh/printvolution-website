@@ -18,6 +18,7 @@ import {
   type GiftTemplateImageZone,
   type GiftTemplateTextZone,
   type GiftTemplateCalendarZone,
+  type GiftTemplateRenderAnchorZone,
   type GiftMode,
 } from '@/lib/gifts/types';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
@@ -48,6 +49,67 @@ function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
 
 function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
   return (z as GiftTemplateCalendarZone).type === 'calendar';
+}
+
+function isRenderAnchorZone(z: GiftTemplateZone): z is GiftTemplateRenderAnchorZone {
+  return (z as GiftTemplateRenderAnchorZone).type === 'render_anchor';
+}
+
+/** Seed defaults for renderer-driven templates so admins start with
+ *  a sensible layout they can drag instead of an empty canvas.
+ *  Returns the zones expressed in 0..200 canvas units (TEMPLATE_W/H). */
+function defaultZonesForRenderer(renderer: string): GiftTemplateZone[] {
+  if (renderer === 'star_map') {
+    // Mirror the renderer's hardcoded foil layout: disk roughly centred
+    // top half, four-line footer below. Admin can drag any of these.
+    return [
+      {
+        type: 'render_anchor',
+        anchor_kind: 'star_disk',
+        id: 'star_disk',
+        label: 'Sky disk · code-driven · drag to position',
+        x_mm: 12, y_mm: 7,           // ≈ (6, 6) in viewBox / R≈44
+        width_mm: 176, height_mm: 130,
+      },
+      {
+        type: 'text', id: 'star_names', label: 'Names',
+        x_mm: 20, y_mm: 154, width_mm: 160, height_mm: 14,
+        font_family: 'Archivo', font_size_mm: 7.2, font_weight: '600',
+        align: 'center', color: '#d4af37', letter_spacing_em: 0.05,
+        text_transform: 'none', editable: false,
+      },
+      {
+        type: 'text', id: 'star_event', label: 'Event subtitle',
+        x_mm: 20, y_mm: 162, width_mm: 160, height_mm: 12,
+        font_family: 'Archivo', font_size_mm: 6.4,
+        align: 'center', color: '#d4af37', letter_spacing_em: 0.05,
+        text_transform: 'uppercase', editable: false,
+      },
+      {
+        type: 'text', id: 'star_location', label: 'Location label',
+        x_mm: 20, y_mm: 175, width_mm: 160, height_mm: 18,
+        font_family: 'Playfair Display', font_size_mm: 13,
+        font_weight: '700', align: 'center', color: '#d4af37',
+        letter_spacing_em: 0.07, text_transform: 'uppercase',
+        editable: false,
+      },
+      {
+        type: 'text', id: 'star_tagline', label: 'Tagline (italic)',
+        x_mm: 20, y_mm: 188, width_mm: 160, height_mm: 10,
+        font_family: 'Playfair Display', font_size_mm: 6.8,
+        font_style: 'italic', align: 'center', color: '#d4af37',
+        editable: false,
+      },
+      {
+        type: 'text', id: 'star_caption', label: 'Coords / date caption',
+        x_mm: 20, y_mm: 145, width_mm: 160, height_mm: 7,
+        font_family: 'Archivo', font_size_mm: 3.4,
+        align: 'center', color: '#d4af37', letter_spacing_em: 0.04,
+        editable: false,
+      },
+    ];
+  }
+  return [];
 }
 
 function makeImageZone(n: number): GiftTemplateImageZone {
@@ -153,12 +215,24 @@ export function GiftTemplateEditor({
     if (!w || !h || w <= 0 || h <= 0) return '1 / 1';
     return `${w} / ${h}`;
   })();
-  const [zones, setZones] = useState<GiftTemplateZone[]>(
-    ((template?.zones_json as GiftTemplateZone[]) ?? []).map((z) => ({
-      ...z,
-      type: z.type ?? 'image',
-    })) as GiftTemplateZone[]
-  );
+  const [zones, setZones] = useState<GiftTemplateZone[]>(() => {
+    const raw = (template?.zones_json as GiftTemplateZone[]) ?? [];
+    if (raw.length > 0) {
+      return raw.map((z) => ({
+        ...z,
+        type: z.type ?? 'image',
+      })) as GiftTemplateZone[];
+    }
+    // Empty zones + renderer-driven template → seed defaults so the
+    // admin can drag positions/fonts/sizes instead of starting blank.
+    // First save persists them. zones_json is the only schema slot
+    // we use for renderer layout — same column the editor already saves.
+    const r = template?.renderer;
+    if (r && r !== 'zones') {
+      return defaultZonesForRenderer(r);
+    }
+    return [];
+  });
 
   // Renderer routing — read-only in the editor for now. Renderer-driven
   // templates (city_map / star_map / song_lyrics) ignore zones_json
@@ -184,7 +258,8 @@ export function GiftTemplateEditor({
     if (renderer === 'star_map') {
       // Static example — current date, Singapore-ish coords. Zero-cost,
       // pure compute, runs in the admin editor without a network round
-      // trip.
+      // trip. Pass the current zones so the preview reflects whatever
+      // the admin has dragged for disk position + footer text layout.
       const scene = buildStarMapScene(1.29, 103.85, new Date());
       return buildStarMapSvg({
         scene,
@@ -195,6 +270,7 @@ export function GiftTemplateEditor({
         tagline: 'Under our stars',
         coordinates: '1.29° N · 103.85° E',
         showLines: true,
+        zones,
       });
     }
     // song_lyrics — return null and fall back to the explanatory banner
@@ -479,7 +555,8 @@ export function GiftTemplateEditor({
                   const active = activeZoneIdx === i;
                   const isText = isTextZone(z);
                   const isCal = isCalendarZone(z);
-                  const badgeBg = isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
+                  const isAnchor = isRenderAnchorZone(z);
+                  const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
                   return (
                     <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''}`}>
                       <div className="flex w-full items-center justify-between gap-2 p-3">
@@ -516,7 +593,18 @@ export function GiftTemplateEditor({
                       </div>
                       {active && (
                         <div className="space-y-3 border-t border-neutral-200 p-3">
-                          {isCal
+                          {isAnchor ? (
+                            <div className="rounded border-2 border-magenta/30 bg-magenta/5 p-3 text-[12px] leading-snug text-ink">
+                              <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
+                                Code-driven region · {(z as GiftTemplateRenderAnchorZone).anchor_kind}
+                              </div>
+                              The renderer owns what gets drawn inside
+                              this rectangle. You can drag and resize
+                              the box (X / Y / W / H below) to move the
+                              region on the canvas, but the contents
+                              themselves come from code.
+                            </div>
+                          ) : isCal
                             ? <CalendarZoneFields zone={z as GiftTemplateCalendarZone} onChange={(p) => updateZone<GiftTemplateCalendarZone>(i, p)} />
                             : isText
                               ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
@@ -762,7 +850,7 @@ export function GiftTemplateEditor({
                   with the zone label so admin can read what each slot
                   is at a glance. No auto-fetched stock photos. */}
               {zones.map((z, i) => {
-                if (isTextZone(z) || isCalendarZone(z)) return null;
+                if (isTextZone(z) || isCalendarZone(z) || isRenderAnchorZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
                 const fit = img.fit_mode ?? 'cover';
                 const hasContent = Boolean(img.default_image_url);
@@ -896,7 +984,9 @@ export function GiftTemplateEditor({
                 const width = (z.width_mm / TEMPLATE_W) * 100;
                 const height = (z.height_mm / TEMPLATE_H) * 100;
                 const isText = isTextZone(z);
-                const accent = isText ? '#0a0a0a' : '#E91E8C';
+                const isAnchor = isRenderAnchorZone(z);
+                const accent = isAnchor ? '#E91E8C' : isText ? '#0a0a0a' : '#E91E8C';
+                const handleLabel = isAnchor ? 'A' : isText ? 'T' : 'I';
                 return (
                   <div
                     key={i}
@@ -907,7 +997,7 @@ export function GiftTemplateEditor({
                       transform: `rotate(${z.rotation_deg ?? 0}deg)`,
                       transformOrigin: 'center',
                       cursor: z.locked ? 'default' : 'move',
-                      border: active ? `2px solid ${accent}` : '2px dashed rgba(0,0,0,0.25)',
+                      border: active ? `2px solid ${accent}` : `2px dashed ${isAnchor ? 'rgba(233,30,140,0.55)' : 'rgba(0,0,0,0.25)'}`,
                       background: active ? `${accent}1a` : 'transparent',
                       boxShadow: active ? `0 0 0 3px ${accent}33` : 'none',
                     }}
@@ -922,8 +1012,16 @@ export function GiftTemplateEditor({
                       className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase text-white"
                       style={{ background: accent }}
                     >
-                      {isText ? 'T' : 'I'} · {z.label}
+                      {handleLabel} · {z.label}
                     </div>
+                    {isAnchor && (
+                      <div
+                        className="pointer-events-none absolute inset-x-0 bottom-1 mx-auto rounded px-1.5 py-0.5 text-center text-[9px] font-semibold uppercase tracking-wider"
+                        style={{ background: 'rgba(233,30,140,0.92)', color: '#fff', maxWidth: '90%' }}
+                      >
+                        🔒 Code-driven · drag to position only
+                      </div>
+                    )}
                     {!z.locked && (
                       <div
                         onPointerDown={(e) => {
