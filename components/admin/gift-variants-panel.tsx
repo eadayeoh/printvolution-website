@@ -1436,26 +1436,27 @@ export function DraggableArea({
     | { mode: 'move' | 'resize'; startX: number; startY: number; startArea: Rect }
     | null
   >(null);
-  // Stage aspect tracks the mockup image's natural aspect so positioning
-  // a rectangle in % stays geometrically faithful — a 60×80% rectangle on
-  // a portrait mockup actually shows as portrait, not as a square. Without
-  // this, the stage is forced 1:1 and a locked-A3 rectangle on a portrait
-  // frame looks square in the editor even when the saved data is correct.
-  // We track the dims as numbers (not just a CSS string) because the
-  // locked-aspect resize math needs stage_W / stage_H to convert mm
-  // ratios into pct-space ratios.
-  const [stageDims, setStageDims] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
+  // Stage aspect strategy:
+  //  • Renderer-linked variant (lockedAspectRatio set) → the stage IS
+  //    the template's shape. A linked-A3 variant gets a stage drawn at
+  //    297:420 portrait, so a rectangle drawn at any width%/height% =
+  //    same pct (i.e. pctW=pctH) automatically displays as A3. This is
+  //    bullet-proof: doesn't depend on the mockup image's actual
+  //    dimensions, doesn't depend on JS image loading. The mockup
+  //    image letterboxes inside the stage via object-contain.
+  //  • Otherwise → fall back to the mockup image's natural aspect so
+  //    free-form rectangles stay geometrically faithful to the photo.
+  const [imageDims, setImageDims] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
   useEffect(() => {
-    if (!mockupUrl) { setStageDims({ w: 1, h: 1 }); return; }
+    if (!mockupUrl) { setImageDims({ w: 1, h: 1 }); return; }
     const img = new Image();
     img.onload = () => {
       if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-        setStageDims({ w: img.naturalWidth, h: img.naturalHeight });
+        setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
       }
     };
     img.src = mockupUrl;
   }, [mockupUrl]);
-  const stageAspect = `${stageDims.w} / ${stageDims.h}`;
   // Per-variant override of the lock prop. Only matters when
   // lockedAspectRatio is also set — flipping this off lets admin draw a
   // mismatched rectangle (e.g. intentional letterbox on a square frame).
@@ -1464,6 +1465,12 @@ export function DraggableArea({
     !aspectUnlocked && lockedAspectRatio && lockedAspectRatio > 0
       ? lockedAspectRatio
       : null;
+  const stageDims = effectiveLockedRatio
+    // Build stage dims from the locked W/H ratio. Use 1000 as the
+    // base so the numbers stay readable (1000 × 1414 for A3 etc.).
+    ? { w: 1000, h: Math.round(1000 / effectiveLockedRatio) }
+    : imageDims;
+  const stageAspect = `${stageDims.w} / ${stageDims.h}`;
 
   const clamp = (n: number) => Math.max(0, Math.min(100, n));
   const normalise = (r: Rect): Rect => {
