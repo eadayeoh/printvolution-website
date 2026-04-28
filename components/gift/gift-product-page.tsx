@@ -47,6 +47,81 @@ import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
 
+/** Customer-facing wrapper that composites a renderer template inside
+ *  a variant's mockup_area rectangle. The parent stage matches the
+ *  mockup image's natural aspect so the saved area % (which is of the
+ *  image) lines up exactly with what shows on screen — same as the
+ *  admin variant editor.
+ *
+ *  Without this, the parent was forced 1:1 with the mockup
+ *  letterboxed inside via object-contain. Admins drawing a rectangle
+ *  to fill an A3 frame would see the customer-facing rectangle
+ *  appear at the WRONG position + size on the PDP, because % of the
+ *  square stage ≠ % of the (portrait) mockup image. */
+function RendererVariantStage({
+  mockupUrl,
+  area,
+  rendererAspect,
+  children,
+  overlay,
+}: {
+  mockupUrl: string;
+  area: { x: number; y: number; width: number; height: number };
+  rendererAspect: string;
+  children: React.ReactNode;
+  overlay?: React.ReactNode;
+}) {
+  const [imageDims, setImageDims] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
+  useEffect(() => {
+    if (!mockupUrl) { setImageDims({ w: 1, h: 1 }); return; }
+    const img = new window.Image();
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
+      }
+    };
+    img.src = mockupUrl;
+  }, [mockupUrl]);
+  return (
+    <div style={{
+      width: '100%',
+      aspectRatio: `${imageDims.w} / ${imageDims.h}`,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <img
+        src={mockupUrl}
+        alt=""
+        // object-fill since the parent now matches image aspect — the
+        // image fills exactly, no letterboxing, so the design
+        // rectangle's % positions match the % the admin drew on.
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left:   `${area.x}%`,
+          top:    `${area.y}%`,
+          width:  `${area.width}%`,
+          height: `${area.height}%`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Inner frame keeps the renderer's natural aspect so it
+            never squashes when the variant area is a different
+            shape. maxW/maxH 100% lets it shrink to fit. */}
+        <div style={{ aspectRatio: rendererAspect, maxWidth: '100%', maxHeight: '100%', height: '100%' }}>
+          {children}
+        </div>
+      </div>
+      {overlay}
+    </div>
+  );
+}
+
 type Props = {
   product: GiftProduct;
   templates: GiftTemplate[];
@@ -1463,39 +1538,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   ) : null;
 
                   // Variant has a physical mockup + an admin-set design
-                  // rectangle — slot the renderer inside it.
+                  // rectangle — slot the renderer inside it. The
+                  // parent stage matches the mockup image's natural
+                  // aspect so the admin-drawn rectangle lines up
+                  // exactly with where it'll print on the customer's
+                  // PDP (same coordinate system as the variant editor).
                   if (variantMockup && variantArea) {
                     return (
-                      <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden' }}>
-                        <img
-                          src={variantMockup}
-                          alt=""
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-                        />
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left:   `${variantArea.x}%`,
-                            top:    `${variantArea.y}%`,
-                            width:  `${variantArea.width}%`,
-                            height: `${variantArea.height}%`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {/* Inner frame holds the renderer's natural
-                              aspect ratio so it never gets squashed when
-                              the variant area is a different aspect.
-                              maxWidth/maxHeight 100% lets it shrink to
-                              fit either dimension. */}
-                          <div style={{ aspectRatio: rendererAspect, maxWidth: '100%', maxHeight: '100%', height: '100%' }}>
-                            {rendererBody}
-                          </div>
-                        </div>
-                        {cityFetchOverlay}
-                      </div>
+                      <RendererVariantStage
+                        mockupUrl={variantMockup}
+                        area={variantArea}
+                        rendererAspect={rendererAspect}
+                        overlay={cityFetchOverlay}
+                      >
+                        {rendererBody}
+                      </RendererVariantStage>
                     );
                   }
 
