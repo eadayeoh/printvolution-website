@@ -197,6 +197,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // photo with a footer block (title / names / year). We keep its inputs
   // flat instead of squeezing them into the surfaces / templates flow.
   const isSongLyrics = product.slug === 'song-lyrics-photo-frame';
+  const [songLayout, setSongLayout] = useState<'song' | 'wedding'>('song');
   const [songLyrics, setSongLyrics] = useState<string>('');
   const [songTitle, setSongTitle]   = useState<string>('OUR SONG');
   const [songNames, setSongNames]   = useState<string>('');
@@ -723,6 +724,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // URL into the cart line so the production pipeline can re-render the
     // SVG server-side at 300 DPI.
     if (isSongLyrics) {
+      notes += `${notes ? ';' : ''}song_layout:${songLayout}`;
       if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
       if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
       if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
@@ -1135,6 +1137,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       names={songNames}
                       year={songYear}
                       font={engravedFont}
+                      layout={songLayout}
                     />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
@@ -1753,6 +1756,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   photoUrl={songPhotoUrl} onPhotoUrl={setSongPhotoUrl}
                   allowedFonts={allowedFonts}
                   font={engravedFont} onFont={setEngravedFont}
+                  layout={songLayout} onLayout={setSongLayout}
                 />
               ) : (
               <>

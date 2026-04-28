@@ -1,5 +1,7 @@
 'use client';
 
+import type { SongLyricsLayout } from './song-lyrics-template';
+
 type Props = {
   lyrics: string;
   onLyrics: (s: string) => void;
@@ -14,17 +16,54 @@ type Props = {
   allowedFonts: string[];
   font: string;
   onFont: (f: string) => void;
+  layout: SongLyricsLayout;
+  onLayout: (l: SongLyricsLayout) => void;
 };
 
 export function SongLyricsInputs({
   lyrics, onLyrics, title, onTitle, names, onNames,
   year, onYear, photoUrl, onPhotoUrl,
   allowedFonts, font, onFont,
+  layout, onLayout,
 }: Props) {
+  // Field labels + placeholders shift with the chosen layout so the inputs
+  // match what the customer sees on the preview (year vs full date, etc).
+  const isWedding = layout === 'wedding';
   return (
     <div style={{ padding: '20px 22px', display: 'grid', gap: 14 }}>
       <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-magenta)' }}>
         Make your record
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {([
+          { v: 'song',    label: 'Song record',  hint: 'Title · Names · EST. year' },
+          { v: 'wedding', label: 'Wedding date', hint: 'Names · Date · Subtitle'   },
+        ] as Array<{ v: SongLyricsLayout; label: string; hint: string }>).map((opt) => {
+          const active = layout === opt.v;
+          return (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => onLayout(opt.v)}
+              style={{
+                padding: '10px 12px',
+                background: active ? 'var(--pv-ink)' : '#fff',
+                color: active ? '#fff' : 'var(--pv-ink)',
+                border: '2px solid var(--pv-ink)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: 'var(--pv-f-body)',
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              <div>{opt.label}</div>
+              <div style={{ marginTop: 2, fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 400, opacity: 0.75 }}>
+                {opt.hint}
+              </div>
+            </button>
+          );
+        })}
       </div>
       <label style={{ display: 'block' }}>
         <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
@@ -44,35 +83,36 @@ export function SongLyricsInputs({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <label style={{ display: 'block' }}>
           <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-            Title
+            {isWedding ? 'Subtitle' : 'Title'}
           </span>
           <input
             type="text" value={title}
             onChange={(e) => onTitle(e.target.value.slice(0, 30))}
-            placeholder="OUR SONG"
+            placeholder={isWedding ? 'OUR FIRST DANCE' : 'OUR SONG'}
             style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
           />
         </label>
         <label style={{ display: 'block' }}>
           <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-            Year
+            {isWedding ? 'Date' : 'Year'}
           </span>
           <input
             type="text" value={year}
-            onChange={(e) => onYear(e.target.value.slice(0, 4))}
-            placeholder="2026" maxLength={4}
+            onChange={(e) => onYear(e.target.value.slice(0, isWedding ? 14 : 4))}
+            placeholder={isWedding ? '27.08.2023' : '2026'}
+            maxLength={isWedding ? 14 : 4}
             style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
           />
         </label>
       </div>
       <label style={{ display: 'block' }}>
         <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-          Names (e.g. Bruce &amp; Janie)
+          Names (e.g. {isWedding ? 'Mercy &amp; Adam' : 'Bruce &amp; Janie'})
         </span>
         <input
           type="text" value={names}
           onChange={(e) => onNames(e.target.value.slice(0, 50))}
-          placeholder="Bruce & Janie"
+          placeholder={isWedding ? 'Mercy & Adam' : 'Bruce & Janie'}
           style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14 }}
         />
       </label>
