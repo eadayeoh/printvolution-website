@@ -59,6 +59,7 @@ export function CityMapInputs({
   const [address, setAddress] = useState<string>('');
   const [resolving, setResolving] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localNotice, setLocalNotice] = useState<string | null>(null);
 
   async function resolveLocation(rawLat: number, rawLng: number, label: string, radius: number) {
     setLocalError(null);
@@ -67,7 +68,18 @@ export function CityMapInputs({
       setLocalError(v.error);
       return;
     }
-    onLocationResolved({ lat: rawLat, lng: rawLng, label, radiusKm: radius, vectors: v.vectors });
+    // The server may have fallen back to a smaller radius for a dense city —
+    // surface the effective value so the slider matches the rendered map.
+    onLocationResolved({
+      lat: rawLat, lng: rawLng, label,
+      radiusKm: v.effectiveRadiusKm,
+      vectors: v.vectors,
+    });
+    if (v.effectiveRadiusKm < radius - 0.4) {
+      setLocalNotice(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data for this city.`);
+    } else {
+      setLocalNotice(null);
+    }
   }
 
   async function handleResolve() {
@@ -75,6 +87,7 @@ export function CityMapInputs({
     if (!trimmed) return;
     setResolving(true);
     setLocalError(null);
+    setLocalNotice(null);
     try {
       // Allow "lat, lng" raw paste — quick path, no geocoder.
       const m = trimmed.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
@@ -96,11 +109,17 @@ export function CityMapInputs({
   async function handleRadiusChange(r: number) {
     onRadius(r);
     if (lat == null || lng == null) return;
-    // Re-fetch silently when the customer scrubs the radius slider.
     setLocalError(null);
     const v = await fetchCityMapPaths(lat, lng, r);
     if (!v.ok) { setLocalError(v.error); return; }
-    onLocationResolved({ lat, lng, label: cityLabel, radiusKm: r, vectors: v.vectors });
+    onLocationResolved({
+      lat, lng, label: cityLabel,
+      radiusKm: v.effectiveRadiusKm,
+      vectors: v.vectors,
+    });
+    if (v.effectiveRadiusKm < r - 0.4) {
+      setLocalError(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data for this city.`);
+    }
   }
 
   const errorMsg = localError ?? fetchError;
@@ -137,9 +156,19 @@ export function CityMapInputs({
         {errorMsg && (
           <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: '#c00' }}>{errorMsg}</div>
         )}
-        {lat != null && lng != null && !errorMsg && (
+        {localNotice && !errorMsg && (
+          <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: '#a06400' }}>{localNotice}</div>
+        )}
+        {!errorMsg && !busy && (
           <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
-            ✦ {lat.toFixed(4)}, {lng.toFixed(4)}
+            {lat != null && lng != null
+              ? `✦ ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+              : '↩ Press Enter or click Find — dense cities may take 5–15 seconds.'}
+          </div>
+        )}
+        {busy && (
+          <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-magenta)' }}>
+            ↻ Loading map data — this can take 5–15 seconds for big cities…
           </div>
         )}
       </label>

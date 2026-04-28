@@ -707,20 +707,34 @@ export async function fetchCityMapPaths(
   lat: number,
   lng: number,
   radiusKm: number,
-): Promise<{ ok: true; vectors: CityMapVectors } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; vectors: CityMapVectors; effectiveRadiusKm: number }
+  | { ok: false; error: string }
+> {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return { ok: false, error: 'Invalid coordinates' };
   }
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return { ok: false, error: 'Coordinates out of range' };
   }
-  const r = Math.max(1, Math.min(15, radiusKm || 5));
-  try {
-    const vectors = await fetchCityMapVectors(lat, lng, r);
-    return { ok: true, vectors };
-  } catch (e: any) {
-    console.error('[fetchCityMapPaths] error', e?.message);
-    return { ok: false, error: 'Map data unavailable, try a smaller radius' };
+  // Try the requested radius first, then progressively smaller fallbacks
+  // for dense cities where Overpass times out / OOMs at the wide bbox.
+  // The customer sees the resulting smaller radius reflected back in the
+  // slider so they understand what's on the page.
+  const requested = Math.max(1, Math.min(15, radiusKm || 5));
+  const tries = [requested, requested * 0.6, requested * 0.35, 2].filter(
+    (r, i, arr) => r >= 1 && r <= 15 && (i === 0 || r < arr[i - 1] - 0.4),
+  );
+  let lastErr = '';
+  for (const r of tries) {
+    try {
+      const vectors = await fetchCityMapVectors(lat, lng, r);
+      return { ok: true, vectors, effectiveRadiusKm: Number(r.toFixed(1)) };
+    } catch (e: any) {
+      lastErr = e?.message || 'unknown';
+      console.error('[fetchCityMapPaths] retry', r.toFixed(1), 'km:', lastErr);
+    }
   }
+  return { ok: false, error: `Map data unavailable for this location (${lastErr})` };
 }
 

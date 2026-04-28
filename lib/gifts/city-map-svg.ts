@@ -30,17 +30,19 @@ export const CM_GEOM = Object.freeze({
 // Tuned for an 88×88mm map of a ~5 km radius. Keep motorways visible but
 // not dominant; keep residential roads thin enough that a dense city
 // reads as texture rather than noise.
+//
+// service / pedestrian / living_street are intentionally OMITTED — they're
+// invisible at print scale, dwarf the response size for big cities (e.g.
+// Singapore went from 17 MB → 9.6 MB by dropping them), and add no signal
+// to a foil-print map.
 const ROAD_WIDTH: Record<string, number> = {
   motorway:        0.55,
   trunk:           0.50,
   primary:         0.42,
   secondary:       0.32,
   tertiary:        0.24,
-  unclassified:    0.16,
   residential:     0.14,
-  living_street:   0.12,
-  pedestrian:      0.10,
-  service:         0.08,
+  unclassified:    0.12,
 };
 
 // Waterways (rivers / streams) get their own weight scaled by the radius.
@@ -169,9 +171,10 @@ export async function fetchCityMapVectors(
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `data=${encodeURIComponent(query)}`,
-        // OSM data is essentially static at our zoom — cache aggressively.
-        // Keyed on URL+body, so different (lat,lng,radius) miss separately.
-        next: { revalidate: 60 * 60 * 24 * 7 },
+        // Do NOT use Next.js fetch cache here — Overpass responses can be
+        // 10+ MB for dense cities and Vercel's cache silently fails for
+        // bodies over ~2 MB. Use 'no-store' so the runtime doesn't try.
+        cache: 'no-store',
       });
       if (!res.ok) {
         lastErr = new Error(`overpass ${res.status}`);
@@ -328,7 +331,7 @@ export function buildCityMapSvg({
     // Roads — back-to-front so motorways sit on top of residentials.
     // Iterate from thin to thick.
     const drawOrder = [
-      'service', 'pedestrian', 'living_street', 'residential', 'unclassified',
+      'unclassified', 'residential',
       'tertiary', 'secondary', 'primary', 'trunk', 'motorway',
     ];
     for (const cls of drawOrder) {
