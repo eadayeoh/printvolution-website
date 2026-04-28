@@ -25,8 +25,8 @@ import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
-import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
 import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
+import { SpotifyPlaqueTemplate } from '@/components/gift/spotify-plaque-template';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -324,22 +324,10 @@ export function GiftTemplateEditor({
             : null,
       });
     }
-    if (renderer === 'spotify_plaque') {
-      const refW = parseFloat(refWidthMm);
-      const refH = parseFloat(refHeightMm);
-      return buildSpotifyPlaqueSvg({
-        photoUrl: null,           // placeholder grey square in admin
-        songTitle: 'Your Favourite Song',
-        artistName: "Artist's Name",
-        spotifyTrackId: '6rqhFgbbKwnb9MLmUQDhG6',  // demo (Mr. Brightside)
-        templateRefDims:
-          Number.isFinite(refW) && Number.isFinite(refH) && refW > 0 && refH > 0
-            ? { width_mm: refW, height_mm: refH }
-            : null,
-      });
-    }
-    // song_lyrics — return null and fall back to the explanatory banner
-    // (no quick way to render the React component to a string here).
+    // spotify_plaque and song_lyrics — return null and let the React
+    // component branch below mount the live preview. Spotify's scan
+    // code can't ride inside dangerouslySetInnerHTML SVG markup
+    // because cross-origin SVG <image> elements don't load that way.
     return null;
   })();
 
@@ -1028,6 +1016,31 @@ export function GiftTemplateEditor({
                   </div>
                 </div>
               )}
+              {/* Spotify plaque mounts the same React preview the
+                  customer sees so the demo scan code (Mr. Brightside)
+                  actually renders — SVG <image> via innerHTML doesn't
+                  load cross-origin images, so the preview overlays a
+                  plain HTML <img> on top of the layout SVG. */}
+              {isRendererTemplate && renderer === 'spotify_plaque' && (() => {
+                const refW = parseFloat(refWidthMm);
+                const refH = parseFloat(refHeightMm);
+                const dims = Number.isFinite(refW) && Number.isFinite(refH) && refW > 0 && refH > 0
+                  ? { width_mm: refW, height_mm: refH }
+                  : null;
+                return (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div style={{ width: '100%', height: '100%', maxWidth: '100%' }}>
+                      <SpotifyPlaqueTemplate
+                        photoUrl={null}
+                        songTitle="Your Favourite Song"
+                        artistName="Artist's Name"
+                        spotifyTrackId="6rqhFgbbKwnb9MLmUQDhG6"
+                        templateRefDims={dims}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Tiny debug pill so admins can verify the renderer
                   field is actually set on this template row. If the
                   pill says "renderer: zones" but you expected city_map

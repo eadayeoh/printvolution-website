@@ -9,8 +9,8 @@ import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, G
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
-import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
+import { SpotifyPlaqueTemplate } from '@/components/gift/spotify-plaque-template';
 
 /** Fallback for products that haven't pinned their allowed modes yet. Used
  *  only when allowedModes prop is empty — custom modes added via the admin
@@ -199,19 +199,11 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         cityLabel: 'LONDON', tagline: 'Love now and always',
       });
     }
-    if (t.renderer === 'spotify_plaque') {
-      const tw = (t as { reference_width_mm?: number | null }).reference_width_mm;
-      const th = (t as { reference_height_mm?: number | null }).reference_height_mm;
-      return buildSpotifyPlaqueSvg({
-        photoUrl: null,
-        songTitle: 'Your Favourite Song',
-        artistName: "Artist's Name",
-        spotifyTrackId: '6rqhFgbbKwnb9MLmUQDhG6',
-        templateRefDims: tw && th ? { width_mm: tw, height_mm: th } : null,
-      });
-    }
-    // song_lyrics is a React component, not a string builder — skip
-    // for now; admin will see the empty pink rectangle as before.
+    // spotify_plaque + song_lyrics are React components (not pure SVG
+    // string builders) — they're mounted directly in the JSX below so
+    // the cross-origin Spotify scan code can render via a plain HTML
+    // <img> overlay. SVG <image> via dangerouslySetInnerHTML doesn't
+    // load cross-origin images.
     return null;
   })();
 
@@ -749,6 +741,27 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                           lockedAspectRatio={lockedAspectRatio}
                           lockBadgeText={lockBadgeText}
                           previewSvgMarkup={rendererPreviewSvg}
+                          previewNode={
+                            linkedRendererTemplate?.renderer === 'spotify_plaque'
+                              ? (
+                                <SpotifyPlaqueTemplate
+                                  photoUrl={null}
+                                  songTitle="Your Favourite Song"
+                                  artistName="Artist's Name"
+                                  spotifyTrackId="6rqhFgbbKwnb9MLmUQDhG6"
+                                  templateRefDims={
+                                    (linkedRendererTemplate as { reference_width_mm?: number | null }).reference_width_mm
+                                    && (linkedRendererTemplate as { reference_height_mm?: number | null }).reference_height_mm
+                                      ? {
+                                          width_mm: (linkedRendererTemplate as { reference_width_mm: number }).reference_width_mm,
+                                          height_mm: (linkedRendererTemplate as { reference_height_mm: number }).reference_height_mm,
+                                        }
+                                      : null
+                                  }
+                                />
+                              )
+                              : null
+                          }
                         />
                       </div>
                     ) : (
@@ -1421,6 +1434,7 @@ export function DraggableArea({
   lockedAspectRatio,
   lockBadgeText,
   previewSvgMarkup,
+  previewNode,
 }: {
   mockupUrl: string;
   area: Rect;
@@ -1438,6 +1452,10 @@ export function DraggableArea({
    *  sees the actual template output composited on the variant photo,
    *  not an empty pink fill. Pass the full `<svg ...>...</svg>` string. */
   previewSvgMarkup?: string | null;
+  /** Optional React node to render inside the rectangle instead of an
+   *  SVG string. Used when the renderer needs HTML overlays that can't
+   *  be inlined in SVG (e.g. spotify_plaque's cross-origin scan code). */
+  previewNode?: React.ReactNode;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
@@ -1618,11 +1636,16 @@ export function DraggableArea({
             cursor: drag?.mode === 'move' ? 'grabbing' : 'grab',
             // Translucent pink fill behind the preview so the rectangle
             // remains visible even when the renderer SVG is dark.
-            background: previewSvgMarkup ? 'transparent' : 'rgba(233,30,140,0.15)',
+            background: previewSvgMarkup || previewNode ? 'transparent' : 'rgba(233,30,140,0.15)',
             overflow: 'hidden',
           }}
         >
-          {previewSvgMarkup && (
+          {previewNode && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div style={{ width: '100%', height: '100%' }}>{previewNode}</div>
+            </div>
+          )}
+          {!previewNode && previewSvgMarkup && (
             <div
               // Shows the actual renderer output composited inside the
               // pink rectangle so admin sees what customers see — no

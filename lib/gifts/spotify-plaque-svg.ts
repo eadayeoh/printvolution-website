@@ -42,7 +42,36 @@ export type BuildSpotifyPlaqueSvgInput = {
   /** Optional template ref dims so the canvas aspect locks to the
    *  product's print dimensions. A4 portrait → 100×141.4 viewBox. */
   templateRefDims?: { width_mm: number; height_mm: number } | null;
+  /** When true, skip rendering the scan-code area (image or placeholder)
+   *  so the caller can overlay one with a regular HTML <img>. SVG <image>
+   *  with cross-origin URLs does not load reliably when the SVG is
+   *  injected via React's dangerouslySetInnerHTML — using a plain HTML
+   *  <img> dodges that. The print pipeline uses the default false. */
+  omitScanCode?: boolean;
 };
+
+/** Layout constants exported so React previews can position an HTML
+ *  <img> overlay that lines up with what the SVG renderer would produce
+ *  if it were embedding the image itself. */
+export function spotifyPlaqueScanRect(
+  templateRefDims?: { width_mm: number; height_mm: number } | null,
+): { xPct: number; yPct: number; widthPct: number; heightPct: number } {
+  const W = 100;
+  const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
+    ? (templateRefDims.height_mm / templateRefDims.width_mm) * W
+    : 141.4;
+  const margin = 8;
+  const scanW = W - margin * 2;
+  const scanH = scanW / 4;
+  const scanX = margin;
+  const scanY = H - margin - scanH;
+  return {
+    xPct: (scanX / W) * 100,
+    yPct: (scanY / H) * 100,
+    widthPct: (scanW / W) * 100,
+    heightPct: (scanH / H) * 100,
+  };
+}
 
 export function buildSpotifyPlaqueSvg({
   photoUrl,
@@ -50,6 +79,7 @@ export function buildSpotifyPlaqueSvg({
   artistName,
   spotifyTrackId,
   templateRefDims,
+  omitScanCode = false,
 }: BuildSpotifyPlaqueSvgInput): string {
   const W = 100;
   const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
@@ -181,15 +211,18 @@ export function buildSpotifyPlaqueSvg({
   // ── Spotify scannable strip ─────────────────────────────────────────────
   // The PNG from scannables.scdn.co already includes the Spotify logo on
   // the left and the bars on the right in a single 4:1 image — no need
-  // to draw our own logo. xlink:href is included alongside href for
-  // older WebKit (Safari) compatibility when SVG is injected via
+  // to draw our own logo. omitScanCode lets the React preview skip this
+  // section and overlay a plain HTML <img> instead, because SVG <image>
+  // with a cross-origin URL does not render reliably when injected via
   // dangerouslySetInnerHTML.
-  if (spotifyTrackId) {
-    const scanUrl = spotifyScannableUrl(spotifyTrackId);
-    body += `<image href="${esc(scanUrl)}" xlink:href="${esc(scanUrl)}" x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" preserveAspectRatio="xMidYMid meet"/>`;
-  } else {
-    body += `<rect x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" fill="${trackGrey}"/>`;
-    body += `<text x="${scanX + scanW / 2}" y="${scanY + scanH / 2 + 1}" text-anchor="middle" font-size="3.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
+  if (!omitScanCode) {
+    if (spotifyTrackId) {
+      const scanUrl = spotifyScannableUrl(spotifyTrackId);
+      body += `<image href="${esc(scanUrl)}" xlink:href="${esc(scanUrl)}" x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" preserveAspectRatio="xMidYMid meet"/>`;
+    } else {
+      body += `<rect x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" fill="${trackGrey}"/>`;
+      body += `<text x="${scanX + scanW / 2}" y="${scanY + scanH / 2 + 1}" text-anchor="middle" font-size="3.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
+    }
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}">${body}</svg>`;
