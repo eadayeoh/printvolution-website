@@ -660,7 +660,10 @@ const VariantSchema = z.object({
       z.object({
         name: z.string().min(1),
         hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Hex must be #RRGGBB'),
-        mockup_url: z.string().min(1),
+        // Optional. Empty string = colour-overlay swatch (just retints
+        // the renderer's foil colour, doesn't swap the displayed photo).
+        // Populated = mockup-swatch (photo swap on pick).
+        mockup_url: z.string().default(''),
       }),
     )
     .default([]),
