@@ -345,7 +345,15 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     for (const [si, s] of d.colour_swatches.entries()) {
       if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return false; }
       if (!/^#[0-9A-Fa-f]{6}$/.test(s.hex)) { setErr(`Colour swatch #${si + 1} hex must be #RRGGBB.`); return false; }
-      if (!s.mockup_url) { setErr(`Colour swatch #${si + 1} needs a mockup image.`); return false; }
+      // Two valid shapes:
+      //  - Mockup swatch: name + hex + mockup_url (swaps the displayed
+      //    photo when picked, e.g. T-shirt with red / navy / black tiles).
+      //  - Overlay swatch: name + hex, NO mockup_url (just retints the
+      //    existing renderer output — used for foil colours like
+      //    Gold / Rose Gold / Silver where the physical photo doesn't
+      //    change, only the foil ink does).
+      // Both need a name so the cart line is meaningful.
+      if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return false; }
     }
     for (const [si, s] of d.surfaces.entries()) {
       if (!s.id.trim() || !/^[a-z0-9-]+$/.test(s.id)) { setErr(`Surface #${si + 1} id must be lowercase-slug.`); return false; }
@@ -457,6 +465,26 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
           ? { ...d, colour_swatches: [...d.colour_swatches, { name: '', hex: '#000000', mockup_url: '' }] }
           : d,
       ),
+    );
+  }
+  /** Quick-add a swatch with a known foil colour. Skips the row if a
+   *  swatch with the same name already exists on the variant so admins
+   *  can hammer the buttons without creating duplicates. */
+  function addFoilSwatch(i: number, swatch: { name: string; hex: string }) {
+    setDrafts((list) =>
+      list.map((d, idx) => {
+        if (idx !== i) return d;
+        if (d.colour_swatches.some((s) => s.name.trim().toLowerCase() === swatch.name.toLowerCase())) {
+          return d;
+        }
+        return {
+          ...d,
+          colour_swatches: [
+            ...d.colour_swatches,
+            { name: swatch.name, hex: swatch.hex, mockup_url: '' },
+          ],
+        };
+      }),
     );
   }
   function updateSwatch(variantI: number, swatchI: number, patch: Partial<GiftVariantColourSwatch>) {
@@ -883,6 +911,48 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                           + Swatch
                         </button>
                       </div>
+                      {/* Quick-add chips for the foil colours that
+                          come up on every renderer-driven product
+                          (Star Map, City Map, Song Lyrics frames).
+                          Skips re-adding any name already present so
+                          admins can mash the buttons without making
+                          duplicates. */}
+                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">Quick add foil:</span>
+                        {[
+                          { name: 'Gold',      hex: '#d4af37' },
+                          { name: 'Rose Gold', hex: '#b76e79' },
+                          { name: 'Silver',    hex: '#c0c0c0' },
+                          { name: 'Copper',    hex: '#b87333' },
+                          { name: 'Black',     hex: '#0a0a0a' },
+                          { name: 'White',     hex: '#ffffff' },
+                        ].map((c) => {
+                          const exists = d.colour_swatches.some(
+                            (s) => s.name.trim().toLowerCase() === c.name.toLowerCase(),
+                          );
+                          return (
+                            <button
+                              key={c.name}
+                              type="button"
+                              disabled={exists}
+                              onClick={() => addFoilSwatch(i, c)}
+                              title={exists ? `${c.name} already added` : `Add ${c.name} (${c.hex})`}
+                              className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide hover:border-pink hover:text-pink disabled:opacity-40 disabled:hover:border-neutral-300 disabled:hover:text-current"
+                            >
+                              <span
+                                aria-hidden
+                                style={{
+                                  width: 11, height: 11, borderRadius: '50%',
+                                  background: c.hex,
+                                  border: '1px solid #0a0a0a',
+                                  display: 'inline-block',
+                                }}
+                              />
+                              {c.name}
+                            </button>
+                          );
+                        })}
+                      </div>
                       {d.colour_swatches.length > 0 && (
                         <div className="space-y-2">
                           {d.colour_swatches.map((s, sIdx) => (
@@ -919,8 +989,8 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   />
                                 </label>
                               </div>
-                              <div className="w-[120px]">
-                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mockup</span>
+                              <div className="w-[140px]">
+                                <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Mockup (optional)</span>
                                 <ImageUpload
                                   value={s.mockup_url}
                                   onChange={(url) => updateSwatch(i, sIdx, { mockup_url: url })}
@@ -929,9 +999,13 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   size="sm"
                                   label="Mockup"
                                 />
-                                {!s.mockup_url && (
-                                  <div className="mt-1 text-[11px] text-amber-700">⚠ Mockup image required — upload above to save this swatch.</div>
-                                )}
+                                <div className="mt-1 text-[10px] leading-snug text-neutral-500">
+                                  {s.mockup_url ? (
+                                    <span><strong>Mockup swatch</strong> — picking this swaps the displayed photo.</span>
+                                  ) : (
+                                    <span><strong>Colour overlay</strong> — no photo swap; only retints the renderer output (foil colour).</span>
+                                  )}
+                                </div>
                               </div>
                               <button
                                 type="button"
@@ -1367,17 +1441,21 @@ export function DraggableArea({
   // a portrait mockup actually shows as portrait, not as a square. Without
   // this, the stage is forced 1:1 and a locked-A3 rectangle on a portrait
   // frame looks square in the editor even when the saved data is correct.
-  const [stageAspect, setStageAspect] = useState<string>('1 / 1');
+  // We track the dims as numbers (not just a CSS string) because the
+  // locked-aspect resize math needs stage_W / stage_H to convert mm
+  // ratios into pct-space ratios.
+  const [stageDims, setStageDims] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
   useEffect(() => {
-    if (!mockupUrl) { setStageAspect('1 / 1'); return; }
+    if (!mockupUrl) { setStageDims({ w: 1, h: 1 }); return; }
     const img = new Image();
     img.onload = () => {
       if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-        setStageAspect(`${img.naturalWidth} / ${img.naturalHeight}`);
+        setStageDims({ w: img.naturalWidth, h: img.naturalHeight });
       }
     };
     img.src = mockupUrl;
   }, [mockupUrl]);
+  const stageAspect = `${stageDims.w} / ${stageDims.h}`;
   // Per-variant override of the lock prop. Only matters when
   // lockedAspectRatio is also set — flipping this off lets admin draw a
   // mismatched rectangle (e.g. intentional letterbox on a square frame).
@@ -1409,19 +1487,18 @@ export function DraggableArea({
     }
     // Aspect ratio is preserved on resize when:
     //  - The variant's product is linked to a renderer template with
-    //    reference dimensions → effectiveLockedRatio (in MM space).
-    //    Lock is ON by default; turns off via the toggle below.
-    //  - The admin holds Shift while dragging — falls back to the
-    //    product's overall aspect ratio. Legacy behaviour preserved.
-    //
-    // The rectangle is stored in % of the mockup image, so to enforce
-    // a real-world (mm) aspect ratio we have to factor out the
-    // product's own width/height ratio: pct_w / pct_h equals
-    // (mm_w / mm_h) × (productH_mm / productW_mm).
-    const productHwRatio =
-      productWidthMm > 0 && productHeightMm > 0
-        ? productHeightMm / productWidthMm
-        : 1;
+    //    reference dimensions → effectiveLockedRatio is the locked
+    //    DISPLAY ratio (W/H). Admins want the rectangle to LOOK A3 in
+    //    the editor (so they can trace the design opening of the
+    //    physical product), so we lock the rectangle's on-screen
+    //    aspect — not the % math. The on-screen aspect of a
+    //    width%/height% rectangle on a stage with aspect stage_W /
+    //    stage_H is (width% / height%) × (stage_W / stage_H), so the
+    //    pct-space ratio we lock to is lockedRatio × (stage_H/stage_W).
+    //  - Shift-drag falls back to the product's mm aspect (legacy).
+    const stageHWRatio = stageDims.w > 0 && stageDims.h > 0
+      ? stageDims.h / stageDims.w
+      : 1;
     function onMove(e: PointerEvent) {
       const { dxPct, dyPct } = pctDelta(e.clientX, e.clientY);
       if (drag!.mode === 'move') {
@@ -1434,14 +1511,16 @@ export function DraggableArea({
       } else {
         let nw = drag!.startArea.width + dxPct;
         let nh = drag!.startArea.height + dyPct;
-        // mm-space ratio → pct-space ratio. Shift-drag's "lock to
-        // product aspect" is just locked_mm_ratio = productW/productH.
-        const lockedMmRatio = effectiveLockedRatio
+        // Pick the locked DISPLAY aspect (W/H, both pixels on screen):
+        //   - Renderer-linked variant → effectiveLockedRatio
+        //   - Shift-drag → product's mm aspect (assumes mockup image
+        //     was photographed with the product roughly filling it)
+        const lockedDisplayRatio = effectiveLockedRatio
           ?? (e.shiftKey && productWidthMm > 0 && productHeightMm > 0
                 ? productWidthMm / productHeightMm
                 : null);
-        if (lockedMmRatio) {
-          const pctRatio = lockedMmRatio * productHwRatio;
+        if (lockedDisplayRatio) {
+          const pctRatio = lockedDisplayRatio * stageHWRatio;
           if (Math.abs(dxPct) >= Math.abs(dyPct)) {
             nh = nw / pctRatio;
           } else {
@@ -1468,24 +1547,28 @@ export function DraggableArea({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag, effectiveLockedRatio]);
 
-  // When the lock turns ON (or the locked ratio changes) and the
-  // current rectangle's aspect doesn't match, snap it to the locked
-  // ratio. Anchored at top-left so position stays where admin put it.
+  // When the lock turns ON (or the locked ratio / stage dims change)
+  // and the rectangle's display aspect doesn't match, snap it.
+  // Anchored at top-left so position stays where admin put it. Display
+  // aspect = (width% × stage_W) / (height% × stage_H), so we want
+  // width% / height% = lockedRatio × stage_H / stage_W.
   useEffect(() => {
     if (!effectiveLockedRatio) return;
-    const currentRatio = (area.width / area.height) * (productHeightMm / productWidthMm || 1);
-    if (Math.abs(currentRatio - effectiveLockedRatio) < 0.001) return;
-    // Resize the rectangle so its aspect matches. Shrink the larger
-    // dimension so we never grow past the canvas edge.
+    if (stageDims.w <= 0 || stageDims.h <= 0) return;
+    const pctRatio = effectiveLockedRatio * (stageDims.h / stageDims.w);
+    const currentPctRatio = area.width / area.height;
+    if (Math.abs(currentPctRatio - pctRatio) < 0.001) return;
+    // Snap by adjusting height (keep width). Fall back to adjusting
+    // width if height would exceed 100% of the stage.
     let nw = area.width;
-    let nh = (area.width * (productWidthMm / productHeightMm)) / effectiveLockedRatio;
+    let nh = nw / pctRatio;
     if (nh > 100) {
       nh = area.height;
-      nw = (area.height * (productHeightMm / productWidthMm)) * effectiveLockedRatio;
+      nw = nh * pctRatio;
     }
     onChange(normalise({ x: area.x, y: area.y, width: nw, height: nh }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveLockedRatio]);
+  }, [effectiveLockedRatio, stageDims.w, stageDims.h]);
 
   function startMove(e: React.PointerEvent) {
     e.preventDefault();
