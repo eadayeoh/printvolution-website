@@ -138,9 +138,6 @@ export function buildSpotifyPlaqueSvg({
 
   let body = '';
 
-  // White acrylic background
-  body += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`;
-
   // ── Photo (square, customer upload) ─────────────────────────────────────
   if (photoUrl) {
     body += `<image href="${esc(photoUrl)}" xlink:href="${esc(photoUrl)}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" preserveAspectRatio="xMidYMid slice"/>`;
