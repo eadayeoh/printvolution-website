@@ -327,11 +327,13 @@ function emitZoneText(
     : transform === 'capitalize' ? text.replace(/\b\w/g, (c) => c.toUpperCase())
     : text;
 
-  // Auto-shrink to fit the foil disk footer width. Estimate the natural
-  // text width (uppercase Playfair ≈ 0.7 × font-size per char) and only
-  // emit textLength when the string would actually overflow — short
-  // strings keep their natural rendering instead of getting stretched.
-  const naturalWidth = munged.length * size * 0.7 + Math.max(0, munged.length - 1) * letter;
+  // Auto-shrink to fit the foil disk footer width. Char-width estimate
+  // tuned to uppercase Playfair Display 700 (≈ 0.9 × font-size per char)
+  // — short strings keep their natural rendering, long strings like
+  // "MARINA BAY SANDS" get textLength + lengthAdjust=spacingAndGlyphs
+  // so SVG shrinks them to fit instead of overflowing the disk.
+  const charFactor = transform === 'uppercase' ? 0.9 : 0.6;
+  const naturalWidth = munged.length * size * charFactor + Math.max(0, munged.length - 1) * letter;
   const fitAttrs = defaults.maxWidth && naturalWidth > defaults.maxWidth
     ? ` textLength="${defaults.maxWidth.toFixed(2)}" lengthAdjust="spacingAndGlyphs"`
     : '';
