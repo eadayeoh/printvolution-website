@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { uploadSongLyricsPhoto } from '@/app/(site)/gift/actions';
 import type { SongLyricsLayout } from './song-lyrics-template';
 
 type Props = {
@@ -18,6 +20,9 @@ type Props = {
   onTagline: (s: string) => void;
   photoUrl: string;
   onPhotoUrl: (s: string) => void;
+  /** Stable gift_assets.id for the uploaded photo — emitted into cart notes. */
+  onPhotoAssetId: (id: string) => void;
+  productSlug: string;
   allowedFonts: string[];
   // Per-field fonts. Each defaults to a sensible choice when empty.
   titleFont: string;
@@ -35,12 +40,14 @@ type Props = {
 export function SongLyricsInputs({
   lyrics, onLyrics, title, onTitle, names, onNames,
   year, onYear, subtitle, onSubtitle, tagline, onTagline,
-  photoUrl, onPhotoUrl,
+  photoUrl, onPhotoUrl, onPhotoAssetId, productSlug,
   allowedFonts,
   titleFont, onTitleFont, namesFont, onNamesFont, yearFont, onYearFont,
   layout, onLayout,
   lyricsScale, onLyricsScale,
 }: Props) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   // Field labels + placeholders shift with the chosen layout so the inputs
   // match what the customer sees on the preview (year vs full date, etc).
   const isWedding = layout === 'wedding';
@@ -213,24 +220,49 @@ export function SongLyricsInputs({
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-            onChange={(e) => {
+            disabled={uploading}
+            onChange={async (e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
               if (!f) return;
-              if (f.size > 15 * 1024 * 1024) { alert('Photo too large (max 15 MB).'); return; }
-              const reader = new FileReader();
-              reader.onload = () => onPhotoUrl(String(reader.result));
-              reader.onerror = () => alert('Could not read that file.');
-              reader.readAsDataURL(f);
+              if (f.size > 15 * 1024 * 1024) { setUploadError('Photo too large (max 15 MB).'); return; }
+              setUploading(true);
+              setUploadError(null);
+              try {
+                const fd = new FormData();
+                fd.set('file', f);
+                fd.set('product_slug', productSlug);
+                const res = await uploadSongLyricsPhoto(fd);
+                if (!res.ok) {
+                  setUploadError(res.error || 'Upload failed.');
+                  return;
+                }
+                onPhotoUrl(res.displayUrl);
+                onPhotoAssetId(res.sourceAssetId);
+              } catch {
+                setUploadError('Upload failed — please try again.');
+              } finally {
+                setUploading(false);
+              }
             }}
-            style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, cursor: 'pointer' }}
+            style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-mono)', fontSize: 12, cursor: uploading ? 'wait' : 'pointer', opacity: uploading ? 0.6 : 1 }}
           />
-          {photoUrl && (
+          {uploading && (
+            <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-magenta)' }}>
+              Uploading…
+            </div>
+          )}
+          {uploadError && (
+            <div style={{ marginTop: 6, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: '#c00' }}>
+              {uploadError}
+            </div>
+          )}
+          {photoUrl && !uploading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
               <img src={photoUrl} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--pv-ink)' }} />
               <button
                 type="button"
-                onClick={() => onPhotoUrl('')}
+                onClick={() => { onPhotoUrl(''); onPhotoAssetId(''); }}
                 style={{ background: 'transparent', border: '1px solid var(--pv-ink)', padding: '6px 12px', fontFamily: 'var(--pv-f-mono)', fontSize: 11, cursor: 'pointer' }}
               >
                 Remove

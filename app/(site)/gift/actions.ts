@@ -67,6 +67,66 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
   }
 }
 
+/**
+ * Song-lyrics-photo-frame photo upload.
+ *
+ * The customer's browser only renders the SVG composition — the photo
+ * is composited entirely client-side via an <image href> in the SVG. So
+ * we need a renderable URL the browser can load (signed, 1 h) AND a
+ * stable id that survives into the cart line so production can fetch
+ * the original from gift-sources at fulfilment time.
+ *
+ * Replaces the previous data-URL approach, which silently truncated when
+ * a multi-megabyte photo was packed into the order's personalisation_notes.
+ */
+export async function uploadSongLyricsPhoto(formData: FormData): Promise<
+  { ok: true; sourceAssetId: string; displayUrl: string } | { ok: false; error: string }
+> {
+  try {
+    const file = formData.get('file');
+    const productSlug = (formData.get('product_slug') || '').toString();
+    if (!(file instanceof File)) return { ok: false, error: 'No file' };
+    if (file.size === 0)        return { ok: false, error: 'Empty file' };
+    if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'File too large (max 20 MB)' };
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detected = detectImage(bytes);
+    const allowed = new Set(['image/jpeg','image/png','image/webp','image/heic','image/heif']);
+    if (!detected || !allowed.has(detected.mime)) {
+      return { ok: false, error: 'File is not a supported image format' };
+    }
+
+    const service = serviceClient();
+    const key = makeKey(`song-photo-${productSlug || 'gift'}`, detected.ext);
+    const { error: upErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .upload(key, bytes, { contentType: detected.mime, upsert: false, cacheControl: '3600' });
+    if (upErr) return { ok: false, error: 'upload failed' };
+
+    const { data: asset, error: aErr } = await service
+      .from('gift_assets')
+      .insert({
+        role: 'source',
+        bucket: GIFT_BUCKETS.sources,
+        path: key,
+        mime_type: detected.mime,
+        size_bytes: file.size,
+      })
+      .select('id').single();
+    if (aErr || !asset) return { ok: false, error: 'asset row failed' };
+
+    const { data: signed, error: sErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .createSignedUrl(key, 60 * 60);
+    if (sErr || !signed) return { ok: false, error: 'sign url failed' };
+
+    return { ok: true, sourceAssetId: asset.id as string, displayUrl: signed.signedUrl };
+  } catch (e: any) {
+    console.error('[song-lyrics upload] uncaught error');
+    return { ok: false, error: 'Server error during upload' };
+  }
+}
+
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const MAX_BYTES = 20 * 1024 * 1024;
 // ext inferred from magic bytes; keep a short, safe mapping.

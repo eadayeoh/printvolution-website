@@ -215,7 +215,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [songTitle, setSongTitle]   = useState<string>('OUR SONG');
   const [songNames, setSongNames]   = useState<string>('');
   const [songYear, setSongYear]     = useState<string>(String(new Date().getFullYear()));
+  // songPhotoUrl is a transient signed URL (1 h) used only for the live
+  // preview in the customer's browser. The cart line carries the stable
+  // gift_assets.id below — production fetches the original from
+  // gift-sources at fulfilment time.
   const [songPhotoUrl, setSongPhotoUrl] = useState<string>('');
+  const [songPhotoAssetId, setSongPhotoAssetId] = useState<string>('');
   // Per-field fonts default to sensible options pulled from allowed_fonts.
   // Initialised lazily so we can reach allowedFonts (declared further down)
   // without restructuring the file.
@@ -754,7 +759,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
       if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
       if (songYear.trim())    notes += `${notes ? ';' : ''}song_year:${songYear.trim()}`;
-      if (songPhotoUrl.trim()) notes += `${notes ? ';' : ''}song_photo:${songPhotoUrl.trim()}`;
+      // Emit the stable asset id, NOT the signed URL (which expires in 1 h
+      // and would balloon notes). Production reads the asset from
+      // gift-sources via this id.
+      if (songPhotoAssetId) notes += `${notes ? ';' : ''}song_photo_asset:${songPhotoAssetId}`;
       if (engravedFont)       notes += `${notes ? ';' : ''}song_font:${engravedFont}`;
     }
     // Record the customer's adjusted area so production knows where
@@ -1786,6 +1794,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   subtitle={songSubtitle} onSubtitle={setSongSubtitle}
                   tagline={songTagline} onTagline={setSongTagline}
                   photoUrl={songPhotoUrl} onPhotoUrl={setSongPhotoUrl}
+                  onPhotoAssetId={setSongPhotoAssetId}
+                  productSlug={product.slug}
                   allowedFonts={allowedFonts}
                   titleFont={songTitleFont || engravedFont}  onTitleFont={setSongTitleFont}
                   namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')} onNamesFont={setSongNamesFont}
