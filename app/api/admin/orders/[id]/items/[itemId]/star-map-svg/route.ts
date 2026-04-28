@@ -83,8 +83,19 @@ export async function GET(
     const showLines  = n['star_show_lines']  === '1';
     const showLabels = n['star_show_labels'] === '1';
 
+    // Layout drives the visual treatment. Fall back from the saved cart
+    // note to a slug-derived default so older orders without star_layout
+    // still render the right product. Anything that isn't 'poster' is
+    // treated as the original foil layout.
+    const layout: 'foil' | 'poster' =
+      n['star_layout'] === 'poster' || row.product_slug === 'star-map-poster'
+        ? 'poster'
+        : 'foil';
+
     const coordinates = showCoords
-      ? `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`
+      ? (layout === 'poster'
+          ? `${Math.abs(lat).toFixed(3)}°${lat >= 0 ? 'N' : 'S'} / ${Math.abs(lng).toFixed(3)}°${lng >= 0 ? 'E' : 'W'}`
+          : `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`)
       : undefined;
 
     const svgMarkup = buildStarMapSvg({
@@ -97,12 +108,15 @@ export async function GET(
       coordinates,
       showLines,
       showLabels,
+      layout,
       locationFont: n['star_font_loc']     ?? undefined,
       namesFont:    n['star_font_names']   ?? undefined,
       eventFont:    n['star_font_event']   ?? undefined,
       taglineFont:  n['star_font_tagline'] ?? undefined,
-      // Drop the navy background — foil printer wants only the gold paths.
-      materialColor: null,
+      // Foil: drop the navy background so only the gold paths ship to
+      // the foil printer. Poster: keep the white background — paper
+      // prints need the full artwork.
+      materialColor: layout === 'foil' ? null : undefined,
     });
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${svgMarkup}`;

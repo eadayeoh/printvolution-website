@@ -57,6 +57,7 @@ export function StarMapTemplate({
   eventFont,
   locationFont,
   taglineFont,
+  layout,
   foilColor,
   materialColor,
 }: Props) {
@@ -84,10 +85,11 @@ export function StarMapTemplate({
       eventFont,
       locationFont,
       taglineFont,
+      layout,
       foilColor,
       materialColor,
     }),
-    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, foilColor, materialColor],
+    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor],
   );
 
   return (

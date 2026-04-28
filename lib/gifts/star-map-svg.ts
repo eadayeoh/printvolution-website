@@ -199,7 +199,17 @@ function fmtTime(d: Date): string {
 
 // ── SVG composition ─────────────────────────────────────────────────────────
 
-export type StarMapLayout = 'foil';
+/**
+ * Visual styles. The astronomical engine is identical for both — what
+ * differs is colour palette, footer composition, and decorative chrome.
+ *
+ *   • 'foil'   — gold-on-navy, cardinal N/S/E/W marks, narrow geometric
+ *                footer block. Designed for foil-printed acrylic frames.
+ *   • 'poster' — black ink on white, thin double border around the canvas,
+ *                em-dash flanked subtitle, taller aspect ratio (A3-ish).
+ *                Designed for paper-stock prints.
+ */
+export type StarMapLayout = 'foil' | 'poster';
 
 export type BuildStarMapSvgInput = {
   scene: StarMapScene | null;
@@ -240,18 +250,46 @@ export function buildStarMapSvg({
   coordinates,
   showLines = true,
   showLabels = false,
-  namesFont = 'Archivo',
-  eventFont = 'Archivo',
-  locationFont = 'Playfair Display',
-  taglineFont = 'Playfair Display',
-  foilColor = '#d4af37',
-  materialColor = '#1a2740',
+  namesFont,
+  eventFont,
+  locationFont,
+  taglineFont,
+  layout = 'foil',
+  foilColor,
+  materialColor,
 }: BuildStarMapSvgInput): string {
-  const { W, H, CX, CY, R } = SM_GEOM;
+  const isPoster = layout === 'poster';
+
+  // Layout-driven palette + canvas. The astronomy compute is identical;
+  // only chrome and colours change.
+  const W = isPoster ? 100 : SM_GEOM.W;
+  const H = isPoster ? 140 : SM_GEOM.H;
+  const CX = W / 2;
+  const CY = isPoster ? 53 : SM_GEOM.CY;       // disk slightly higher on poster
+  const R  = isPoster ? 38 : SM_GEOM.R;         // smaller disk leaves room for the title
+
+  const inkColor    = foilColor    ?? (isPoster ? '#1a1a1a' : '#d4af37');
+  const bgColor     = materialColor !== undefined ? materialColor : (isPoster ? '#ffffff' : '#1a2740');
+  const lineOpacity = isPoster ? 0.85 : 0.55;
+  const fontHead    = namesFont    ?? (isPoster ? 'Archivo'          : 'Archivo');
+  const fontEvent   = eventFont    ?? (isPoster ? 'Archivo'          : 'Archivo');
+  const fontLoc     = locationFont ?? (isPoster ? 'Archivo'          : 'Playfair Display');
+  const fontTagline = taglineFont  ?? (isPoster ? 'Playfair Display' : 'Playfair Display');
+
   let body = '';
 
-  if (materialColor !== null) {
-    body += `<rect x="0" y="0" width="${W}" height="${H}" fill="${materialColor}"/>`;
+  if (bgColor !== null) {
+    body += `<rect x="0" y="0" width="${W}" height="${H}" fill="${bgColor}"/>`;
+  }
+
+  // Poster: thin double-line border framing the whole canvas. Print-ready
+  // posters always need a visible frame; the foil layout doesn't because
+  // the physical frame supplies it.
+  if (isPoster) {
+    const m1 = 6;   // outer border inset
+    const m2 = 8;   // inner border inset
+    body += `<rect x="${m1}" y="${m1}" width="${W - 2 * m1}" height="${H - 2 * m1}" fill="none" stroke="${inkColor}" stroke-width="0.30"/>`;
+    body += `<rect x="${m2}" y="${m2}" width="${W - 2 * m2}" height="${H - 2 * m2}" fill="none" stroke="${inkColor}" stroke-width="0.15"/>`;
   }
 
   // Disk clip. Stars and constellation lines are clipped here so a star
@@ -260,12 +298,19 @@ export function buildStarMapSvg({
   body += `<g clip-path="url(#starMapClip)">`;
 
   if (scene) {
+    // Re-project the bundled scene at the layout-specific (CX, CY, R).
+    // The stored coords are in the SM_GEOM canvas; we map them to the
+    // current canvas with a similarity transform around the disk centre.
+    const sx = R / SM_GEOM.R;
+    const projX = (x: number) => CX + (x - SM_GEOM.CX) * sx;
+    const projY = (y: number) => CY + (y - SM_GEOM.CY) * sx;
+
     // Constellation lines first so stars sit on top.
     if (showLines && scene.constellations.length) {
-      body += `<g fill="none" stroke="${foilColor}" stroke-width="0.10" stroke-linecap="round" stroke-opacity="0.55">`;
+      body += `<g fill="none" stroke="${inkColor}" stroke-width="${(isPoster ? 0.16 : 0.10).toFixed(2)}" stroke-linecap="round" stroke-opacity="${lineOpacity}">`;
       for (const c of scene.constellations) {
         for (const [x1, y1, x2, y2] of c.segments) {
-          body += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`;
+          body += `<line x1="${projX(x1).toFixed(2)}" y1="${projY(y1).toFixed(2)}" x2="${projX(x2).toFixed(2)}" y2="${projY(y2).toFixed(2)}"/>`;
         }
       }
       body += `</g>`;
@@ -273,67 +318,112 @@ export function buildStarMapSvg({
 
     // Stars — bigger ones drawn last so they sit on top of overlaps.
     const sorted = [...scene.stars].sort((a, b) => b.mag - a.mag);
-    body += `<g fill="${foilColor}" stroke="none">`;
+    body += `<g fill="${inkColor}" stroke="none">`;
     for (const s of sorted) {
-      const r = magToRadius(s.mag);
-      body += `<circle cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r="${r.toFixed(3)}"/>`;
+      const r = magToRadius(s.mag) * sx;
+      body += `<circle cx="${projX(s.x).toFixed(2)}" cy="${projY(s.y).toFixed(2)}" r="${r.toFixed(3)}"/>`;
     }
     body += `</g>`;
 
     // Optional labels for named bright stars.
     if (showLabels) {
-      body += `<g fill="${foilColor}" font-family="Archivo, sans-serif" font-size="1.4" letter-spacing="0.1" opacity="0.7">`;
+      body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="1.4" letter-spacing="0.1" opacity="0.7">`;
       for (const s of scene.stars) {
         if (!s.name || s.mag > 1.7) continue;
-        body += `<text x="${(s.x + 1.1).toFixed(2)}" y="${(s.y - 0.6).toFixed(2)}">${esc(s.name)}</text>`;
+        body += `<text x="${(projX(s.x) + 1.1).toFixed(2)}" y="${(projY(s.y) - 0.6).toFixed(2)}">${esc(s.name)}</text>`;
       }
       body += `</g>`;
     }
   } else {
-    body += `<text x="${CX}" y="${CY}" text-anchor="middle" font-size="3.5" font-family="${locationFont}, Georgia, serif" fill="${foilColor}" opacity="0.55" font-style="italic">Pick a date to render the sky</text>`;
+    body += `<text x="${CX}" y="${CY}" text-anchor="middle" font-size="3.5" font-family="${fontLoc}, Georgia, serif" fill="${inkColor}" opacity="0.55" font-style="italic">Pick a date to render the sky</text>`;
   }
 
   body += `</g>`;
 
-  // Disk frame + cardinal ticks. Foil-printable, no fill.
-  body += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${foilColor}" stroke-width="0.30" stroke-opacity="0.95"/>`;
-  body += `<circle cx="${CX}" cy="${CY}" r="${R - 1}" fill="none" stroke="${foilColor}" stroke-width="0.10" stroke-opacity="0.55"/>`;
-
-  // Cardinal direction marks (N at top, E at left to match the east-left
-  // sky convention used in the projection above).
-  const cardR = R + 1.6;
-  const cardSize = 2.2;
-  const cardOpts = [
-    { dx:  0, dy: -cardR, anchor: 'middle', baseline: 'middle', label: 'N' },
-    { dx:  0, dy:  cardR, anchor: 'middle', baseline: 'middle', label: 'S' },
-    { dx: -cardR, dy:  0, anchor: 'middle', baseline: 'middle', label: 'E' },
-    { dx:  cardR, dy:  0, anchor: 'middle', baseline: 'middle', label: 'W' },
-  ];
-  body += `<g fill="${foilColor}" font-family="Archivo, sans-serif" font-size="${cardSize}" font-weight="600" letter-spacing="0.2">`;
-  for (const o of cardOpts) {
-    body += `<text x="${(CX + o.dx).toFixed(2)}" y="${(CY + o.dy + 0.8).toFixed(2)}" text-anchor="${o.anchor}">${o.label}</text>`;
+  // Disk frame.
+  body += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${inkColor}" stroke-width="${isPoster ? 0.20 : 0.30}" stroke-opacity="${isPoster ? 1 : 0.95}"/>`;
+  if (!isPoster) {
+    // Foil layout has an inner circle echo + cardinal marks. The poster
+    // layout drops both for a cleaner print aesthetic (matches modern
+    // sky-poster reference designs).
+    body += `<circle cx="${CX}" cy="${CY}" r="${R - 1}" fill="none" stroke="${inkColor}" stroke-width="0.10" stroke-opacity="0.55"/>`;
+    const cardR = R + 1.6;
+    const cardSize = 2.2;
+    const cardOpts = [
+      { dx:  0, dy: -cardR, label: 'N' },
+      { dx:  0, dy:  cardR, label: 'S' },
+      { dx: -cardR, dy:  0, label: 'E' },
+      { dx:  cardR, dy:  0, label: 'W' },
+    ];
+    body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="${cardSize}" font-weight="600" letter-spacing="0.2">`;
+    for (const o of cardOpts) {
+      body += `<text x="${(CX + o.dx).toFixed(2)}" y="${(CY + o.dy + 0.8).toFixed(2)}" text-anchor="middle">${o.label}</text>`;
+    }
+    body += `</g>`;
   }
-  body += `</g>`;
 
-  // Footer block — names / event / location / tagline + optional coord/date line.
+  // ── Footer ────────────────────────────────────────────────────────────────
   const cx = W / 2;
-  const namesY = 105;
-  const eventY = 110;
-  const locY  = 119;
-  const taglineY = 125;
 
-  body += `<text x="${cx}" y="${namesY}" text-anchor="middle" font-size="3.6" font-family="${namesFont}, sans-serif" letter-spacing="0.4" fill="${foilColor}" font-weight="600">${esc(names.trim() || 'EVA & JOHN')}</text>`;
-  body += `<text x="${cx}" y="${eventY}" text-anchor="middle" font-size="3.2" font-family="${eventFont}, sans-serif" letter-spacing="0.4" fill="${foilColor}">${esc(event.trim() || 'THE NIGHT WE MET')}</text>`;
-  body += `<text x="${cx}" y="${locY}" text-anchor="middle" font-size="6.5" font-family="${locationFont}, Georgia, serif" font-weight="700" letter-spacing="0.6" fill="${foilColor}">${esc((locationLabel.trim() || 'LONDON').toUpperCase())}</text>`;
-  body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="3.4" font-style="italic" font-family="${taglineFont}, Georgia, serif" fill="${foilColor}">${esc(tagline.trim() || 'Under our stars')}</text>`;
+  if (isPoster) {
+    // Poster layout — bold all-caps title block, em-dash flanked subtitle,
+    // tiny mono coords below. Closely mirrors the reference design.
+    const titleY     = CY + R + 14;
+    const subtitleY  = titleY + 7;
+    const captionY   = subtitleY + 6.5;
+    const taglineY   = captionY + 6.5;
 
-  // Sub-disk caption: coordinates + date stamp. Separate from the labels
-  // above because customers usually want the moment recorded literally.
-  const captionParts: string[] = [];
-  if (coordinates && coordinates.trim()) captionParts.push(coordinates.trim());
-  if (dateUtc) captionParts.push(`${fmtDate(dateUtc)} · ${fmtTime(dateUtc)}`);
-  if (captionParts.length) {
-    body += `<text x="${cx}" y="${CY + R + 4.2}" text-anchor="middle" font-size="1.7" font-family="Archivo, sans-serif" letter-spacing="0.3" fill="${foilColor}" opacity="0.75">${esc(captionParts.join(' · '))}</text>`;
+    const titleText = (locationLabel.trim() || event.trim() || 'THE HAPPIEST DAY').toUpperCase();
+    body += `<text x="${cx}" y="${titleY}" text-anchor="middle" font-size="7.2" font-family="${fontLoc}, sans-serif" font-weight="800" letter-spacing="0.6" fill="${inkColor}">${esc(titleText)}</text>`;
+
+    // Subtitle with em-dash flanking — only emit if there's content.
+    // Default convention: "STARS ABOVE <CITY>" so even an empty event
+    // still gives the customer something printable.
+    const subRaw = event.trim() || (locationLabel.trim()
+      ? `Stars above ${locationLabel.trim()}`
+      : 'Stars above the world');
+    const subText = subRaw.toUpperCase();
+    // Layout: ─── SUBTITLE ───  centred. Compute approximate text width
+    // from char count so the rules sit just outside the text block.
+    const approxWidth = Math.min(60, 1.7 * subText.length);
+    const ruleLen = 8;
+    const gap = 2.5;
+    const halfText = approxWidth / 2;
+    const ruleY = subtitleY - 1.2;
+    body += `<line x1="${(cx - halfText - gap - ruleLen).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx - halfText - gap).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
+    body += `<line x1="${(cx + halfText + gap).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx + halfText + gap + ruleLen).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
+    body += `<text x="${cx}" y="${subtitleY}" text-anchor="middle" font-size="3.2" font-family="${fontEvent}, sans-serif" letter-spacing="0.5" fill="${inkColor}">${esc(subText)}</text>`;
+
+    // Tiny mono caption — coords + date + names if provided.
+    const captionParts: string[] = [];
+    if (coordinates && coordinates.trim()) captionParts.push(coordinates.trim());
+    if (dateUtc) captionParts.push(fmtDate(dateUtc));
+    if (names.trim()) captionParts.push(names.trim());
+    if (captionParts.length) {
+      body += `<text x="${cx}" y="${captionY}" text-anchor="middle" font-size="2.2" font-family="Archivo, sans-serif" letter-spacing="0.4" fill="${inkColor}" opacity="0.75">${esc(captionParts.join(' / '))}</text>`;
+    }
+
+    if (tagline.trim()) {
+      body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="2.6" font-style="italic" font-family="${fontTagline}, Georgia, serif" fill="${inkColor}" opacity="0.85">${esc(tagline.trim())}</text>`;
+    }
+  } else {
+    // Foil layout — original four-line stack.
+    const namesY   = 105;
+    const eventY   = 110;
+    const locY     = 119;
+    const taglineY = 125;
+
+    body += `<text x="${cx}" y="${namesY}" text-anchor="middle" font-size="3.6" font-family="${fontHead}, sans-serif" letter-spacing="0.4" fill="${inkColor}" font-weight="600">${esc(names.trim() || 'EVA & JOHN')}</text>`;
+    body += `<text x="${cx}" y="${eventY}" text-anchor="middle" font-size="3.2" font-family="${fontEvent}, sans-serif" letter-spacing="0.4" fill="${inkColor}">${esc(event.trim() || 'THE NIGHT WE MET')}</text>`;
+    body += `<text x="${cx}" y="${locY}" text-anchor="middle" font-size="6.5" font-family="${fontLoc}, Georgia, serif" font-weight="700" letter-spacing="0.6" fill="${inkColor}">${esc((locationLabel.trim() || 'LONDON').toUpperCase())}</text>`;
+    body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="3.4" font-style="italic" font-family="${fontTagline}, Georgia, serif" fill="${inkColor}">${esc(tagline.trim() || 'Under our stars')}</text>`;
+
+    const captionParts: string[] = [];
+    if (coordinates && coordinates.trim()) captionParts.push(coordinates.trim());
+    if (dateUtc) captionParts.push(`${fmtDate(dateUtc)} · ${fmtTime(dateUtc)}`);
+    if (captionParts.length) {
+      body += `<text x="${cx}" y="${CY + R + 4.2}" text-anchor="middle" font-size="1.7" font-family="Archivo, sans-serif" letter-spacing="0.3" fill="${inkColor}" opacity="0.75">${esc(captionParts.join(' · '))}</text>`;
+    }
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">${body}</svg>`;

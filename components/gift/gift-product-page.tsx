@@ -266,7 +266,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // network round-trip, so there's no fetching state.
   const isStarMap =
     templates.some((t) => (t as { renderer?: string }).renderer === 'star_map')
-    || product.slug === 'star-map-photo-frame';
+    || product.slug === 'star-map-photo-frame'
+    || product.slug === 'star-map-poster';
+  // Layout is product-driven, not customer-toggled — the foil and poster
+  // products are physically different (acrylic + foil vs paper + ink).
+  const starLayout: 'foil' | 'poster' =
+    product.slug === 'star-map-poster' ? 'poster' : 'foil';
   const [starLat, setStarLat] = useState<number | null>(null);
   const [starLng, setStarLng] = useState<number | null>(null);
   const [starLocLabel, setStarLocLabel] = useState<string>('');
@@ -877,6 +882,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // store the absolute UTC ISO so the rebuild doesn't depend on the
     // customer's local timezone.
     if (isStarMap) {
+      notes += `${notes ? ';' : ''}star_layout:${starLayout}`;
       if (starLat != null && starLng != null) {
         notes += `${notes ? ';' : ''}star_lat:${starLat.toFixed(5)};star_lng:${starLng.toFixed(5)}`;
       }
@@ -1366,14 +1372,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       locationLabel={starLocLabel}
                       tagline={starTagline}
                       coordinates={starShowCoords && starLat != null && starLng != null
-                        ? `${Math.abs(starLat).toFixed(4)}° ${starLat >= 0 ? 'N' : 'S'} · ${Math.abs(starLng).toFixed(4)}° ${starLng >= 0 ? 'E' : 'W'}`
+                        ? (starLayout === 'poster'
+                            ? `${Math.abs(starLat).toFixed(3)}°${starLat >= 0 ? 'N' : 'S'} / ${Math.abs(starLng).toFixed(3)}°${starLng >= 0 ? 'E' : 'W'}`
+                            : `${Math.abs(starLat).toFixed(4)}° ${starLat >= 0 ? 'N' : 'S'} · ${Math.abs(starLng).toFixed(4)}° ${starLng >= 0 ? 'E' : 'W'}`)
                         : undefined}
                       showLines={starShowLines}
                       showLabels={starShowLabels}
-                      locationFont={starFontLocation || engravedFont}
+                      layout={starLayout}
+                      locationFont={starFontLocation || (starLayout === 'poster' ? 'Archivo' : engravedFont)}
                       namesFont={starFontNames || 'Archivo'}
                       eventFont={starFontEvent || 'Archivo'}
-                      taglineFont={starFontTagline || engravedFont}
+                      taglineFont={starFontTagline || (starLayout === 'poster' ? 'Playfair Display' : engravedFont)}
                     />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
