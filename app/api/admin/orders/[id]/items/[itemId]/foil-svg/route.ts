@@ -67,6 +67,7 @@ export async function GET(
       titleFont: n['song_title_font'],
       namesFont: n['song_names_font'],
       yearFont:  n['song_year_font'],
+      lyricsScale: n['song_lyrics_scale'] ? parseFloat(n['song_lyrics_scale']) : 1,
       layout,
       materialColor: null,
     });

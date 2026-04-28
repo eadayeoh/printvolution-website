@@ -39,6 +39,8 @@ type Props = {
   namesFont?: string;
   yearFont?: string;
   taglineFont?: string;
+  /** Multiplier for the auto-computed lyrics font size. 1 = auto. */
+  lyricsScale?: number;
   layout?: SongLyricsLayout;
   /** Pink wash colour around the disc — only used by song / wedding layouts. */
   accentColor?: string;
@@ -134,6 +136,7 @@ export function SongLyricsTemplate({
   namesFont,
   yearFont,
   taglineFont,
+  lyricsScale = 1,
   layout = 'song',
   accentColor = '#f7c7d8',
   foilColor = '#d4af37',
@@ -241,7 +244,7 @@ export function SongLyricsTemplate({
       {/* Lyrics text spiraling on the disc. Gold on navy for foil; white on
           black for the photo layouts. Font size auto-shrinks. */}
       <text
-        fontSize={autoLyricsFontSize(lyricsForRender.length)}
+        fontSize={autoLyricsFontSize(lyricsForRender.length) * Math.max(0.5, Math.min(2, lyricsScale))}
         fontFamily="Archivo, system-ui, sans-serif"
         fill={lyricsFill}
         letterSpacing="0.02"

@@ -28,6 +28,8 @@ type Props = {
   onYearFont: (f: string) => void;
   layout: SongLyricsLayout;
   onLayout: (l: SongLyricsLayout) => void;
+  lyricsScale: number;
+  onLyricsScale: (n: number) => void;
 };
 
 export function SongLyricsInputs({
@@ -37,6 +39,7 @@ export function SongLyricsInputs({
   allowedFonts,
   titleFont, onTitleFont, namesFont, onNamesFont, yearFont, onYearFont,
   layout, onLayout,
+  lyricsScale, onLyricsScale,
 }: Props) {
   // Field labels + placeholders shift with the chosen layout so the inputs
   // match what the customer sees on the preview (year vs full date, etc).
@@ -95,6 +98,25 @@ export function SongLyricsInputs({
         />
         <div style={{ marginTop: 4, textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
           {lyrics.length} chars
+        </div>
+      </label>
+      <label style={{ display: 'block' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Lyrics size</span>
+          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{Math.round(lyricsScale * 100)}%</span>
+        </div>
+        <input
+          type="range" min={0.5} max={2} step={0.05} value={lyricsScale}
+          onChange={(e) => onLyricsScale(parseFloat(e.target.value))}
+          style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <button type="button" onClick={() => onLyricsScale(Math.max(0.5, +(lyricsScale - 0.1).toFixed(2)))}
+            style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>− smaller</button>
+          <button type="button" onClick={() => onLyricsScale(1)}
+            style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>Auto</button>
+          <button type="button" onClick={() => onLyricsScale(Math.min(2, +(lyricsScale + 0.1).toFixed(2)))}
+            style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>+ bigger</button>
         </div>
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

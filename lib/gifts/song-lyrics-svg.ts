@@ -78,6 +78,9 @@ export type BuildSongLyricsSvgInput = {
   namesFont?: string;
   yearFont?: string;
   taglineFont?: string;
+  /** Multiplier applied on top of the auto-computed lyrics font size.
+   *  1.0 = auto. 0.5 = half-size, 1.5 = 1.5×. Clamped to [0.5, 2.0]. */
+  lyricsScale?: number;
   layout?: SongLyricsLayout;
   accentColor?: string;
   foilColor?: string;
@@ -100,6 +103,7 @@ export function buildSongLyricsSvg({
   namesFont,
   yearFont = 'Archivo',
   taglineFont,
+  lyricsScale = 1,
   layout = 'song',
   accentColor = '#f7c7d8',
   foilColor = '#d4af37',
@@ -119,7 +123,8 @@ export function buildSongLyricsSvg({
   const subInk     = isFoil ? foilColor : '#3a3a3a';
   const discInk    = materialColor ?? '#1a2740';
 
-  const fontSize = autoLyricsFontSize(lyricsForRender.length).toFixed(3);
+  const scale = Math.max(0.5, Math.min(2, lyricsScale));
+  const fontSize = (autoLyricsFontSize(lyricsForRender.length) * scale).toFixed(3);
 
   let body = '';
   body += `<defs>`;

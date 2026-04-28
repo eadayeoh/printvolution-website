@@ -205,6 +205,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [songLayout, setSongLayout] = useState<'song' | 'wedding' | 'foil'>('song');
   const [songSubtitle, setSongSubtitle] = useState<string>('');
   const [songTagline, setSongTagline] = useState<string>('');
+  // 1.0 = auto-shrink default; customer can override via the slider.
+  const [songLyricsScale, setSongLyricsScale] = useState<number>(1);
   // NOTE: customer-facing SVG download is intentionally NOT exposed (project
   // hard rule: customer downloads nothing, ever — not even after payment).
   // The foil SVG is generated admin-side from the order line; see the
@@ -747,6 +749,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (songYearFont)  notes += `;song_year_font:${songYearFont}`;
       if (songSubtitle.trim()) notes += `;song_subtitle:${songSubtitle.trim()}`;
       if (songTagline.trim())  notes += `;song_tagline:${songTagline.trim()}`;
+      if (songLyricsScale !== 1) notes += `;song_lyrics_scale:${songLyricsScale.toFixed(2)}`;
       if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
       if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
       if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
@@ -1163,6 +1166,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       titleFont={songTitleFont || engravedFont}
                       namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : songLayout === 'foil' ? 'Dancing Script' : 'Dancing Script')}
                       yearFont={songYearFont || 'Archivo'}
+                      lyricsScale={songLyricsScale}
                       layout={songLayout}
                     />
                   </div>
@@ -1787,6 +1791,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')} onNamesFont={setSongNamesFont}
                   yearFont={songYearFont || 'Archivo'}       onYearFont={setSongYearFont}
                   layout={songLayout} onLayout={setSongLayout}
+                  lyricsScale={songLyricsScale} onLyricsScale={setSongLyricsScale}
                 />
               ) : (
               <>
