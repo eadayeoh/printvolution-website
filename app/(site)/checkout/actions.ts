@@ -487,11 +487,9 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // the production pipeline for each — source/preview asset IDs were
   // captured at upload time and embedded in personalisation_notes.
   if (giftItems.length > 0) {
-    // Pre-parse refs so we know which template ids the cart references,
-    // then bulk-fetch their mode_override in one round trip. Without this,
-    // products that host multiple physical SKUs through different
-    // templates (e.g. Star Map: Foil vs Poster) would inherit
-    // gift_products.mode and route the wrong way at fulfilment.
+    // Bulk-fetch mode_override for any referenced templates so a
+    // multi-SKU product (e.g. Star Map: foil vs poster) routes by the
+    // customer's pick instead of the product's default mode.
     const giftRefs = giftItems.map((i) => parseGiftRefs(i.personalisation_notes));
     const templateIds = Array.from(
       new Set(giftRefs.map((r) => r.templateId).filter((id): id is string => !!id)),

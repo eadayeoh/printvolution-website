@@ -21,6 +21,7 @@ import {
   type GiftTemplateRenderAnchorZone,
   type GiftMode,
 } from '@/lib/gifts/types';
+import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
@@ -189,7 +190,7 @@ export function GiftTemplateEditor({
   /** Active gift_modes rows, used to populate the mode-override
    *  dropdown. Pulled fresh per page render so newly-added admin
    *  modes show up without a code change. */
-  availableModes?: Array<{ slug: string; label: string }>;
+  availableModes?: Array<Pick<GiftModeMeta, 'slug' | 'label'>>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

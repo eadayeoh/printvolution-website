@@ -120,11 +120,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Auto-select the first template when the product *requires* one — keeps
-  // the live preview from blanking out on first paint, and lets renderer
-  // products (star map / city map / …) read template-driven defaults
-  // (mode_override, customer_picker_role, swatches) without making the
-  // customer click first.
+  // Auto-pick the first template when one is required so the live
+  // preview doesn't render blank before the customer clicks anything.
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     product.template_mode === 'required' && templates.length > 0 ? templates[0].id : null,
   );
@@ -366,27 +363,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     templates.some((t) => (t as { renderer?: string }).renderer === 'star_map')
     || product.slug === 'star-map-photo-frame'
     || product.slug === 'star-map-poster';
-  // Layout follows the customer's template pick when the product carries
-  // multiple star_map templates (e.g. Foil + Poster on the same PDP).
-  // 'foil_overlay' picker role flags a foil template; everything else
-  // (no role / null) is treated as poster — poster prints don't carry a
-  // foil swatch row, so the role split is unambiguous.
-  //
-  // Falls back to the first star_map template when the customer hasn't
-  // picked yet, then to the slug-driven default for legacy products that
-  // have no templates assigned (star-map-photo-frame uses template_mode
-  // = 'none', so its templates list is empty by design).
-  const starLayout: 'foil' | 'poster' = (() => {
-    const tpl = selectedTemplateId
-      ? templates.find((t) => t.id === selectedTemplateId)
-      : templates.find((t) => (t as { renderer?: string }).renderer === 'star_map');
-    if (tpl) {
-      return (tpl as { customer_picker_role?: string | null }).customer_picker_role === 'foil_overlay'
-        ? 'foil'
-        : 'poster';
-    }
-    return product.slug === 'star-map-poster' ? 'poster' : 'foil';
-  })();
   const [starLat, setStarLat] = useState<number | null>(null);
   const [starLng, setStarLng] = useState<number | null>(null);
   const [starLocLabel, setStarLocLabel] = useState<string>('');
@@ -793,12 +769,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     ? templates.find((t) => t.id === selectedTemplateId) ?? null
     : null;
 
-  // Effective customer-picker template — the one whose colour swatches
-  // the customer is offered. The customer's explicit pick always wins
-  // so flipping templates with different picker roles (e.g. Foil ↔
-  // Poster on a star map PDP) updates the swatch row in lockstep.
-  // Falls back to the first renderer-matching template for legacy
-  // pages that don't surface a picker yet.
+  // Customer's explicit pick wins so flipping templates with different
+  // picker roles (e.g. Foil ↔ Poster on a star map PDP) refreshes the
+  // swatch row in lockstep. Falls back to the first renderer-matching
+  // template for products that haven't surfaced a picker yet.
   const customerPickerTemplate = (() => {
     if (activeTemplate) return activeTemplate;
     const rendererSlug =
@@ -807,10 +781,20 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     : isSongLyrics ? 'song_lyrics'
     : null;
     if (rendererSlug) {
-      return templates.find((t) => (t as { renderer?: string }).renderer === rendererSlug) ?? null;
+      return templates.find((t) => t.renderer === rendererSlug) ?? null;
     }
     return null;
   })();
+  // Star map layout follows the active picker template — 'foil_overlay'
+  // role → foil, anything else → poster. Slug fallback covers legacy
+  // products that have no templates assigned (template_mode='none').
+  const starLayout: 'foil' | 'poster' = customerPickerTemplate
+    ? customerPickerTemplate.customer_picker_role === 'foil_overlay'
+      ? 'foil'
+      : 'poster'
+    : product.slug === 'star-map-poster'
+    ? 'poster'
+    : 'foil';
   // Resolved swatch list:
   //   - Template carries customer_picker_role = 'none' → empty array (hides row)
   //   - Template carries 'mockup_swap' or 'foil_overlay' WITH swatches → those win
@@ -970,12 +954,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         if (engravedRotation !== 0) notes += `;text_rot:${engravedRotation}`;
       }
     }
-    // Smuggle the chosen template id into the cart line. Checkout
-    // unpacks this to: (a) populate gift_order_items.template_id, and
-    // (b) apply the template's mode_override to the order's mode.
-    // Renderer-driven products (star map, city map) MUST carry this
-    // when 2+ templates are assigned — otherwise checkout has no way
-    // to tell which physical SKU the customer picked.
+    // Checkout reads gift_template to apply mode_override and stamp
+    // gift_order_items.template_id — without it a multi-template
+    // product can't tell which SKU the customer picked.
     if (selectedTemplateId) {
       notes += `${notes ? ';' : ''}gift_template:${selectedTemplateId}`;
     }
@@ -2249,13 +2230,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   after each renderer-specific input. */}
               {(() => {
                 if (!(isSongLyrics || isCityMap || isStarMap)) return null;
-                // Template picker — only shown when the product offers
-                // 2+ templates so the customer has something meaningful
-                // to choose between. Single-template products auto-pick
-                // and skip the UI. The pick drives starLayout / cart
-                // mode_override, so it has to come BEFORE the renderer
-                // inputs visually so customers don't fill in a star
-                // map and then realise they wanted the poster layout.
+                // Drives starLayout + cart mode_override, so it sits
+                // ahead of the renderer inputs. Single-template products
+                // auto-pick and skip this UI.
                 const templateBlock =
                   hasTemplates && templates.length >= 2 ? (
                     <ComposeSection letter={sectionLetters.template!} title="Pick a layout">
