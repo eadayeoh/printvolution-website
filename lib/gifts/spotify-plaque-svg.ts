@@ -68,13 +68,14 @@ export function buildSpotifyPlaqueSvg({
   const photoX = margin;
   const photoW = W - margin * 2;          // 84
 
-  // Scannable strip pinned at the bottom.
-  const scanH = 12;
+  // Scannable strip pinned at the bottom. The Spotify scannables PNG
+  // already bundles the logo + bars in a single 4:1 image (640×160), so
+  // we use the full content width and let the strip's height follow that
+  // aspect — no hand-drawn logo, no cropping.
+  const scanW = W - margin * 2;             // 84
+  const scanH = scanW / 4;                   // 21 (matches PNG 4:1 aspect)
+  const scanX = margin;
   const scanY = H - margin - scanH;
-  const scanLogoR = 3.5;
-  const scanLogoX = photoX + scanLogoR;
-  const scanCodeX = scanLogoX + scanLogoR + 3;
-  const scanCodeW = (W - margin) - scanCodeX;
 
   // Transport controls sit above the scannable strip.
   const ctrlSpacing = 9;
@@ -112,7 +113,7 @@ export function buildSpotifyPlaqueSvg({
 
   // ── Photo (square, customer upload) ─────────────────────────────────────
   if (photoUrl) {
-    body += `<image href="${esc(photoUrl)}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" preserveAspectRatio="xMidYMid slice"/>`;
+    body += `<image href="${esc(photoUrl)}" xlink:href="${esc(photoUrl)}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" preserveAspectRatio="xMidYMid slice"/>`;
   } else {
     body += `<rect x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" fill="${trackGrey}"/>`;
     body += `<text x="${W / 2}" y="${photoY + photoH / 2}" text-anchor="middle" font-size="3.5" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Upload your photo</text>`;
@@ -177,27 +178,19 @@ export function buildSpotifyPlaqueSvg({
   body += `<polyline points="${cxRepeat + 1.5},${cy - 2.2} ${cxRepeat + 2.7},${cy - 1.6} ${cxRepeat + 1.5},${cy - 1}"/>`;
   body += `</g>`;
 
-  // ── Spotify logo + scannable code strip ─────────────────────────────────
-  // Spotify circle logo (simplified — green circle with three sound waves).
-  body += `<circle cx="${scanLogoX}" cy="${scanY + scanH / 2}" r="${scanLogoR}" fill="#1DB954"/>`;
-  body += `<g stroke="#ffffff" stroke-width="0.55" fill="none" stroke-linecap="round">`;
-  body += `<path d="M ${scanLogoX - scanLogoR * 0.6} ${scanY + scanH / 2 - 1.2} q ${scanLogoR * 0.6} -0.6 ${scanLogoR * 1.2} 0"/>`;
-  body += `<path d="M ${scanLogoX - scanLogoR * 0.5} ${scanY + scanH / 2} q ${scanLogoR * 0.5} -0.5 ${scanLogoR} 0"/>`;
-  body += `<path d="M ${scanLogoX - scanLogoR * 0.4} ${scanY + scanH / 2 + 1.2} q ${scanLogoR * 0.4} -0.4 ${scanLogoR * 0.8} 0"/>`;
-  body += `</g>`;
-
-  // Scannable barcode — lifted from Spotify's public scannables endpoint.
-  // Cropped to remove their built-in white margins so it sits flush
-  // alongside the logo. preserveAspectRatio=none stretches to the bar
-  // shape we want; the bars themselves are vertical strokes so they
-  // stay legible under non-uniform scale.
+  // ── Spotify scannable strip ─────────────────────────────────────────────
+  // The PNG from scannables.scdn.co already includes the Spotify logo on
+  // the left and the bars on the right in a single 4:1 image — no need
+  // to draw our own logo. xlink:href is included alongside href for
+  // older WebKit (Safari) compatibility when SVG is injected via
+  // dangerouslySetInnerHTML.
   if (spotifyTrackId) {
     const scanUrl = spotifyScannableUrl(spotifyTrackId);
-    body += `<image href="${esc(scanUrl)}" x="${scanCodeX}" y="${scanY}" width="${scanCodeW}" height="${scanH}" preserveAspectRatio="xMidYMid slice"/>`;
+    body += `<image href="${esc(scanUrl)}" xlink:href="${esc(scanUrl)}" x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" preserveAspectRatio="xMidYMid meet"/>`;
   } else {
-    body += `<rect x="${scanCodeX}" y="${scanY + scanH / 2 - 2}" width="${scanCodeW}" height="4" fill="${trackGrey}"/>`;
-    body += `<text x="${scanCodeX + scanCodeW / 2}" y="${scanY + scanH / 2 + 0.8}" text-anchor="middle" font-size="2.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
+    body += `<rect x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" fill="${trackGrey}"/>`;
+    body += `<text x="${scanX + scanW / 2}" y="${scanY + scanH / 2 + 1}" text-anchor="middle" font-size="3.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}">${body}</svg>`;
 }
