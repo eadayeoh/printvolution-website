@@ -21,6 +21,8 @@ import {
   type GiftMode,
 } from '@/lib/gifts/types';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
+import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
+import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -156,6 +158,48 @@ export function GiftTemplateEditor({
       type: z.type ?? 'image',
     })) as GiftTemplateZone[]
   );
+
+  // Renderer routing — read-only in the editor for now. Renderer-driven
+  // templates (city_map / star_map / song_lyrics) ignore zones_json
+  // entirely; their layout is defined in code. The canvas shows what the
+  // renderer produces with sample data so admins can see the output even
+  // though there are no zones to drag.
+  const renderer = template?.renderer ?? 'zones';
+  const isRendererTemplate = renderer && renderer !== 'zones';
+  const rendererPreviewSvg: string | null = (() => {
+    if (!isRendererTemplate) return null;
+    if (renderer === 'city_map') {
+      // Empty-state preview — vectors=null gives the "Enter a city to
+      // render the map" placeholder. We don't fire an Overpass fetch
+      // from the admin editor.
+      return buildCityMapSvg({
+        vectors: null,
+        names: 'EVA & JOHN',
+        event: 'OUR FIRST DATE',
+        cityLabel: 'LONDON',
+        tagline: 'Love now and always',
+      });
+    }
+    if (renderer === 'star_map') {
+      // Static example — current date, Singapore-ish coords. Zero-cost,
+      // pure compute, runs in the admin editor without a network round
+      // trip.
+      const scene = buildStarMapScene(1.29, 103.85, new Date());
+      return buildStarMapSvg({
+        scene,
+        dateUtc: new Date(),
+        names: 'EVA & JOHN',
+        event: 'THE NIGHT WE MET',
+        locationLabel: 'SINGAPORE',
+        tagline: 'Under our stars',
+        coordinates: '1.29° N · 103.85° E',
+        showLines: true,
+      });
+    }
+    // song_lyrics — return null and fall back to the explanatory banner
+    // (no quick way to render the React component to a string here).
+    return null;
+  })();
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 560, h: 560 });
@@ -582,6 +626,24 @@ export function GiftTemplateEditor({
 
         {/* RIGHT: visual canvas */}
         <div className="space-y-4">
+          {isRendererTemplate && (
+            <div className="rounded-lg border-2 border-magenta/30 bg-magenta/5 px-4 py-3 text-[12px] leading-snug text-ink">
+              <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
+                Code-driven template — renderer: <span className="font-mono">{renderer}</span>
+              </div>
+              <div>
+                Layout, geometry, and footer text styling come from code, not
+                zones. The preview below shows what the renderer outputs
+                with placeholder text. <strong>Customer-facing text fields</strong>
+                {' '}(names / event / location / tagline) are entered on the
+                product page itself — not here.
+                {' '}
+                <strong>Where the design sits inside the physical frame</strong>
+                {' '}is controlled per variant on the gift product page
+                (mockup image + design area rectangle).
+              </div>
+            </div>
+          )}
           <div className="rounded-lg border border-neutral-200 bg-white">
             <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-2">
               <div>
@@ -623,6 +685,29 @@ export function GiftTemplateEditor({
               <MaskShapeDefs />
               {background && (
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+              )}
+
+              {/* Renderer-driven templates (city_map / star_map /
+                  song_lyrics) skip zones entirely — the layout is code,
+                  so we render the live SVG output instead of the empty
+                  zones canvas. Customers fill in the footer text on the
+                  product page (CityMapInputs / StarMapInputs / SongLyricsInputs);
+                  position inside the variant frame is admin-controlled
+                  on the product's variant editor (mockup_area). */}
+              {isRendererTemplate && rendererPreviewSvg && (
+                <div
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  // Pure SVG built from buildCityMapSvg / buildStarMapSvg —
+                  // safe to inject (all customer text would be XML-escaped
+                  // by the builder, and these are static placeholders).
+                  dangerouslySetInnerHTML={{ __html: rendererPreviewSvg }}
+                />
+              )}
+              {isRendererTemplate && !rendererPreviewSvg && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  Renderer: {renderer} (preview not available in editor — see product page)
+                </div>
               )}
 
               {/* Grid overlay — drawn under the zones so handles stay

@@ -1296,12 +1296,32 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
                 )}
 
-                {/* Song-lyrics-photo-frame: dedicated SVG renderer wins
-                    over the standard preview tree. Lyrics flow on a spiral
-                    around the centre photo; the customer's text fields
-                    feed in directly from the inputs panel below. */}
-                {isSongLyrics ? (
-                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130' }}>
+                {/* Renderer-driven products (song_lyrics / city_map /
+                    star_map). Each one's SVG output is the design itself
+                    — there's no template-zones flow.
+
+                    When the selected variant carries its own mockup
+                    image + design area (e.g. the "Black Frame" variant
+                    on the second admin screenshot), we composite the
+                    renderer SVG INSIDE that rectangle on top of the
+                    variant mockup. The variant editor's existing
+                    drag/resize controls let admins position the design
+                    rectangle wherever it should sit on the physical
+                    product. */}
+                {(isSongLyrics || isCityMap || isStarMap) ? (() => {
+                  const variantMockup = shapeMockup.url ?? null;
+                  const variantArea   = shapeMockup.area ?? null;
+
+                  // Renderer aspect varies — keep each builder's own
+                  // physical proportions so the SVG never gets squashed
+                  // when the design area is a different aspect.
+                  const rendererAspect = isCityMap
+                    ? '100 / 130'
+                    : isStarMap
+                      ? (starLayout === 'poster' ? '100 / 140' : '100 / 130')
+                      : '100 / 130';
+
+                  const rendererBody = isSongLyrics ? (
                     <SongLyricsTemplate
                       photoUrl={songPhotoUrl || null}
                       lyrics={songLyrics}
@@ -1316,9 +1336,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       lyricsScale={songLyricsScale}
                       layout={songLayout}
                     />
-                  </div>
-                ) : isCityMap ? (
-                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130', position: 'relative' }}>
+                  ) : isCityMap ? (
                     <CityMapTemplate
                       vectors={cityVectors}
                       names={cityNames}
@@ -1331,38 +1349,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       eventFont={cityFontEvent || 'Archivo'}
                       taglineFont={cityFontTagline || engravedFont}
                     />
-                    {/* Generating overlay — covers the preview while OSM
-                        vectors are fetching so the customer sees the live
-                        preview is regenerating, not stale. */}
-                    {cityFetching && (
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: 12,
-                        background: 'rgba(26, 39, 64, 0.78)',
-                        backdropFilter: 'blur(2px)',
-                        color: '#d4af37',
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                        pointerEvents: 'none',
-                      }}>
-                        <div style={{
-                          width: 38, height: 38,
-                          border: '3px solid rgba(212, 175, 55, 0.25)',
-                          borderTopColor: '#d4af37',
-                          borderRadius: '50%',
-                          animation: 'pv-citymap-spin 0.9s linear infinite',
-                        }} />
-                        <div>Generating map…</div>
-                        <div style={{ fontSize: 9, fontWeight: 400, letterSpacing: '0.04em', opacity: 0.75 }}>
-                          5–15 s for dense cities
-                        </div>
-                        <style>{`@keyframes pv-citymap-spin { to { transform: rotate(360deg); } }`}</style>
-                      </div>
-                    )}
-                  </div>
-                ) : isStarMap ? (
-                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130', position: 'relative' }}>
+                  ) : (
                     <StarMapTemplate
                       lat={starLat}
                       lng={starLng}
@@ -1384,8 +1371,85 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       eventFont={starFontEvent || 'Archivo'}
                       taglineFont={starFontTagline || (starLayout === 'poster' ? 'Playfair Display' : engravedFont)}
                     />
-                  </div>
-                ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
+                  );
+
+                  // City map "Generating…" overlay — only used in the
+                  // standalone-render branch since it's about an OSM
+                  // fetch in flight, which only the city map runs.
+                  const cityFetchOverlay = isCityMap && cityFetching ? (
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 12,
+                      background: 'rgba(26, 39, 64, 0.78)',
+                      backdropFilter: 'blur(2px)',
+                      color: '#d4af37',
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                      pointerEvents: 'none',
+                    }}>
+                      <div style={{
+                        width: 38, height: 38,
+                        border: '3px solid rgba(212, 175, 55, 0.25)',
+                        borderTopColor: '#d4af37',
+                        borderRadius: '50%',
+                        animation: 'pv-citymap-spin 0.9s linear infinite',
+                      }} />
+                      <div>Generating map…</div>
+                      <div style={{ fontSize: 9, fontWeight: 400, letterSpacing: '0.04em', opacity: 0.75 }}>
+                        5–15 s for dense cities
+                      </div>
+                      <style>{`@keyframes pv-citymap-spin { to { transform: rotate(360deg); } }`}</style>
+                    </div>
+                  ) : null;
+
+                  // Variant has a physical mockup + an admin-set design
+                  // rectangle — slot the renderer inside it.
+                  if (variantMockup && variantArea) {
+                    return (
+                      <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden' }}>
+                        <img
+                          src={variantMockup}
+                          alt=""
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left:   `${variantArea.x}%`,
+                            top:    `${variantArea.y}%`,
+                            width:  `${variantArea.width}%`,
+                            height: `${variantArea.height}%`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {/* Inner frame holds the renderer's natural
+                              aspect ratio so it never gets squashed when
+                              the variant area is a different aspect.
+                              maxWidth/maxHeight 100% lets it shrink to
+                              fit either dimension. */}
+                          <div style={{ aspectRatio: rendererAspect, maxWidth: '100%', maxHeight: '100%', height: '100%' }}>
+                            {rendererBody}
+                          </div>
+                        </div>
+                        {cityFetchOverlay}
+                      </div>
+                    );
+                  }
+
+                  // No variant mockup — fall back to the standalone
+                  // full-bleed renderer. Same look as before this
+                  // change for products without a configured variant.
+                  return (
+                    <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: rendererAspect, position: 'relative' }}>
+                      {rendererBody}
+                      {cityFetchOverlay}
+                    </div>
+                  );
+                })() : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
                   <div style={{ width: '100%' }}>
                     <GiftTemplateLayoutPreview
                       template={activeTemplate}

@@ -291,11 +291,16 @@ export type GiftTemplate = {
   /** Routes the template to a renderer:
    *   • 'zones'       — standard multi-slot form (default).
    *   • 'song_lyrics' — SongLyricsTemplate React component (spiral lyrics
-   *                     around photo + title/names/year footer). Bypasses
-   *                     zones_json entirely; the customer's inputs are
-   *                     defined by the renderer.
+   *                     around photo + title/names/year footer).
+   *   • 'city_map'    — CityMapTemplate (OSM-derived foil city map).
+   *   • 'star_map'    — StarMapTemplate (sky chart for date+location;
+   *                     foil or poster layout).
+   *
+   *  Renderer-driven templates bypass zones_json entirely; the
+   *  customer's inputs are defined by the renderer's React component
+   *  on the product page (CityMapInputs / StarMapInputs / SongLyricsInputs).
    */
-  renderer?: 'zones' | 'song_lyrics';
+  renderer?: 'zones' | 'song_lyrics' | 'city_map' | 'star_map';
 };
 
 export type GiftCropRect = {
