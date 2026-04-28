@@ -1590,29 +1590,29 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
                   // Variant has a physical mockup + an admin-set design
                   // rectangle — slot the renderer inside it. The
-                  // When admin sets preview_max_width_px the customer
-                  // wants a snug shell at product dimensions — skip the
-                  // variant mockup wrapping (which paints wall + floor
-                  // around the frame) and just render the design at the
-                  // product's aspect.
+                  // When admin sets preview_max_width_px, the shell
+                  // tightens AND its aspect locks to product dimensions
+                  // (so a 200×200mm product gets a square shell). The
+                  // mockup still shows inside via object-fit: contain.
                   const snugMode = product.preview_max_width_px != null;
 
                   // parent stage matches the mockup image's natural
                   // aspect so the admin-drawn rectangle lines up
                   // exactly with where it'll print on the customer's
                   // PDP (same coordinate system as the variant editor).
-                  if (variantMockup && variantArea && !snugMode) {
-                    // Stage aspect = linked renderer template's
-                    // reference dimensions, so the area % saved by
-                    // the admin editor's template-aspect stage
-                    // resolves to the same position + size here.
+                  if (variantMockup && variantArea) {
+                    // Stage aspect priority: snug mode → product dims;
+                    // else linked template's reference dims; else null
+                    // (RendererVariantStage falls back to 1:1).
                     const linkedTpl = templates.find((t) => {
                       const r = (t as { renderer?: string }).renderer;
                       return r && r !== 'zones';
                     }) as { reference_width_mm?: number | null; reference_height_mm?: number | null } | undefined;
-                    const tplAspect = linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
-                      ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
-                      : null;
+                    const tplAspect = snugMode && product.width_mm > 0 && product.height_mm > 0
+                      ? `${product.width_mm} / ${product.height_mm}`
+                      : linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
+                        ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
+                        : null;
                     return (
                       <RendererVariantStage
                         mockupUrl={variantMockup}
