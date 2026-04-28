@@ -80,6 +80,17 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                         <strong>Notes:</strong> {item.personalisation_notes}
                       </div>
                     )}
+                    {/* Foil-print SVG download — admin only, generated server-
+                        side from the line's notes. Customers never see this. */}
+                    {item.product_slug === 'song-lyrics-photo-frame' && (
+                      <a
+                        href={`/api/admin/orders/${order.id}/items/${item.id}/foil-svg`}
+                        className="mt-2 inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                        download
+                      >
+                        ↓ Foil SVG
+                      </a>
+                    )}
                     <div className="mt-1 text-xs text-neutral-500">Qty {item.qty}</div>
                   </div>
                   <div className="text-right">

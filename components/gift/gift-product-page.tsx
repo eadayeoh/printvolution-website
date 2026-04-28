@@ -196,33 +196,19 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // This product has a single template — lyrics spiraling around a centre
   // photo with a footer block (title / names / year). We keep its inputs
   // flat instead of squeezing them into the surfaces / templates flow.
-  const isSongLyrics = product.slug === 'song-lyrics-photo-frame';
+  // Detect via the seeded gift_template (renderer='song_lyrics') so any
+  // product the admin links the template to gets the special PDP. Falls
+  // back to the legacy slug check so existing data still works.
+  const isSongLyrics =
+    templates.some((t) => (t as { renderer?: string }).renderer === 'song_lyrics')
+    || product.slug === 'song-lyrics-photo-frame';
   const [songLayout, setSongLayout] = useState<'song' | 'wedding' | 'foil'>('song');
   const [songSubtitle, setSongSubtitle] = useState<string>('');
   const [songTagline, setSongTagline] = useState<string>('');
-  // Stable id so the export handler can find the rendered SVG in the DOM
-  // and serialise it for download (with materialColor stripped).
-  const SONG_SVG_ID = 'song-lyrics-svg';
-  function exportSongSvg() {
-    if (typeof document === 'undefined') return;
-    const node = document.getElementById(SONG_SVG_ID) as SVGSVGElement | null;
-    if (!node) return;
-    // Clone and drop the first <rect> (background material) so the file
-    // contains only the foil-printed paths.
-    const clone = node.cloneNode(true) as SVGSVGElement;
-    const bg = clone.querySelector('rect');
-    if (bg && bg.parentNode) bg.parentNode.removeChild(bg);
-    const xml = new XMLSerializer().serializeToString(clone);
-    const blob = new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n${xml}`], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${product.slug}-foil-${Date.now()}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+  // NOTE: customer-facing SVG download is intentionally NOT exposed (project
+  // hard rule: customer downloads nothing, ever — not even after payment).
+  // The foil SVG is generated admin-side from the order line; see the
+  // /api/admin/orders/[id]/items/[itemId]/foil-svg route.
   const [songLyrics, setSongLyrics] = useState<string>('');
   const [songTitle, setSongTitle]   = useState<string>('OUR SONG');
   const [songNames, setSongNames]   = useState<string>('');
@@ -1178,7 +1164,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : songLayout === 'foil' ? 'Dancing Script' : 'Dancing Script')}
                       yearFont={songYearFont || 'Archivo'}
                       layout={songLayout}
-                      svgId={SONG_SVG_ID}
                     />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
@@ -1802,7 +1787,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')} onNamesFont={setSongNamesFont}
                   yearFont={songYearFont || 'Archivo'}       onYearFont={setSongYearFont}
                   layout={songLayout} onLayout={setSongLayout}
-                  onExportSvg={exportSongSvg}
                 />
               ) : (
               <>

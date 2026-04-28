@@ -266,6 +266,14 @@ export type GiftTemplate = {
   /** When true, customer sees a font-family dropdown next to each
    *  text zone. Default false — admin opts in per template. */
   customer_can_change_font?: boolean;
+  /** Routes the template to a renderer:
+   *   • 'zones'       — standard multi-slot form (default).
+   *   • 'song_lyrics' — SongLyricsTemplate React component (spiral lyrics
+   *                     around photo + title/names/year footer). Bypasses
+   *                     zones_json entirely; the customer's inputs are
+   *                     defined by the renderer.
+   */
+  renderer?: 'zones' | 'song_lyrics';
 };
 
 export type GiftCropRect = {

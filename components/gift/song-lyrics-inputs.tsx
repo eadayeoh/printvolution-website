@@ -28,8 +28,6 @@ type Props = {
   onYearFont: (f: string) => void;
   layout: SongLyricsLayout;
   onLayout: (l: SongLyricsLayout) => void;
-  /** Foil-layout SVG export trigger. Parent owns the actual download. */
-  onExportSvg?: () => void;
 };
 
 export function SongLyricsInputs({
@@ -38,7 +36,7 @@ export function SongLyricsInputs({
   photoUrl, onPhotoUrl,
   allowedFonts,
   titleFont, onTitleFont, namesFont, onNamesFont, yearFont, onYearFont,
-  layout, onLayout, onExportSvg,
+  layout, onLayout,
 }: Props) {
   // Field labels + placeholders shift with the chosen layout so the inputs
   // match what the customer sees on the preview (year vs full date, etc).
@@ -221,15 +219,6 @@ export function SongLyricsInputs({
             ✦ Square crop works best. The photo is masked into a circle in the centre.
           </div>
         </div>
-      )}
-      {isFoil && onExportSvg && (
-        <button
-          type="button"
-          onClick={onExportSvg}
-          style={{ marginTop: 4, padding: '12px 14px', background: 'var(--pv-ink)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'var(--pv-f-mono)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}
-        >
-          ↓ Download foil SVG
-        </button>
       )}
     </div>
   );
