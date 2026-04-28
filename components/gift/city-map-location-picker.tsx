@@ -12,7 +12,7 @@
  * `window` on import.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -54,6 +54,18 @@ function MapRecenter({ lat, lng }: { lat: number; lng: number }) {
 export default function CityMapLocationPicker({ lat, lng, radiusKm, onMove }: Props) {
   const markerRef = useRef<L.Marker | null>(null);
 
+  // Local pin position. The parent prop is the source of truth for the
+  // *resolved* location, but it lags by 5–15 s while OSM data downloads.
+  // Without this local state, the marker visually bounces back to the
+  // pre-drag prop value on any re-render during the fetch — even after
+  // the customer has clearly dragged it elsewhere. Local state keeps the
+  // pin stable; the parent will eventually push the same coords back via
+  // props, at which point the useEffect below no-ops.
+  const [pinPos, setPinPos] = useState<[number, number]>([lat, lng]);
+  useEffect(() => {
+    setPinPos([lat, lng]);
+  }, [lat, lng]);
+
   // Pick a zoom level that makes the radius circle fill ~70% of the map.
   // 3 km ≈ zoom 13, 6 km ≈ zoom 12, 12 km ≈ zoom 11.
   const zoom = useMemo(() => {
@@ -66,7 +78,7 @@ export default function CityMapLocationPicker({ lat, lng, radiusKm, onMove }: Pr
   return (
     <div style={{ width: '100%', height: 220, border: '2px solid var(--pv-ink)', position: 'relative' }}>
       <MapContainer
-        center={[lat, lng]}
+        center={pinPos}
         zoom={zoom}
         scrollWheelZoom
         style={{ width: '100%', height: '100%' }}
@@ -75,14 +87,14 @@ export default function CityMapLocationPicker({ lat, lng, radiusKm, onMove }: Pr
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapRecenter lat={lat} lng={lng} />
+        <MapRecenter lat={pinPos[0]} lng={pinPos[1]} />
         <Circle
-          center={[lat, lng]}
+          center={pinPos}
           radius={radiusKm * 1000}
           pathOptions={{ color: '#c41e6f', fillColor: '#c41e6f', fillOpacity: 0.08, weight: 2 }}
         />
         <Marker
-          position={[lat, lng]}
+          position={pinPos}
           draggable
           icon={PIN_ICON}
           eventHandlers={{
@@ -90,6 +102,7 @@ export default function CityMapLocationPicker({ lat, lng, radiusKm, onMove }: Pr
               const m = markerRef.current;
               if (!m) return;
               const p = m.getLatLng();
+              setPinPos([p.lat, p.lng]);
               onMove(p.lat, p.lng);
             },
           }}
