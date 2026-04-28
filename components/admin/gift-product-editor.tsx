@@ -89,6 +89,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   const [bleedMm, setBleedMm] = useState(product?.bleed_mm.toString() ?? '2');
   const [safeZoneMm, setSafeZoneMm] = useState(product?.safe_zone_mm.toString() ?? '3');
   const [minSourcePx, setMinSourcePx] = useState(product?.min_source_px.toString() ?? '1200');
+  const [previewMaxWidthPx, setPreviewMaxWidthPx] = useState(
+    product?.preview_max_width_px ? String(product.preview_max_width_px) : '',
+  );
 
 
   const [basePrice, setBasePrice] = useState(((product?.base_price_cents ?? 0) / 100).toFixed(2));
@@ -180,6 +183,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
       bleed_mm: parseFloat(bleedMm) || 0,
       safe_zone_mm: parseFloat(safeZoneMm) || 0,
       min_source_px: parseInt(minSourcePx, 10) || 1200,
+      preview_max_width_px: previewMaxWidthPx.trim() ? parseInt(previewMaxWidthPx, 10) || null : null,
       template_mode: templateMode,
       base_price_cents: Math.round((parseFloat(basePrice) || 0) * 100),
       price_tiers: priceTiers
@@ -786,6 +790,21 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 <span className="mb-1 block text-xs font-bold text-ink">Minimum source resolution (px, long edge)</span>
                 <input type="number" value={minSourcePx} onChange={(e) => setMinSourcePx(e.target.value)} className={inputCls} />
                 <span className="mt-1 block text-[11px] text-neutral-500">Customer photos smaller than this trigger a warning at upload.</span>
+              </label>
+              <label className="block md:col-span-2">
+                <span className="mb-1 block text-xs font-bold text-ink">Live-preview max width (px)</span>
+                <input
+                  type="number"
+                  min="120"
+                  max="2000"
+                  value={previewMaxWidthPx}
+                  onChange={(e) => setPreviewMaxWidthPx(e.target.value)}
+                  placeholder="Auto"
+                  className={inputCls}
+                />
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Caps the customer-facing live-preview shell on the PDP. Leave blank for auto (parent column width / 480 px renderer fallback). Tighten this for products whose tall mockup would otherwise dwarf the rest of the compose flow.
+                </span>
               </label>
             </div>
             <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">

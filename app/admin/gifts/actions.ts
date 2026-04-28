@@ -45,6 +45,7 @@ const GiftProductSchema = z.object({
   bleed_mm: z.number().min(0).default(2),
   safe_zone_mm: z.number().min(0).default(3),
   min_source_px: z.number().int().min(300).default(1200),
+  preview_max_width_px: z.number().int().min(120).max(2000).nullable().optional(),
   // Mode slug — validated as non-empty string so custom modes added via
   // /admin/gifts/modes (no code change) flow through. The gift_modes
   // table is the source of truth.

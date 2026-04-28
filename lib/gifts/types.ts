@@ -81,6 +81,10 @@ export type GiftProduct = {
   bleed_mm: number;
   safe_zone_mm: number;
   min_source_px: number;
+  /** Optional cap on the customer-facing live-preview shell width (px).
+   *  NULL = auto (parent column width / 480 px renderer fallback).
+   *  Migration 0081. */
+  preview_max_width_px?: number | null;
   /** Processing mode slug — must match an active row in gift_modes.
    *  Typed as string (not the GiftMode union) since admins can add
    *  custom modes via /admin/gifts/modes without a code change. */

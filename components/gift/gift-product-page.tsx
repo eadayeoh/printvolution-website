@@ -1401,6 +1401,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   justifyContent: 'center',
                   position: 'relative',
                   minHeight: 320,
+                  // Admin-tunable cap. Null = column-width / 480 fallback.
+                  maxWidth: product.preview_max_width_px ?? undefined,
+                  marginLeft: product.preview_max_width_px ? 'auto' : undefined,
+                  marginRight: product.preview_max_width_px ? 'auto' : undefined,
+                  width: '100%',
                 }}
               >
                 {/* Suppress the big "Building preview…" overlay on
