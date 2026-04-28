@@ -41,6 +41,9 @@ import { GiftFigurinePicker } from './gift-figurine-picker';
 import { resolveMockup } from '@/lib/gifts/resolve-mockup';
 import { TextStyleControls } from '@/components/gift/text-style-controls';
 import { SongLyricsInputs } from '@/components/gift/song-lyrics-inputs';
+import { CityMapTemplate } from '@/components/gift/city-map-template';
+import { CityMapInputs } from '@/components/gift/city-map-inputs';
+import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 
 type Props = {
   product: GiftProduct;
@@ -221,6 +224,26 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // gift-sources at fulfilment time.
   const [songPhotoUrl, setSongPhotoUrl] = useState<string>('');
   const [songPhotoAssetId, setSongPhotoAssetId] = useState<string>('');
+
+  // ── City Map Photo Frame (special-cased product) ──────────────────────────
+  // Detect by renderer='city_map' so any product the admin links the template
+  // to gets the special PDP. Same shape as song-lyrics above.
+  const isCityMap =
+    templates.some((t) => (t as { renderer?: string }).renderer === 'city_map')
+    || product.slug === 'city-map-photo-frame';
+  const [cityLat, setCityLat] = useState<number | null>(null);
+  const [cityLng, setCityLng] = useState<number | null>(null);
+  const [cityLabel, setCityLabel] = useState<string>('');
+  const [cityRadius, setCityRadius] = useState<number>(5);
+  const [cityVectors, setCityVectors] = useState<CityMapVectors | null>(null);
+  const [cityNames, setCityNames] = useState<string>('');
+  const [cityEvent, setCityEvent] = useState<string>('');
+  const [cityTagline, setCityTagline] = useState<string>('');
+  const [cityShowCoords, setCityShowCoords] = useState<boolean>(false);
+  const [cityFontTitle, setCityFontTitle] = useState<string>('');
+  const [cityFontNames, setCityFontNames] = useState<string>('');
+  const [cityFontEvent, setCityFontEvent] = useState<string>('');
+  const [cityFontTagline, setCityFontTagline] = useState<string>('');
   // Per-field fonts default to sensible options pulled from allowed_fonts.
   // Initialised lazily so we can reach allowedFonts (declared further down)
   // without restructuring the file.
@@ -765,6 +788,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (songPhotoAssetId) notes += `${notes ? ';' : ''}song_photo_asset:${songPhotoAssetId}`;
       if (engravedFont)       notes += `${notes ? ';' : ''}song_font:${engravedFont}`;
     }
+    // City Map Photo Frame: serialise the coords + footer text + radius so
+    // the admin can regenerate the foil-printable SVG from the order.
+    if (isCityMap) {
+      if (cityLat != null && cityLng != null) {
+        notes += `${notes ? ';' : ''}city_lat:${cityLat.toFixed(5)};city_lng:${cityLng.toFixed(5)};city_radius:${cityRadius.toFixed(1)}`;
+      }
+      if (cityLabel.trim())   notes += `${notes ? ';' : ''}city_label:${cityLabel.trim()}`;
+      if (cityNames.trim())   notes += `${notes ? ';' : ''}city_names:${cityNames.trim()}`;
+      if (cityEvent.trim())   notes += `${notes ? ';' : ''}city_event:${cityEvent.trim()}`;
+      if (cityTagline.trim()) notes += `${notes ? ';' : ''}city_tagline:${cityTagline.trim()}`;
+      if (cityShowCoords)     notes += `${notes ? ';' : ''}city_show_coords:1`;
+      if (cityFontTitle)      notes += `${notes ? ';' : ''}city_font_title:${cityFontTitle}`;
+      if (cityFontNames)      notes += `${notes ? ';' : ''}city_font_names:${cityFontNames}`;
+      if (cityFontEvent)      notes += `${notes ? ';' : ''}city_font_event:${cityFontEvent}`;
+      if (cityFontTagline)    notes += `${notes ? ';' : ''}city_font_tagline:${cityFontTagline}`;
+    }
     // Record the customer's adjusted area so production knows where
     // to place the design on the 300 DPI file (if they dragged/resized).
     if (selectedVariant?.photo_pan_mode && (panOffset.x !== 50 || panOffset.y !== 50)) {
@@ -1176,6 +1215,21 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       yearFont={songYearFont || 'Archivo'}
                       lyricsScale={songLyricsScale}
                       layout={songLayout}
+                    />
+                  </div>
+                ) : isCityMap ? (
+                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130' }}>
+                    <CityMapTemplate
+                      vectors={cityVectors}
+                      names={cityNames}
+                      event={cityEvent}
+                      cityLabel={cityLabel}
+                      tagline={cityTagline}
+                      coordinates={cityShowCoords && cityLat != null && cityLng != null ? `${cityLat.toFixed(4)}° N · ${cityLng.toFixed(4)}° E` : undefined}
+                      cityFont={cityFontTitle || engravedFont}
+                      namesFont={cityFontNames || 'Archivo'}
+                      eventFont={cityFontEvent || 'Archivo'}
+                      taglineFont={cityFontTagline || engravedFont}
                     />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
@@ -1802,6 +1856,29 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   yearFont={songYearFont || 'Archivo'}       onYearFont={setSongYearFont}
                   layout={songLayout} onLayout={setSongLayout}
                   lyricsScale={songLyricsScale} onLyricsScale={setSongLyricsScale}
+                />
+              ) : isCityMap ? (
+                <CityMapInputs
+                  lat={cityLat} lng={cityLng}
+                  cityLabel={cityLabel} onCityLabel={setCityLabel}
+                  radiusKm={cityRadius} onRadius={setCityRadius}
+                  fetching={false}
+                  fetchError={null}
+                  onLocationResolved={({ lat, lng, label, radiusKm, vectors }) => {
+                    setCityLat(lat); setCityLng(lng);
+                    if (!cityLabel.trim()) setCityLabel(label.split(',')[0]);
+                    setCityRadius(radiusKm);
+                    setCityVectors(vectors);
+                  }}
+                  names={cityNames} onNames={setCityNames}
+                  event={cityEvent} onEvent={setCityEvent}
+                  tagline={cityTagline} onTagline={setCityTagline}
+                  showCoords={cityShowCoords} onShowCoords={setCityShowCoords}
+                  allowedFonts={allowedFonts}
+                  cityFont={cityFontTitle || engravedFont} onCityFont={setCityFontTitle}
+                  namesFont={cityFontNames || 'Archivo'}    onNamesFont={setCityFontNames}
+                  eventFont={cityFontEvent || 'Archivo'}    onEventFont={setCityFontEvent}
+                  taglineFont={cityFontTagline || engravedFont} onTaglineFont={setCityFontTagline}
                 />
               ) : (
               <>

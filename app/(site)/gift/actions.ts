@@ -7,6 +7,7 @@ import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
+import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
@@ -655,3 +656,71 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     previewUrl: preview.previewPublicUrl,
   };
 }
+
+// ── City Map Photo Frame ────────────────────────────────────────────────────
+
+/**
+ * Geocode a free-text address via OSM Nominatim. Returns the top match's
+ * lat/lng + a clean human-readable label (the geocoder's display_name
+ * truncated to the first 2 components — usually city + country).
+ *
+ * Nominatim's usage policy requires a real User-Agent and at most 1 req/s.
+ * Customer-driven so the rate is fine; cache is keyed on the query string.
+ */
+export async function geocodeAddress(query: string): Promise<
+  { ok: true; lat: number; lng: number; label: string } | { ok: false; error: string }
+> {
+  const q = query.trim();
+  if (!q) return { ok: false, error: 'Empty query' };
+  if (q.length > 200) return { ok: false, error: 'Query too long' };
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'PrintVolution-CityMapGift/1.0 (multipleaddictions@gmail.com)',
+        'Accept-Language': 'en',
+      },
+      next: { revalidate: 60 * 60 * 24 * 30 },
+    });
+    if (!res.ok) return { ok: false, error: `geocoder ${res.status}` };
+    const arr = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+    if (!arr.length) return { ok: false, error: 'No matches for that address' };
+    const top = arr[0];
+    // First two display_name components is usually "<place>, <country>"; we
+    // surface that as the default city label (customer can override).
+    const label = top.display_name.split(',').slice(0, 2).join(',').trim();
+    return { ok: true, lat: parseFloat(top.lat), lng: parseFloat(top.lon), label };
+  } catch (e: any) {
+    console.error('[geocodeAddress] error', e?.message);
+    return { ok: false, error: 'Geocoder unavailable, try again' };
+  }
+}
+
+/**
+ * Pull OSM road + water vectors for a bounding box around (lat, lng) at the
+ * given radius and return the prepared SVG path data. Heavy operation —
+ * cached aggressively at the fetch layer (1 week revalidate). Same call
+ * used by the live PDP preview and the admin foil-SVG re-render.
+ */
+export async function fetchCityMapPaths(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+): Promise<{ ok: true; vectors: CityMapVectors } | { ok: false; error: string }> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { ok: false, error: 'Invalid coordinates' };
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return { ok: false, error: 'Coordinates out of range' };
+  }
+  const r = Math.max(1, Math.min(15, radiusKm || 5));
+  try {
+    const vectors = await fetchCityMapVectors(lat, lng, r);
+    return { ok: true, vectors };
+  } catch (e: any) {
+    console.error('[fetchCityMapPaths] error', e?.message);
+    return { ok: false, error: 'Map data unavailable, try a smaller radius' };
+  }
+}
+
