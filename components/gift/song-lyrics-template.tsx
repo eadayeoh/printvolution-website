@@ -76,6 +76,31 @@ const turns = 7;
 // Pre-computed at module load — these constants never change between renders.
 const SPIRAL_D = spiralPath(cx, cy, outerR, innerR, turns);
 
+// Approximate path length (mm) used to auto-size the lyrics font. Sum of
+// average circumferences across each turn — close enough for picking a
+// font size that fits the customer's text without measurement.
+const SPIRAL_LENGTH_MM = (() => {
+  const drPerTurn = (innerR - outerR) / turns;
+  let total = 0;
+  for (let i = 0; i < turns; i++) {
+    const rAvg = outerR + drPerTurn * (i + 0.5);
+    total += 2 * Math.PI * rAvg;
+  }
+  return total;
+})();
+
+// Base font size at which ~1100–1200 chars fits naturally. Above that we
+// scale down proportionally so any-length paste still renders.
+const BASE_FONT_SIZE = 1.55;
+const BASE_CAPACITY  = 1150; // chars at BASE_FONT_SIZE
+const MIN_FONT_SIZE  = 0.5;  // anything smaller is unreadable
+
+function autoLyricsFontSize(charCount: number): number {
+  if (charCount <= BASE_CAPACITY) return BASE_FONT_SIZE;
+  const scale = BASE_CAPACITY / charCount;
+  return Math.max(MIN_FONT_SIZE, BASE_FONT_SIZE * scale);
+}
+
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function SongLyricsTemplate({
@@ -152,14 +177,15 @@ export function SongLyricsTemplate({
       {/* Centre spindle hole */}
       <circle cx={cx} cy={cy} r="0.7" fill={accentColor} />
 
-      {/* Lyrics text spiraling on the disc (white on black) */}
+      {/* Lyrics text spiraling on the disc (white on black). Font size auto-
+          shrinks for longer text so any paste fits without truncation. */}
       <text
-        fontSize="1.55"
+        fontSize={autoLyricsFontSize(lyricsForRender.length)}
         fontFamily="Archivo, system-ui, sans-serif"
         fill="#f4f4f4"
         letterSpacing="0.02"
       >
-        <textPath href="#songLyricsSpiral" startOffset="0%" lengthAdjust="spacing">
+        <textPath href="#songLyricsSpiral" startOffset="0%" lengthAdjust="spacingAndGlyphs">
           {lyricsForRender}
         </textPath>
       </text>
