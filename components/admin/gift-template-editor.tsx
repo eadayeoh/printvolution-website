@@ -179,12 +179,17 @@ function makeTextZone(n: number): GiftTemplateTextZone {
 export function GiftTemplateEditor({
   template,
   existingGroups,
+  availableModes,
 }: {
   template: GiftTemplate | null;
   /** Group names already in use across the template library. Powers
    *  the Group field's autocomplete so admins stay on existing
    *  buckets instead of accidentally coining a typo'd new one. */
   existingGroups?: string[];
+  /** Active gift_modes rows, used to populate the mode-override
+   *  dropdown. Pulled fresh per page render so newly-added admin
+   *  modes show up without a code change. */
+  availableModes?: Array<{ slug: string; label: string }>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -215,6 +220,12 @@ export function GiftTemplateEditor({
       mockup_url: s.mockup_url ?? '',
     })),
   );
+  // Per-template production mode override (migration 0080). Empty string
+  // = inherit from gift_products.mode; any other value forces the cart
+  // line's mode at checkout. Lets one product host multiple physical
+  // SKUs (e.g. foil vs poster) selectable via the customer template
+  // picker.
+  const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
   const FOIL_QUICK_ADDS: Array<{ name: string; hex: string }> = [
     { name: 'Gold',      hex: '#FFD700' },
     { name: 'Rose Gold', hex: '#B76E79' },
@@ -425,6 +436,7 @@ export function GiftTemplateEditor({
       customer_swatches: customerSwatches
         .map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: (s.mockup_url ?? '').trim() }))
         .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
+      mode_override: modeOverride.trim() || null,
     };
     startTransition(async () => {
       if (template) {
@@ -866,6 +878,32 @@ export function GiftTemplateEditor({
                   )}
                 </>
               )}
+            </div>
+
+            {/* ── Production mode override (per-template) ───────────── */}
+            <div className="rounded-lg border-2 border-neutral-200 p-4">
+              <div className="mb-2 text-sm font-bold text-ink">Production mode override</div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Optional. When set, picking this template at checkout forces
+                the order line&apos;s mode (overriding the product&apos;s mode).
+                Use when one product offers multiple physical SKUs through
+                different templates — e.g. a Star Map sold as both
+                <em> foiling on acrylic</em> and <em> digital print on paper</em>
+                from the same PDP. Leave on <strong>Inherit</strong> for
+                templates that don&apos;t change the production process.
+              </div>
+              <select
+                value={modeOverride}
+                onChange={(e) => setModeOverride(e.target.value)}
+                className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+              >
+                <option value="">Inherit from product</option>
+                {(availableModes ?? []).map((m) => (
+                  <option key={m.slug} value={m.slug}>
+                    {m.label} ({m.slug})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

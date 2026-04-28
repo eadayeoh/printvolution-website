@@ -334,6 +334,13 @@ export type GiftTemplate = {
    *  Gold/Rose Gold/Silver for foil overlay. */
   customer_picker_role?: 'none' | 'mockup_swap' | 'foil_overlay' | null;
   customer_swatches?: Array<{ name: string; hex: string; mockup_url?: string }>;
+  /** Optional production mode this template forces on the order line,
+   *  overriding gift_products.mode. NULL = inherit. Used when one product
+   *  hosts multiple physical SKUs (e.g. foil vs poster) selectable via
+   *  the customer template picker. Free-form string — must match a
+   *  gift_modes.slug (no DB FK; gift_modes is admin-extendable per
+   *  migration 0072). Migration 0080. */
+  mode_override?: string | null;
 };
 
 export type GiftCropRect = {

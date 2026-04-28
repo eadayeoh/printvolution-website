@@ -411,6 +411,10 @@ const TemplateSchema = z.object({
       }),
     )
     .default([]),
+  // Per-template production-mode override (migration 0080). Free-form
+  // string — must match a gift_modes.slug, but no DB FK so admins can
+  // add custom slugs at runtime without breaking this validation.
+  mode_override: z.string().min(1).max(40).nullable().optional(),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {

@@ -393,16 +393,21 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     }
   }
 
-  // For gift items, parse the source/preview asset IDs out of
-  // personalisation_notes — the upload action wrote them there as
-  // "gift_source:<uuid>;gift_preview:<uuid>"
-  function parseGiftRefs(notes: string | undefined): { sourceId?: string; previewId?: string } {
+  // For gift items, parse the source/preview/template IDs out of
+  // personalisation_notes — the upload + add-to-cart actions wrote them
+  // there as "gift_source:<uuid>;gift_preview:<uuid>;gift_template:<uuid>".
+  // The template id is optional: products with template_mode='none' or
+  // a single auto-selected template don't smuggle it.
+  function parseGiftRefs(
+    notes: string | undefined,
+  ): { sourceId?: string; previewId?: string; templateId?: string } {
     if (!notes) return {};
-    const out: { sourceId?: string; previewId?: string } = {};
+    const out: { sourceId?: string; previewId?: string; templateId?: string } = {};
     for (const part of notes.split(';')) {
       const [k, v] = part.split(':');
       if (k === 'gift_source' && v) out.sourceId = v.trim();
       if (k === 'gift_preview' && v) out.previewId = v.trim();
+      if (k === 'gift_template' && v) out.templateId = v.trim();
     }
     return out;
   }
@@ -482,19 +487,40 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // the production pipeline for each — source/preview asset IDs were
   // captured at upload time and embedded in personalisation_notes.
   if (giftItems.length > 0) {
-    const giftRows = giftItems.map((i) => {
-      const refs = parseGiftRefs(i.personalisation_notes);
+    // Pre-parse refs so we know which template ids the cart references,
+    // then bulk-fetch their mode_override in one round trip. Without this,
+    // products that host multiple physical SKUs through different
+    // templates (e.g. Star Map: Foil vs Poster) would inherit
+    // gift_products.mode and route the wrong way at fulfilment.
+    const giftRefs = giftItems.map((i) => parseGiftRefs(i.personalisation_notes));
+    const templateIds = Array.from(
+      new Set(giftRefs.map((r) => r.templateId).filter((id): id is string => !!id)),
+    );
+    const templateOverrides = new Map<string, string | null>();
+    if (templateIds.length > 0) {
+      const { data: tplRows } = await sb
+        .from('gift_templates')
+        .select('id, mode_override')
+        .in('id', templateIds);
+      for (const t of tplRows ?? []) {
+        templateOverrides.set(t.id as string, (t.mode_override as string | null) ?? null);
+      }
+    }
+    const giftRows = giftItems.map((i, idx) => {
+      const refs = giftRefs[idx];
       const info = giftSlugToInfo.get(i.product_slug)!;
+      const overrideMode = refs.templateId ? templateOverrides.get(refs.templateId) ?? null : null;
       return {
         order_id: order.id,
         gift_product_id: info.id,
         variant_id: i.gift_variant_id ?? null,
+        template_id: refs.templateId ?? null,
         qty: i.qty,
         unit_price_cents: i.unit_price_cents,
         line_total_cents: i.line_total_cents,
         source_asset_id: refs.sourceId ?? null,
         preview_asset_id: refs.previewId ?? null,
-        mode: info.mode,
+        mode: overrideMode ?? info.mode,
         product_name_snapshot: i.product_name,
         production_status: 'pending' as const,
         shape_kind: i.shape_kind ?? null,

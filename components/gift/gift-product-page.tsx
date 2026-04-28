@@ -120,7 +120,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  // Auto-select the first template when the product *requires* one — keeps
+  // the live preview from blanking out on first paint, and lets renderer
+  // products (star map / city map / …) read template-driven defaults
+  // (mode_override, customer_picker_role, swatches) without making the
+  // customer click first.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    product.template_mode === 'required' && templates.length > 0 ? templates[0].id : null,
+  );
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(
     prompts.length === 1 ? prompts[0].id : null,
   );
@@ -359,10 +366,27 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     templates.some((t) => (t as { renderer?: string }).renderer === 'star_map')
     || product.slug === 'star-map-photo-frame'
     || product.slug === 'star-map-poster';
-  // Layout is product-driven, not customer-toggled — the foil and poster
-  // products are physically different (acrylic + foil vs paper + ink).
-  const starLayout: 'foil' | 'poster' =
-    product.slug === 'star-map-poster' ? 'poster' : 'foil';
+  // Layout follows the customer's template pick when the product carries
+  // multiple star_map templates (e.g. Foil + Poster on the same PDP).
+  // 'foil_overlay' picker role flags a foil template; everything else
+  // (no role / null) is treated as poster — poster prints don't carry a
+  // foil swatch row, so the role split is unambiguous.
+  //
+  // Falls back to the first star_map template when the customer hasn't
+  // picked yet, then to the slug-driven default for legacy products that
+  // have no templates assigned (star-map-photo-frame uses template_mode
+  // = 'none', so its templates list is empty by design).
+  const starLayout: 'foil' | 'poster' = (() => {
+    const tpl = selectedTemplateId
+      ? templates.find((t) => t.id === selectedTemplateId)
+      : templates.find((t) => (t as { renderer?: string }).renderer === 'star_map');
+    if (tpl) {
+      return (tpl as { customer_picker_role?: string | null }).customer_picker_role === 'foil_overlay'
+        ? 'foil'
+        : 'poster';
+    }
+    return product.slug === 'star-map-poster' ? 'poster' : 'foil';
+  })();
   const [starLat, setStarLat] = useState<number | null>(null);
   const [starLng, setStarLng] = useState<number | null>(null);
   const [starLocLabel, setStarLocLabel] = useState<string>('');
@@ -770,10 +794,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     : null;
 
   // Effective customer-picker template — the one whose colour swatches
-  // the customer is offered. For renderer-driven products this is the
-  // template flagged with that renderer (since there's no customer
-  // template-pick step). For zones products it's whatever they picked.
+  // the customer is offered. The customer's explicit pick always wins
+  // so flipping templates with different picker roles (e.g. Foil ↔
+  // Poster on a star map PDP) updates the swatch row in lockstep.
+  // Falls back to the first renderer-matching template for legacy
+  // pages that don't surface a picker yet.
   const customerPickerTemplate = (() => {
+    if (activeTemplate) return activeTemplate;
     const rendererSlug =
       isStarMap   ? 'star_map'
     : isCityMap   ? 'city_map'
@@ -782,7 +809,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (rendererSlug) {
       return templates.find((t) => (t as { renderer?: string }).renderer === rendererSlug) ?? null;
     }
-    return activeTemplate;
+    return null;
   })();
   // Resolved swatch list:
   //   - Template carries customer_picker_role = 'none' → empty array (hides row)
@@ -942,6 +969,15 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
         notes += `;text_pos:${textPos.x.toFixed(1)},${textPos.y.toFixed(1)}`;
         if (engravedRotation !== 0) notes += `;text_rot:${engravedRotation}`;
       }
+    }
+    // Smuggle the chosen template id into the cart line. Checkout
+    // unpacks this to: (a) populate gift_order_items.template_id, and
+    // (b) apply the template's mode_override to the order's mode.
+    // Renderer-driven products (star map, city map) MUST carry this
+    // when 2+ templates are assigned — otherwise checkout has no way
+    // to tell which physical SKU the customer picked.
+    if (selectedTemplateId) {
+      notes += `${notes ? ';' : ''}gift_template:${selectedTemplateId}`;
     }
     if (hasSurfaces && selectedVariant) {
       for (const s of selectedVariant.surfaces) {
@@ -2213,6 +2249,63 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   after each renderer-specific input. */}
               {(() => {
                 if (!(isSongLyrics || isCityMap || isStarMap)) return null;
+                // Template picker — only shown when the product offers
+                // 2+ templates so the customer has something meaningful
+                // to choose between. Single-template products auto-pick
+                // and skip the UI. The pick drives starLayout / cart
+                // mode_override, so it has to come BEFORE the renderer
+                // inputs visually so customers don't fill in a star
+                // map and then realise they wanted the poster layout.
+                const templateBlock =
+                  hasTemplates && templates.length >= 2 ? (
+                    <ComposeSection letter={sectionLetters.template!} title="Pick a layout">
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 8,
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                        }}
+                      >
+                        {templates.map((t) => {
+                          const active = selectedTemplateId === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setSelectedTemplateId(t.id)}
+                              style={{
+                                background: '#fff',
+                                border: active ? '2px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
+                                cursor: 'pointer',
+                                padding: 0,
+                                overflow: 'hidden',
+                                boxShadow: active ? '3px 3px 0 var(--pv-magenta)' : 'none',
+                                transition: 'all 0.12s',
+                                textAlign: 'left',
+                              }}
+                            >
+                              <div style={{ position: 'relative', aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden' }}>
+                                {t.thumbnail_url ? (
+                                  <Image
+                                    src={t.thumbnail_url}
+                                    alt={t.name}
+                                    fill
+                                    sizes="140px"
+                                    style={{ objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
+                                )}
+                              </div>
+                              <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
+                                {t.name}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </ComposeSection>
+                  ) : null;
                 const variantsBlock = variants.length >= 2 ? (() => {
                   const kinds = new Set(variants.map((v) => v.variant_kind || 'base'));
                   const singleKind = kinds.size === 1 ? [...kinds][0] : null;
@@ -2273,6 +2366,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 ) : null;
                 return (
                   <>
+                    {templateBlock}
                     {variantsBlock}
                     {sizeBlock}
                   </>
