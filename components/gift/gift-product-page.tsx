@@ -1561,7 +1561,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       // the background. Renderer falls back to its
                       // layout default (navy for foil, white for poster).
                     />
-                  ) : (
+                  ) : isStarMap ? (
                     <StarMapTemplate
                       lat={starLat}
                       lng={starLng}
@@ -1621,7 +1621,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         return w && h ? { width_mm: w, height_mm: h } : null;
                       })()}
                     />
-                  );
+                  ) : null;
 
                   // City map "Generating…" overlay — only used in the
                   // standalone-render branch since it's about an OSM
