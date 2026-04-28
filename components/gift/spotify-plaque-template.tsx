@@ -75,6 +75,13 @@ export function SpotifyPlaqueTemplate({
               height: '100%',
               objectFit: 'contain',
               display: 'block',
+              // Spotify's scannable PNG bakes in a white background.
+              // multiply blends white pixels into whatever sits behind
+              // (white × bg = bg) while keeping the black logo + bars
+              // intact (black × bg = black) — so the plaque looks
+              // truly transparent without us having to fetch+strip
+              // the SVG version server-side.
+              mixBlendMode: 'multiply',
             }}
           />
         ) : (
