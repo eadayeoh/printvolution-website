@@ -23,6 +23,7 @@ import {
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
+import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -704,9 +705,34 @@ export function GiftTemplateEditor({
                   dangerouslySetInnerHTML={{ __html: rendererPreviewSvg }}
                 />
               )}
-              {isRendererTemplate && !rendererPreviewSvg && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                  Renderer: {renderer} (preview not available in editor — see product page)
+              {/* Song lyrics renders as a React SVG component (not a
+                  pure string builder), so we mount it directly here. */}
+              {isRendererTemplate && renderer === 'song_lyrics' && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div style={{ width: '100%', height: '100%', maxWidth: '100%' }}>
+                    <SongLyricsTemplate
+                      photoUrl={null}
+                      lyrics=""
+                      title="OUR SONG"
+                      names="EVA & JOHN"
+                      year="2018"
+                      subtitle="THE FIRST DANCE"
+                      tagline="Love now and always"
+                      layout="song"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Tiny debug pill so admins can verify the renderer
+                  field is actually set on this template row. If the
+                  pill says "renderer: zones" but you expected city_map
+                  / star_map / song_lyrics, the DB column is unset on
+                  this row (older template — re-create or update via
+                  SQL: update gift_templates set renderer='city_map'
+                  where id='...'). */}
+              {(
+                <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-ink/85 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  renderer: {renderer || 'zones'}
                 </div>
               )}
 
