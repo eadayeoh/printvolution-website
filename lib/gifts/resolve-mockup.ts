@@ -9,21 +9,9 @@ export type ResolvedMockup = {
 /**
  * Picks the mockup image + customer-draggable area for the live preview.
  *
- * URL precedence (visual material — what the customer SEES), highest to lowest:
- *   1. Selected colour swatch — when the customer picks a swatch on the
- *      variant tile, the swatch's own product shot replaces the visible
- *      mockup so colour changes are reflected immediately. This wins over
- *      surface mockups too (a multi-face variant in rose gold should look
- *      rose gold across all sides — admin only uploads one shot per
- *      colour). Trade-off: per-side angles are lost when a swatch is picked.
- *   2. Active surface mockup (multi-face variants — 3-D keychain).
- *   3. Per-prompt override — the customer's art style has its own shot.
- *   4. Per-shape override — the customer's shape has its own mockup.
- *   5. Variant's `mockup_url`, then product's, as final fallback.
- *
  * AREA precedence (where the customer's photo / engraving sits), highest
- * to lowest — independent of URL since the engraving zone doesn't move
- * when the material changes:
+ * to lowest — deliberately decoupled from URL, since the engraving zone
+ * doesn't move when the visual material (colour, style) changes:
  *   1. Active surface area
  *   2. Per-prompt override area
  *   3. Per-shape override area

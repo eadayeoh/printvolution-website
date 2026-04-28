@@ -400,16 +400,19 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
           </div>
         ) : (
           <div className="space-y-4">
-            {drafts.map((d, i) => (
-              <div key={d.id ?? `new-${i}`} className="rounded-lg border-2 border-neutral-200 p-4">
+            {drafts.map((d, i) => {
+              const draftKey = d.id ?? `new-${i}`;
+              const isCollapsed = !!collapsed[draftKey];
+              return (
+              <div key={draftKey} className="rounded-lg border-2 border-neutral-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-500">
                   <button
                     type="button"
-                    onClick={() => toggleCollapsed(d.id ?? `new-${i}`)}
+                    onClick={() => toggleCollapsed(draftKey)}
                     className="flex flex-1 items-center gap-2 text-left hover:text-ink"
-                    title={collapsed[d.id ?? `new-${i}`] ? 'Expand' : 'Collapse'}
+                    title={isCollapsed ? 'Expand' : 'Collapse'}
                   >
-                    {collapsed[d.id ?? `new-${i}`] ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                     <span className="text-ink">
                       {d.name?.trim() || (d.id ? `Variant #${i + 1}` : 'New variant (unsaved)')}
                     </span>
@@ -442,7 +445,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                     </button>
                   </div>
                 </div>
-                {!collapsed[d.id ?? `new-${i}`] && (
+                {!isCollapsed && (
                 <>
                 <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
                   <div className="space-y-3">
@@ -969,7 +972,8 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                 </>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

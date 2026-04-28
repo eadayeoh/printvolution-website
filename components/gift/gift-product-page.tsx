@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -341,7 +341,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   // removing a step (Shape, Style, Size …) doesn't require rethinking
   // every downstream ternary. Steps only count when their section is
   // actually rendered.
-  const sectionLetters = (() => {
+  const sectionLetters = useMemo(() => {
     const m: Record<string, string> = {};
     let i = 0;
     if (hasTemplates) m.template = String.fromCharCode(65 + i++);
@@ -353,7 +353,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     if (showPromptPicker) m.style = String.fromCharCode(65 + i++);
     if (showTextStep) m.text = String.fromCharCode(65 + i++);
     return m;
-  })();
+  }, [hasTemplates, variants.length, shapePickerActive, sortedSizes.length, figurinePickerActive, showPromptPicker, showTextStep]);
   // Non-AI modes run the server composite as a straight passthrough —
   // the CSS layout preview matches the final output, so we auto-fire
   // generate silently instead of asking the customer to click a button.
