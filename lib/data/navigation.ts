@@ -19,20 +19,23 @@ export const NAVIGATION_TAG = 'navigation';
 //
 // Nav + mega-menu data is public (header is shown to anonymous visitors),
 // so a fresh anon-key client without cookies is the right tool here.
-function publicAnonClient() {
-  return createSbClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
+//
+// Single anon client reused across cached fetches. unstable_cache requires
+// no request-scoped APIs (cookies, headers) — so the standard cookie-aware
+// createClient() from '@/lib/supabase/server' would crash here. The anon
+// key is fine because nav + mega menus are public-readable.
+const publicAnon = createSbClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
 
 // unstable_cache: cross-request data cache, busted by tag on admin save.
 // react cache(): per-request memoisation so multiple Header sub-components
 // in the same render don't re-execute the wrapper.
 const fetchNavigationCached = unstable_cache(
   async (): Promise<NavItem[]> => {
-    const supabase = publicAnonClient();
+    const supabase = publicAnon;
     const { data, error } = await supabase
       .from('navigation')
       .select('label, type, action, mega_key, display_order')
@@ -42,14 +45,14 @@ const fetchNavigationCached = unstable_cache(
     return (data ?? []) as NavItem[];
   },
   ['navigation-list'],
-  { tags: [NAVIGATION_TAG], revalidate: 5 },
+  { tags: [NAVIGATION_TAG], revalidate: 3600 },
 );
 
 export const getNavigation = cache(async (): Promise<NavItem[]> => fetchNavigationCached());
 
 const fetchMegaMenusCached = unstable_cache(
   async (): Promise<Record<string, MegaMenuSection[]>> => {
-    const supabase = publicAnonClient();
+    const supabase = publicAnon;
     const { data, error } = await supabase
       .from('mega_menus')
       .select(`
@@ -76,7 +79,7 @@ const fetchMegaMenusCached = unstable_cache(
     return grouped;
   },
   ['mega-menus'],
-  { tags: [NAVIGATION_TAG], revalidate: 5 },
+  { tags: [NAVIGATION_TAG], revalidate: 3600 },
 );
 
 export const getMegaMenus = cache(async (): Promise<Record<string, MegaMenuSection[]>> => fetchMegaMenusCached());

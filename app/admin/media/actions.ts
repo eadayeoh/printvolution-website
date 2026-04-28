@@ -264,7 +264,7 @@ async function buildUsageSetForFilenames(
     // Same JSONB / plain split as listMediaWithUsage. Do NOT use ::text on JSONB
     // — PostgREST will 400 and the silent error would make the recheck blind to
     // every JSONB reference, defeating the safety net.
-    let queryBuilder = (sb as any).from(table).select(`id, ${col}`);
+    let queryBuilder = (sb as any).from(table).select(`${col}`);
     if (target.kind === 'plain' || target.kind === 'html') {
       queryBuilder = queryBuilder.like(col, '%/product-images/%');
     }
