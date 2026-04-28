@@ -1,0 +1,123 @@
+/**
+ * Admin-only download: regenerates the foil-printable star-map SVG for an
+ * order item. Re-projects the bundled star catalogue for the customer's
+ * coords + UTC moment, parses the footer text from the line's notes, and
+ * streams an `image/svg+xml` file with materialColor=null so only the
+ * foil paths ship to the printer.
+ *
+ * Customers never have a download surface — admin-only.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { reportError } from '@/lib/observability';
+import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
+
+function parseNotes(notes: string | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!notes) return out;
+  for (const part of notes.split(';')) {
+    const idx = part.indexOf(':');
+    if (idx <= 0) continue;
+    const k = part.slice(0, idx).trim();
+    const v = part.slice(idx + 1);
+    if (k) out[k] = v;
+  }
+  return out;
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string; itemId: string } },
+) {
+  try {
+    await requireAdmin();
+  } catch (e: any) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const sb = createServiceClient();
+    const { data: row, error } = await sb
+      .from('order_items')
+      .select('id, order_id, product_name, product_slug, personalisation_notes')
+      .eq('id', params.itemId)
+      .eq('order_id', params.id)
+      .maybeSingle();
+
+    if (error || !row) {
+      return NextResponse.json({ error: 'Order item not found' }, { status: 404 });
+    }
+
+    const n = parseNotes(row.personalisation_notes as string | null);
+    const lat = parseFloat(n['star_lat'] ?? '');
+    const lng = parseFloat(n['star_lng'] ?? '');
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return NextResponse.json({ error: 'Order has no star-map coordinates' }, { status: 400 });
+    }
+
+    // Prefer the absolute UTC ISO. Fall back to local-time + offset if for
+    // some reason the customer's order didn't get the UTC stamp written
+    // (older orders, or a bug in serialisation).
+    let dateUtc: Date | null = null;
+    if (n['star_date_utc']) {
+      const d = new Date(n['star_date_utc']);
+      if (!Number.isNaN(d.getTime())) dateUtc = d;
+    }
+    if (!dateUtc && n['star_local_date'] && n['star_local_time']) {
+      const [yy, mm, dd] = n['star_local_date'].split('-').map((s) => parseInt(s, 10));
+      const [hh, mi]     = n['star_local_time'].split(':').map((s) => parseInt(s, 10));
+      const tzOff = parseInt(n['star_tz_offset'] ?? '0', 10) || 0;
+      if ([yy, mm, dd, hh, mi].every(Number.isFinite)) {
+        dateUtc = new Date(Date.UTC(yy, mm - 1, dd, hh, mi) - tzOff * 60 * 1000);
+      }
+    }
+    if (!dateUtc) {
+      return NextResponse.json({ error: 'Order has no date/time for the sky' }, { status: 400 });
+    }
+
+    const scene = buildStarMapScene(lat, lng, dateUtc);
+
+    const showCoords = n['star_show_coords'] === '1';
+    const showLines  = n['star_show_lines']  === '1';
+    const showLabels = n['star_show_labels'] === '1';
+
+    const coordinates = showCoords
+      ? `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`
+      : undefined;
+
+    const svgMarkup = buildStarMapSvg({
+      scene,
+      dateUtc,
+      names:         n['star_names']   ?? '',
+      event:         n['star_event']   ?? '',
+      locationLabel: n['star_label']   ?? '',
+      tagline:       n['star_tagline'] ?? '',
+      coordinates,
+      showLines,
+      showLabels,
+      locationFont: n['star_font_loc']     ?? undefined,
+      namesFont:    n['star_font_names']   ?? undefined,
+      eventFont:    n['star_font_event']   ?? undefined,
+      taglineFont:  n['star_font_tagline'] ?? undefined,
+      // Drop the navy background — foil printer wants only the gold paths.
+      materialColor: null,
+    });
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${svgMarkup}`;
+    const filename = `${row.product_slug}-${row.id.slice(0, 8)}.svg`;
+
+    return new NextResponse(xml, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  } catch (err) {
+    reportError(err, { route: 'admin.orders.star_map_svg', order_id: params.id });
+    return NextResponse.json({ error: 'Failed to generate SVG' }, { status: 500 });
+  }
+}

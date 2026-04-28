@@ -44,6 +44,8 @@ import { SongLyricsInputs } from '@/components/gift/song-lyrics-inputs';
 import { CityMapTemplate } from '@/components/gift/city-map-template';
 import { CityMapInputs } from '@/components/gift/city-map-inputs';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
+import { StarMapTemplate } from '@/components/gift/star-map-template';
+import { StarMapInputs } from '@/components/gift/star-map-inputs';
 
 type Props = {
   product: GiftProduct;
@@ -257,6 +259,51 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [cityFontNames, setCityFontNames] = useState<string>('');
   const [cityFontEvent, setCityFontEvent] = useState<string>('');
   const [cityFontTagline, setCityFontTagline] = useState<string>('');
+
+  // ── Star Map Photo Frame (special-cased product) ──────────────────────────
+  // Detect by renderer='star_map'. The sky for a given (lat, lng, date_UTC)
+  // is computed entirely client-side from the bundled catalogue — no
+  // network round-trip, so there's no fetching state.
+  const isStarMap =
+    templates.some((t) => (t as { renderer?: string }).renderer === 'star_map')
+    || product.slug === 'star-map-photo-frame';
+  const [starLat, setStarLat] = useState<number | null>(null);
+  const [starLng, setStarLng] = useState<number | null>(null);
+  const [starLocLabel, setStarLocLabel] = useState<string>('');
+  // Date/time are stored in CUSTOMER-LOCAL terms; tzOffsetMin converts them
+  // to the UTC moment the projection runs against. Default = today, 21:00,
+  // browser TZ — sensible "I don't remember the exact time" baseline.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [starDateIso, setStarDateIso] = useState<string>(todayIso);
+  const [starTimeHm, setStarTimeHm]   = useState<string>('21:00');
+  const [starTzOffsetMin, setStarTzOffsetMin] = useState<number>(
+    -new Date().getTimezoneOffset(),
+  );
+  const [starNames, setStarNames] = useState<string>('');
+  const [starEvent, setStarEvent] = useState<string>('');
+  const [starTagline, setStarTagline] = useState<string>('');
+  const [starShowCoords, setStarShowCoords] = useState<boolean>(true);
+  const [starShowLines, setStarShowLines]   = useState<boolean>(true);
+  const [starShowLabels, setStarShowLabels] = useState<boolean>(false);
+  const [starFontLocation, setStarFontLocation] = useState<string>('');
+  const [starFontNames, setStarFontNames]       = useState<string>('');
+  const [starFontEvent, setStarFontEvent]       = useState<string>('');
+  const [starFontTagline, setStarFontTagline]   = useState<string>('');
+
+  // Combine the customer-local date/time/offset into the absolute UTC
+  // Date the projection should run against. Memoised so the live preview
+  // doesn't recompute when only footer text changes.
+  const starDateUtc = useMemo<Date | null>(() => {
+    if (!starDateIso || !starTimeHm) return null;
+    const [yy, mm, dd] = starDateIso.split('-').map((s) => parseInt(s, 10));
+    const [hh, mi]     = starTimeHm.split(':').map((s) => parseInt(s, 10));
+    if (!Number.isFinite(yy) || !Number.isFinite(mm) || !Number.isFinite(dd) || !Number.isFinite(hh) || !Number.isFinite(mi)) return null;
+    // Treat (yy,mm,dd,hh,mi) as a wall-clock at offset starTzOffsetMin.
+    // UTC = local - offset.
+    const utcMs = Date.UTC(yy, mm - 1, dd, hh, mi) - starTzOffsetMin * 60 * 1000;
+    return new Date(utcMs);
+  }, [starDateIso, starTimeHm, starTzOffsetMin]);
+
   // Per-field fonts default to sensible options pulled from allowed_fonts.
   // Initialised lazily so we can reach allowedFonts (declared further down)
   // without restructuring the file.
@@ -825,6 +872,32 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       if (cityFontEvent)      notes += `${notes ? ';' : ''}city_font_event:${cityFontEvent}`;
       if (cityFontTagline)    notes += `${notes ? ';' : ''}city_font_tagline:${cityFontTagline}`;
     }
+    // Star Map Photo Frame: serialise the coords + UTC moment + footer text
+    // so the admin can regenerate the foil-printable SVG from the order. We
+    // store the absolute UTC ISO so the rebuild doesn't depend on the
+    // customer's local timezone.
+    if (isStarMap) {
+      if (starLat != null && starLng != null) {
+        notes += `${notes ? ';' : ''}star_lat:${starLat.toFixed(5)};star_lng:${starLng.toFixed(5)}`;
+      }
+      if (starDateUtc) {
+        notes += `${notes ? ';' : ''}star_date_utc:${starDateUtc.toISOString()}`;
+      }
+      // Local-time round-trip — admin order detail can show the customer
+      // what they entered, not the UTC equivalent.
+      notes += `${notes ? ';' : ''}star_local_date:${starDateIso};star_local_time:${starTimeHm};star_tz_offset:${starTzOffsetMin}`;
+      if (starLocLabel.trim()) notes += `${notes ? ';' : ''}star_label:${starLocLabel.trim()}`;
+      if (starNames.trim())    notes += `${notes ? ';' : ''}star_names:${starNames.trim()}`;
+      if (starEvent.trim())    notes += `${notes ? ';' : ''}star_event:${starEvent.trim()}`;
+      if (starTagline.trim())  notes += `${notes ? ';' : ''}star_tagline:${starTagline.trim()}`;
+      if (starShowCoords)      notes += `${notes ? ';' : ''}star_show_coords:1`;
+      if (starShowLines)       notes += `${notes ? ';' : ''}star_show_lines:1`;
+      if (starShowLabels)      notes += `${notes ? ';' : ''}star_show_labels:1`;
+      if (starFontLocation)    notes += `${notes ? ';' : ''}star_font_loc:${starFontLocation}`;
+      if (starFontNames)       notes += `${notes ? ';' : ''}star_font_names:${starFontNames}`;
+      if (starFontEvent)       notes += `${notes ? ';' : ''}star_font_event:${starFontEvent}`;
+      if (starFontTagline)     notes += `${notes ? ';' : ''}star_font_tagline:${starFontTagline}`;
+    }
     // Record the customer's adjusted area so production knows where
     // to place the design on the 300 DPI file (if they dragged/resized).
     if (selectedVariant?.photo_pan_mode && (panOffset.x !== 50 || panOffset.y !== 50)) {
@@ -1281,6 +1354,27 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         <style>{`@keyframes pv-citymap-spin { to { transform: rotate(360deg); } }`}</style>
                       </div>
                     )}
+                  </div>
+                ) : isStarMap ? (
+                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130', position: 'relative' }}>
+                    <StarMapTemplate
+                      lat={starLat}
+                      lng={starLng}
+                      dateUtc={starDateUtc}
+                      names={starNames}
+                      event={starEvent}
+                      locationLabel={starLocLabel}
+                      tagline={starTagline}
+                      coordinates={starShowCoords && starLat != null && starLng != null
+                        ? `${Math.abs(starLat).toFixed(4)}° ${starLat >= 0 ? 'N' : 'S'} · ${Math.abs(starLng).toFixed(4)}° ${starLng >= 0 ? 'E' : 'W'}`
+                        : undefined}
+                      showLines={starShowLines}
+                      showLabels={starShowLabels}
+                      locationFont={starFontLocation || engravedFont}
+                      namesFont={starFontNames || 'Archivo'}
+                      eventFont={starFontEvent || 'Archivo'}
+                      taglineFont={starFontTagline || engravedFont}
+                    />
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
                   <div style={{ width: '100%' }}>
@@ -1930,6 +2024,33 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   namesFont={cityFontNames || 'Archivo'}    onNamesFont={setCityFontNames}
                   eventFont={cityFontEvent || 'Archivo'}    onEventFont={setCityFontEvent}
                   taglineFont={cityFontTagline || engravedFont} onTaglineFont={setCityFontTagline}
+                />
+              ) : isStarMap ? (
+                <StarMapInputs
+                  lat={starLat} lng={starLng}
+                  locationLabel={starLocLabel}
+                  dateIso={starDateIso}
+                  timeHm={starTimeHm}
+                  tzOffsetMin={starTzOffsetMin}
+                  onLocationResolved={({ lat, lng, label }) => {
+                    setStarLat(lat); setStarLng(lng);
+                    if (!starLocLabel.trim()) setStarLocLabel(label.split(',')[0]);
+                  }}
+                  onLocationLabel={setStarLocLabel}
+                  onDateIso={setStarDateIso}
+                  onTimeHm={setStarTimeHm}
+                  onTzOffsetMin={setStarTzOffsetMin}
+                  names={starNames} onNames={setStarNames}
+                  event={starEvent} onEvent={setStarEvent}
+                  tagline={starTagline} onTagline={setStarTagline}
+                  showCoords={starShowCoords} onShowCoords={setStarShowCoords}
+                  showLines={starShowLines}   onShowLines={setStarShowLines}
+                  showLabels={starShowLabels} onShowLabels={setStarShowLabels}
+                  allowedFonts={allowedFonts}
+                  locationFont={starFontLocation || engravedFont} onLocationFont={setStarFontLocation}
+                  namesFont={starFontNames || 'Archivo'}          onNamesFont={setStarFontNames}
+                  eventFont={starFontEvent || 'Archivo'}          onEventFont={setStarFontEvent}
+                  taglineFont={starFontTagline || engravedFont}   onTaglineFont={setStarFontTagline}
                 />
               ) : (
               <>

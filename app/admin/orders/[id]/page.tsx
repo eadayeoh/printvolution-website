@@ -100,6 +100,15 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                         ↓ City-map SVG
                       </a>
                     )}
+                    {item.product_slug === 'star-map-photo-frame' && (
+                      <a
+                        href={`/api/admin/orders/${order.id}/items/${item.id}/star-map-svg`}
+                        className="mt-2 inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                        download
+                      >
+                        ↓ Star-map SVG
+                      </a>
+                    )}
                     <div className="mt-1 text-xs text-neutral-500">Qty {item.qty}</div>
                   </div>
                   <div className="text-right">
