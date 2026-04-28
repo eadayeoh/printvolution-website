@@ -296,6 +296,10 @@ function emitZoneText(
     italic?: boolean;
     letterSpacing?: number;
     transform?: 'uppercase' | 'lowercase' | 'capitalize' | 'none';
+    /** When set, the rendered text is constrained to this width (in
+     *  viewBox units). SVG's textLength + lengthAdjust shrinks long
+     *  strings to fit instead of overflowing the foil disk's footer. */
+    maxWidth?: number;
   },
 ): string {
   // Resolve actual draw params: zone overrides → defaults.
@@ -323,8 +327,17 @@ function emitZoneText(
     : transform === 'capitalize' ? text.replace(/\b\w/g, (c) => c.toUpperCase())
     : text;
 
+  // Auto-shrink to fit the foil disk footer width. Estimate the natural
+  // text width (uppercase Playfair ≈ 0.7 × font-size per char) and only
+  // emit textLength when the string would actually overflow — short
+  // strings keep their natural rendering instead of getting stretched.
+  const naturalWidth = munged.length * size * 0.7 + Math.max(0, munged.length - 1) * letter;
+  const fitAttrs = defaults.maxWidth && naturalWidth > defaults.maxWidth
+    ? ` textLength="${defaults.maxWidth.toFixed(2)}" lengthAdjust="spacingAndGlyphs"`
+    : '';
+
   const dyForCenter = size * 0.35;   // approximate baseline shim
-  const out = `<text x="${x.toFixed(2)}" y="${(y + dyForCenter).toFixed(2)}" text-anchor="${anchor}" font-size="${size.toFixed(2)}" font-family="${fontFamily}, sans-serif" letter-spacing="${letter}"${italic ? ' font-style="italic"' : ''}${weight !== '400' ? ` font-weight="${weight}"` : ''} fill="${fill}">${esc(munged)}</text>`;
+  const out = `<text x="${x.toFixed(2)}" y="${(y + dyForCenter).toFixed(2)}" text-anchor="${anchor}" font-size="${size.toFixed(2)}" font-family="${fontFamily}, sans-serif" letter-spacing="${letter}"${italic ? ' font-style="italic"' : ''}${weight !== '400' ? ` font-weight="${weight}"` : ''} fill="${fill}"${fitAttrs}>${esc(munged)}</text>`;
   return out;
 }
 
@@ -550,22 +563,25 @@ export function buildStarMapSvg({
       });
     }
   } else {
-    // Foil layout — original four-line stack.
+    // Foil layout — four-line stack. Each line caps its width at 90 viewBox
+    // units (≈ 90% of the 100-unit canvas) so long inputs like
+    // "MARINA BAY SANDS" auto-shrink instead of overflowing the disk footer.
+    const footerMaxWidth = 90;
     body += emitZoneText(zoneNames, W, H, 1, names.trim() || 'EVA & JOHN', {
       cx, y: 105, size: 3.6, fontFamily: fontHead, fill: inkColor, customerForcedFill,
-      weight: '600', letterSpacing: 0.4,
+      weight: '600', letterSpacing: 0.4, maxWidth: footerMaxWidth,
     });
     body += emitZoneText(zoneEvent, W, H, 1, event.trim() || 'THE NIGHT WE MET', {
       cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: inkColor, customerForcedFill,
-      letterSpacing: 0.4,
+      letterSpacing: 0.4, maxWidth: footerMaxWidth,
     });
     body += emitZoneText(zoneLocation, W, H, 1, locationLabel.trim() || 'LONDON', {
       cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: inkColor, customerForcedFill,
-      weight: '700', letterSpacing: 0.6, transform: 'uppercase',
+      weight: '700', letterSpacing: 0.6, transform: 'uppercase', maxWidth: footerMaxWidth,
     });
     body += emitZoneText(zoneTagline, W, H, 1, tagline.trim() || 'Under our stars', {
       cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: inkColor, customerForcedFill,
-      italic: true,
+      italic: true, maxWidth: footerMaxWidth,
     });
 
     const captionParts: string[] = [];
@@ -574,7 +590,7 @@ export function buildStarMapSvg({
     if (captionParts.length) {
       body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' · '), {
         cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: inkColor, customerForcedFill,
-        letterSpacing: 0.3,
+        letterSpacing: 0.3, maxWidth: footerMaxWidth,
       });
     }
   }
