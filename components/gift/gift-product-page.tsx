@@ -2341,11 +2341,61 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     </div>
                   </ComposeSection>
                 ) : null;
+                // Standalone swatch row — variant tiles host the swatches when
+                // there are 2+ variants; for renderer-driven products with no
+                // variants we render a separate row driven by the active
+                // template's customer_swatches.
+                const colourBlock =
+                  variants.length < 2 && swatchOverride && swatchOverride.length > 0 ? (
+                    <ComposeSection title="Pick a colour">
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                        {swatchOverride.map((s) => {
+                          const active = selectedColour?.name === s.name;
+                          return (
+                            <button
+                              key={s.name}
+                              type="button"
+                              onClick={() => setSelectedColour({ name: s.name, hex: s.hex, mockup_url: s.mockup_url ?? '' })}
+                              title={s.name}
+                              aria-label={s.name}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '6px 12px 6px 6px',
+                                background: '#fff',
+                                border: active ? '2px solid var(--pv-magenta)' : '2px solid var(--pv-rule)',
+                                borderRadius: 999,
+                                cursor: 'pointer',
+                                boxShadow: active ? '2px 2px 0 var(--pv-magenta)' : 'none',
+                                transition: 'all 0.12s',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: '50%',
+                                  background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                                  border: '1px solid var(--pv-ink)',
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                {s.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </ComposeSection>
+                  ) : null;
                 return (
                   <>
                     {templateBlock}
                     {variantsBlock}
                     {sizeBlock}
+                    {colourBlock}
                   </>
                 );
               })()}
@@ -3750,7 +3800,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
 
 /* ---------- Helper subcomponents ---------- */
 
-function ComposeSection({ letter, title, children }: { letter: string; title: string; children: React.ReactNode }) {
+function ComposeSection({ letter, title, children }: { letter?: string; title: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: 20, borderBottom: '1px solid var(--pv-rule)' }}>
       <div
@@ -3766,21 +3816,23 @@ function ComposeSection({ letter, title, children }: { letter: string; title: st
           gap: 8,
         }}
       >
-        <span
-          style={{
-            width: 22,
-            height: 22,
-            background: 'var(--pv-ink)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--pv-f-display)',
-            fontSize: 11,
-          }}
-        >
-          {letter}
-        </span>
+        {letter && (
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              background: 'var(--pv-ink)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'var(--pv-f-display)',
+              fontSize: 11,
+            }}
+          >
+            {letter}
+          </span>
+        )}
         {title}
       </div>
       {children}
