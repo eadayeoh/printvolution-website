@@ -1054,20 +1054,30 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                             placeholder="#000000"
                             className={`${inputCls} font-mono text-xs max-w-[140px]`}
                           />
-                          <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
                             {[
                               { hex: '#000000', label: 'Black' },
-                              { hex: '#1a2740', label: 'Navy' },
-                              { hex: '#ffffff', label: 'White' },
-                              { hex: '#f4ede0', label: 'Cream' },
+                              { hex: '#FFFFFF', label: 'White' },
+                              { hex: '#FFD700', label: 'Gold' },
+                              { hex: '#B76E79', label: 'Rose Gold' },
+                              { hex: '#C0C0C0', label: 'Silver' },
                             ].map((c) => (
                               <button
                                 key={c.hex}
                                 type="button"
                                 onClick={() => updateDraft(i, { material_color: c.hex })}
-                                title={c.label}
-                                className="h-6 rounded-full border border-neutral-300 px-2 text-[10px] font-bold uppercase tracking-wide hover:border-pink"
+                                title={`${c.label} (${c.hex})`}
+                                className="inline-flex h-6 items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 text-[10px] font-bold uppercase tracking-wide hover:border-pink"
                               >
+                                <span
+                                  aria-hidden
+                                  style={{
+                                    width: 11, height: 11, borderRadius: '50%',
+                                    background: c.hex,
+                                    border: '1px solid #0a0a0a',
+                                    display: 'inline-block',
+                                  }}
+                                />
                                 {c.label}
                               </button>
                             ))}
