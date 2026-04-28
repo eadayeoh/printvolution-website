@@ -170,40 +170,65 @@ export function GiftVariantLivePreview({
               {v.colour_swatches.length > 0 && (
                 <div
                   style={{
-                    display: 'flex',
-                    gap: 6,
-                    padding: '8px 10px 10px',
+                    padding: '10px 10px 12px',
                     borderTop: '1px solid var(--pv-rule)',
-                    flexWrap: 'wrap',
+                    background: 'var(--pv-cream-warm, #FFF4E5)',
                   }}
                 >
-                  {v.colour_swatches.map((s, sIdx) => {
-                    const activeSwatch = sIdx === swatchIdx;
-                    return (
-                      <button
-                        key={sIdx}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          chooseSwatch(v.id, sIdx, s);
-                        }}
-                        title={s.name}
-                        aria-label={s.name}
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: '50%',
-                          background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
-                          border: activeSwatch
-                            ? '2px solid var(--pv-ink)'
-                            : '1px solid var(--pv-rule)',
-                          boxShadow: activeSwatch ? '0 0 0 2px var(--pv-magenta)' : 'none',
-                          cursor: 'pointer',
-                          padding: 0,
-                        }}
-                      />
-                    );
-                  })}
+                  <div
+                    style={{
+                      fontFamily: 'var(--pv-f-mono)',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: chosenSwatch ? 'var(--pv-ink)' : 'var(--pv-magenta)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {chosenSwatch
+                      ? `Colour: ${chosenSwatch.name}`
+                      : '↓ Pick a colour'}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    {v.colour_swatches.map((s, sIdx) => {
+                      const activeSwatch = sIdx === swatchIdx;
+                      return (
+                        <button
+                          key={sIdx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            chooseSwatch(v.id, sIdx, s);
+                          }}
+                          title={s.name}
+                          aria-label={s.name}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                            border: activeSwatch
+                              ? '3px solid var(--pv-ink)'
+                              : '2px solid var(--pv-ink)',
+                            boxShadow: activeSwatch
+                              ? '0 0 0 3px var(--pv-magenta)'
+                              : '2px 2px 0 var(--pv-ink)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            transition: 'transform 0.12s',
+                            transform: activeSwatch ? 'scale(1.08)' : 'scale(1)',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
