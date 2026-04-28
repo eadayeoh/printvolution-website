@@ -1602,17 +1602,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   // exactly with where it'll print on the customer's
                   // PDP (same coordinate system as the variant editor).
                   if (variantMockup && variantArea) {
-                    // Stage aspect priority: snug mode → product dims;
-                    // else linked template's reference dims; else null
-                    // (RendererVariantStage falls back to 1:1).
+                    // Stage aspect priority: linked template's reference
+                    // dims (e.g. A3 297×420 — matches what the variant
+                    // editor's aspect-lock enforces) → product dims →
+                    // null (1:1 fallback).
                     const linkedTpl = templates.find((t) => {
                       const r = (t as { renderer?: string }).renderer;
                       return r && r !== 'zones';
                     }) as { reference_width_mm?: number | null; reference_height_mm?: number | null } | undefined;
-                    const tplAspect = snugMode && product.width_mm > 0 && product.height_mm > 0
-                      ? `${product.width_mm} / ${product.height_mm}`
-                      : linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
-                        ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
+                    const tplAspect = linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
+                      ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
+                      : product.width_mm > 0 && product.height_mm > 0
+                        ? `${product.width_mm} / ${product.height_mm}`
                         : null;
                     return (
                       <RendererVariantStage
