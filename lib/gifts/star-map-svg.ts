@@ -311,7 +311,13 @@ function emitZoneText(
   const y = zone
     ? (zone.y_mm + zone.height_mm / 2) * (H / 200)
     : defaults.y;
-  const size = (zone?.font_size_mm ?? defaults.size / scale) * scale;
+  // font_size_mm in zones is mm-in-200mm-canvas-space (matches how zone
+  // x/y/width/height are stored). Convert to viewBox units the same way
+  // positions are converted (W/200) so fonts scale with the canvas instead
+  // of rendering 2× too big in the 100-unit viewBox.
+  const size = zone?.font_size_mm
+    ? zone.font_size_mm * (W / 200)
+    : (defaults.size / scale) * scale;
   const fontFamily = zone?.font_family ?? defaults.fontFamily;
   const fill = defaults.customerForcedFill ?? zone?.color ?? defaults.fill;
   const weight = zone?.font_weight ?? defaults.weight ?? '400';
