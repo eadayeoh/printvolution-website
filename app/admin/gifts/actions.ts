@@ -416,6 +416,10 @@ const TemplateSchema = z.object({
   // string — must match a gift_modes.slug, but no DB FK so admins can
   // add custom slugs at runtime without breaking this validation.
   mode_override: z.string().min(1).max(40).nullable().optional(),
+  // Date-windowed occasion FK (migration 0084). NULL = always-on. When
+  // set, the customer-facing PDP only shows the template inside the
+  // occasion's date window.
+  occasion_id: z.string().uuid().nullable().optional(),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {
@@ -470,6 +474,58 @@ export async function duplicateTemplate(id: string) {
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts/templates');
   return { ok: true as const, id: created.id };
+}
+
+// ---------------------------------------------------------------------------
+// GIFT OCCASIONS CRUD (date-windowed template visibility — migration 0084)
+// ---------------------------------------------------------------------------
+
+const OccasionSchema = z.object({
+  name: z.string().min(1),
+  badge_label: z.string().nullable().optional(),
+  // Plain YYYY-MM-DD; the gift_occasions.target_date column is a DATE.
+  target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD'),
+  days_before: z.number().int().min(0).default(14),
+  days_after:  z.number().int().min(0).default(2),
+  is_active:   z.boolean().default(true),
+});
+
+export async function createGiftOccasion(input: z.input<typeof OccasionSchema>) {
+  const sb = await requireAdmin();
+  const parsed = OccasionSchema.parse(input);
+  const { data, error } = await sb
+    .from('gift_occasions')
+    .insert(parsed as any)
+    .select('id')
+    .single();
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/occasions');
+  return { ok: true as const, id: data.id };
+}
+
+export async function updateGiftOccasion(
+  id: string,
+  input: Partial<z.input<typeof OccasionSchema>>,
+) {
+  const sb = await requireAdmin();
+  const { error } = await sb.from('gift_occasions').update(input as any).eq('id', id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/occasions');
+  revalidatePath(`/admin/gifts/occasions/${id}`);
+  // Templates whose occasion changed: regenerate the templates list +
+  // any PDP that may render them.
+  revalidatePath('/admin/gifts/templates');
+  return { ok: true as const };
+}
+
+export async function deleteGiftOccasion(id: string) {
+  const sb = await requireAdmin();
+  // gift_templates.occasion_id is ON DELETE SET NULL — affected templates
+  // simply revert to always-on, no cascade pain.
+  const { error } = await sb.from('gift_occasions').delete().eq('id', id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/occasions');
+  return { ok: true as const };
 }
 
 // ---------------------------------------------------------------------------

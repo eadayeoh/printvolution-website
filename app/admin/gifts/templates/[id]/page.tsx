@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation';
 import { GiftTemplateEditor } from '@/components/admin/gift-template-editor';
-import { getTemplateByIdAdmin, listAllTemplatesAdmin } from '@/lib/gifts/data';
+import { getTemplateByIdAdmin, listAllOccasionsAdmin, listAllTemplatesAdmin } from '@/lib/gifts/data';
 import { listAllModesAdmin, toModeOptions } from '@/lib/gifts/modes';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditTemplatePage({ params }: { params: { id: string } }) {
-  const [template, all, modes] = await Promise.all([
+  const [template, all, modes, occasions] = await Promise.all([
     getTemplateByIdAdmin(params.id),
     listAllTemplatesAdmin(),
     listAllModesAdmin(),
+    listAllOccasionsAdmin(),
   ]);
   if (!template) notFound();
   const existingGroups = Array.from(
@@ -20,6 +21,7 @@ export default async function EditTemplatePage({ params }: { params: { id: strin
       template={template}
       existingGroups={existingGroups}
       availableModes={toModeOptions(modes)}
+      availableOccasions={occasions}
     />
   );
 }

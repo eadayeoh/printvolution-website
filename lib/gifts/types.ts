@@ -345,6 +345,26 @@ export type GiftTemplate = {
    *  gift_modes.slug (no DB FK; gift_modes is admin-extendable per
    *  migration 0072). Migration 0080. */
   mode_override?: string | null;
+  /** Optional gift_occasions FK. When set, the template only appears in
+   *  the customer-facing PDP picker during the occasion's date window
+   *  (target_date ± days_before/days_after). NULL = always-on, shows
+   *  year-round. Admin sees all templates regardless. Migration 0084. */
+  occasion_id?: string | null;
+};
+
+/** Date-windowed occasion (e.g. Mother's Day 2026). Tagged on
+ *  gift_templates via occasion_id; PDP hides out-of-window templates,
+ *  in-window templates render with a badge and sort first. Migration 0084. */
+export type GiftOccasion = {
+  id: string;
+  name: string;
+  badge_label: string | null;
+  target_date: string; // YYYY-MM-DD
+  days_before: number;
+  days_after: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type GiftCropRect = {

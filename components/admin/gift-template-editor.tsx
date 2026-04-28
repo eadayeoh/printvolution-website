@@ -13,6 +13,7 @@ import {
   GIFT_FONT_FAMILIES,
   GIFT_MODE_LABEL,
   giftFontStack,
+  type GiftOccasion,
   type GiftTemplate,
   type GiftTemplateZone,
   type GiftTemplateImageZone,
@@ -182,6 +183,7 @@ export function GiftTemplateEditor({
   template,
   existingGroups,
   availableModes,
+  availableOccasions = [],
 }: {
   template: GiftTemplate | null;
   /** Group names already in use across the template library. Powers
@@ -192,6 +194,10 @@ export function GiftTemplateEditor({
    *  dropdown. Pulled fresh per page render so newly-added admin
    *  modes show up without a code change. */
   availableModes: Array<Pick<GiftModeMeta, 'slug' | 'label'>>;
+  /** All gift_occasions rows (active + paused). Drives the optional
+   *  occasion dropdown — picking one date-windows the template on the
+   *  customer-facing PDP. Migration 0084. */
+  availableOccasions?: GiftOccasion[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -228,6 +234,7 @@ export function GiftTemplateEditor({
   // SKUs (e.g. foil vs poster) selectable via the customer template
   // picker.
   const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
+  const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
   const FOIL_QUICK_ADDS: Array<{ name: string; hex: string }> = [
     { name: 'Gold',      hex: '#FFD700' },
     { name: 'Rose Gold', hex: '#B76E79' },
@@ -447,6 +454,7 @@ export function GiftTemplateEditor({
         .map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: (s.mockup_url ?? '').trim() }))
         .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
       mode_override: modeOverride.trim() || null,
+      occasion_id: occasionId.trim() || null,
     };
     startTransition(async () => {
       if (template) {
@@ -888,6 +896,40 @@ export function GiftTemplateEditor({
                   )}
                 </>
               )}
+            </div>
+
+            {/* ── Occasion windowing (per-template) ─────────────────── */}
+            <div className="rounded-lg border-2 border-neutral-200 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-sm font-bold text-ink">Occasion window</div>
+                <Link
+                  href="/admin/gifts/occasions"
+                  className="text-[10px] font-bold text-neutral-500 underline hover:text-ink"
+                >
+                  Manage occasions →
+                </Link>
+              </div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Optional. When set, the template only appears in the customer
+                picker during the occasion&apos;s date window
+                (target ± days_before / days_after). Leave as
+                {' '}<strong>Always show</strong> for year-round layouts.
+              </div>
+              <select
+                value={occasionId}
+                onChange={(e) => setOccasionId(e.target.value)}
+                className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+              >
+                <option value="">Always show (no occasion)</option>
+                {availableOccasions.map((o) => {
+                  const flag = o.is_active ? '' : ' · paused';
+                  return (
+                    <option key={o.id} value={o.id}>
+                      {o.name} — {o.target_date} (−{o.days_before}/+{o.days_after}d){flag}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             {/* ── Production mode override (per-template) ───────────── */}

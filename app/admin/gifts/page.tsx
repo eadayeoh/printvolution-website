@@ -85,6 +85,12 @@ export default async function AdminGiftsPage() {
             Templates →
           </Link>
           <Link
+            href="/admin/gifts/occasions"
+            className="rounded-full border border-neutral-200 px-4 py-2 text-xs font-bold text-ink hover:border-ink"
+          >
+            Occasions →
+          </Link>
+          <Link
             href="/admin/gifts/new"
             className="inline-flex items-center gap-2 rounded-full bg-pink px-4 py-2 text-xs font-bold text-white hover:bg-pink-dark"
           >

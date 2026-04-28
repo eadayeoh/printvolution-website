@@ -1,13 +1,21 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { GiftProductPage } from '@/components/gift/gift-product-page';
-import { getGiftProductBySlug, listActiveGiftProducts, listTemplatesForProduct } from '@/lib/gifts/data';
+import { getGiftProductBySlug, listActiveGiftProducts, listActiveOccasions, listTemplatesForProduct } from '@/lib/gifts/data';
+import { filterTemplatesByOccasion } from '@/lib/gifts/occasion';
 import { listPromptsForProduct } from '@/lib/gifts/prompts';
 import { listActiveVariants } from '@/lib/gifts/variants';
 import { ProductSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
 import { giftFromPrice } from '@/lib/gifts/types';
 
 export const dynamic = 'force-dynamic';
+
+function rawTemplatesNeedOccasionFilter(templateMode: string | null | undefined): boolean {
+  // Skip the occasions query for products that don't render a template
+  // picker at all (template_mode = 'none'). Anything else may have
+  // occasion-tagged templates and needs the lookup.
+  return templateMode !== 'none';
+}
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const p = await getGiftProductBySlug(params.slug);
@@ -33,7 +41,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function GiftPage({ params }: { params: { slug: string } }) {
   const product = await getGiftProductBySlug(params.slug);
   if (!product) notFound();
-  const [templates, prompts, variants, allGifts] = await Promise.all([
+  const [rawTemplates, prompts, variants, allGifts, occasions] = await Promise.all([
     product.template_mode === 'none' ? Promise.resolve([]) : listTemplatesForProduct(product.id),
     product.mode === 'photo-resize' ? Promise.resolve([]) : listPromptsForProduct({
       mode: product.mode,
@@ -44,7 +52,17 @@ export default async function GiftPage({ params }: { params: { slug: string } })
     }),
     listActiveVariants(product.id),
     listActiveGiftProducts(),
+    rawTemplatesNeedOccasionFilter(product.template_mode) ? listActiveOccasions() : Promise.resolve([]),
   ]);
+  // Apply occasion windowing: templates with an out-of-window occasion
+  // are hidden from the customer; in-window templates sort first and
+  // ship a badge label down to the PDP for the tile ribbon.
+  const { visible: templates, badgeByTemplateId } = filterTemplatesByOccasion(
+    rawTemplates,
+    occasions,
+  );
+  const occasionBadgeMap: Record<string, string> = {};
+  badgeByTemplateId.forEach((label, id) => { occasionBadgeMap[id] = label; });
   // Related: prefer same mode, exclude current, cap at 4.
   const sameMode = allGifts.filter((g) => g.slug !== product.slug && g.mode === product.mode);
   const otherMode = allGifts.filter((g) => g.slug !== product.slug && g.mode !== product.mode);
@@ -73,6 +91,7 @@ export default async function GiftPage({ params }: { params: { slug: string } })
         prompts={prompts}
         variants={variants}
         relatedGifts={relatedGifts}
+        occasionBadgeByTemplateId={occasionBadgeMap}
       />
     </>
   );

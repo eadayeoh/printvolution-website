@@ -129,9 +129,22 @@ type Props = {
   prompts: GiftPrompt[];
   variants?: GiftProductVariant[];
   relatedGifts?: Array<Pick<GiftProduct, 'slug' | 'name' | 'thumbnail_url' | 'base_price_cents' | 'price_tiers'>>;
+  /** Template ID → human badge label ("Mother's Day"). The PDP renders
+   *  this as a small ribbon overlay on the in-window tile. Templates
+   *  not in this map are either always-on or out-of-window (and the
+   *  data layer has already filtered them out for customer-facing
+   *  reads). Migration 0084. */
+  occasionBadgeByTemplateId?: Record<string, string>;
 };
 
-export function GiftProductPage({ product, templates, prompts, variants = [], relatedGifts = [] }: Props) {
+export function GiftProductPage({
+  product,
+  templates,
+  prompts,
+  variants = [],
+  relatedGifts = [],
+  occasionBadgeByTemplateId = {},
+}: Props) {
   const addToCart = useCart((s) => s.add);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -276,9 +289,26 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     typeof window !== 'undefined' ? loadDesignDraft(product.slug) : null,
   );
   const [draftRestored, setDraftRestored] = useState(false);
+  // Surfaces a one-line notice in the picker when a saved/bookmarked
+  // template id no longer matches anything visible — happens when an
+  // occasion-tagged template (e.g. Mother's Day) goes out of window
+  // between visits. We silently flip to the new default and explain why.
+  const [occasionFallbackNotice, setOccasionFallbackNotice] = useState(false);
   useEffect(() => {
     if (!savedDraft) return;
-    if (savedDraft.templateId) setSelectedTemplateId(savedDraft.templateId);
+    if (savedDraft.templateId) {
+      // If the saved id still resolves in the visible list, restore as before.
+      // Otherwise the template is hidden by occasion windowing — leave the
+      // auto-picked default and surface a notice.
+      const stillVisible = templates.some((t) => t.id === savedDraft.templateId);
+      if (stillVisible) {
+        setSelectedTemplateId(savedDraft.templateId);
+      } else if (templates.length > 0) {
+        setOccasionFallbackNotice(true);
+        const dismiss = setTimeout(() => setOccasionFallbackNotice(false), 6000);
+        return () => clearTimeout(dismiss);
+      }
+    }
     if (savedDraft.promptId) setSelectedPromptId(savedDraft.promptId);
     if (savedDraft.variantId) setSelectedVariantId(savedDraft.variantId);
     if (savedDraft.sizeSlug) setSelectedSizeSlug(savedDraft.sizeSlug);
@@ -2326,6 +2356,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 const templateBlock =
                   hasTemplates && templates.length >= 2 ? (
                     <ComposeSection letter={sectionLetters.template!} title="Pick a layout">
+                      {occasionFallbackNotice ? (
+                        <div
+                          style={{
+                            marginBottom: 8,
+                            padding: '8px 10px',
+                            background: 'var(--pv-cream)',
+                            border: '1px dashed var(--pv-rule)',
+                            fontFamily: 'var(--pv-f-mono)',
+                            fontSize: 11,
+                            color: 'var(--pv-ink)',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          That layout is out of season — showing today&apos;s lineup instead.
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           display: 'grid',
@@ -2365,6 +2411,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                         })()}
                         {templates.map((t) => {
                           const active = selectedTemplateId === t.id;
+                          const badge = occasionBadgeByTemplateId[t.id];
                           return (
                             <button
                               key={t.id}
@@ -2393,6 +2440,26 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                                 ) : (
                                   <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
                                 )}
+                                {badge ? (
+                                  <span
+                                    style={{
+                                      position: 'absolute',
+                                      top: 6,
+                                      left: 6,
+                                      background: 'var(--pv-magenta)',
+                                      color: '#fff',
+                                      fontSize: 9,
+                                      fontWeight: 800,
+                                      padding: '3px 6px',
+                                      borderRadius: 3,
+                                      letterSpacing: '0.04em',
+                                      textTransform: 'uppercase',
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                                    }}
+                                  >
+                                    {badge}
+                                  </span>
+                                ) : null}
                               </div>
                               <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                                 {t.name}
@@ -2609,6 +2676,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   multi-slot form or the legacy single-file dropzone. */}
               {hasTemplates && (
                 <ComposeSection letter={sectionLetters.template!} title="Pick a template">
+                  {occasionFallbackNotice ? (
+                    <div
+                      style={{
+                        marginBottom: 8,
+                        padding: '8px 10px',
+                        background: 'var(--pv-cream)',
+                        border: '1px dashed var(--pv-rule)',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11,
+                        color: 'var(--pv-ink)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      That template is out of season — showing today&apos;s lineup instead.
+                    </div>
+                  ) : null}
                   <div
                     style={{
                       display: 'grid',
@@ -2618,6 +2701,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   >
                     {templates.map((t) => {
                       const active = selectedTemplateId === t.id;
+                      const badge = occasionBadgeByTemplateId[t.id];
                       return (
                         <button
                           key={t.id}
@@ -2646,6 +2730,26 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                             ) : (
                               <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
                             )}
+                            {badge ? (
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  top: 6,
+                                  left: 6,
+                                  background: 'var(--pv-magenta)',
+                                  color: '#fff',
+                                  fontSize: 9,
+                                  fontWeight: 800,
+                                  padding: '3px 6px',
+                                  borderRadius: 3,
+                                  letterSpacing: '0.04em',
+                                  textTransform: 'uppercase',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                                }}
+                              >
+                                {badge}
+                              </span>
+                            ) : null}
                           </div>
                           <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                             {t.name}
