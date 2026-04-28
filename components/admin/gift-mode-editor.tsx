@@ -42,10 +42,7 @@ export function GiftModeEditor({ mode }: { mode: GiftModeMeta }) {
       <div className="mb-4">
         <Link href="/admin/gifts/modes" className="text-sm text-neutral-500 hover:text-ink">← Back to modes</Link>
       </div>
-      <h1 className="mb-1 text-2xl font-black">Edit mode</h1>
-      <p className="mb-6 text-xs text-neutral-500">
-        Slug: <span className="font-mono">{mode.slug}</span> (wired into the render pipeline — not editable)
-      </p>
+      <h1 className="mb-1 text-2xl font-black">Edit {mode.label || 'mode'}</h1>
 
       <div className="max-w-2xl space-y-4 rounded-lg border border-neutral-200 bg-white p-6">
         <label className="block">

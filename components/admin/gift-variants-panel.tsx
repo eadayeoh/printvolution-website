@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
 import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode } from '@/lib/gifts/types';
@@ -161,6 +161,46 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     setDrafts((list) => [...list, toDraft()]);
   }
 
+  /**
+   * Clone an existing variant — copies every field except the DB id (so
+   * Save creates a new row), tweaks the slug + name to make the duplicate
+   * obviously distinct, and inserts the copy directly below the source so
+   * the admin doesn't lose their place. The duplicate isn't persisted
+   * until the admin clicks Save.
+   */
+  function duplicateRow(i: number) {
+    setDrafts((list) => {
+      const src = list[i];
+      const baseSlug = src.slug.replace(/-copy(?:-\d+)?$/, '') || 'variant';
+      const existing = new Set(list.map((d) => d.slug));
+      let suffix = 'copy';
+      let candidate = `${baseSlug}-${suffix}`;
+      let n = 2;
+      while (existing.has(candidate)) {
+        candidate = `${baseSlug}-copy-${n}`;
+        n++;
+      }
+      const copy: Draft = {
+        ...src,
+        id: undefined,
+        slug: candidate,
+        name: src.name ? `${src.name} (copy)` : '',
+        // Deep-clone nested arrays/objects so editing the copy doesn't
+        // mutate the source row.
+        colour_swatches: src.colour_swatches.map((s) => ({ ...s })),
+        surfaces: src.surfaces.map((s) => ({ ...s, mockup_area: { ...s.mockup_area } })),
+        mockup_area: { ...src.mockup_area },
+        mockup_bounds: { ...src.mockup_bounds },
+      };
+      const next = list.slice();
+      next.splice(i + 1, 0, copy);
+      return next.map((d, idx) => ({ ...d, display_order: String(idx) }));
+    });
+    // Drop the new row open so the admin can rename it / tweak the
+    // mockup straight away.
+    setCollapsed((c) => ({ ...c, [`new-${i + 1}`]: false }));
+  }
+
   function removeRow(i: number) {
     const d = drafts[i];
     if (d.id && !confirm('Delete this variant? Orders placed with it stay intact.')) return;
@@ -180,18 +220,31 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   // main product save button persists every variant in one go.
   async function saveDraft(i: number): Promise<boolean> {
     const d = drafts[i];
-    if (!d.name.trim() || !d.slug.trim()) {
-      setErr(`Variant #${i + 1}: name and slug are required`);
+    if (!d.name.trim()) {
+      setErr(`Variant #${i + 1}: name is required`);
       return false;
     }
     if (!d.mockup_url) {
       setErr(`Variant "${d.name}": needs a mockup image`);
       return false;
     }
-    const slugClash = drafts.find((other, j) => j !== i && other.slug.trim() === d.slug.trim());
-    if (slugClash) {
-      setErr(`A variant with slug "${d.slug.trim()}" already exists${slugClash.name ? ` (“${slugClash.name}”)` : ''}.`);
-      return false;
+    // Slug is now an internal artifact — auto-derived from name when
+    // missing, and auto-suffixed with a short random tag if a collision
+    // would happen on (gift_product_id, slug) within this admin session.
+    // Admins shouldn't have to think about slugs for variants.
+    let workingSlug = d.slug.trim();
+    if (!workingSlug) {
+      workingSlug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'variant';
+    }
+    const taken = new Set(drafts.filter((_, j) => j !== i).map((o) => o.slug.trim()).filter(Boolean));
+    if (taken.has(workingSlug)) {
+      let n = 2;
+      while (taken.has(`${workingSlug}-${n}`)) n++;
+      workingSlug = `${workingSlug}-${n}`;
+    }
+    if (workingSlug !== d.slug) {
+      d.slug = workingSlug;
+      updateDraft(i, { slug: workingSlug });
     }
     for (const [si, s] of d.colour_swatches.entries()) {
       if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return false; }
@@ -428,7 +481,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                     </span>
                     {d.id && (
                       <span className="text-neutral-400">
-                        {' · '}{d.slug || '—'}{' · S$'}{d.base_price || '0.00'}
+                        {' · S$'}{d.base_price || '0.00'}
                         {!d.is_active && ' · (hidden)'}
                       </span>
                     )}
@@ -453,33 +506,30 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                     >
                       <ArrowDown size={12} />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => duplicateRow(i)}
+                      className="rounded border border-neutral-200 p-1 text-neutral-500 hover:border-ink hover:text-ink"
+                      title="Duplicate this variant — new copy inserted below, save to persist"
+                    >
+                      <Copy size={12} />
+                    </button>
                   </div>
                 </div>
                 {!isCollapsed && (
                 <>
                 <div className="grid gap-3 lg:grid-cols-[1fr_280px]">
                   <div className="space-y-3">
-                    <div className="grid grid-cols-[2fr_1fr] gap-2">
-                      <label className="block">
-                        <span className="mb-1 block text-xs font-bold text-ink">Name</span>
-                        <input
-                          value={d.name}
-                          onBlur={() => autoSlug(i)}
-                          onChange={(e) => updateDraft(i, { name: e.target.value })}
-                          className={inputCls}
-                          placeholder="Oak Round"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-xs font-bold text-ink">Slug</span>
-                        <input
-                          value={d.slug}
-                          onChange={(e) => updateDraft(i, { slug: e.target.value })}
-                          className={`${inputCls} font-mono text-xs`}
-                          placeholder="oak-round"
-                        />
-                      </label>
-                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-bold text-ink">Name</span>
+                      <input
+                        value={d.name}
+                        onBlur={() => autoSlug(i)}
+                        onChange={(e) => updateDraft(i, { name: e.target.value })}
+                        className={inputCls}
+                        placeholder="Oak Round"
+                      />
+                    </label>
                     <label className="block">
                       <span className="mb-1 block text-xs font-bold text-ink">Features (one per line)</span>
                       <textarea

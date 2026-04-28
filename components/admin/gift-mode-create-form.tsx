@@ -19,22 +19,31 @@ export function GiftModeCreateForm() {
   const [pending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
 
-  const [slug, setSlug] = useState('');
   const [label, setLabel] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('');
   const [displayOrder, setDisplayOrder] = useState('99');
 
   function reset() {
-    setSlug(''); setLabel(''); setDescription(''); setIcon(''); setDisplayOrder('99');
+    setLabel(''); setDescription(''); setIcon(''); setDisplayOrder('99');
     setErr(null);
   }
 
   function submit() {
     setErr(null);
+    // Slug is derived from the label automatically — admins shouldn't have
+    // to think about URL-safe identifiers when adding a new processing
+    // mode. Server-side regex still validates the result, and the create
+    // action returns a duplicate-slug error if two modes derive the same
+    // slug (admin renames the label to disambiguate).
+    const derivedSlug = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    if (!derivedSlug) {
+      setErr('Label must contain at least one letter or digit.');
+      return;
+    }
     startTransition(async () => {
       const r = await createGiftMode({
-        slug: slug.trim(),
+        slug: derivedSlug,
         label: label.trim(),
         description: description.trim() || null,
         icon: icon.trim() || null,
@@ -64,17 +73,7 @@ export function GiftModeCreateForm() {
     <div className="mb-4 rounded border-2 border-ink bg-white p-4">
       <div className="mb-3 text-xs font-bold uppercase tracking-wider">New processing mode</div>
       <div className="grid grid-cols-2 gap-3">
-        <label className="block text-xs">
-          <span className="mb-1 block font-bold uppercase tracking-wider">Slug</span>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-            placeholder="foil-press"
-            maxLength={40}
-            className="w-full rounded border-2 border-ink px-2 py-1 font-mono text-xs"
-          />
-        </label>
-        <label className="block text-xs">
+        <label className="col-span-2 block text-xs">
           <span className="mb-1 block font-bold uppercase tracking-wider">Label</span>
           <input
             value={label}
@@ -118,7 +117,7 @@ export function GiftModeCreateForm() {
         <button
           type="button"
           onClick={submit}
-          disabled={pending || !slug.trim() || !label.trim()}
+          disabled={pending || !label.trim()}
           className="rounded bg-ink px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
         >
           {pending ? 'Adding…' : 'Add mode'}
