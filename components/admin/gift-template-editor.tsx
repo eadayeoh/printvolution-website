@@ -25,6 +25,7 @@ import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
+import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
 import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
@@ -317,6 +318,20 @@ export function GiftTemplateEditor({
         coordinates: '1.29° N · 103.85° E',
         showLines: true,
         zones,
+        templateRefDims:
+          Number.isFinite(refW) && Number.isFinite(refH) && refW > 0 && refH > 0
+            ? { width_mm: refW, height_mm: refH }
+            : null,
+      });
+    }
+    if (renderer === 'spotify_plaque') {
+      const refW = parseFloat(refWidthMm);
+      const refH = parseFloat(refHeightMm);
+      return buildSpotifyPlaqueSvg({
+        photoUrl: null,           // placeholder grey square in admin
+        songTitle: 'Your Favourite Song',
+        artistName: "Artist's Name",
+        spotifyTrackId: '6rqhFgbbKwnb9MLmUQDhG6',  // demo (Mr. Brightside)
         templateRefDims:
           Number.isFinite(refW) && Number.isFinite(refH) && refW > 0 && refH > 0
             ? { width_mm: refW, height_mm: refH }

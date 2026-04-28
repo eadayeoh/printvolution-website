@@ -9,6 +9,7 @@ import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, G
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
+import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 
 /** Fallback for products that haven't pinned their allowed modes yet. Used
@@ -196,6 +197,17 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         vectors: null,
         names: 'EVA & JOHN', event: 'OUR FIRST DATE',
         cityLabel: 'LONDON', tagline: 'Love now and always',
+      });
+    }
+    if (t.renderer === 'spotify_plaque') {
+      const tw = (t as { reference_width_mm?: number | null }).reference_width_mm;
+      const th = (t as { reference_height_mm?: number | null }).reference_height_mm;
+      return buildSpotifyPlaqueSvg({
+        photoUrl: null,
+        songTitle: 'Your Favourite Song',
+        artistName: "Artist's Name",
+        spotifyTrackId: '6rqhFgbbKwnb9MLmUQDhG6',
+        templateRefDims: tw && th ? { width_mm: tw, height_mm: th } : null,
       });
     }
     // song_lyrics is a React component, not a string builder — skip
