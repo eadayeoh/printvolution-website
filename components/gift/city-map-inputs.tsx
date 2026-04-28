@@ -91,6 +91,14 @@ export function CityMapInputs({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const debounceRef = useRef<number | null>(null);
+  // Debounce + sequence-id for radius slider. The slider fires onChange
+  // continuously during drag; we used to fire one Overpass fetch per
+  // tick, then whichever returned last (often an intermediate value)
+  // would clobber the slider position. Now: schedule one fetch 250ms
+  // after the user stops dragging, and ignore any responses tagged with
+  // an older sequence id.
+  const radiusDebounceRef = useRef<number | null>(null);
+  const radiusSeqRef = useRef(0);
 
   // Debounced autocomplete — Nominatim usage policy is 1 req/sec, so 300ms
   // debounce keeps us comfortably under that even when the customer types
@@ -211,20 +219,34 @@ export function CityMapInputs({
     }
   }
 
-  async function handleRadiusChange(r: number) {
+  function handleRadiusChange(r: number) {
+    // Update the slider value + circle preview INSTANTLY so the UI tracks
+    // the customer's drag. The expensive Overpass fetch fires only once
+    // after they stop dragging (debounced 250ms), and stale responses
+    // from a previous tick are dropped via the sequence id — without this
+    // the slider visibly snaps back when an early intermediate fetch
+    // returns after the final one was started.
     onRadius(r);
     if (lat == null || lng == null) return;
-    setLocalError(null);
-    const v = await fetchCityMapPaths(lat, lng, r);
-    if (!v.ok) { setLocalError(v.error); return; }
-    onLocationResolved({
-      lat, lng, label: cityLabel,
-      radiusKm: v.effectiveRadiusKm,
-      vectors: v.vectors,
-    });
-    if (v.effectiveRadiusKm < r - 0.4) {
-      setLocalError(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data for this city.`);
-    }
+    if (radiusDebounceRef.current) window.clearTimeout(radiusDebounceRef.current);
+    radiusDebounceRef.current = window.setTimeout(() => {
+      const seq = ++radiusSeqRef.current;
+      setLocalError(null);
+      setLocalNotice(null);
+      void (async () => {
+        const v = await fetchCityMapPaths(lat, lng, r);
+        if (seq !== radiusSeqRef.current) return;
+        if (!v.ok) { setLocalError(v.error); return; }
+        onLocationResolved({
+          lat, lng, label: cityLabel,
+          radiusKm: v.effectiveRadiusKm,
+          vectors: v.vectors,
+        });
+        if (v.effectiveRadiusKm < r - 0.4) {
+          setLocalNotice(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data for this city.`);
+        }
+      })();
+    }, 250);
   }
 
   const errorMsg = localError ?? fetchError;
