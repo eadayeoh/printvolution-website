@@ -14,8 +14,13 @@ type Props = {
   photoUrl: string;
   onPhotoUrl: (s: string) => void;
   allowedFonts: string[];
-  font: string;
-  onFont: (f: string) => void;
+  // Per-field fonts. Each defaults to a sensible choice when empty.
+  titleFont: string;
+  onTitleFont: (f: string) => void;
+  namesFont: string;
+  onNamesFont: (f: string) => void;
+  yearFont: string;
+  onYearFont: (f: string) => void;
   layout: SongLyricsLayout;
   onLayout: (l: SongLyricsLayout) => void;
 };
@@ -23,7 +28,8 @@ type Props = {
 export function SongLyricsInputs({
   lyrics, onLyrics, title, onTitle, names, onNames,
   year, onYear, photoUrl, onPhotoUrl,
-  allowedFonts, font, onFont,
+  allowedFonts,
+  titleFont, onTitleFont, namesFont, onNamesFont, yearFont, onYearFont,
   layout, onLayout,
 }: Props) {
   // Field labels + placeholders shift with the chosen layout so the inputs
@@ -120,20 +126,28 @@ export function SongLyricsInputs({
         />
       </label>
       {allowedFonts.length > 0 && (
-        <label style={{ display: 'block' }}>
-          <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-            Title font
-          </span>
-          <select
-            value={font}
-            onChange={(e) => onFont(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: font, fontSize: 14 }}
-          >
-            {allowedFonts.map((f) => (
-              <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-            ))}
-          </select>
-        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {([
+            { label: isWedding ? 'Subtitle font' : 'Title font', value: titleFont, onChange: onTitleFont },
+            { label: 'Names font',                                value: namesFont, onChange: onNamesFont },
+            { label: isWedding ? 'Date font' : 'Year font',       value: yearFont,  onChange: onYearFont  },
+          ]).map((f) => (
+            <label key={f.label} style={{ display: 'block' }}>
+              <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                {f.label}
+              </span>
+              <select
+                value={f.value}
+                onChange={(e) => f.onChange(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: f.value, fontSize: 14 }}
+              >
+                {allowedFonts.map((opt) => (
+                  <option key={opt} value={opt} style={{ fontFamily: opt }}>{opt}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
       )}
       <div style={{ display: 'block' }}>
         <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>

@@ -203,6 +203,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [songNames, setSongNames]   = useState<string>('');
   const [songYear, setSongYear]     = useState<string>(String(new Date().getFullYear()));
   const [songPhotoUrl, setSongPhotoUrl] = useState<string>('');
+  // Per-field fonts default to sensible options pulled from allowed_fonts.
+  // Initialised lazily so we can reach allowedFonts (declared further down)
+  // without restructuring the file.
+  const [songTitleFont, setSongTitleFont] = useState<string>('');
+  const [songNamesFont, setSongNamesFont] = useState<string>('');
+  const [songYearFont,  setSongYearFont]  = useState<string>('');
 
   // Pull the admin-configured Google Fonts once on mount so the picker
   // dropdown + the draggable text overlay both render in the real font.
@@ -725,6 +731,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // SVG server-side at 300 DPI.
     if (isSongLyrics) {
       notes += `${notes ? ';' : ''}song_layout:${songLayout}`;
+      if (songTitleFont) notes += `;song_title_font:${songTitleFont}`;
+      if (songNamesFont) notes += `;song_names_font:${songNamesFont}`;
+      if (songYearFont)  notes += `;song_year_font:${songYearFont}`;
       if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
       if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
       if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
@@ -1136,7 +1145,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       title={songTitle}
                       names={songNames}
                       year={songYear}
-                      font={engravedFont}
+                      titleFont={songTitleFont || engravedFont}
+                      namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')}
+                      yearFont={songYearFont || 'Archivo'}
                       layout={songLayout}
                     />
                   </div>
@@ -1755,7 +1766,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   year={songYear} onYear={setSongYear}
                   photoUrl={songPhotoUrl} onPhotoUrl={setSongPhotoUrl}
                   allowedFonts={allowedFonts}
-                  font={engravedFont} onFont={setEngravedFont}
+                  titleFont={songTitleFont || engravedFont}  onTitleFont={setSongTitleFont}
+                  namesFont={songNamesFont || (songLayout === 'wedding' ? engravedFont : 'Dancing Script')} onNamesFont={setSongNamesFont}
+                  yearFont={songYearFont || 'Archivo'}       onYearFont={setSongYearFont}
                   layout={songLayout} onLayout={setSongLayout}
                 />
               ) : (

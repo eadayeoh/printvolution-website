@@ -28,7 +28,11 @@ type Props = {
   title: string;
   names: string;
   year: string;
+  /** Per-field fonts. `font` is kept as a fallback for back-compat. */
   font?: string;
+  titleFont?: string;
+  namesFont?: string;
+  yearFont?: string;
   layout?: SongLyricsLayout;
   /** Pink wash colour around the disc — defaults to a soft blush. */
   accentColor?: string;
@@ -110,9 +114,18 @@ export function SongLyricsTemplate({
   names,
   year,
   font = 'Playfair Display',
+  titleFont,
+  namesFont,
+  yearFont,
   layout = 'song',
   accentColor = '#f7c7d8',
 }: Props) {
+  // Per-field fonts default to a sensible serif/script/sans combo when the
+  // customer hasn't picked one. Falling back to the legacy `font` prop keeps
+  // existing call sites working unchanged.
+  const tf = titleFont ?? font;
+  const nf = namesFont ?? (layout === 'wedding' ? font : 'Dancing Script');
+  const yf = yearFont  ?? 'Archivo';
 
   // Empty-state placeholder so the customer can see the layout before they
   // paste real lyrics. Hidden the moment they type anything.
@@ -195,18 +208,18 @@ export function SongLyricsTemplate({
         <>
           {/* Names — serif italic, large, top of footer */}
           <text x={cx} y={108} textAnchor="middle" fontSize="7.5"
-                fontFamily={`${font}, Georgia, serif`} fontStyle="italic" fontWeight="600"
+                fontFamily={`${nf}, Georgia, serif`} fontStyle="italic" fontWeight="600"
                 fill="#0d0d0d" letterSpacing="0.4">
             {names.trim() || 'Mercy & Adam'}
           </text>
           {/* Date — sans, mid */}
           <text x={cx} y={117} textAnchor="middle" fontSize="4.2"
-                fontFamily="Archivo, sans-serif" fill="#0d0d0d" letterSpacing="0.3">
+                fontFamily={`${yf}, sans-serif`} fill="#0d0d0d" letterSpacing="0.3">
             {year.trim() || '27.08.2023'}
           </text>
           {/* Subtitle — serif italic, small, bottom (e.g. "OUR FIRST DANCE") */}
           <text x={cx} y={125} textAnchor="middle" fontSize="4.5"
-                fontFamily={`${font}, Georgia, serif`} fontStyle="italic" fill="#0d0d0d"
+                fontFamily={`${tf}, Georgia, serif`} fontStyle="italic" fill="#0d0d0d"
                 letterSpacing="0.5">
             {title.trim() || 'OUR FIRST DANCE'}
           </text>
@@ -215,18 +228,18 @@ export function SongLyricsTemplate({
         <>
           {/* Song layout: Title / Names / EST. Year */}
           <text x={cx} y={108} textAnchor="middle" fontSize="7"
-                fontFamily={`${font}, Georgia, serif`} fontWeight="700" fill="#0d0d0d"
+                fontFamily={`${tf}, Georgia, serif`} fontWeight="700" fill="#0d0d0d"
                 letterSpacing="0.4">
             {title.trim() || 'OUR SONG'}
           </text>
           <text x={cx} y={117} textAnchor="middle" fontSize="5.5"
-                fontFamily="'Dancing Script', cursive" fill="#0d0d0d">
+                fontFamily={`'${nf}', cursive`} fill="#0d0d0d">
             {names.trim() || 'Your & Their Name'}
           </text>
           {/* Hairline divider */}
           <line x1={cx - 4} x2={cx + 4} y1={121} y2={121} stroke="#0d0d0d" strokeWidth="0.3" />
           <text x={cx} y={126} textAnchor="middle" fontSize="3"
-                fontFamily="Archivo, sans-serif" letterSpacing="0.6"
+                fontFamily={`${yf}, sans-serif`} letterSpacing="0.6"
                 fill="#3a3a3a">
             EST. {year.trim() || CURRENT_YEAR}
           </text>
