@@ -68,22 +68,34 @@ function RendererVariantStage({
 }: {
   mockupUrl: string;
   area: { x: number; y: number; width: number; height: number };
-  /** Stage aspect as a CSS string ("297 / 420") OR null to use 1:1. */
+  /** Stage aspect as a CSS string ("297 / 420"), or null to let the
+   *  mockup's natural aspect drive the shell size (img is width:100%
+   *  with height:auto, no letterbox around the mockup). */
   templateAspect: string | null;
   children: React.ReactNode;
   overlay?: React.ReactNode;
 }) {
+  // When templateAspect is null, the outer div has no aspect-ratio set
+  // and the mockup img defines its height naturally. The img is
+  // position:static (display:block) so the parent grows to its size.
+  // When templateAspect is set, the outer div forces that aspect and
+  // the mockup is object-fit:contain'd inside (legacy behaviour).
+  const useMockupAspect = templateAspect == null;
   return (
     <div style={{
       width: '100%',
-      aspectRatio: templateAspect ?? '1 / 1',
+      aspectRatio: templateAspect ?? undefined,
       position: 'relative',
       overflow: 'hidden',
     }}>
       <img
         src={mockupUrl}
         alt=""
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+        style={
+          useMockupAspect
+            ? { display: 'block', width: '100%', height: 'auto' }
+            : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
+        }
       />
       <div
         style={{
@@ -1611,24 +1623,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   // exactly with where it'll print on the customer's
                   // PDP (same coordinate system as the variant editor).
                   if (variantMockup && variantArea) {
-                    // Stage aspect priority: linked template's reference
-                    // dims (e.g. A3 297×420 — matches what the variant
-                    // editor's aspect-lock enforces) → product dims →
-                    // null (1:1 fallback).
-                    const linkedTpl = templates.find((t) => {
-                      const r = (t as { renderer?: string }).renderer;
-                      return r && r !== 'zones';
-                    }) as { reference_width_mm?: number | null; reference_height_mm?: number | null } | undefined;
-                    const tplAspect = linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
-                      ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
-                      : product.width_mm > 0 && product.height_mm > 0
-                        ? `${product.width_mm} / ${product.height_mm}`
-                        : null;
+                    // Stage aspect = null → RendererVariantStage lets the
+                    // mockup img define the shell size (width:100%,
+                    // height:auto). No aspect-ratio override means a
+                    // square mockup gets a square shell with no cream
+                    // letterbox top/bottom.
                     return (
                       <RendererVariantStage
                         mockupUrl={variantMockup}
                         area={variantArea}
-                        templateAspect={tplAspect}
+                        templateAspect={null}
                         overlay={cityFetchOverlay}
                       >
                         {rendererBody}
