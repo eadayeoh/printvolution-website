@@ -898,9 +898,32 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                     <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div>
-                          <div className="text-[11px] font-bold text-ink">Colour swatches (optional)</div>
+                          <div className="text-[11px] font-bold text-ink">
+                            {linkedRendererTemplate ? 'Colour overlays (optional)' : 'Colour swatches (optional)'}
+                          </div>
                           <div className="text-[10px] text-neutral-500">
-                            Add colour choices inside this tile — e.g. one T-shirt tile with red / navy / black dots. Customer picks a swatch to swap the displayed mockup. Leave empty for no colour choice.
+                            {linkedRendererTemplate ? (
+                              <>
+                                Foil / ink colour options the customer picks
+                                between. Each colour overlays all the text in
+                                the rendered template. Add as many as you
+                                want — quick-add chips below for the common
+                                ones. Mockup image is optional: leave blank
+                                for a pure overlay (recommended for foil
+                                colours like Gold / Rose Gold / Silver where
+                                the photo doesn&apos;t change), upload a
+                                photo to also swap the displayed mockup
+                                when picked.
+                              </>
+                            ) : (
+                              <>
+                                Add colour choices inside this tile — e.g.
+                                one T-shirt tile with red / navy / black
+                                dots. Customer picks a swatch to swap the
+                                displayed mockup. Leave empty for no colour
+                                choice.
+                              </>
+                            )}
                           </div>
                         </div>
                         <button
@@ -1020,78 +1043,6 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         </div>
                       )}
                     </div>
-
-                    {/* Material colour — only meaningful for renderer-
-                        driven products (city_map / star_map /
-                        song_lyrics). Sits behind the foil paths in
-                        the SVG. The customer's chosen colour swatch
-                        (Gold / Rose Gold / Silver) drives the foil
-                        ink colour separately via colour_swatches. */}
-                    {linkedRendererTemplate && (
-                      <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="mb-2">
-                          <div className="text-[11px] font-bold text-ink">Material colour</div>
-                          <div className="text-[10px] text-neutral-500">
-                            Background colour behind the foil paths in the rendered SVG. Pick a hex that matches the physical material on this variant&apos;s mockup (e.g. <span className="font-mono">#000000</span> for a black frame interior, <span className="font-mono">#ffffff</span> for white). Leave blank to use the renderer default.
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            aria-hidden
-                            style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: 4,
-                              background: /^#[0-9A-Fa-f]{6}$/.test(d.material_color)
-                                ? d.material_color
-                                : 'repeating-linear-gradient(45deg,#eee 0 6px,#ddd 6px 12px)',
-                              border: '2px solid #0a0a0a',
-                            }}
-                          />
-                          <input
-                            value={d.material_color}
-                            onChange={(e) => updateDraft(i, { material_color: e.target.value })}
-                            placeholder="#000000"
-                            className={`${inputCls} font-mono text-xs max-w-[140px]`}
-                          />
-                          <div className="flex flex-wrap items-center gap-1">
-                            {[
-                              { hex: '#000000', label: 'Black' },
-                              { hex: '#FFFFFF', label: 'White' },
-                              { hex: '#FFD700', label: 'Gold' },
-                              { hex: '#B76E79', label: 'Rose Gold' },
-                              { hex: '#C0C0C0', label: 'Silver' },
-                            ].map((c) => (
-                              <button
-                                key={c.hex}
-                                type="button"
-                                onClick={() => updateDraft(i, { material_color: c.hex })}
-                                title={`${c.label} (${c.hex})`}
-                                className="inline-flex h-6 items-center gap-1 rounded-full border border-neutral-300 bg-white px-2 text-[10px] font-bold uppercase tracking-wide hover:border-pink"
-                              >
-                                <span
-                                  aria-hidden
-                                  style={{
-                                    width: 11, height: 11, borderRadius: '50%',
-                                    background: c.hex,
-                                    border: '1px solid #0a0a0a',
-                                    display: 'inline-block',
-                                  }}
-                                />
-                                {c.label}
-                              </button>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => updateDraft(i, { material_color: '' })}
-                              className="h-6 rounded-full border border-neutral-200 px-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500 hover:border-red-300"
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Per-variant size availability + price-delta
                         overrides. Defaults: all product sizes
