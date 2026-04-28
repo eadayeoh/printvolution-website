@@ -39,6 +39,7 @@ import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
 import { GiftFigurinePicker } from './gift-figurine-picker';
 import { resolveMockup } from '@/lib/gifts/resolve-mockup';
+import { TextStyleControls } from '@/components/gift/text-style-controls';
 
 type Props = {
   product: GiftProduct;
@@ -1941,70 +1942,18 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     const activeAcceptsText = activeSurface?.accepts === 'text' || activeSurface?.accepts === 'both';
                     if (!anySurfaceHasText || !activeAcceptsText) return null;
                     return (
-                      <div style={{
-                        marginTop: 14,
-                        padding: '12px 14px',
-                        background: '#fafaf7',
-                        border: '1px solid var(--pv-rule)',
-                        borderRadius: 8,
-                        display: 'grid',
-                        gap: 10,
-                      }}>
-                        <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-                          Text style — applies across all surfaces
-                        </div>
-                        {allowedFonts.length > 0 && (
-                          <label style={{ display: 'block' }}>
-                            <span style={{ display: 'block', marginBottom: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Font</span>
-                            <select
-                              value={engravedFont}
-                              onChange={(e) => setEngravedFont(e.target.value)}
-                              style={{ width: '100%', padding: '8px 10px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: engravedFont, fontSize: 14, fontWeight: 500 }}
-                            >
-                              {allowedFonts.map((f) => (
-                                <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-                              ))}
-                            </select>
-                          </label>
-                        )}
-                        <label style={{ display: 'block' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Size</span>
-                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedSizePct}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={2}
-                            max={20}
-                            step={0.5}
-                            value={engravedSizePct}
-                            onChange={(e) => setEngravedSizePct(parseFloat(e.target.value))}
-                            style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
-                          />
-                        </label>
-                        <label style={{ display: 'block' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Rotation</span>
-                            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedRotation}°</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={-180}
-                            max={180}
-                            step={1}
-                            value={engravedRotation}
-                            onChange={(e) => setEngravedRotation(parseFloat(e.target.value))}
-                            style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
-                          />
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                            <button type="button" onClick={() => setEngravedRotation(Math.max(-180, engravedRotation - 15))} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>↺ −15°</button>
-                            <button type="button" onClick={() => setEngravedRotation(0)} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>Reset</button>
-                            <button type="button" onClick={() => setEngravedRotation(Math.min(180, engravedRotation + 15))} style={{ background: 'transparent', border: '1px solid var(--pv-rule)', padding: '2px 8px', fontFamily: 'var(--pv-f-mono)', fontSize: 10, cursor: 'pointer' }}>+15° ↻</button>
-                          </div>
-                        </label>
-                        <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
-                          ✦ Drag the text on the preview to position it inside the safe zone.
-                        </div>
+                      <div style={{ marginTop: 14 }}>
+                        <TextStyleControls
+                          allowedFonts={allowedFonts}
+                          font={engravedFont}
+                          onFont={setEngravedFont}
+                          sizePct={engravedSizePct}
+                          onSizePct={setEngravedSizePct}
+                          rotation={engravedRotation}
+                          onRotation={setEngravedRotation}
+                          header="Text style — applies across all surfaces"
+                          hint="✦ Drag the text on the preview to position it inside the safe zone."
+                        />
                       </div>
                     );
                   })()}
@@ -2417,43 +2366,17 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   </div>
 
                   {engravedText.trim() && (
-                    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                      {allowedFonts.length > 0 && (
-                        <label style={{ display: 'block' }}>
-                          <span style={{ display: 'block', marginBottom: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Font</span>
-                          <select
-                            value={engravedFont}
-                            onChange={(e) => setEngravedFont(e.target.value)}
-                            style={{
-                              width: '100%', padding: '10px 12px', background: '#fff',
-                              border: '2px solid var(--pv-ink)', fontFamily: engravedFont,
-                              fontSize: 14, fontWeight: 500,
-                            }}
-                          >
-                            {allowedFonts.map((f) => (
-                              <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-                      <label style={{ display: 'block' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>Size</span>
-                          <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{engravedSizePct}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={2}
-                          max={20}
-                          step={0.5}
-                          value={engravedSizePct}
-                          onChange={(e) => setEngravedSizePct(parseFloat(e.target.value))}
-                          style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
-                        />
-                      </label>
-                      <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em' }}>
-                        ✦ Drag the text on the preview to position it inside the safe zone.
-                      </div>
+                    <div style={{ marginTop: 12 }}>
+                      <TextStyleControls
+                        allowedFonts={allowedFonts}
+                        font={engravedFont}
+                        onFont={setEngravedFont}
+                        sizePct={engravedSizePct}
+                        onSizePct={setEngravedSizePct}
+                        rotation={engravedRotation}
+                        onRotation={setEngravedRotation}
+                        hint="✦ Drag the text on the preview to position it inside the safe zone."
+                      />
                     </div>
                   )}
                 </ComposeSection>
