@@ -11,8 +11,21 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { geocodeAddress, searchAddresses, fetchCityMapPaths } from '@/app/(site)/gift/actions';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
+
+// Leaflet imports `window` at module load — must be client-only. The rest
+// of CityMapInputs is fine to SSR since the picker only mounts after a
+// location resolves.
+const LocationPicker = dynamic(
+  () => import('@/components/gift/city-map-location-picker'),
+  { ssr: false, loading: () => (
+    <div style={{ height: 220, border: '2px solid var(--pv-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--pv-f-mono)', fontSize: 11, color: 'var(--pv-muted)' }}>
+      Loading map…
+    </div>
+  ) },
+);
 
 type AddressSuggestion = { lat: number; lng: number; label: string; displayName: string };
 
@@ -178,6 +191,26 @@ export function CityMapInputs({
     }
   }
 
+  async function handlePinMove(newLat: number, newLng: number) {
+    setLocalError(null);
+    setLocalNotice(null);
+    setResolving(true);
+    try {
+      const v = await fetchCityMapPaths(newLat, newLng, radiusKm);
+      if (!v.ok) { setLocalError(v.error); return; }
+      onLocationResolved({
+        lat: newLat, lng: newLng, label: cityLabel,
+        radiusKm: v.effectiveRadiusKm,
+        vectors: v.vectors,
+      });
+      if (v.effectiveRadiusKm < radiusKm - 0.4) {
+        setLocalNotice(`Auto-zoomed to ${v.effectiveRadiusKm} km — wider radius had too much data here.`);
+      }
+    } finally {
+      setResolving(false);
+    }
+  }
+
   async function handleRadiusChange(r: number) {
     onRadius(r);
     if (lat == null || lng == null) return;
@@ -289,6 +322,23 @@ export function CityMapInputs({
           </div>
         )}
       </div>
+
+      {/* Live picker preview — only mounts once a location is resolved.
+          Customer can drag the pin to fine-tune. The pink circle visualises
+          the current map radius so they see exactly what the print covers. */}
+      {lat != null && lng != null && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+              Drag the pin to fine-tune
+            </span>
+            <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
+              Pink circle = print coverage
+            </span>
+          </div>
+          <LocationPicker lat={lat} lng={lng} radiusKm={radiusKm} onMove={(la, lo) => void handlePinMove(la, lo)} />
+        </div>
+      )}
 
       {/* Quick-pick chips. Each landmark is curated so the rendered map shows
           the iconic part of that city (Marina Bay, Westminster, Times Sq…) —

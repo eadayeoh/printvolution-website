@@ -31,7 +31,10 @@ const nextConfig = {
       // Next.js ships inline bootstrap scripts and styled-jsx inline styles.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://fastly.picsum.photos https://randomuser.me https://*.hit-pay.com`,
+      // *.tile.openstreetmap.org — OSM raster tiles for the city-map product's
+      // location picker (Leaflet). Required so the customer can see and
+      // drag-pin the location they're committing to before checkout.
+      `img-src 'self' data: blob: https://${supabaseHost} https://picsum.photos https://fastly.picsum.photos https://randomuser.me https://*.hit-pay.com https://*.tile.openstreetmap.org`,
       "font-src 'self' data: https://fonts.gstatic.com",
       `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.hit-pay.com https://api.sandbox.hit-pay.com https://*.sentry.io https://*.ingest.sentry.io`,
       "frame-src 'self' https://hit-pay.com https://*.hit-pay.com https://www.google.com",
