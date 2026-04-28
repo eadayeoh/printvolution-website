@@ -1329,6 +1329,12 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 boxShadow: '8px 8px 0 var(--pv-ink)',
                 overflow: 'hidden',
                 marginBottom: 16,
+                // Admin-tunable cap on the whole shell (LIVE PREVIEW
+                // label + preview area collapse together so there's no
+                // empty space inside the black border).
+                maxWidth: product.preview_max_width_px ?? undefined,
+                marginLeft: product.preview_max_width_px ? 'auto' : undefined,
+                marginRight: product.preview_max_width_px ? 'auto' : undefined,
               }}
             >
               {/* Preview head */}
@@ -1401,11 +1407,6 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   justifyContent: 'center',
                   position: 'relative',
                   minHeight: 320,
-                  // Admin-tunable cap. Null = column-width / 480 fallback.
-                  maxWidth: product.preview_max_width_px ?? undefined,
-                  marginLeft: product.preview_max_width_px ? 'auto' : undefined,
-                  marginRight: product.preview_max_width_px ? 'auto' : undefined,
-                  width: '100%',
                 }}
               >
                 {/* Suppress the big "Building preview…" overlay on
