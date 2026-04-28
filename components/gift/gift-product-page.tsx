@@ -186,6 +186,16 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [addedFlash, setAddedFlash] = useState(false);
   const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
   const [engravedText, setEngravedText] = useState('');
+
+  // Extra text fields configured on the product (no template required —
+  // see gift_products.extra_text_zones). Each field becomes one input
+  // on the PDP and one `text_<id>:<value>` line in cart notes.
+  const extraTextZones = (product.extra_text_zones ?? []) as Array<{ id: string; label: string; max_chars?: number | null }>;
+  const [extraTextValues, setExtraTextValues] = useState<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    for (const z of extraTextZones) out[z.id] = '';
+    return out;
+  });
   const allowedFonts = product.allowed_fonts ?? [];
   const [engravedFont, setEngravedFont] = useState<string>(allowedFonts[0] ?? 'Archivo');
   const [engravedSizePct, setEngravedSizePct] = useState<number>(6); // % of preview height
@@ -637,7 +647,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       label: string;
       text?: string;
       source_asset_id?: string;
-      mode: 'laser' | 'uv' | 'embroidery' | 'photo-resize' | 'eco-solvent' | 'digital' | 'uv-dtf';
+      mode: string;
     }> | undefined;
     if (hasSurfaces && selectedVariant) {
       setUploading(true);
@@ -767,6 +777,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
       }
     }
     if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
+    // Extra text zones (admin-configured, no template). Each non-empty
+    // field becomes one text_<id>:<value> entry — same shape as
+    // surfaces-driven text fields, so admin order detail + production
+    // pipeline read them identically.
+    for (const z of extraTextZones) {
+      const v = (extraTextValues[z.id] ?? '').trim();
+      if (v) notes += `${notes ? ';' : ''}text_${z.id}:${v}`;
+    }
     // Song-lyrics-photo-frame: serialise the four custom text fields + photo
     // URL into the cart line so the production pipeline can re-render the
     // SVG server-side at 300 DPI.
@@ -2409,6 +2427,47 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       />
                     </div>
                   )}
+                </ComposeSection>
+              )}
+
+              {/* Extra text fields (admin-configured on the product, no
+                  template needed). Each field is rendered as one input.
+                  Customer fills, fields flow through to cart notes as
+                  text_<id>:<value> for the admin order view + production. */}
+              {extraTextZones.length > 0 && (
+                <ComposeSection
+                  letter={sectionLetters.text ?? 'X'}
+                  title={extraTextZones.length === 1 ? 'Engraving text' : 'Engraving fields'}
+                >
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {extraTextZones.map((z) => {
+                      const max = z.max_chars && z.max_chars > 0 ? z.max_chars : 60;
+                      const val = extraTextValues[z.id] ?? '';
+                      return (
+                        <label key={z.id} style={{ display: 'block' }}>
+                          <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
+                            {z.label}
+                            {z.max_chars && (
+                              <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--pv-muted)' }}>
+                                ({val.length}/{z.max_chars})
+                              </span>
+                            )}
+                          </span>
+                          <input
+                            type="text"
+                            value={val}
+                            onChange={(e) => {
+                              const next = e.target.value.slice(0, max);
+                              setExtraTextValues((prev) => ({ ...prev, [z.id]: next }));
+                            }}
+                            maxLength={max}
+                            placeholder={`Enter ${z.label.toLowerCase()}`}
+                            style={{ width: '100%', padding: '12px 14px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 15, fontWeight: 500 }}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
                 </ComposeSection>
               )}
               </>

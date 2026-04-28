@@ -4,21 +4,27 @@
  *  - both  → either; reserved for future, UI currently treats as 'photo'. */
 export type GiftInputMode = 'photo' | 'text' | 'both';
 
-export type GiftMode =
-  | 'laser'
-  | 'uv'
-  | 'embroidery'
-  | 'photo-resize'
-  | 'eco-solvent'
-  | 'digital'
-  | 'uv-dtf';
+/** Processing-mode slug. Was a strict union of the original 7 modes;
+ *  now `string` because admins can add custom modes via /admin/gifts/modes
+ *  without a code change. Existing switch/lookup sites either fall back
+ *  to a default branch or use `GIFT_MODE_LABEL[slug] ?? slug`. */
+export type GiftMode = string;
+
+/** The original baseline mode slugs. Used by code paths that have
+ *  hard-coded handling (AI prompt switches, pipeline classification). */
+export const WELL_KNOWN_GIFT_MODES = [
+  'laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf',
+] as const;
+export type WellKnownGiftMode = (typeof WELL_KNOWN_GIFT_MODES)[number];
 export type GiftTemplateMode = 'none' | 'optional' | 'required';
 export type GiftAssetRole = 'source' | 'preview' | 'production' | 'production-pdf';
 export type GiftProductionStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
 // Fallback labels/descriptions used when the gift_modes metadata table
-// is unavailable. Admin can override every row at /admin/gifts/modes.
-export const GIFT_MODE_LABEL: Record<GiftMode, string> = {
+// is unavailable. Admin can override every row at /admin/gifts/modes,
+// and may also add new mode slugs that aren't in this baseline record.
+// Lookups should always fall back to the slug itself: `LABEL[m] ?? m`.
+export const GIFT_MODE_LABEL: Record<string, string> = {
   'laser': 'Laser Engraving',
   'uv': 'UV Printing',
   'embroidery': 'Embroidery',
@@ -28,7 +34,14 @@ export const GIFT_MODE_LABEL: Record<GiftMode, string> = {
   'uv-dtf': 'UV DTF',
 };
 
-export const GIFT_MODE_DESCRIPTION: Record<GiftMode, string> = {
+/** Resolve a mode slug to a human label, falling back to the slug itself
+ *  for custom modes added via /admin/gifts/modes that aren't in the
+ *  baseline record. */
+export function giftModeLabel(slug: string): string {
+  return GIFT_MODE_LABEL[slug] ?? slug;
+}
+
+export const GIFT_MODE_DESCRIPTION: Record<string, string> = {
   'laser': 'AI-stylises the photo for laser engraving (high contrast, line-art output).',
   'uv': 'AI-stylises the photo for UV flatbed printing (flat, saturated colours).',
   'embroidery': 'AI-stylises + posterises the photo for embroidery (limited colour palette).',
@@ -68,12 +81,15 @@ export type GiftProduct = {
   bleed_mm: number;
   safe_zone_mm: number;
   min_source_px: number;
-  mode: GiftMode;
+  /** Processing mode slug — must match an active row in gift_modes.
+   *  Typed as string (not the GiftMode union) since admins can add
+   *  custom modes via /admin/gifts/modes without a code change. */
+  mode: string;
   /** Optional second production method — products like acrylic wall
    *  art can mix e.g. UV-printed photo panel + laser-engraved border.
    *  Null = single-mode product (the common case). When set, templates
    *  and variant surfaces can pick between {mode, secondary_mode}. */
-  secondary_mode?: GiftMode | null;
+  secondary_mode?: string | null;
   template_mode: GiftTemplateMode;
   ai_prompt: string | null;
   ai_negative_prompt: string | null;
@@ -104,6 +120,12 @@ export type GiftProduct = {
    *  NULL = use the mode-based default (laser/uv → on, others → off).
    *  TRUE/FALSE wins over the default. */
   show_text_step?: boolean | null;
+  /** Optional list of simple text-input fields shown on the PDP without
+   *  needing a zones-based template. Useful for jewellery and similar
+   *  products that just need to capture a couple of strings cleanly
+   *  ("Front engraving" + "Back engraving" etc). Cart notes serialise
+   *  as `text_<id>:<value>`. Empty / undefined = no extra fields. */
+  extra_text_zones?: Array<{ id: string; label: string; max_chars?: number | null }> | null;
   // Admin-authored content overrides. NULL = use mode-based default.
   seo_body?: string | null;
   seo_magazine?: unknown;
@@ -396,7 +418,7 @@ export type GiftVariantSurface = {
    *  engraved — or split the parent catalogue into method-choice
    *  variants like "Laser-engraved figurine" vs "UV-printed figurine"
    *  under one parent. Null → inherit the parent's mode. */
-  mode?: GiftMode | null;
+  mode?: string | null;
   /** Per-surface upcharge in cents. Added to the unit price for every
    *  surface the customer fills (text typed or photo uploaded), on top
    *  of the variant's base_price. Missing/0 → no surcharge. Stored as

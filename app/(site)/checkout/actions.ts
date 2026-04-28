@@ -252,7 +252,9 @@ const OrderSchema = z.object({
         label: z.string().min(1),
         text: z.string().max(500).optional(),
         source_asset_id: z.string().uuid().optional(),
-        mode: z.enum(['laser','uv','embroidery','photo-resize','eco-solvent','digital','uv-dtf']),
+        // Free string — admins can add custom modes via /admin/gifts/modes,
+        // gift_modes is the source of truth, no DB enum to keep in sync.
+        mode: z.string().min(1).max(40),
       })).optional(),
     })
   ).min(1),

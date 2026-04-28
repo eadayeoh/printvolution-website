@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { listAllModesAdmin } from '@/lib/gifts/modes';
+import { GiftModeCreateForm } from '@/components/admin/gift-mode-create-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,12 +12,13 @@ export default async function AdminGiftModesPage() {
         <Link href="/admin/gifts" className="text-sm text-neutral-500 hover:text-ink">← Back to gifts</Link>
       </div>
       <h1 className="mb-1 text-2xl font-black">Processing Modes</h1>
-      <p className="mb-6 max-w-2xl text-sm text-neutral-600">
+      <p className="mb-4 max-w-2xl text-sm text-neutral-600">
         Labels, descriptions, icons and display order for the processing modes on every gift product.
-        The mode slugs themselves (laser / uv / embroidery / photo-resize) are wired into the render
-        pipeline and cannot be renamed or deleted here — edit metadata only. Toggle inactive to hide a
-        mode from the product editor without losing its data.
+        Add new modes here — they become selectable on products, variants and templates immediately.
+        Slugs are immutable once created. Toggle inactive to retire a mode without losing data on
+        historical orders.
       </p>
+      <GiftModeCreateForm />
 
       {modes.length === 0 ? (
         <div className="rounded border-2 border-dashed p-8 text-center text-neutral-500">

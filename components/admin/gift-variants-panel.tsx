@@ -5,11 +5,21 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftMode } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 
-const ALL_GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
+/** Fallback for products that haven't pinned their allowed modes yet. Used
+ *  only when allowedModes prop is empty — custom modes added via the admin
+ *  modes page won't appear here, but they will appear once the parent
+ *  product's primary/secondary mode is set to that custom mode. */
+const FALLBACK_MODES = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
+
+/** Display the configured label for a known mode, otherwise the slug
+ *  itself (for custom modes added via /admin/gifts/modes). */
+function modeLabel(slug: string): string {
+  return (GIFT_MODE_LABEL as Record<string, string>)[slug] ?? slug;
+}
 
 type Draft = {
   id?: string;
@@ -101,7 +111,7 @@ type GiftVariantsPanelProps = {
   /** When set, the per-surface Mode dropdown only lets admin pick from
    *  these (parent product's {mode, secondary_mode}). When undefined or
    *  empty, every mode is available (back-compat). */
-  allowedModes?: GiftMode[];
+  allowedModes?: string[];
   /** Parent product dimensions used as the mockup canvas when a variant
    *  doesn't override width_mm/height_mm. */
   productWidthMm: number;
@@ -673,12 +683,12 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   </span>
                                   <select
                                     value={s.mode ?? ''}
-                                    onChange={(e) => updateSurface(i, sIdx, { mode: (e.target.value || null) as GiftMode | null })}
+                                    onChange={(e) => updateSurface(i, sIdx, { mode: e.target.value || null })}
                                     className={inputCls}
                                   >
                                     <option value="">Inherit parent</option>
-                                    {(allowedModes && allowedModes.length > 0 ? allowedModes : ALL_GIFT_MODES).map((m) => (
-                                      <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
+                                    {(allowedModes && allowedModes.length > 0 ? allowedModes : FALLBACK_MODES).map((m) => (
+                                      <option key={m} value={m}>{modeLabel(m)}</option>
                                     ))}
                                   </select>
                                 </label>

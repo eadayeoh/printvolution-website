@@ -146,6 +146,13 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   );
 
   const [showTextStep, setShowTextStep] = useState<boolean | null>(product?.show_text_step ?? null);
+  const [extraTextZones, setExtraTextZones] = useState<Array<{ id: string; label: string; max_chars: string }>>(
+    (product?.extra_text_zones ?? []).map((z) => ({
+      id: z.id,
+      label: z.label,
+      max_chars: z.max_chars != null ? String(z.max_chars) : '',
+    })),
+  );
 
   function autoSlugFromName() {
     setSlug(slugify(name).slice(0, 60));
@@ -202,6 +209,13 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         : null,
       is_active: isActive,
       show_text_step: showTextStep,
+      extra_text_zones: extraTextZones
+        .filter((z) => z.id.trim() && z.label.trim())
+        .map((z) => ({
+          id: z.id.trim(),
+          label: z.label.trim(),
+          max_chars: z.max_chars.trim() ? parseInt(z.max_chars, 10) || null : null,
+        })),
       mockup_url: mockupUrl || null,
       // mockup_area is a NOT NULL column at the DB level, so always send
       // the current value. When there's no mockup URL the coordinates
@@ -504,6 +518,77 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               </select>
               <div className="text-[10px] text-neutral-400">
                 Auto follows the product mode. Force off when surfaces handle all text inputs.
+              </div>
+            </div>
+
+            {/* Extra text zones — adds N simple text fields to the PDP without
+                needing a zones-based template. Useful for jewellery: front +
+                back engraving, or "name" + "date" pairs. */}
+            <div className="mt-6 border-t border-neutral-200 pt-5">
+              <div className="mb-1 text-sm font-black text-ink">Extra text fields</div>
+              <div className="mb-3 max-w-2xl text-xs text-neutral-600">
+                Add one or more simple text inputs to the PDP — no template needed. Use for jewellery
+                (front / back engraving), pet tags (name + phone), or any product where you just want
+                to capture a couple of strings cleanly. Cart notes carry each field as
+                <span className="font-mono"> text_&lt;id&gt;:&lt;value&gt;</span>.
+              </div>
+              <div className="space-y-2">
+                {extraTextZones.map((z, i) => (
+                  <div key={i} className="flex flex-wrap items-end gap-2 rounded border-2 border-neutral-200 bg-neutral-50 p-2">
+                    <label className="block">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">ID (cart key)</span>
+                      <input
+                        value={z.id}
+                        onChange={(e) => {
+                          const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40);
+                          setExtraTextZones((prev) => prev.map((x, idx) => idx === i ? { ...x, id: v } : x));
+                        }}
+                        placeholder="front"
+                        className="w-32 rounded border-2 border-ink px-2 py-1 font-mono text-xs"
+                      />
+                    </label>
+                    <label className="block flex-1 min-w-[140px]">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">Label (shown to customer)</span>
+                      <input
+                        value={z.label}
+                        onChange={(e) => {
+                          const v = e.target.value.slice(0, 60);
+                          setExtraTextZones((prev) => prev.map((x, idx) => idx === i ? { ...x, label: v } : x));
+                        }}
+                        placeholder="Front engraving"
+                        className="w-full rounded border-2 border-ink px-2 py-1 text-sm"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500">Max chars (optional)</span>
+                      <input
+                        type="number"
+                        value={z.max_chars}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setExtraTextZones((prev) => prev.map((x, idx) => idx === i ? { ...x, max_chars: v } : x));
+                        }}
+                        placeholder="e.g. 18"
+                        className="w-24 rounded border-2 border-ink px-2 py-1 font-mono text-xs"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setExtraTextZones((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="rounded border-2 border-ink px-2 py-1 text-xs hover:bg-red-100"
+                      title="Remove this field"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setExtraTextZones((prev) => [...prev, { id: '', label: '', max_chars: '' }])}
+                  className="inline-flex items-center gap-1 rounded border-2 border-ink bg-yellow-brand px-3 py-1 text-xs font-bold uppercase tracking-wider hover:bg-ink hover:text-white"
+                >
+                  <Plus size={12} /> Add text field
+                </button>
               </div>
             </div>
           </div>

@@ -45,14 +45,14 @@ const GiftProductSchema = z.object({
   bleed_mm: z.number().min(0).default(2),
   safe_zone_mm: z.number().min(0).default(3),
   min_source_px: z.number().int().min(300).default(1200),
-  mode: z.enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf']),
+  // Mode slug — validated as non-empty string so custom modes added via
+  // /admin/gifts/modes (no code change) flow through. The gift_modes
+  // table is the source of truth.
+  mode: z.string().min(1).max(40),
   // Optional second production method — max 2 modes per product. When
   // set, variant surface / template zone mode dropdowns are limited to
   // {mode, secondary_mode}. Validated distinct from `mode` below.
-  secondary_mode: z
-    .enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'])
-    .nullable()
-    .optional(),
+  secondary_mode: z.string().min(1).max(40).nullable().optional(),
   template_mode: z.enum(['none', 'optional', 'required']).default('none'),
   ai_prompt: z.string().nullable().optional(),
   ai_negative_prompt: z.string().nullable().optional(),
@@ -70,6 +70,16 @@ const GiftProductSchema = z.object({
   seo_body: z.string().nullable().optional(),
   seo_magazine: z.any().nullable().optional(),
   show_text_step: z.boolean().nullable().optional(),
+  // Simple per-product text fields, no template required. Each entry
+  // surfaces as one input on the PDP and one `text_<id>:<value>` line
+  // in cart notes. Slug-style ids only so the cart-note key is safe.
+  extra_text_zones: z
+    .array(z.object({
+      id: z.string().regex(/^[a-z0-9-]+$/, 'lowercase letters, digits, dashes only').min(1).max(40),
+      label: z.string().min(1).max(60),
+      max_chars: z.number().int().positive().nullable().optional(),
+    }))
+    .default([]),
   faqs: z.array(z.object({
     question: z.string(),
     answer: z.string(),
@@ -350,6 +360,26 @@ export async function updateGiftMode(slug: string, input: z.input<typeof ModeSch
   const parsed = ModeSchema.parse(input);
   const { error } = await sb.from('gift_modes').update(parsed).eq('slug', slug);
   if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/modes');
+  revalidatePath('/admin/gifts');
+  return { ok: true as const };
+}
+
+const NewModeSchema = ModeSchema.extend({
+  // Slug is fixed once created — orders, prompts and surfaces reference it
+  // by string. Letters, digits and dashes only so it stays URL-safe.
+  slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, 'lowercase letters, digits and dashes only'),
+});
+
+export async function createGiftMode(input: z.input<typeof NewModeSchema>) {
+  const sb = await requireAdmin();
+  const parsed = NewModeSchema.parse(input);
+  const { error } = await sb.from('gift_modes').insert(parsed);
+  if (error) {
+    // Surface a nicer message for the duplicate-slug case (Postgres 23505).
+    if (error.code === '23505') return { ok: false as const, error: 'A mode with that slug already exists.' };
+    return { ok: false as const, error: error.message };
+  }
   revalidatePath('/admin/gifts/modes');
   revalidatePath('/admin/gifts');
   return { ok: true as const };
@@ -652,10 +682,8 @@ const VariantSchema = z.object({
         font_size_pct: z.number().positive().nullable().optional(),
         color: z.string().nullable().optional(),
         // Optional per-surface production method. Null = inherit parent.
-        mode: z
-          .enum(['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'])
-          .nullable()
-          .optional(),
+        // Free string for custom modes added via /admin/gifts/modes.
+        mode: z.string().min(1).max(40).nullable().optional(),
         price_delta_cents: z.number().int().nonnegative().default(0),
       }),
     )

@@ -4,14 +4,15 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 /** One face of a surfaces-driven gift line item. Mirrors the shape of
- *  gift_order_item_surfaces that checkout will write. Mode is literal
- *  so the checkout OrderSchema.enum narrows cleanly without a cast. */
+ *  gift_order_item_surfaces that checkout will write. Mode is now a
+ *  free string (admins can add custom modes via /admin/gifts/modes);
+ *  checkout validates against the live gift_modes table. */
 export type CartItemSurface = {
   id: string;                // matches surface.id on the variant
   label: string;             // 'Front' — for admin + cart display
   text?: string;             // text-surface content
   source_asset_id?: string;  // photo-surface asset (pre-uploaded on add to cart)
-  mode: 'laser' | 'uv' | 'embroidery' | 'photo-resize' | 'eco-solvent' | 'digital' | 'uv-dtf';
+  mode: string;
 };
 
 export type CartItem = {
