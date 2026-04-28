@@ -715,6 +715,13 @@ const VariantSchema = z.object({
       }),
     )
     .default({}),
+  // Material / background colour for renderer-driven products. Hex.
+  // Null = renderer default per layout.
+  material_color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Material colour must be a 6-digit hex like #000000')
+    .nullable()
+    .optional(),
 });
 
 /** If the parent product's base_price_cents is still at 0, recompute

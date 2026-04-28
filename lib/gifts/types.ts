@@ -501,6 +501,11 @@ export type GiftProductVariant = {
    *  `price_delta_cents` for that variant × size combo. Missing key =
    *  inherit product defaults. Empty object = all defaults. */
   size_overrides?: Record<string, { available?: boolean; price_delta_cents?: number }>;
+  /** Material / background colour behind the foil for renderer-driven
+   *  products (city_map / star_map / song_lyrics). Hex string. Null =
+   *  fall back to the renderer's hardcoded default per layout
+   *  (#1a2740 navy for foil, #ffffff white for poster). */
+  material_color?: string | null;
 };
 
 export type MockupArea = { x: number; y: number; width: number; height: number };

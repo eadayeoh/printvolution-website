@@ -1377,6 +1377,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       yearFont={songYearFont || 'Archivo'}
                       lyricsScale={songLyricsScale}
                       layout={songLayout}
+                      foilColor={selectedColour?.hex ?? undefined}
+                      materialColor={selectedVariant?.material_color ?? undefined}
                     />
                   ) : isCityMap ? (
                     <CityMapTemplate
@@ -1390,6 +1392,8 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       namesFont={cityFontNames || 'Archivo'}
                       eventFont={cityFontEvent || 'Archivo'}
                       taglineFont={cityFontTagline || engravedFont}
+                      foilColor={selectedColour?.hex ?? undefined}
+                      materialColor={selectedVariant?.material_color ?? undefined}
                     />
                   ) : (
                     <StarMapTemplate
@@ -1412,6 +1416,14 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       namesFont={starFontNames || 'Archivo'}
                       eventFont={starFontEvent || 'Archivo'}
                       taglineFont={starFontTagline || (starLayout === 'poster' ? 'Playfair Display' : engravedFont)}
+                      // Customer's foil-colour pick (Gold / Rose Gold /
+                      // Silver) flows through the existing colour swatch
+                      // — hex drives the renderer's foilColor.
+                      foilColor={selectedColour?.hex ?? undefined}
+                      // Material colour comes from the variant (e.g.
+                      // black on a "Black Frame" tile). Null falls back
+                      // to the renderer's layout default.
+                      materialColor={selectedVariant?.material_color ?? undefined}
                       // Pass admin-authored layout from the linked
                       // gift_template (renderer='star_map'). Disk
                       // position + footer text positions / fonts /
@@ -2100,6 +2112,79 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                 marginBottom: 14,
               }}
             >
+              {/* Pickers shared across renderer-driven products
+                  (song_lyrics / city_map / star_map). The standard
+                  compose flow further down already renders these for
+                  zone-template products; renderer products bypass that
+                  flow entirely, so we re-emit the common pickers here
+                  after each renderer-specific input. */}
+              {(() => {
+                if (!(isSongLyrics || isCityMap || isStarMap)) return null;
+                const variantsBlock = variants.length >= 2 ? (() => {
+                  const kinds = new Set(variants.map((v) => v.variant_kind || 'base'));
+                  const singleKind = kinds.size === 1 ? [...kinds][0] : null;
+                  const title =
+                    singleKind === 'size'     ? 'Pick your size' :
+                    singleKind === 'colour'   ? 'Pick your colour' :
+                    singleKind === 'material' ? 'Pick your material' :
+                    singleKind === 'base'     ? 'Pick your base' :
+                                                'Choose an option';
+                  return (
+                    <ComposeSection letter={sectionLetters.variants!} title={title}>
+                      <GiftVariantLivePreview
+                        variants={variants}
+                        selectedId={selectedVariantId}
+                        onSelect={setSelectedVariantId}
+                        previewUrl={null}
+                        onColourChange={setSelectedColour}
+                      />
+                    </ComposeSection>
+                  );
+                })() : null;
+                const sizeBlock = availableSizes.length > 0 ? (
+                  <ComposeSection letter={sectionLetters.size!} title="Pick a size">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {availableSizes.map((s) => {
+                        const isSelected = s.slug === selectedSizeSlug;
+                        const ovDelta = selectedVariant?.size_overrides?.[s.slug]?.price_delta_cents;
+                        const deltaCents = typeof ovDelta === 'number' ? ovDelta : (s.price_delta_cents ?? 0);
+                        return (
+                          <button
+                            key={s.slug}
+                            type="button"
+                            onClick={() => setSelectedSizeSlug(s.slug)}
+                            style={{
+                              padding: '12px 18px',
+                              background: isSelected ? 'var(--pv-ink)' : '#fff',
+                              color: isSelected ? '#fff' : 'var(--pv-ink)',
+                              border: `2px solid ${isSelected ? 'var(--pv-ink)' : '#0a0a0a'}`,
+                              borderRadius: 4,
+                              fontFamily: 'var(--pv-f-mono)',
+                              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                              textTransform: 'uppercase', cursor: 'pointer',
+                              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                              gap: 4, minWidth: 140,
+                            }}
+                          >
+                            <span>{s.name}</span>
+                            <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: '0.04em' }}>
+                              {s.width_mm}×{s.height_mm}mm
+                              {deltaCents > 0 && ` · +S$${(deltaCents / 100).toFixed(2)}`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ComposeSection>
+                ) : null;
+                return (
+                  <>
+                    {variantsBlock}
+                    {sizeBlock}
+                  </>
+                );
+              })()}
+
               {/* Song-lyrics-photo-frame: a focused single-step compose UI
                   with the four custom text fields + a photo upload. Replaces
                   the standard template/upload/text flow entirely. */}

@@ -54,6 +54,10 @@ type Draft = {
   // overrides. Keyed by gift_products.sizes[].slug. Missing key =
   // inherit product defaults (available, product-level delta).
   size_overrides: Record<string, { available?: boolean; price_delta_cents?: number }>;
+  // Migration 0078 — material colour for renderer-driven products
+  // (the bg behind the foil paths). Hex; empty string = fall back to
+  // renderer default per layout.
+  material_color: string;
 };
 
 function toDraft(v?: GiftProductVariant): Draft {
@@ -99,6 +103,7 @@ function toDraft(v?: GiftProductVariant): Draft {
           Object.entries(v.size_overrides).map(([k, entry]) => [k, { ...entry }]),
         )
       : {},
+    material_color: v?.material_color ?? '',
   };
 }
 
@@ -392,6 +397,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
         }
         return Object.keys(cleaned).length > 0 ? cleaned : null;
       })(),
+      material_color: d.material_color.trim() || null,
       // Strip empty/no-op overrides so the DB doesn't accumulate
       // dead entries. An override is meaningful only when it sets
       // available=false OR a price_delta_cents.
@@ -941,6 +947,68 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                       )}
                     </div>
 
+                    {/* Material colour — only meaningful for renderer-
+                        driven products (city_map / star_map /
+                        song_lyrics). Sits behind the foil paths in
+                        the SVG. The customer's chosen colour swatch
+                        (Gold / Rose Gold / Silver) drives the foil
+                        ink colour separately via colour_swatches. */}
+                    {linkedRendererTemplate && (
+                      <div className="rounded border border-neutral-200 bg-neutral-50 p-3">
+                        <div className="mb-2">
+                          <div className="text-[11px] font-bold text-ink">Material colour</div>
+                          <div className="text-[10px] text-neutral-500">
+                            Background colour behind the foil paths in the rendered SVG. Pick a hex that matches the physical material on this variant&apos;s mockup (e.g. <span className="font-mono">#000000</span> for a black frame interior, <span className="font-mono">#ffffff</span> for white). Leave blank to use the renderer default.
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            aria-hidden
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 4,
+                              background: /^#[0-9A-Fa-f]{6}$/.test(d.material_color)
+                                ? d.material_color
+                                : 'repeating-linear-gradient(45deg,#eee 0 6px,#ddd 6px 12px)',
+                              border: '2px solid #0a0a0a',
+                            }}
+                          />
+                          <input
+                            value={d.material_color}
+                            onChange={(e) => updateDraft(i, { material_color: e.target.value })}
+                            placeholder="#000000"
+                            className={`${inputCls} font-mono text-xs max-w-[140px]`}
+                          />
+                          <div className="flex items-center gap-1">
+                            {[
+                              { hex: '#000000', label: 'Black' },
+                              { hex: '#1a2740', label: 'Navy' },
+                              { hex: '#ffffff', label: 'White' },
+                              { hex: '#f4ede0', label: 'Cream' },
+                            ].map((c) => (
+                              <button
+                                key={c.hex}
+                                type="button"
+                                onClick={() => updateDraft(i, { material_color: c.hex })}
+                                title={c.label}
+                                className="h-6 rounded-full border border-neutral-300 px-2 text-[10px] font-bold uppercase tracking-wide hover:border-pink"
+                              >
+                                {c.label}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateDraft(i, { material_color: '' })}
+                              className="h-6 rounded-full border border-neutral-200 px-2 text-[10px] font-bold uppercase tracking-wide text-neutral-500 hover:border-red-300"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Per-variant size availability + price-delta
                         overrides. Defaults: all product sizes
                         available, with the product-level price delta
@@ -1294,6 +1362,22 @@ export function DraggableArea({
     | { mode: 'move' | 'resize'; startX: number; startY: number; startArea: Rect }
     | null
   >(null);
+  // Stage aspect tracks the mockup image's natural aspect so positioning
+  // a rectangle in % stays geometrically faithful — a 60×80% rectangle on
+  // a portrait mockup actually shows as portrait, not as a square. Without
+  // this, the stage is forced 1:1 and a locked-A3 rectangle on a portrait
+  // frame looks square in the editor even when the saved data is correct.
+  const [stageAspect, setStageAspect] = useState<string>('1 / 1');
+  useEffect(() => {
+    if (!mockupUrl) { setStageAspect('1 / 1'); return; }
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setStageAspect(`${img.naturalWidth} / ${img.naturalHeight}`);
+      }
+    };
+    img.src = mockupUrl;
+  }, [mockupUrl]);
   // Per-variant override of the lock prop. Only matters when
   // lockedAspectRatio is also set — flipping this off lets admin draw a
   // mismatched rectangle (e.g. intentional letterbox on a square frame).
@@ -1325,15 +1409,18 @@ export function DraggableArea({
     }
     // Aspect ratio is preserved on resize when:
     //  - The variant's product is linked to a renderer template with
-    //    reference dimensions → effectiveLockedRatio. This is the
-    //    common case and the lock is ON by default.
+    //    reference dimensions → effectiveLockedRatio (in MM space).
+    //    Lock is ON by default; turns off via the toggle below.
     //  - The admin holds Shift while dragging — falls back to the
     //    product's overall aspect ratio. Legacy behaviour preserved.
     //
-    // The lock can be turned off per-variant via the toggle below.
-    const productRatio =
+    // The rectangle is stored in % of the mockup image, so to enforce
+    // a real-world (mm) aspect ratio we have to factor out the
+    // product's own width/height ratio: pct_w / pct_h equals
+    // (mm_w / mm_h) × (productH_mm / productW_mm).
+    const productHwRatio =
       productWidthMm > 0 && productHeightMm > 0
-        ? productWidthMm / productHeightMm
+        ? productHeightMm / productWidthMm
         : 1;
     function onMove(e: PointerEvent) {
       const { dxPct, dyPct } = pctDelta(e.clientX, e.clientY);
@@ -1347,19 +1434,18 @@ export function DraggableArea({
       } else {
         let nw = drag!.startArea.width + dxPct;
         let nh = drag!.startArea.height + dyPct;
-        // Renderer-locked variants snap on EVERY resize. Shift-drag
-        // for non-locked variants falls back to the product's ratio.
-        // Match by stage aspect: we're scaling pct, but the stage is
-        // 1:1, so width pct and height pct are the same magnitude.
-        // For a target aspect ratio (in mm), we need to compensate
-        // by the stage's width/height, both 1:1, so it's a direct
-        // pct match.
-        const ratio = effectiveLockedRatio ?? (e.shiftKey ? productRatio : null);
-        if (ratio) {
+        // mm-space ratio → pct-space ratio. Shift-drag's "lock to
+        // product aspect" is just locked_mm_ratio = productW/productH.
+        const lockedMmRatio = effectiveLockedRatio
+          ?? (e.shiftKey && productWidthMm > 0 && productHeightMm > 0
+                ? productWidthMm / productHeightMm
+                : null);
+        if (lockedMmRatio) {
+          const pctRatio = lockedMmRatio * productHwRatio;
           if (Math.abs(dxPct) >= Math.abs(dyPct)) {
-            nh = nw / ratio;
+            nh = nw / pctRatio;
           } else {
-            nw = nh * ratio;
+            nw = nh * pctRatio;
           }
         }
         onChange(normalise({
@@ -1420,7 +1506,7 @@ export function DraggableArea({
       <div
         ref={stageRef}
         className="relative overflow-hidden rounded border border-neutral-300 bg-neutral-50"
-        style={{ aspectRatio: '1 / 1', userSelect: 'none', touchAction: 'none' }}
+        style={{ aspectRatio: stageAspect, userSelect: 'none', touchAction: 'none' }}
       >
         <img src={mockupUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-contain" />
         <div
