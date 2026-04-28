@@ -792,34 +792,23 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               ) : (
                 <div className="space-y-2">
                   {sizes.map((s, i) => (
-                    <div key={i} className="grid grid-cols-[1.2fr_1fr_90px_90px_110px_40px] items-end gap-2 rounded border border-neutral-200 bg-neutral-50 p-3">
+                    <div key={i} className="grid grid-cols-[1fr_90px_90px_110px_40px] items-end gap-2 rounded border border-neutral-200 bg-neutral-50 p-3">
                       <label className="block">
                         <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Name</span>
                         <input
                           value={s.name}
-                          onChange={(e) => { const next = [...sizes]; next[i] = { ...s, name: e.target.value }; setSizes(next); }}
-                          onBlur={() => {
-                            if (!s.slug && s.name) {
-                              const next = [...sizes];
-                              next[i] = { ...s, slug: slugify(s.name).slice(0, 40) };
-                              setSizes(next);
-                            }
+                          onChange={(e) => {
+                            // Auto-derive the slug from the name on every keystroke.
+                            // Slug is an internal stable key (used by the cart line +
+                            // saved drafts) — never appears in URLs — so the admin
+                            // shouldn't have to manage it.
+                            const name = e.target.value;
+                            const next = [...sizes];
+                            next[i] = { ...s, name, slug: slugify(name).slice(0, 40) };
+                            setSizes(next);
                           }}
                           placeholder="A4 portrait"
                           className={inputCls}
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Slug</span>
-                        <input
-                          value={s.slug}
-                          onChange={(e) => {
-                            const next = [...sizes];
-                            next[i] = { ...s, slug: slugify(e.target.value).slice(0, 40) };
-                            setSizes(next);
-                          }}
-                          placeholder="a4-portrait"
-                          className={`${inputCls} font-mono text-xs`}
                         />
                       </label>
                       <label className="block">
