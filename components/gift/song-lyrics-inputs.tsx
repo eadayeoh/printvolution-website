@@ -67,17 +67,21 @@ export function SongLyricsInputs({
       </div>
       <label style={{ display: 'block' }}>
         <span style={{ display: 'block', marginBottom: 4, fontSize: 11, fontFamily: 'var(--pv-f-mono)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--pv-muted)' }}>
-          Lyrics (max 600 chars)
+          Lyrics
         </span>
         <textarea
           value={lyrics}
-          onChange={(e) => onLyrics(e.target.value.slice(0, 600))}
-          placeholder={'Paste the lyric you want spiraling around the photo.\nKeep it short — long verses get tiny.'}
-          rows={5}
+          // 1500 leaves comfortable headroom on the 7-turn spiral (~1100–1200
+          // chars fits naturally at base font size; lengthAdjust='spacing'
+          // compresses up to ~1500 cleanly). Past that, character spacing
+          // gets too tight to read.
+          onChange={(e) => onLyrics(e.target.value.slice(0, 1500))}
+          placeholder={'Paste the lyric you want spiraling around the photo.\nA full verse + chorus fits comfortably.'}
+          rows={6}
           style={{ width: '100%', padding: '12px 14px', background: '#fff', border: '2px solid var(--pv-ink)', fontFamily: 'var(--pv-f-body)', fontSize: 14, lineHeight: 1.45, resize: 'vertical' }}
         />
-        <div style={{ marginTop: 4, textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: lyrics.length >= 560 ? 'var(--pv-magenta)' : 'var(--pv-muted)' }}>
-          {lyrics.length} / 600
+        <div style={{ marginTop: 4, textAlign: 'right', fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: lyrics.length >= 1300 ? 'var(--pv-magenta)' : 'var(--pv-muted)' }}>
+          {lyrics.length} / 1500
         </div>
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
