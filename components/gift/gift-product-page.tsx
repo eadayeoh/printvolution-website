@@ -2330,6 +2330,36 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                           gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                         }}
                       >
+                        {/* No-template tile — only when the product allows
+                            an empty selection (template_mode='optional').
+                            Falls back to the basic photo/text upload flow. */}
+                        {product.template_mode === 'optional' && (() => {
+                          const active = selectedTemplateId === null;
+                          return (
+                            <button
+                              key="__no_template__"
+                              type="button"
+                              onClick={() => setSelectedTemplateId(null)}
+                              style={{
+                                background: '#fff',
+                                border: active ? '2px solid var(--pv-magenta)' : '2px dashed var(--pv-rule)',
+                                cursor: 'pointer',
+                                padding: 0,
+                                overflow: 'hidden',
+                                boxShadow: active ? '3px 3px 0 var(--pv-magenta)' : 'none',
+                                transition: 'all 0.12s',
+                                textAlign: 'left',
+                              }}
+                            >
+                              <div style={{ position: 'relative', aspectRatio: '1/1', background: 'var(--pv-cream)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+                                ⊘
+                              </div>
+                              <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
+                                No layout — just upload your photo
+                              </div>
+                            </button>
+                          );
+                        })()}
                         {templates.map((t) => {
                           const active = selectedTemplateId === t.id;
                           return (
