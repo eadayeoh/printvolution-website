@@ -160,9 +160,20 @@ export function SongLyricsTemplate({
   // Colour palette switches with the layout. For foil printing the dark
   // material colour is included only in the on-screen preview — the SVG
   // export sets materialColor=null to drop it from the file.
-  const lyricsFill = isFoil ? foilColor : '#f4f4f4';
-  const footerInk  = isFoil ? foilColor : '#0d0d0d';
-  const subInk     = isFoil ? foilColor : '#3a3a3a';
+  //
+  // For song / wedding layouts, the customer's colour-overlay pick
+  // (foilColor when it's been changed from the default gold) retints
+  // the LYRICS + FOOTER TEXT only — never the vinyl disc itself,
+  // which stays dark for contrast. `textInk` is the text colour that
+  // tracks the overlay; `discFill` is the vinyl disc fill which
+  // doesn't.
+  const customerOverlayApplied = !isFoil && !!foilColor && foilColor !== '#d4af37';
+  const lyricsFill = isFoil ? foilColor : (customerOverlayApplied ? foilColor : '#f4f4f4');
+  const textInk    = isFoil ? foilColor : (customerOverlayApplied ? foilColor : '#0d0d0d');
+  const subInk     = isFoil ? foilColor : (customerOverlayApplied ? foilColor : '#3a3a3a');
+  // Disc + hairline divider stay dark regardless of the overlay.
+  const discFill   = '#0d0d0d';
+  const footerInk  = textInk;
 
   return (
     <svg
@@ -194,7 +205,7 @@ export function SongLyricsTemplate({
         <>
           <rect x="0" y="0" width={W} height={FOOTER_TOP} fill={accentColor} opacity="0.18" />
           <circle cx={cx} cy={cy} r="46" fill="url(#songWash)" />
-          <circle cx={cx} cy={cy} r="40" fill={footerInk} />
+          <circle cx={cx} cy={cy} r="40" fill={discFill} />
           {[39, 36, 30, 24, 18].map((r) => (
             <circle key={r} cx={cx} cy={cy} r={r} fill="none" stroke="#1f1f1f" strokeWidth="0.15" />
           ))}

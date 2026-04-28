@@ -49,53 +49,41 @@ import { StarMapInputs } from '@/components/gift/star-map-inputs';
 
 /** Customer-facing wrapper that composites a renderer template inside
  *  a variant's mockup_area rectangle. The parent stage matches the
- *  mockup image's natural aspect so the saved area % (which is of the
- *  image) lines up exactly with what shows on screen — same as the
- *  admin variant editor.
+ *  linked TEMPLATE's reference aspect (e.g. A3 portrait 297:420)
+ *  rather than the mockup image's natural aspect — that way the
+ *  area % saved by the admin variant editor (which uses the same
+ *  template-aspect stage) lines up exactly with where the renderer
+ *  appears here.
  *
- *  Without this, the parent was forced 1:1 with the mockup
- *  letterboxed inside via object-contain. Admins drawing a rectangle
- *  to fill an A3 frame would see the customer-facing rectangle
- *  appear at the WRONG position + size on the PDP, because % of the
- *  square stage ≠ % of the (portrait) mockup image. */
+ *  The mockup image sits behind via object-contain, so it letterboxes
+ *  inside the template-aspect stage if its photographed aspect
+ *  differs. That's a clean visual hint to admins to crop their
+ *  mockups to the template's proportions for best presentation. */
 function RendererVariantStage({
   mockupUrl,
   area,
-  rendererAspect,
+  templateAspect,
   children,
   overlay,
 }: {
   mockupUrl: string;
   area: { x: number; y: number; width: number; height: number };
-  rendererAspect: string;
+  /** Stage aspect as a CSS string ("297 / 420") OR null to use 1:1. */
+  templateAspect: string | null;
   children: React.ReactNode;
   overlay?: React.ReactNode;
 }) {
-  const [imageDims, setImageDims] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
-  useEffect(() => {
-    if (!mockupUrl) { setImageDims({ w: 1, h: 1 }); return; }
-    const img = new window.Image();
-    img.onload = () => {
-      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-        setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
-      }
-    };
-    img.src = mockupUrl;
-  }, [mockupUrl]);
   return (
     <div style={{
       width: '100%',
-      aspectRatio: `${imageDims.w} / ${imageDims.h}`,
+      aspectRatio: templateAspect ?? '1 / 1',
       position: 'relative',
       overflow: 'hidden',
     }}>
       <img
         src={mockupUrl}
         alt=""
-        // object-fill since the parent now matches image aspect — the
-        // image fills exactly, no letterboxing, so the design
-        // rectangle's % positions match the % the admin drew on.
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
       />
       <div
         style={{
@@ -104,18 +92,16 @@ function RendererVariantStage({
           top:    `${area.y}%`,
           width:  `${area.width}%`,
           height: `${area.height}%`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          // No flex centering / no aspect-ratio inner div — let the
+          // SVG fill the area. The SVG's own viewBox + default
+          // preserveAspectRatio="xMidYMid meet" handles internal
+          // letterboxing, but the outer footprint fills the area
+          // the admin drew, so the customer sees the design at the
+          // exact position + size the variant editor showed.
           overflow: 'hidden',
         }}
       >
-        {/* Inner frame keeps the renderer's natural aspect so it
-            never squashes when the variant area is a different
-            shape. maxW/maxH 100% lets it shrink to fit. */}
-        <div style={{ aspectRatio: rendererAspect, maxWidth: '100%', maxHeight: '100%', height: '100%' }}>
-          {children}
-        </div>
+        {children}
       </div>
       {overlay}
     </div>
@@ -1453,7 +1439,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       lyricsScale={songLyricsScale}
                       layout={songLayout}
                       foilColor={selectedColour?.hex ?? undefined}
-                      materialColor={selectedVariant?.material_color ?? undefined}
+                      // materialColor intentionally NOT passed — colour
+                      // overlays only retint the foil (text/lines), not
+                      // the background. Renderer falls back to its
+                      // layout default (navy for foil, white for poster).
                     />
                   ) : isCityMap ? (
                     <CityMapTemplate
@@ -1468,7 +1457,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       eventFont={cityFontEvent || 'Archivo'}
                       taglineFont={cityFontTagline || engravedFont}
                       foilColor={selectedColour?.hex ?? undefined}
-                      materialColor={selectedVariant?.material_color ?? undefined}
+                      // materialColor intentionally NOT passed — colour
+                      // overlays only retint the foil (text/lines), not
+                      // the background. Renderer falls back to its
+                      // layout default (navy for foil, white for poster).
                     />
                   ) : (
                     <StarMapTemplate
@@ -1498,7 +1490,10 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       // Material colour comes from the variant (e.g.
                       // black on a "Black Frame" tile). Null falls back
                       // to the renderer's layout default.
-                      materialColor={selectedVariant?.material_color ?? undefined}
+                      // materialColor intentionally NOT passed — colour
+                      // overlays only retint the foil (text/lines), not
+                      // the background. Renderer falls back to its
+                      // layout default (navy for foil, white for poster).
                       // Pass admin-authored layout from the linked
                       // gift_template (renderer='star_map'). Disk
                       // position + footer text positions / fonts /
@@ -1544,11 +1539,22 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   // exactly with where it'll print on the customer's
                   // PDP (same coordinate system as the variant editor).
                   if (variantMockup && variantArea) {
+                    // Stage aspect = linked renderer template's
+                    // reference dimensions, so the area % saved by
+                    // the admin editor's template-aspect stage
+                    // resolves to the same position + size here.
+                    const linkedTpl = templates.find((t) => {
+                      const r = (t as { renderer?: string }).renderer;
+                      return r && r !== 'zones';
+                    }) as { reference_width_mm?: number | null; reference_height_mm?: number | null } | undefined;
+                    const tplAspect = linkedTpl?.reference_width_mm && linkedTpl?.reference_height_mm
+                      ? `${linkedTpl.reference_width_mm} / ${linkedTpl.reference_height_mm}`
+                      : null;
                     return (
                       <RendererVariantStage
                         mockupUrl={variantMockup}
                         area={variantArea}
-                        rendererAspect={rendererAspect}
+                        templateAspect={tplAspect}
                         overlay={cityFetchOverlay}
                       >
                         {rendererBody}
