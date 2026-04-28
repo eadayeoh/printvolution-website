@@ -1025,9 +1025,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
           </div>
 
-          {/* Templates assignment — only when template mode != none */}
-          {templateMode !== 'none' && (
-            <div className="rounded-lg border border-neutral-200 bg-white p-6">
+          {/* Templates assignment — always rendered so admins can see
+              existing assignments even when template_mode='none'. The
+              warning below covers that mismatch case. */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-black text-ink">Assigned templates</div>
@@ -1037,6 +1038,19 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   + Create new template
                 </Link>
               </div>
+              {templateMode === 'none' && assignedTemplates.length > 0 && (
+                <div className="mb-4 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-[12px] leading-snug text-amber-900">
+                  <div className="mb-1 font-bold uppercase tracking-wider">⚠ Hidden from customers</div>
+                  <div>
+                    <strong>Template mode</strong> is set to <strong>None</strong>, so
+                    these {assignedTemplates.length} assignment{assignedTemplates.length === 1 ? '' : 's'} won&apos;t
+                    show on the product page — the front-end skips the templates fetch
+                    entirely when mode is <code>none</code>. Switch the field above to
+                    <strong> Required</strong> or <strong> Optional</strong> to enable
+                    the customer-facing picker.
+                  </div>
+                </div>
+              )}
               {allTemplates.length === 0 ? (
                 <div className="rounded border border-dashed border-neutral-300 p-8 text-center text-xs text-neutral-500">
                   No templates exist yet. <Link href="/admin/gifts/templates/new" className="font-bold text-pink">Create one</Link> then come back.
@@ -1074,7 +1088,6 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 </div>
               )}
             </div>
-          )}
 
           {/* Fallback mockup — only relevant when no variant mockups cover it */}
           {(() => {
