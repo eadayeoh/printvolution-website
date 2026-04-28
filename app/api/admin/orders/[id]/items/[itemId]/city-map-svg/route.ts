@@ -76,8 +76,21 @@ export async function GET(
       materialColor: null,
     });
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${svgMarkup}`;
-    const filename = `${row.product_slug}-${row.id.slice(0, 8)}.svg`;
+    // Stamp the physical print size onto the <svg> root from the size
+    // the customer selected at checkout (saved in cart notes by the PDP).
+    // Without width/height, downstream printer software has to be told
+    // the size out-of-band; with them, the SVG is self-describing.
+    const sizeWmm = parseFloat(n['size_w_mm'] ?? '');
+    const sizeHmm = parseFloat(n['size_h_mm'] ?? '');
+    const sizeAttrs = (Number.isFinite(sizeWmm) && sizeWmm > 0 && Number.isFinite(sizeHmm) && sizeHmm > 0)
+      ? ` width="${sizeWmm}mm" height="${sizeHmm}mm"`
+      : '';
+    const stamped = sizeAttrs
+      ? svgMarkup.replace('<svg ', `<svg${sizeAttrs} `)
+      : svgMarkup;
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${stamped}`;
+    const sizeSuffix = sizeAttrs ? `-${Math.round(sizeWmm)}x${Math.round(sizeHmm)}mm` : '';
+    const filename = `${row.product_slug}-${row.id.slice(0, 8)}${sizeSuffix}.svg`;
 
     return new NextResponse(xml, {
       status: 200,

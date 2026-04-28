@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Plus, ChevronUp, ChevronDown, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
-import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode } from '@/lib/gifts/types';
+import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftTemplate, GiftTemplateZone } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
+import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
+import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 
 /** Fallback for products that haven't pinned their allowed modes yet. Used
  *  only when allowedModes prop is empty — custom modes added via the admin
@@ -125,6 +127,15 @@ type GiftVariantsPanelProps = {
    *  per-variant mockup block — one slot per prompt — so the live
    *  preview can swap the mockup when the customer picks an art style. */
   parentPrompts?: Array<{ id: string; name: string; mode: string }>;
+  /** Renderer-driven template linked to the parent product (city_map /
+   *  star_map). When set, the variant editor's mockup-area rectangle:
+   *    - locks its aspect ratio to the template's reference dims
+   *    - shows a "🔒 A3 portrait · 297×420mm" badge
+   *    - composites the renderer's actual output inside the rectangle
+   *      so admin sees what the customer will see (no mental
+   *      compositing). Pass null/undefined for non-renderer products
+   *      and the editor falls back to the legacy free-form rectangle. */
+  linkedRendererTemplate?: GiftTemplate | null;
 };
 
 export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariantsPanelProps>(function GiftVariantsPanel({
@@ -135,7 +146,73 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   productHeightMm,
   parentShapeOptions,
   parentPrompts,
+  linkedRendererTemplate,
 }, ref) {
+  // ── Renderer preview wiring ──────────────────────────────────────────
+  // Build the full SVG markup once per template change — we render the
+  // SAME markup inside every variant's pink rectangle (admins see the
+  // template overlay no matter which variant tile they're editing).
+  // Customer text uses placeholder strings so admin gets a realistic
+  // preview without leaking real customer data.
+  const rendererPreviewSvg: string | null = (() => {
+    const t = linkedRendererTemplate;
+    if (!t || !t.renderer || t.renderer === 'zones') return null;
+    const zones = (t.zones_json as GiftTemplateZone[] | null | undefined) ?? null;
+    if (t.renderer === 'star_map') {
+      const scene = buildStarMapScene(1.29, 103.85, new Date());
+      return buildStarMapSvg({
+        scene, dateUtc: new Date(),
+        names: 'EVA & JOHN', event: 'THE NIGHT WE MET',
+        locationLabel: 'SINGAPORE', tagline: 'Under our stars',
+        coordinates: '1.29° N · 103.85° E',
+        showLines: true,
+        zones,
+      });
+    }
+    if (t.renderer === 'city_map') {
+      return buildCityMapSvg({
+        vectors: null,
+        names: 'EVA & JOHN', event: 'OUR FIRST DATE',
+        cityLabel: 'LONDON', tagline: 'Love now and always',
+      });
+    }
+    // song_lyrics is a React component, not a string builder — skip
+    // for now; admin will see the empty pink rectangle as before.
+    return null;
+  })();
+
+  // Locked aspect ratio comes from the template's reference dimensions.
+  // Falls back to null (no lock) if the template doesn't have both set.
+  const lockedAspectRatio: number | null = (() => {
+    const t = linkedRendererTemplate;
+    if (!t) return null;
+    const rw = (t as { reference_width_mm?: number | null }).reference_width_mm;
+    const rh = (t as { reference_height_mm?: number | null }).reference_height_mm;
+    if (!rw || !rh || rw <= 0 || rh <= 0) return null;
+    return rw / rh;
+  })();
+  // Friendly badge text — most printable A-sizes get a nice label,
+  // anything else gets the raw mm.
+  const lockBadgeText: string | null = (() => {
+    const t = linkedRendererTemplate;
+    if (!t || !lockedAspectRatio) return null;
+    const rw = (t as { reference_width_mm?: number }).reference_width_mm ?? 0;
+    const rh = (t as { reference_height_mm?: number }).reference_height_mm ?? 0;
+    const tagFor = (w: number, h: number): string | null => {
+      const pairs: Array<[number, number, string]> = [
+        [297, 420, 'A3'], [210, 297, 'A4'], [148, 210, 'A5'], [105, 148, 'A6'],
+        [420, 297, 'A3 landscape'], [297, 210, 'A4 landscape'], [210, 148, 'A5 landscape'],
+      ];
+      const m = pairs.find(([pw, ph]) => Math.abs(pw - w) < 1 && Math.abs(ph - h) < 1);
+      if (!m) return null;
+      const portrait = h >= w;
+      return portrait && m[2].length === 2 ? `${m[2]} portrait` : m[2];
+    };
+    const tag = tagFor(rw, rh);
+    return tag
+      ? `🔒 ${tag} · ${rw}×${rh}mm`
+      : `🔒 ${rw}×${rh}mm`;
+  })();
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(initialVariants.map(toDraft));
   const [collapsed, setCollapsed] = useState<{ [k: string]: boolean }>({});
@@ -590,6 +667,9 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                           productWidthMm={productWidthMm}
                           productHeightMm={productHeightMm}
                           onChange={(next) => updateDraft(i, { mockup_area: next })}
+                          lockedAspectRatio={lockedAspectRatio}
+                          lockBadgeText={lockBadgeText}
+                          previewSvgMarkup={rendererPreviewSvg}
                         />
                       </div>
                     ) : (
@@ -1051,18 +1131,40 @@ export function DraggableArea({
   productWidthMm,
   productHeightMm,
   onChange,
+  lockedAspectRatio,
+  lockBadgeText,
+  previewSvgMarkup,
 }: {
   mockupUrl: string;
   area: Rect;
   productWidthMm: number;
   productHeightMm: number;
   onChange: (next: Rect) => void;
+  /** When set, resizing the rectangle preserves this width/height ratio
+   *  (always — no Shift required). Admins can override per-variant via
+   *  the unlock toggle if they need a non-matching mockup area. */
+  lockedAspectRatio?: number | null;
+  /** Pill rendered on the rectangle, e.g. "🔒 A3 portrait · 297×420mm".
+   *  Tells admin at a glance the rectangle matches the linked template. */
+  lockBadgeText?: string | null;
+  /** Optional inline SVG markup rendered INSIDE the rectangle so admin
+   *  sees the actual template output composited on the variant photo,
+   *  not an empty pink fill. Pass the full `<svg ...>...</svg>` string. */
+  previewSvgMarkup?: string | null;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
     | { mode: 'move' | 'resize'; startX: number; startY: number; startArea: Rect }
     | null
   >(null);
+  // Per-variant override of the lock prop. Only matters when
+  // lockedAspectRatio is also set — flipping this off lets admin draw a
+  // mismatched rectangle (e.g. intentional letterbox on a square frame).
+  const [aspectUnlocked, setAspectUnlocked] = useState<boolean>(false);
+  const effectiveLockedRatio =
+    !aspectUnlocked && lockedAspectRatio && lockedAspectRatio > 0
+      ? lockedAspectRatio
+      : null;
 
   const clamp = (n: number) => Math.max(0, Math.min(100, n));
   const normalise = (r: Rect): Rect => {
@@ -1084,11 +1186,15 @@ export function DraggableArea({
         dyPct: ((clientY - drag!.startY) / r.height) * 100,
       };
     }
-    // Resize is free-form — the area on the mockup is just a region the
-    // customer's photo lives inside, not a forced print medium. Hold Shift
-    // while dragging to lock to the product's physical aspect ratio for
-    // pixel-perfect alignment with rectangular prints (10×15 photo etc).
-    const lockedRatio =
+    // Aspect ratio is preserved on resize when:
+    //  - The variant's product is linked to a renderer template with
+    //    reference dimensions → effectiveLockedRatio. This is the
+    //    common case and the lock is ON by default.
+    //  - The admin holds Shift while dragging — falls back to the
+    //    product's overall aspect ratio. Legacy behaviour preserved.
+    //
+    // The lock can be turned off per-variant via the toggle below.
+    const productRatio =
       productWidthMm > 0 && productHeightMm > 0
         ? productWidthMm / productHeightMm
         : 1;
@@ -1104,12 +1210,19 @@ export function DraggableArea({
       } else {
         let nw = drag!.startArea.width + dxPct;
         let nh = drag!.startArea.height + dyPct;
-        if (e.shiftKey) {
-          // Shift-drag: preserve the product's physical aspect ratio.
+        // Renderer-locked variants snap on EVERY resize. Shift-drag
+        // for non-locked variants falls back to the product's ratio.
+        // Match by stage aspect: we're scaling pct, but the stage is
+        // 1:1, so width pct and height pct are the same magnitude.
+        // For a target aspect ratio (in mm), we need to compensate
+        // by the stage's width/height, both 1:1, so it's a direct
+        // pct match.
+        const ratio = effectiveLockedRatio ?? (e.shiftKey ? productRatio : null);
+        if (ratio) {
           if (Math.abs(dxPct) >= Math.abs(dyPct)) {
-            nh = nw / lockedRatio;
+            nh = nw / ratio;
           } else {
-            nw = nh * lockedRatio;
+            nw = nh * ratio;
           }
         }
         onChange(normalise({
@@ -1130,7 +1243,26 @@ export function DraggableArea({
       window.removeEventListener('pointercancel', onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag]);
+  }, [drag, effectiveLockedRatio]);
+
+  // When the lock turns ON (or the locked ratio changes) and the
+  // current rectangle's aspect doesn't match, snap it to the locked
+  // ratio. Anchored at top-left so position stays where admin put it.
+  useEffect(() => {
+    if (!effectiveLockedRatio) return;
+    const currentRatio = (area.width / area.height) * (productHeightMm / productWidthMm || 1);
+    if (Math.abs(currentRatio - effectiveLockedRatio) < 0.001) return;
+    // Resize the rectangle so its aspect matches. Shrink the larger
+    // dimension so we never grow past the canvas edge.
+    let nw = area.width;
+    let nh = (area.width * (productWidthMm / productHeightMm)) / effectiveLockedRatio;
+    if (nh > 100) {
+      nh = area.height;
+      nw = (area.height * (productHeightMm / productWidthMm)) * effectiveLockedRatio;
+    }
+    onChange(normalise({ x: area.x, y: area.y, width: nw, height: nh }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveLockedRatio]);
 
   function startMove(e: React.PointerEvent) {
     e.preventDefault();
@@ -1156,15 +1288,37 @@ export function DraggableArea({
         <img src={mockupUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-contain" />
         <div
           onPointerDown={startMove}
-          className="absolute border-2 border-pink bg-pink/15"
+          className="absolute border-2 border-pink"
           style={{
             left: `${clamp(area.x)}%`,
             top: `${clamp(area.y)}%`,
             width: `${clamp(area.width)}%`,
             height: `${clamp(area.height)}%`,
             cursor: drag?.mode === 'move' ? 'grabbing' : 'grab',
+            // Translucent pink fill behind the preview so the rectangle
+            // remains visible even when the renderer SVG is dark.
+            background: previewSvgMarkup ? 'transparent' : 'rgba(233,30,140,0.15)',
+            overflow: 'hidden',
           }}
         >
+          {previewSvgMarkup && (
+            <div
+              // Shows the actual renderer output composited inside the
+              // pink rectangle so admin sees what customers see — no
+              // mental compositing needed. SVG comes from the linked
+              // template's own builder, customer text is empty/placeholder.
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              dangerouslySetInnerHTML={{ __html: previewSvgMarkup }}
+            />
+          )}
+          {lockBadgeText && (
+            <div
+              className="pointer-events-none absolute left-1 top-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+              style={{ background: 'rgba(233,30,140,0.92)' }}
+            >
+              {lockBadgeText}
+            </div>
+          )}
           <div
             onPointerDown={startResize}
             aria-label="Drag to resize"
@@ -1180,8 +1334,25 @@ export function DraggableArea({
       <div className="space-y-1 text-[11px] text-neutral-600">
         <div><strong>Design size:</strong> {wMm} × {hMm} mm</div>
         <div><strong>Position:</strong> {area.x.toFixed(1)}%, {area.y.toFixed(1)}% from top-left</div>
+        {lockedAspectRatio && (
+          <div className="mt-2 rounded border-2 border-magenta/30 bg-magenta/5 p-2">
+            <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-ink">
+              <input
+                type="checkbox"
+                checked={!aspectUnlocked}
+                onChange={(e) => setAspectUnlocked(!e.target.checked)}
+              />
+              <span>Lock aspect to template ({lockedAspectRatio.toFixed(3)})</span>
+            </label>
+            <div className="mt-1 text-[9px] text-neutral-500">
+              Keeps the rectangle at the linked template&apos;s ratio so
+              the customer&apos;s design fits without distortion. Uncheck
+              for an intentional letterbox / mismatch.
+            </div>
+          </div>
+        )}
         <div className="mt-2 text-[10px] text-neutral-400">
-          Drag the pink rectangle to move it. Drag the small square in the bottom-right to resize freely — hold <strong>Shift</strong> to lock to the product's aspect ratio. Customers can fine-tune position inside this area when they upload their photo.
+          Drag the pink rectangle to move it. Drag the small square in the bottom-right to resize{lockedAspectRatio ? ' (aspect locked)' : ' freely — hold Shift to lock to the product\'s aspect ratio'}. Customers can fine-tune position inside this area when they upload their photo.
         </div>
       </div>
     </div>

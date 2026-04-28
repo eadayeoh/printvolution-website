@@ -846,6 +846,18 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 productHeightMm={parseFloat(heightMm) || product.height_mm}
                 parentShapeOptions={shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null}
                 parentPrompts={parentPrompts}
+                // First assigned template that uses a code-driven
+                // renderer (city_map / star_map). The variant editor
+                // uses it to lock the mockup-area rectangle's aspect
+                // and overlay the renderer's actual output inside.
+                linkedRendererTemplate={
+                  allTemplates.find(
+                    (t) =>
+                      assignedTemplates.includes(t.id) &&
+                      (t as { renderer?: string }).renderer &&
+                      (t as { renderer?: string }).renderer !== 'zones',
+                  ) ?? null
+                }
               />
             ) : (
               <div className="rounded border border-dashed p-8 text-center text-sm text-neutral-500">Save this product first, then variants can be added.</div>

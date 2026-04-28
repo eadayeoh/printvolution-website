@@ -864,6 +864,11 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // City Map Photo Frame: serialise the coords + footer text + radius so
     // the admin can regenerate the foil-printable SVG from the order.
     if (isCityMap) {
+      // Customer's chosen physical size — same convention as star map
+      // (admin SVG download stamps width/height from these notes).
+      if (selectedSize) {
+        notes += `${notes ? ';' : ''}size_slug:${selectedSize.slug};size_w_mm:${selectedSize.width_mm};size_h_mm:${selectedSize.height_mm}`;
+      }
       if (cityLat != null && cityLng != null) {
         notes += `${notes ? ';' : ''}city_lat:${cityLat.toFixed(5)};city_lng:${cityLng.toFixed(5)};city_radius:${cityRadius.toFixed(1)}`;
       }
@@ -883,6 +888,13 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
     // customer's local timezone.
     if (isStarMap) {
       notes += `${notes ? ';' : ''}star_layout:${starLayout}`;
+      // Customer's chosen physical size — flows through to the admin
+      // foil-SVG download, which stamps width="X mm" height="Y mm" so
+      // the printer's software auto-sizes correctly without anyone
+      // having to remember A3 vs A4.
+      if (selectedSize) {
+        notes += `;size_slug:${selectedSize.slug};size_w_mm:${selectedSize.width_mm};size_h_mm:${selectedSize.height_mm}`;
+      }
       if (starLat != null && starLng != null) {
         notes += `${notes ? ';' : ''}star_lat:${starLat.toFixed(5)};star_lng:${starLng.toFixed(5)}`;
       }
