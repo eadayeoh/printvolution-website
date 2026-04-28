@@ -66,13 +66,12 @@ export default function CityMapLocationPicker({ lat, lng, radiusKm, onMove }: Pr
     setPinPos([lat, lng]);
   }, [lat, lng]);
 
-  // Pick a zoom level that makes the radius circle fill ~70% of the map.
-  // 3 km ≈ zoom 13, 6 km ≈ zoom 12, 12 km ≈ zoom 11.
+  // Pick a zoom level that makes the radius circle fill ~70% of the map
+  // for the new 1.5–6 km customer range.
   const zoom = useMemo(() => {
-    if (radiusKm <= 2.5) return 14;
-    if (radiusKm <= 5) return 13;
-    if (radiusKm <= 8) return 12;
-    return 11;
+    if (radiusKm <= 2) return 14;
+    if (radiusKm <= 4) return 13;
+    return 12;
   }, [radiusKm]);
 
   return (

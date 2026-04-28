@@ -246,6 +246,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
   const [cityLabel, setCityLabel] = useState<string>('');
   const [cityRadius, setCityRadius] = useState<number>(3);
   const [cityVectors, setCityVectors] = useState<CityMapVectors | null>(null);
+  // True while CityMapInputs is fetching/refetching the OSM vectors.
+  // Drives the "Generating…" overlay on the live preview.
+  const [cityFetching, setCityFetching] = useState<boolean>(false);
   const [cityNames, setCityNames] = useState<string>('');
   const [cityEvent, setCityEvent] = useState<string>('');
   const [cityTagline, setCityTagline] = useState<string>('');
@@ -1236,7 +1239,7 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                     />
                   </div>
                 ) : isCityMap ? (
-                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130' }}>
+                  <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', aspectRatio: '100 / 130', position: 'relative' }}>
                     <CityMapTemplate
                       vectors={cityVectors}
                       names={cityNames}
@@ -1249,6 +1252,35 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                       eventFont={cityFontEvent || 'Archivo'}
                       taglineFont={cityFontTagline || engravedFont}
                     />
+                    {/* Generating overlay — covers the preview while OSM
+                        vectors are fetching so the customer sees the live
+                        preview is regenerating, not stale. */}
+                    {cityFetching && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: 12,
+                        background: 'rgba(26, 39, 64, 0.78)',
+                        backdropFilter: 'blur(2px)',
+                        color: '#d4af37',
+                        fontFamily: 'var(--pv-f-mono)',
+                        fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                        pointerEvents: 'none',
+                      }}>
+                        <div style={{
+                          width: 38, height: 38,
+                          border: '3px solid rgba(212, 175, 55, 0.25)',
+                          borderTopColor: '#d4af37',
+                          borderRadius: '50%',
+                          animation: 'pv-citymap-spin 0.9s linear infinite',
+                        }} />
+                        <div>Generating map…</div>
+                        <div style={{ fontSize: 9, fontWeight: 400, letterSpacing: '0.04em', opacity: 0.75 }}>
+                          5–15 s for dense cities
+                        </div>
+                        <style>{`@keyframes pv-citymap-spin { to { transform: rotate(360deg); } }`}</style>
+                      </div>
+                    )}
                   </div>
                 ) : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
                   <div style={{ width: '100%' }}>
@@ -1880,8 +1912,9 @@ export function GiftProductPage({ product, templates, prompts, variants = [], re
                   lat={cityLat} lng={cityLng}
                   cityLabel={cityLabel} onCityLabel={setCityLabel}
                   radiusKm={cityRadius} onRadius={setCityRadius}
-                  fetching={false}
+                  fetching={cityFetching}
                   fetchError={null}
+                  onFetchingChange={setCityFetching}
                   onLocationResolved={({ lat, lng, label, radiusKm, vectors }) => {
                     setCityLat(lat); setCityLng(lng);
                     if (!cityLabel.trim()) setCityLabel(label.split(',')[0]);

@@ -763,9 +763,13 @@ export async function fetchCityMapPaths(
   // for dense cities where Overpass times out / OOMs at the wide bbox.
   // The customer sees the resulting smaller radius reflected back in the
   // slider so they understand what's on the page.
-  const requested = Math.max(1, Math.min(15, radiusKm || 5));
-  const tries = [requested, requested * 0.6, requested * 0.35, 2].filter(
-    (r, i, arr) => r >= 1 && r <= 15 && (i === 0 || r < arr[i - 1] - 0.4),
+  // Customer-facing slider caps at 6 km so production-print quality stays
+  // good (a 6 km bbox at 88 mm wide already produces road strokes near
+  // the press limit). Server-side we accept up to 8 km in case admin
+  // traffic uses something out-of-band, but never larger.
+  const requested = Math.max(1, Math.min(8, radiusKm || 3));
+  const tries = [requested, requested * 0.6, requested * 0.35, 1.5].filter(
+    (r, i, arr) => r >= 1 && r <= 8 && (i === 0 || r < arr[i - 1] - 0.4),
   );
   let lastErr = '';
   for (const r of tries) {

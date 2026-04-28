@@ -61,6 +61,9 @@ type Props = {
   fetching: boolean;
   /** Last resolution error, if any. */
   fetchError: string | null;
+  /** Reports the inputs panel's internal fetch state UP so the parent can
+   *  render a "Generating…" overlay on the live preview. */
+  onFetchingChange?: (b: boolean) => void;
 
   names: string; onNames: (s: string) => void;
   event: string; onEvent: (s: string) => void;
@@ -77,7 +80,7 @@ type Props = {
 export function CityMapInputs({
   lat, lng, cityLabel, radiusKm,
   onLocationResolved, onCityLabel, onRadius,
-  fetching, fetchError,
+  fetching, fetchError, onFetchingChange,
   names, onNames, event, onEvent, tagline, onTagline,
   showCoords, onShowCoords,
   allowedFonts,
@@ -86,8 +89,16 @@ export function CityMapInputs({
 }: Props) {
   const [address, setAddress] = useState<string>('');
   const [resolving, setResolving] = useState<boolean>(false);
+  const [radiusFetching, setRadiusFetching] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localNotice, setLocalNotice] = useState<string | null>(null);
+
+  // Bridge inner-scoped fetch states up to the parent so it can render
+  // a "Generating…" overlay on the live preview while a request is in
+  // flight (slider drag, pin drag, address search, quick-pick chip).
+  useEffect(() => {
+    onFetchingChange?.(resolving || radiusFetching);
+  }, [resolving, radiusFetching, onFetchingChange]);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const debounceRef = useRef<number | null>(null);
@@ -229,6 +240,7 @@ export function CityMapInputs({
     onRadius(r);
     if (lat == null || lng == null) return;
     if (radiusDebounceRef.current) window.clearTimeout(radiusDebounceRef.current);
+    setRadiusFetching(true);
     radiusDebounceRef.current = window.setTimeout(() => {
       const seq = ++radiusSeqRef.current;
       setLocalError(null);
@@ -236,6 +248,7 @@ export function CityMapInputs({
       void (async () => {
         const v = await fetchCityMapPaths(lat, lng, r);
         if (seq !== radiusSeqRef.current) return;
+        setRadiusFetching(false);
         if (!v.ok) { setLocalError(v.error); return; }
         onLocationResolved({
           lat, lng, label: cityLabel,
@@ -388,12 +401,13 @@ export function CityMapInputs({
           <span style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>{radiusKm.toFixed(1)} km</span>
         </div>
         <input
-          type="range" min={2} max={12} step={0.5} value={radiusKm}
+          type="range" min={1.5} max={6} step={0.5} value={Math.min(radiusKm, 6)}
           onChange={(e) => handleRadiusChange(parseFloat(e.target.value))}
           style={{ width: '100%', accentColor: 'var(--pv-magenta)' }}
         />
-        <div style={{ marginTop: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
-          Smaller = neighbourhood detail. Bigger = whole-city skyline.
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)' }}>
+          <span>← Zoom in (1.5 km)</span>
+          <span>Zoom out (6 km) →</span>
         </div>
       </label>
 
