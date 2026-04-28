@@ -287,6 +287,11 @@ function emitZoneText(
     size: number;
     fontFamily: string;
     fill: string;
+    /** When set, overrides BOTH zone.color and defaults.fill — used when
+     *  the customer picks a foil colour via customer_picker_role='foil_overlay'.
+     *  The pick is meant to retint every foil element on the layout, so the
+     *  template's per-zone hardcoded colour must yield to it. */
+    customerForcedFill?: string;
     weight?: string;
     italic?: boolean;
     letterSpacing?: number;
@@ -304,7 +309,7 @@ function emitZoneText(
     : defaults.y;
   const size = (zone?.font_size_mm ?? defaults.size / scale) * scale;
   const fontFamily = zone?.font_family ?? defaults.fontFamily;
-  const fill = zone?.color ?? defaults.fill;
+  const fill = defaults.customerForcedFill ?? zone?.color ?? defaults.fill;
   const weight = zone?.font_weight ?? defaults.weight ?? '400';
   const italic = (zone?.font_style === 'italic') || defaults.italic;
   const letter = zone?.letter_spacing_em ?? defaults.letterSpacing ?? 0;
@@ -474,6 +479,13 @@ export function buildStarMapSvg({
   const zoneTagline  = findTextZone(zones, 'star_tagline');
   const zoneCaption  = findTextZone(zones, 'star_caption');
 
+  // When the customer picks a foil colour via customer_picker_role='foil_overlay',
+  // their pick must override the zone-baked colours seeded on the template
+  // (e.g. star_names.color='#d4af37'). buildStarMapSvg gets the pick via
+  // foilColor; we forward it as customerForcedFill so emitZoneText skips
+  // the per-zone colour override.
+  const customerForcedFill = foilColor;
+
   if (isPoster) {
     // Poster layout — bold all-caps title block, em-dash flanked subtitle,
     // tiny mono coords below. Closely mirrors the reference design.
@@ -484,7 +496,7 @@ export function buildStarMapSvg({
 
     const titleText = (locationLabel.trim() || event.trim() || 'THE HAPPIEST DAY');
     body += emitZoneText(zoneLocation, W, H, 1, titleText, {
-      cx, y: titleY, size: 7.2, fontFamily: fontLoc, fill: inkColor,
+      cx, y: titleY, size: 7.2, fontFamily: fontLoc, fill: inkColor, customerForcedFill,
       weight: '800', letterSpacing: 0.6, transform: 'uppercase',
     });
 
@@ -507,7 +519,7 @@ export function buildStarMapSvg({
       body += `<line x1="${(cx + halfText + gap).toFixed(2)}" y1="${ruleY.toFixed(2)}" x2="${(cx + halfText + gap + ruleLen).toFixed(2)}" y2="${ruleY.toFixed(2)}" stroke="${inkColor}" stroke-width="0.18"/>`;
     }
     body += emitZoneText(zoneEvent, W, H, 1, subText, {
-      cx, y: subtitleY, size: 3.2, fontFamily: fontEvent, fill: inkColor,
+      cx, y: subtitleY, size: 3.2, fontFamily: fontEvent, fill: inkColor, customerForcedFill,
       letterSpacing: 0.5,
     });
 
@@ -518,14 +530,14 @@ export function buildStarMapSvg({
     if (names.trim()) captionParts.push(names.trim());
     if (captionParts.length) {
       body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' / '), {
-        cx, y: captionY, size: 2.2, fontFamily: 'Archivo', fill: inkColor,
+        cx, y: captionY, size: 2.2, fontFamily: 'Archivo', fill: inkColor, customerForcedFill,
         letterSpacing: 0.4,
       });
     }
 
     if (tagline.trim()) {
       body += emitZoneText(zoneTagline, W, H, 1, tagline.trim(), {
-        cx, y: taglineY, size: 2.6, fontFamily: fontTagline, fill: inkColor,
+        cx, y: taglineY, size: 2.6, fontFamily: fontTagline, fill: inkColor, customerForcedFill,
         italic: true,
       });
     }
@@ -533,26 +545,26 @@ export function buildStarMapSvg({
       // Customer-supplied names are surfaced as a separate top line
       // when the admin gave them a dedicated zone.
       body += emitZoneText(zoneNames, W, H, 1, names.trim(), {
-        cx, y: CY - R - 6, size: 3.6, fontFamily: fontHead, fill: inkColor,
+        cx, y: CY - R - 6, size: 3.6, fontFamily: fontHead, fill: inkColor, customerForcedFill,
         weight: '600', letterSpacing: 0.4, transform: 'uppercase',
       });
     }
   } else {
     // Foil layout — original four-line stack.
     body += emitZoneText(zoneNames, W, H, 1, names.trim() || 'EVA & JOHN', {
-      cx, y: 105, size: 3.6, fontFamily: fontHead, fill: inkColor,
+      cx, y: 105, size: 3.6, fontFamily: fontHead, fill: inkColor, customerForcedFill,
       weight: '600', letterSpacing: 0.4,
     });
     body += emitZoneText(zoneEvent, W, H, 1, event.trim() || 'THE NIGHT WE MET', {
-      cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: inkColor,
+      cx, y: 110, size: 3.2, fontFamily: fontEvent, fill: inkColor, customerForcedFill,
       letterSpacing: 0.4,
     });
     body += emitZoneText(zoneLocation, W, H, 1, locationLabel.trim() || 'LONDON', {
-      cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: inkColor,
+      cx, y: 119, size: 6.5, fontFamily: fontLoc, fill: inkColor, customerForcedFill,
       weight: '700', letterSpacing: 0.6, transform: 'uppercase',
     });
     body += emitZoneText(zoneTagline, W, H, 1, tagline.trim() || 'Under our stars', {
-      cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: inkColor,
+      cx, y: 125, size: 3.4, fontFamily: fontTagline, fill: inkColor, customerForcedFill,
       italic: true,
     });
 
@@ -561,7 +573,7 @@ export function buildStarMapSvg({
     if (dateUtc) captionParts.push(`${fmtDate(dateUtc)} · ${fmtTime(dateUtc)}`);
     if (captionParts.length) {
       body += emitZoneText(zoneCaption, W, H, 1, captionParts.join(' · '), {
-        cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: inkColor,
+        cx, y: CY + R + 4.2, size: 1.7, fontFamily: 'Archivo', fill: inkColor, customerForcedFill,
         letterSpacing: 0.3,
       });
     }
