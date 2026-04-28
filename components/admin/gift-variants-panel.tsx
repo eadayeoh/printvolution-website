@@ -1188,7 +1188,12 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         value={d.mockup_url}
                         onChange={(url) => updateDraft(i, { mockup_url: url })}
                         prefix={`variant-${d.slug || 'mockup'}`}
-                        aspect={1}
+                        // Crop to the linked template's reference aspect
+                        // (e.g. A3 297×420) so the uploaded mockup shape
+                        // matches the design rect + SVG aspect — no
+                        // letterbox at any layer. Falls back to 1:1 for
+                        // variants without a renderer-linked template.
+                        aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
                         size="md"
                         label="Mockup"
                       />
