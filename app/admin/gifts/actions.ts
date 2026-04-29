@@ -123,8 +123,7 @@ const GiftProductSchema = z.object({
     price_delta_cents: z.number().int().min(0).default(0),
     display_order: z.number().int().default(0),
   })).default([]),
-  production_primary_format: z.enum(['png', 'jpg', 'svg']).nullable().optional(),
-  production_include_pdf: z.boolean().nullable().optional(),
+  production_files: z.array(z.enum(['png', 'jpg', 'svg', 'pdf'])).nullable().optional(),
 });
 
 /** Pretty-print a Zod error for the admin toast — takes the first
@@ -445,8 +444,7 @@ const TemplateSchema = z.object({
   // occasion's date window.
   occasion_id: z.string().uuid().nullable().optional(),
   allowed_shape_kinds: z.array(z.enum(['cutout', 'rectangle', 'template'])).nullable().optional(),
-  production_primary_format: z.enum(['png', 'jpg', 'svg']).nullable().optional(),
-  production_include_pdf: z.boolean().nullable().optional(),
+  production_files: z.array(z.enum(['png', 'jpg', 'svg', 'pdf'])).nullable().optional(),
 });
 
 /** Validates that mode_override (if set) matches an active gift_modes

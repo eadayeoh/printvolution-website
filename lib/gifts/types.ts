@@ -117,13 +117,11 @@ export type GiftProduct = {
   first_ordered_at: string | null;
   created_at: string;
   updated_at: string;
-  /** Override the production primary file format. NULL = derive from
-   *  product.mode via productionFormatsForMode (e.g. UV → png, foil →
-   *  svg). Templates can override this further per-template. */
-  production_primary_format?: 'png' | 'jpg' | 'svg' | null;
-  /** Override whether the rasterized output is also wrapped in a print
-   *  PDF. NULL = mode default. */
-  production_include_pdf?: boolean | null;
+  /** What files production should emit. Array of {'png','jpg','svg','pdf'}.
+   *  Order matters — the first non-pdf entry is the primary; 'pdf' is
+   *  additive (wraps the primary in a print PDF). NULL or empty =
+   *  inherit from the mode default (productionFormatsForMode). */
+  production_files?: Array<'png' | 'jpg' | 'svg' | 'pdf'> | null;
   // Mockup — product shot that the transformed design is composited onto
   mockup_url?: string | null;
   mockup_area?: { x: number; y: number; width: number; height: number } | null;
@@ -360,13 +358,10 @@ export type GiftTemplate = {
    *  shape_options whose `kind` is in this list. NULL = inherit all
    *  shape_options from the gift_products row. */
   allowed_shape_kinds?: import('./shape-options').ShapeKind[] | null;
-  /** Per-template override for the production primary format. Wins
-   *  over the product-level setting. NULL = inherit from the product
-   *  (which may itself fall through to the mode default). */
-  production_primary_format?: 'png' | 'jpg' | 'svg' | null;
-  /** Per-template override for whether to wrap in a print PDF. NULL =
-   *  inherit from the product. */
-  production_include_pdf?: boolean | null;
+  /** Per-template override for the set of production files to emit.
+   *  Wins over the product-level setting. NULL or empty = inherit from
+   *  the product (which may itself fall through to the mode default). */
+  production_files?: Array<'png' | 'jpg' | 'svg' | 'pdf'> | null;
 };
 
 /** Date-windowed occasion (e.g. Mother's Day 2026). Tagged on

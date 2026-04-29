@@ -93,11 +93,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     product?.preview_max_width_px ? String(product.preview_max_width_px) : '',
   );
 
-  const [productionPrimaryFormat, setProductionPrimaryFormat] = useState<string>(
-    product?.production_primary_format ?? '',
-  );
-  const [productionIncludePdf, setProductionIncludePdf] = useState<string>(
-    product?.production_include_pdf == null ? '' : (product.production_include_pdf ? 'yes' : 'no'),
+  const [productionFiles, setProductionFiles] = useState<Array<'png' | 'jpg' | 'svg' | 'pdf'>>(
+    product?.production_files ?? [],
   );
 
   const [basePrice, setBasePrice] = useState(((product?.base_price_cents ?? 0) / 100).toFixed(2));
@@ -245,8 +242,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         ? figurineOptions.filter((o) => o.slug && o.name && o.image_url)
         : null,
       figurine_area: figurinePickerEnabled && figurineOptions.length > 0 ? figurineArea : null,
-      production_primary_format: (productionPrimaryFormat || null) as 'png' | 'jpg' | 'svg' | null,
-      production_include_pdf: productionIncludePdf === '' ? null : productionIncludePdf === 'yes',
+      production_files: productionFiles.length > 0 ? productionFiles : null,
     };
     if (!modeLocked) payload.mode = mode;
     payload.secondary_mode = secondaryMode;
@@ -821,31 +817,37 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white p-6">
-            <div className="mb-3 text-sm font-black text-ink">Production output</div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-xs font-bold text-ink">Primary format</span>
-                <select value={productionPrimaryFormat} onChange={(e) => setProductionPrimaryFormat(e.target.value)} className={inputCls}>
-                  <option value="">Inherit from mode</option>
-                  <option value="png">PNG</option>
-                  <option value="jpg">JPG</option>
-                  <option value="svg">SVG</option>
-                </select>
-                <span className="mt-1 block text-[11px] text-neutral-500">
-                  Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
-                </span>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-bold text-ink">Wrap in PDF</span>
-                <select value={productionIncludePdf} onChange={(e) => setProductionIncludePdf(e.target.value)} className={inputCls}>
-                  <option value="">Inherit from mode</option>
-                  <option value="yes">Yes (PNG + PDF)</option>
-                  <option value="no">No (skip PDF)</option>
-                </select>
-                <span className="mt-1 block text-[11px] text-neutral-500">
-                  Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
-                </span>
-              </label>
+            <div className="mb-1 text-sm font-black text-ink">Production output</div>
+            <p className="mb-3 text-[11px] text-neutral-500">
+              Pick the files you want production to emit. Templates can override per-template. Empty = inherit from product mode.
+            </p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {([
+                { key: 'png', label: 'PNG', note: 'bitmap, default for laser/UV/digital' },
+                { key: 'jpg', label: 'JPG', note: 'bitmap, smaller; default for embroidery' },
+                { key: 'svg', label: 'SVG', note: 'vector, default for foil' },
+                { key: 'pdf', label: 'PDF', note: 'wrap the primary file in a print-ready PDF (with bleed)' },
+              ] as const).map((f) => {
+                const checked = productionFiles.includes(f.key);
+                return (
+                  <label key={f.key} className="flex items-start gap-2 rounded border border-neutral-200 p-2.5 hover:border-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setProductionFiles((prev) =>
+                          e.target.checked ? [...prev, f.key] : prev.filter((k) => k !== f.key),
+                        );
+                      }}
+                      className="mt-0.5 h-4 w-4"
+                    />
+                    <span className="block">
+                      <span className="block text-xs font-bold text-ink">{f.label}</span>
+                      <span className="mt-0.5 block text-[11px] text-neutral-500">{f.note}</span>
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -284,12 +284,8 @@ export function GiftTemplateEditor({
   // line's mode at checkout. Lets one product host multiple physical
   // SKUs (e.g. foil vs poster) selectable via the customer template
   // picker.
-  const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
-  const [productionPrimaryFormat, setProductionPrimaryFormat] = useState<string>(
-    template?.production_primary_format ?? '',
-  );
-  const [productionIncludePdf, setProductionIncludePdf] = useState<string>(
-    template?.production_include_pdf == null ? '' : (template.production_include_pdf ? 'yes' : 'no'),
+  const [productionFiles, setProductionFiles] = useState<Array<'png' | 'jpg' | 'svg' | 'pdf'>>(
+    template?.production_files ?? [],
   );
   const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
   // Empty Set = inherit all product shape_options. Any non-empty
@@ -731,11 +727,9 @@ export function GiftTemplateEditor({
       customer_swatches: customerSwatches
         .map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: (s.mockup_url ?? '').trim() }))
         .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
-      mode_override: modeOverride.trim() || null,
       occasion_id: occasionId.trim() || null,
       allowed_shape_kinds: allowedShapeKinds.size > 0 ? Array.from(allowedShapeKinds) : null,
-      production_primary_format: (productionPrimaryFormat || null) as 'png' | 'jpg' | 'svg' | null,
-      production_include_pdf: productionIncludePdf === '' ? null : productionIncludePdf === 'yes',
+      production_files: productionFiles.length > 0 ? productionFiles : null,
     };
     startTransition(async () => {
       if (template) {
@@ -1232,70 +1226,38 @@ export function GiftTemplateEditor({
               ) : null}
             </div>
 
-            {/* ── Production mode override (per-template) ───────────── */}
             <div className="rounded-lg border-2 border-neutral-200 p-4">
-              <div className="mb-2 text-sm font-bold text-ink">Production mode override</div>
-              <div className="mb-3 text-[11px] text-neutral-500">
-                Optional. When set, picking this template at checkout forces
-                the order line&apos;s mode (overriding the product&apos;s mode).
-                Use when one product offers multiple physical SKUs through
-                different templates — e.g. a Star Map sold as both
-                <em> foiling on acrylic</em> and <em> digital print on paper</em>
-                from the same PDP. Leave on <strong>Inherit</strong> for
-                templates that don&apos;t change the production process.
-              </div>
-              <select
-                value={modeOverride}
-                onChange={(e) => setModeOverride(e.target.value)}
-                className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
-              >
-                <option value="">Inherit from product</option>
-                {availableModes.map((m) => (
-                  <option key={m.slug} value={m.slug}>
-                    {m.label} ({m.slug})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="rounded-lg border-2 border-neutral-200 p-4">
-              <div className="mb-2 text-sm font-bold text-ink">Production output</div>
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                    Primary format
-                  </span>
-                  <select
-                    value={productionPrimaryFormat}
-                    onChange={(e) => setProductionPrimaryFormat(e.target.value)}
-                    className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
-                  >
-                    <option value="">Inherit from mode</option>
-                    <option value="png">PNG</option>
-                    <option value="jpg">JPG</option>
-                    <option value="svg">SVG</option>
-                  </select>
-                  <span className="mt-1 block text-[10px] text-neutral-500">
-                    Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
-                  </span>
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
-                    Wrap in PDF
-                  </span>
-                  <select
-                    value={productionIncludePdf}
-                    onChange={(e) => setProductionIncludePdf(e.target.value)}
-                    className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
-                  >
-                    <option value="">Inherit from mode</option>
-                    <option value="yes">Yes (PNG + PDF)</option>
-                    <option value="no">No (skip PDF)</option>
-                  </select>
-                  <span className="mt-1 block text-[10px] text-neutral-500">
-                    Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
-                  </span>
-                </label>
+              <div className="mb-1 text-sm font-bold text-ink">Production output</div>
+              <p className="mb-3 text-[10px] text-neutral-500">
+                Override the product&apos;s setting. Empty = inherit from the product (which may itself fall back to the mode default).
+              </p>
+              <div className="space-y-2">
+                {([
+                  { key: 'png', label: 'PNG', note: 'bitmap, default for laser/UV/digital' },
+                  { key: 'jpg', label: 'JPG', note: 'bitmap, smaller; default for embroidery' },
+                  { key: 'svg', label: 'SVG', note: 'vector, default for foil' },
+                  { key: 'pdf', label: 'PDF', note: 'wrap the primary file in a print-ready PDF (with bleed)' },
+                ] as const).map((f) => {
+                  const checked = productionFiles.includes(f.key);
+                  return (
+                    <label key={f.key} className="flex items-start gap-2 rounded border-2 border-neutral-200 p-2 hover:border-neutral-400">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setProductionFiles((prev) =>
+                            e.target.checked ? [...prev, f.key] : prev.filter((k) => k !== f.key),
+                          );
+                        }}
+                        className="mt-0.5 h-3.5 w-3.5"
+                      />
+                      <span className="block">
+                        <span className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700">{f.label}</span>
+                        <span className="mt-0.5 block text-[10px] text-neutral-500">{f.note}</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1625,7 +1587,7 @@ export function GiftTemplateEditor({
                 const img = z as GiftTemplateImageZone;
                 const fit = img.fit_mode ?? 'cover';
                 const hasContent = Boolean(img.default_image_url);
-                const clipPath = hasContent ? maskClipPathCss(img.mask_preset) : undefined;
+                const clipPath = maskClipPathCss(img.mask_preset);
                 return (
                   <div
                     key={`pv-${i}`}

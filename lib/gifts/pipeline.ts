@@ -49,23 +49,25 @@ function productionFormatsForMode(mode: string | null | undefined): {
   }
 }
 
-/** Resolve the production output format with template > product > mode-default
- *  precedence. Either field on the template wins individually — a template
- *  can change just the primary format and still inherit the product's
- *  PDF-wrap choice. NULL means "inherit from the next layer down". */
+/** Resolve the list of production files to emit, with template > product >
+ *  mode-default precedence. Each entry is one of {'png','jpg','svg','pdf'}.
+ *  The first non-pdf entry is the "primary" output (PNG or JPG or SVG);
+ *  'pdf' is additive (wraps the primary in a print PDF).
+ *  NULL or empty array on a layer = inherit from the next layer down. */
 function resolveProductionFormat(
   template: GiftTemplate | null | undefined,
   product: GiftProduct,
 ): { primary: 'png' | 'jpg' | 'svg'; includePdf: boolean } {
-  const fallback = productionFormatsForMode(product.mode);
-  return {
-    primary: template?.production_primary_format
-      ?? product.production_primary_format
-      ?? fallback.primary,
-    includePdf: template?.production_include_pdf
-      ?? product.production_include_pdf
-      ?? fallback.includePdf,
+  const fromArray = (arr: ReadonlyArray<string> | null | undefined): { primary: 'png' | 'jpg' | 'svg'; includePdf: boolean } | null => {
+    if (!arr || arr.length === 0) return null;
+    const includePdf = arr.includes('pdf');
+    const primary = arr.find((x) => x === 'png' || x === 'jpg' || x === 'svg') as 'png' | 'jpg' | 'svg' | undefined;
+    if (!primary) return null;
+    return { primary, includePdf };
   };
+  return fromArray(template?.production_files)
+    ?? fromArray(product.production_files)
+    ?? productionFormatsForMode(product.mode);
 }
 
 async function loadTemplate(templateId: string | null): Promise<GiftTemplate | null> {
