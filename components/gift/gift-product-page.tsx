@@ -726,6 +726,16 @@ export function GiftProductPage({
     setErr(null);
     setUploading(true);
     const isAi = !isNonAiMode;
+    // Read the file into a data URL so the upload card can show a
+    // thumbnail straight away — well before Generate kicks off.
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const r = reader.result;
+        if (typeof r === 'string') setPendingSourceThumb(r);
+      };
+      reader.readAsDataURL(file);
+    } catch { /* fallback: card just shows empty placeholder */ }
     if (isAi) {
       // Source-only path. No template / prompt / shape sent — those
       // are picked AFTER upload and applied at Generate time.
@@ -798,6 +808,10 @@ export function GiftProductPage({
 
   // Source uploaded but no AI run yet. Drives the Generate button.
   const [pendingSourceAssetId, setPendingSourceAssetId] = useState<string | null>(null);
+  // Local data-URL preview of the just-uploaded photo. Server-side preview
+  // doesn't exist yet (customer hasn't clicked Generate), but we can still
+  // show what they uploaded in the "Photo uploaded" card.
+  const [pendingSourceThumb, setPendingSourceThumb] = useState<string | null>(null);
   const [quota, setQuota] = useState<QuotaState | null>(null);
   useEffect(() => {
     // Fire-and-forget on mount + after each successful generation.
@@ -3188,18 +3202,23 @@ export function GiftProductPage({
                       gap: 12,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        border: '2px solid var(--pv-ink)',
-                        backgroundImage: preview ? `url(${preview.previewUrl})` : 'none',
-                        background: preview ? undefined : 'var(--pv-cream)',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        flexShrink: 0,
-                      }}
-                    />
+                    {(() => {
+                      const thumbUrl = preview?.previewUrl ?? pendingSourceThumb;
+                      return (
+                        <div
+                          style={{
+                            width: 56,
+                            height: 56,
+                            border: '2px solid var(--pv-ink)',
+                            backgroundImage: thumbUrl ? `url(${thumbUrl})` : 'none',
+                            background: thumbUrl ? undefined : 'var(--pv-cream)',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            flexShrink: 0,
+                          }}
+                        />
+                      );
+                    })()}
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>Photo uploaded</div>
                       <div
@@ -3217,7 +3236,7 @@ export function GiftProductPage({
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setPreview(null); setPendingSourceAssetId(null); fileRef.current?.click(); }}
+                      onClick={() => { setPreview(null); setPendingSourceAssetId(null); setPendingSourceThumb(null); fileRef.current?.click(); }}
                       style={{
                         background: 'var(--pv-ink)',
                         color: '#fff',
