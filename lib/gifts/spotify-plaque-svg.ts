@@ -168,22 +168,33 @@ export function buildSpotifyPlaqueSvg({
   const progHeadPct = 0.27;               // ~0:36 of 2:15
 
   // Artist + title — admin-editable via zones if present, else default
-  // bottom-up stacking above the progress bar.
+  // bottom-up stacking above the progress bar. font_size_mm wins over
+  // zone-height-derived sizing so resizing the box doesn't accidentally
+  // scale the text.
   const artistVb = zoneToViewbox(zArtist, templateRefDims, W, H);
   const titleVb  = zoneToViewbox(zTitle,  templateRefDims, W, H);
-  const artistSize = artistVb?.h ? artistVb.h * 0.9 : 3.6;
+  // Convert font_size_mm (saved in editor's 0..200 canvas units) to
+  // viewBox units the same way zoneToViewbox does.
+  const fontMmToVb = (mm: number | undefined): number | null =>
+    typeof mm === 'number' && Number.isFinite(mm) ? (mm / 200) * W : null;
+  const titleSize  = fontMmToVb(zTitle?.font_size_mm)  ?? (titleVb?.h  ? titleVb.h  * 0.85 : 5);
+  const artistSize = fontMmToVb(zArtist?.font_size_mm) ?? (artistVb?.h ? artistVb.h * 0.9  : 3.6);
   const artistY = artistVb ? artistVb.y + artistVb.h * 0.65 : progY - 6;
-  const artistX = artistVb ? artistVb.x : margin;
-  const titleSize = titleVb?.h ? titleVb.h * 0.85 : 5;
+  const artistX = artistVb ? artistVb.x : (titleVb ? titleVb.x : margin);
   const titleY = titleVb ? titleVb.y + titleVb.h * 0.65 : artistY - 5;
   const titleX = titleVb ? titleVb.x : margin;
 
   // Photo — admin-editable position/size via zone, else fill top.
+  // When admin sets a photo zone, clamp the height so it can't extend
+  // past the title's top — otherwise a customer's photo bleeds over
+  // the title text.
   const photoVb = zoneToViewbox(zPhoto, templateRefDims, W, H);
   const photoX = photoVb ? photoVb.x : margin;
   const photoY = photoVb ? photoVb.y : margin;
   const photoW = photoVb ? photoVb.w : W - margin * 2;
-  const photoH = photoVb ? photoVb.h : Math.min(W - margin * 2, (titleVb ? titleY - margin - 4 : titleY - margin - 4));
+  const photoH = photoVb
+    ? Math.min(photoVb.h, Math.max(0, titleY - photoY - 4))
+    : Math.min(W - margin * 2, titleY - margin - 4);
 
   let body = '';
 
@@ -196,27 +207,43 @@ export function buildSpotifyPlaqueSvg({
   }
 
   // ── Title ───────────────────────────────────────────────────────────────
-  // Font / weight / colour come from the zone if admin set them.
+  // Font / weight / colour / alignment come from the zone if admin set
+  // them. SVG text-anchor maps left→start, center→middle, right→end.
+  const alignToAnchor = (a: string | undefined): string =>
+    a === 'right' ? 'end' : a === 'center' ? 'middle' : 'start';
+  const xForAnchor = (zone: { x: number; w: number } | null, fallback: number, align: string | undefined): number => {
+    if (!zone) return fallback;
+    if (align === 'right') return zone.x + zone.w;
+    if (align === 'center') return zone.x + zone.w / 2;
+    return zone.x;
+  };
   const titleFont   = zTitle?.font_family  ?? 'Archivo, sans-serif';
   const titleWeight = zTitle?.font_weight  ?? '700';
   const titleColor  = zTitle?.color        ?? inkColor;
-  body += `<text x="${titleX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="${esc(titleFont)}" font-weight="${esc(titleWeight)}" fill="${titleColor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
+  const titleAnchor = alignToAnchor(zTitle?.align);
+  const titleAnchorX = xForAnchor(titleVb, titleX, zTitle?.align);
+  body += `<text x="${titleAnchorX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="${esc(titleFont)}" font-weight="${esc(titleWeight)}" fill="${titleColor}" text-anchor="${titleAnchor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
 
   // ── Artist ──────────────────────────────────────────────────────────────
   // Artist line uses the customer-picked text colour but at 65% opacity
   // so the title still reads louder than the artist (Spotify's UI does
   // the same — artist name is muted vs. the title).
-  const artistFont  = zArtist?.font_family ?? 'Archivo, sans-serif';
-  const artistColor = zArtist?.color       ?? inkColor;
-  body += `<text x="${artistX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="${esc(artistFont)}" fill="${artistColor}" fill-opacity="0.65">${esc(artistName.trim() || "Artist's Name")}</text>`;
+  const artistFont   = zArtist?.font_family ?? 'Archivo, sans-serif';
+  const artistColor  = zArtist?.color       ?? inkColor;
+  const artistAnchor = alignToAnchor(zArtist?.align);
+  const artistAnchorX = xForAnchor(artistVb, artistX, zArtist?.align);
+  body += `<text x="${artistAnchorX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="${esc(artistFont)}" fill="${artistColor}" fill-opacity="0.65" text-anchor="${artistAnchor}">${esc(artistName.trim() || "Artist's Name")}</text>`;
 
   // ── Heart icon (red, position admin-editable via 'heart' zone) ─────────
+  // The heart is a path scaled uniformly — non-square zones would
+  // otherwise let admin stretch it. Use the smaller of the two zone
+  // dims so the heart fits inside the box without distortion.
   const heartRed = '#FF3B5C';
   const heartVb = zoneToViewbox(zHeart, templateRefDims, W, H);
-  const heartSize = heartVb?.w ?? 4.2;
+  const heartSize = heartVb ? Math.min(heartVb.w, heartVb.h) : 4.2;
   const heartScale = heartSize / 24;
-  const heartX = heartVb ? heartVb.x : W - margin - heartSize;
-  const heartY = heartVb ? heartVb.y : (titleY + artistY) / 2 - heartSize / 2 + 0.5;
+  const heartX = heartVb ? heartVb.x + (heartVb.w - heartSize) / 2 : W - margin - heartSize;
+  const heartY = heartVb ? heartVb.y + (heartVb.h - heartSize) / 2 : (titleY + artistY) / 2 - heartSize / 2 + 0.5;
   body += `<path transform="translate(${heartX} ${heartY}) scale(${heartScale.toFixed(4)})" d="M 12 21.35 l -1.45 -1.32 C 5.4 16.36 2 13.28 2 9.5 C 2 6.42 4.42 4 7.5 4 c 1.74 0 3.41 0.81 4.5 2.09 C 13.09 4.81 14.76 4 16.5 4 C 19.58 4 22 6.42 22 9.5 c 0 3.78 -3.4 6.86 -8.55 11.54 L 12 21.35 z" fill="${heartRed}"/>`;
 
   // ── Progress bar ────────────────────────────────────────────────────────
