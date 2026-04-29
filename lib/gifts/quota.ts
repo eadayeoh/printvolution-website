@@ -35,15 +35,26 @@ export async function checkGiftGenerationQuota(opts: {
       .eq('user_id', opts.userId)
       .gte('consumed_at', since);
     const used = count ?? 0;
+    let reason: string | undefined;
+    if (used >= USER_LIMIT) {
+      const { data: oldestRow } = await sb
+        .from('gift_generation_usage')
+        .select('consumed_at')
+        .eq('user_id', opts.userId)
+        .gte('consumed_at', since)
+        .order('consumed_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const oldestMs = oldestRow?.consumed_at ? new Date(oldestRow.consumed_at).getTime() : null;
+      reason = `You've used your ${USER_LIMIT} free generations this week. Resets in ${daysUntilReset(oldestMs)} days.`;
+    }
     return {
       allowed: used < USER_LIMIT,
       remaining: Math.max(0, USER_LIMIT - used),
       used,
       limit: USER_LIMIT,
       isSignedIn: true,
-      reason: used >= USER_LIMIT
-        ? `You've used your ${USER_LIMIT} free generations this week. Resets in ${daysUntilReset(used, since)} days.`
-        : undefined,
+      reason,
     };
   }
 
@@ -147,10 +158,10 @@ export async function claimAnonUsageForUser(_userId: string, anonSessionId: stri
   await sb.rpc('claim_anon_gift_usage', { p_anon_session_id: anonSessionId });
 }
 
-function daysUntilReset(_used: number, sinceIso: string): number {
-  // Approximate — the 7d window slides as old rows fall out. Show
-  // days until the OLDEST counted row ages out.
-  const sinceMs = new Date(sinceIso).getTime();
-  const oldestExpiresMs = sinceMs + WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  return Math.max(1, Math.ceil((oldestExpiresMs - Date.now()) / (24 * 60 * 60 * 1000)));
+function daysUntilReset(oldestConsumedAtMs: number | null): number {
+  // The 7d window slides as old rows fall out. Show days until the
+  // OLDEST counted row ages out. NULL = nothing consumed yet → full 7.
+  if (oldestConsumedAtMs == null) return WINDOW_DAYS;
+  const expiresMs = oldestConsumedAtMs + WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.ceil((expiresMs - Date.now()) / (24 * 60 * 60 * 1000)));
 }

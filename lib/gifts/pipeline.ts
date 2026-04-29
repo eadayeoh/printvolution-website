@@ -1013,7 +1013,10 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
         canvasWidthPx:  styledMeta.width  ?? 0,
         canvasHeightPx: styledMeta.height ?? 0,
       });
-      buf = cutout.previewBuffer;
+      // Production must be the transparent PNG, not the checker-backed
+      // preview JPEG — laser cutters print only the subject and need
+      // alpha to mask everything outside the silhouette.
+      buf = cutout.bgRemovedPng;
 
       // Persist a fresh cut SVG asset at production resolution. The
       // earlier preview's cut_file row stays in storage but is no
@@ -1038,7 +1041,11 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   }
 
   // Per-mode output format with template / product overrides.
-  const fmt = resolveProductionFormat(template, product);
+  // Cutout must override to PNG — JPG would flatten the transparent
+  // silhouette to white and the laser would cut a rectangle.
+  const fmt = input.shapeKind === 'cutout'
+    ? { primary: 'png' as const, includePdf: false }
+    : resolveProductionFormat(template, product);
   // Always render a high-quality bitmap first; we either ship the PNG
   // / JPG directly or wrap it inside an SVG.
   const bitmapBuf = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();

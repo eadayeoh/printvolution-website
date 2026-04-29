@@ -15,7 +15,13 @@ export function encodeNoteValue(s: string): string {
 }
 
 function decodeNoteValue(s: string): string {
-  return s.replace(/%3A/g, ':').replace(/%3B/g, ';').replace(/%25/g, '%');
+  // Sentinel %25 first so a literal "%3A" in source (encoded as "%253A")
+  // doesn't collapse to ":" before its leading "%" is restored.
+  return s
+    .replace(/%25/g, '\x00')
+    .replace(/%3A/g, ':')
+    .replace(/%3B/g, ';')
+    .replace(/\x00/g, '%');
 }
 
 export function parsePersonalisationNotes(

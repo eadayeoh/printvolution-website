@@ -66,9 +66,12 @@ type CartState = {
   count: () => number;
 };
 
-// Cart auto-clears after 7 days of inactivity. Every mutation bumps
+// Cart auto-clears after 6 days of inactivity. Every mutation bumps
 // `lastUpdated`; on rehydrate, we wipe if the timestamp is too old.
-const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Held just under the 7-day signed-URL TTL on `gift_image_url` so the
+// cart wipes BEFORE the thumbnails 404 — customers never see a broken
+// preview with no UI signal.
+const MAX_AGE_MS = 6 * 24 * 60 * 60 * 1000;
 
 export const useCart = create<CartState>()(
   persist(
