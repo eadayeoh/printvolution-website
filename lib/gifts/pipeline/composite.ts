@@ -21,9 +21,10 @@
 //     preview; final fidelity needs a TTF bundle which is a separate
 //     piece of infra work.
 
-import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftTemplateCalendarZone, GiftMode } from '@/lib/gifts/types';
+import type { GiftTemplate, GiftTemplateZone, GiftTemplateImageZone, GiftTemplateTextZone, GiftTemplateCalendarZone, GiftTemplateShapeZone, GiftMode } from '@/lib/gifts/types';
 import { renderSvgWithFonts } from './fonts';
 import { renderCalendarSvg, type CalendarFill } from './calendar-svg';
+import { shapeZoneSvg } from '@/lib/gifts/shape-zones';
 import { maskPresetSvg } from '@/lib/gifts/mask-shapes';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
@@ -183,7 +184,20 @@ export async function renderTemplateComposite(
     const zh = Math.max(0, Math.min(outH - zy, rawZh));
     if (zw <= 0 || zh <= 0) continue;
 
-    if (isCalendar(zone)) {
+    if (isShape(zone)) {
+      // Decorative shape (heart / star / line / etc.) — render the
+      // exact same SVG the editor + customer preview use, then composite.
+      // Render at zone-local mm dimensions; sharp resamples onto the
+      // pixel grid below.
+      const svg = shapeZoneSvg(zone, zone.width_mm, zone.height_mm);
+      const resvgBuf = await renderSvgWithFonts(svg);
+      const svgBuf: Buffer = resvgBuf
+        ?? await sharp(Buffer.from(svg)).resize(zw, zh).png().toBuffer();
+      // resvg may produce at the SVG's native size, so resize to zone
+      // px dimensions before composite.
+      const sized = await sharp(svgBuf).resize(zw, zh, { fit: 'fill' }).png().toBuffer();
+      overlays.push({ input: sized, top: zy, left: zx });
+    } else if (isCalendar(zone)) {
       // Calendar zones use the same SVG generator the live preview
       // calls — single source of truth so what the customer sees in
       // preview is what gets printed. Render at the zone's pixel
@@ -318,6 +332,9 @@ function isText(z: GiftTemplateZone): z is GiftTemplateTextZone {
 }
 function isCalendar(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
   return (z as GiftTemplateCalendarZone).type === 'calendar';
+}
+function isShape(z: GiftTemplateZone): z is GiftTemplateShapeZone {
+  return (z as GiftTemplateShapeZone).type === 'shape';
 }
 
 async function prepImageZone(

@@ -396,7 +396,7 @@ export async function createGiftMode(input: z.input<typeof NewModeSchema>) {
 // no id at all, breaking the renderer at customer time.
 const ZoneShape = z.object({
   id: z.string().min(1),
-  type: z.enum(['image', 'text', 'calendar', 'render_anchor']),
+  type: z.enum(['image', 'text', 'calendar', 'render_anchor', 'shape']),
   x_mm: z.number().finite(),
   y_mm: z.number().finite(),
   width_mm: z.number().finite().positive(),

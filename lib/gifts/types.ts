@@ -276,11 +276,33 @@ export type GiftTemplateRenderAnchorZone = GiftTemplateZoneBase & {
   label: string;
 };
 
+/** Decorative-shape primitive admins can drop on the canvas without
+ *  uploading a foreground PNG — useful for thin accent lines, heart /
+ *  star motifs, framing rectangles, etc. The shape itself is rendered
+ *  by the editor / customer preview / production composite from a
+ *  single SVG path, so what admin places on the canvas is byte-for-byte
+ *  what gets printed (no foreground image to author separately). */
+export type GiftShapeKind = 'line' | 'rect' | 'circle' | 'heart' | 'star' | 'triangle';
+
+export type GiftTemplateShapeZone = GiftTemplateZoneBase & {
+  type: 'shape';
+  shape: GiftShapeKind;
+  /** Fill colour for closed shapes. Lines ignore fill — they only have
+   *  a stroke. Null / empty = no fill (outline-only). */
+  fill?: string | null;
+  /** Stroke colour. Null / empty = no stroke. */
+  stroke?: string | null;
+  /** Stroke width in canvas mm (zones_json's 0..200 grid).
+   *  Lines need a non-zero stroke or they won't render. */
+  stroke_width?: number;
+};
+
 export type GiftTemplateZone =
   | GiftTemplateImageZone
   | GiftTemplateTextZone
   | GiftTemplateCalendarZone
-  | GiftTemplateRenderAnchorZone;
+  | GiftTemplateRenderAnchorZone
+  | GiftTemplateShapeZone;
 
 export const GIFT_FONT_FAMILIES: Array<{ value: string; label: string; stack: string }> = [
   { value: 'inter', label: 'Inter (sans)', stack: 'Inter, ui-sans-serif, system-ui, sans-serif' },

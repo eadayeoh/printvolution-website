@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon, Eye, EyeOff, Heart, Star, Square, Circle, Minus, Triangle, Shapes } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate, renameTemplateGroup, clearTemplateGroup } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { MaskShapeDefs } from '@/components/gift/mask-shape-defs';
@@ -20,8 +20,11 @@ import {
   type GiftTemplateTextZone,
   type GiftTemplateCalendarZone,
   type GiftTemplateRenderAnchorZone,
+  type GiftTemplateShapeZone,
+  type GiftShapeKind,
   type GiftMode,
 } from '@/lib/gifts/types';
+import { shapeZoneSvg, GIFT_SHAPE_KINDS, GIFT_SHAPE_LABEL } from '@/lib/gifts/shape-zones';
 import type { ShapeKind } from '@/lib/gifts/shape-options';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
@@ -57,6 +60,10 @@ function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
 
 function isRenderAnchorZone(z: GiftTemplateZone): z is GiftTemplateRenderAnchorZone {
   return (z as GiftTemplateRenderAnchorZone).type === 'render_anchor';
+}
+
+function isShapeZone(z: GiftTemplateZone): z is GiftTemplateShapeZone {
+  return (z as GiftTemplateShapeZone).type === 'shape';
 }
 
 /** Seed defaults for renderer-driven templates so admins start with
@@ -227,6 +234,27 @@ function makeTextZone(n: number): GiftTemplateTextZone {
     line_height: 1.2,
     letter_spacing_em: 0,
     max_chars: 60,
+  };
+}
+
+function makeShapeZone(kind: GiftShapeKind, n: number): GiftTemplateShapeZone {
+  // Centred 60×60 default — admin drags from there. Lines default
+  // taller-than-tall + a visible stroke so the line actually shows up
+  // (a 0-stroke line is invisible and would leave admin confused).
+  const isLine = kind === 'line';
+  return {
+    type: 'shape',
+    id: `shape${n}`,
+    label: `${kind[0].toUpperCase()}${kind.slice(1)} ${n}`,
+    shape: kind,
+    x_mm: isLine ? 20 : 70,
+    y_mm: isLine ? 90 : 70,
+    width_mm: isLine ? 160 : 60,
+    height_mm: isLine ? 4 : 60,
+    rotation_deg: 0,
+    fill: isLine ? null : '#ec4899',
+    stroke: isLine ? '#0a0a0a' : null,
+    stroke_width: isLine ? 1 : 0,
   };
 }
 
@@ -489,6 +517,12 @@ export function GiftTemplateEditor({
   function addCalendarZone() {
     const n = zones.filter(isCalendarZone).length + 1;
     commitZones([...zones, makeCalendarZone(n)]);
+    setActiveZoneIdx(zones.length);
+  }
+
+  function addShapeZone(kind: GiftShapeKind) {
+    const n = zones.filter(isShapeZone).length + 1;
+    commitZones([...zones, makeShapeZone(kind, n)]);
     setActiveZoneIdx(zones.length);
   }
 
@@ -817,9 +851,10 @@ export function GiftTemplateEditor({
 
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
 
-  const imageCount = zones.filter((z) => !isTextZone(z) && !isCalendarZone(z)).length;
+  const imageCount = zones.filter((z) => !isTextZone(z) && !isCalendarZone(z) && !isShapeZone(z) && !isRenderAnchorZone(z)).length;
   const textCount = zones.filter(isTextZone).length;
   const calendarCount = zones.filter(isCalendarZone).length;
+  const shapeCount = zones.filter(isShapeZone).length;
 
   return (
     <div className="p-6">
@@ -974,10 +1009,10 @@ export function GiftTemplateEditor({
               <div>
                 <div className="text-xs font-bold text-ink">Template slots</div>
                 <div className="text-[11px] text-neutral-500">
-                  {imageCount} image · {textCount} text{calendarCount > 0 && ` · ${calendarCount} calendar`}
+                  {imageCount} image · {textCount} text{calendarCount > 0 && ` · ${calendarCount} calendar`}{shapeCount > 0 && ` · ${shapeCount} shape`}
                 </div>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap justify-end gap-1.5">
                 <button type="button" onClick={addImageZone} className="inline-flex items-center gap-1 rounded-full bg-pink px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-pink-dark">
                   <ImageIcon size={11} /> Image
                 </button>
@@ -988,6 +1023,33 @@ export function GiftTemplateEditor({
                   <CalendarIcon size={11} /> Calendar
                 </button>
               </div>
+            </div>
+            {/* Decorative-shape primitives — admin clicks one to drop a
+                heart / star / line / etc. on the canvas. Pure SVG, no
+                upload required. The same shape SVG renders in the
+                customer preview AND the production composite. */}
+            <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 rounded border border-dashed border-neutral-200 bg-neutral-50/60 p-2">
+              <span className="inline-flex items-center gap-1 px-1 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                <Shapes size={11} /> Shapes
+              </span>
+              <button type="button" onClick={() => addShapeZone('heart')} className="inline-flex items-center gap-1 rounded-full border-2 border-pink/40 bg-white px-2 py-1 text-[10px] font-bold text-pink hover:border-pink hover:bg-pink/10">
+                <Heart size={11} /> Heart
+              </button>
+              <button type="button" onClick={() => addShapeZone('star')} className="inline-flex items-center gap-1 rounded-full border-2 border-amber-400 bg-white px-2 py-1 text-[10px] font-bold text-amber-600 hover:border-amber-500 hover:bg-amber-50">
+                <Star size={11} /> Star
+              </button>
+              <button type="button" onClick={() => addShapeZone('circle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+                <Circle size={11} /> Circle
+              </button>
+              <button type="button" onClick={() => addShapeZone('rect')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+                <Square size={11} /> Rectangle
+              </button>
+              <button type="button" onClick={() => addShapeZone('triangle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+                <Triangle size={11} /> Triangle
+              </button>
+              <button type="button" onClick={() => addShapeZone('line')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+                <Minus size={11} /> Line
+              </button>
             </div>
             {zones.length === 0 ? (
               <div className="rounded border border-dashed border-neutral-300 p-4 text-center text-[11px] text-neutral-500">
@@ -1008,7 +1070,8 @@ export function GiftTemplateEditor({
                   const isText = isTextZone(z);
                   const isCal = isCalendarZone(z);
                   const isAnchor = isRenderAnchorZone(z);
-                  const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
+                  const isShape = isShapeZone(z);
+                  const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : isShape ? 'bg-purple-500' : 'bg-pink';
                   return (
                     <div
                       key={i}
@@ -1056,7 +1119,7 @@ export function GiftTemplateEditor({
                           className="flex min-w-0 flex-1 items-center gap-2 text-left"
                         >
                           <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-white ${badgeBg}`}>
-                            {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : <ImageIcon size={12} />}
+                            {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : isShape ? <Shapes size={12} /> : <ImageIcon size={12} />}
                           </span>
                           <span className={`text-sm font-bold text-ink truncate ${(z as any).hidden ? 'line-through' : ''}`}>{z.label || 'Untitled'}</span>
                           {isText && (z as GiftTemplateTextZone).editable === false && (
@@ -1418,6 +1481,7 @@ export function GiftTemplateEditor({
             const isText = isTextZone(z);
             const isCal = isCalendarZone(z);
             const isAnchor = isRenderAnchorZone(z);
+            const isShape = isShapeZone(z);
             return (
               <div className="rounded-lg border-2 border-pink bg-white shadow-sm">
                 <div className="flex items-center justify-between gap-2 border-b border-neutral-200 px-3 py-2">
@@ -1443,7 +1507,9 @@ export function GiftTemplateEditor({
                     ? <CalendarZoneFields zone={z as GiftTemplateCalendarZone} onChange={(p) => updateZone<GiftTemplateCalendarZone>(i, p)} />
                     : isText
                       ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
-                      : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
+                      : isShape
+                        ? <ShapeZoneFields zone={z as GiftTemplateShapeZone} onChange={(p) => updateZone<GiftTemplateShapeZone>(i, p)} />
+                        : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
 
                   <div className="border-t border-neutral-200 pt-3">
                     <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Align on canvas</div>
@@ -1718,7 +1784,7 @@ export function GiftTemplateEditor({
                   with the zone label so admin can read what each slot
                   is at a glance. No auto-fetched stock photos. */}
               {zones.map((z, i) => {
-                if (isTextZone(z) || isCalendarZone(z) || isRenderAnchorZone(z)) return null;
+                if (isTextZone(z) || isCalendarZone(z) || isRenderAnchorZone(z) || isShapeZone(z)) return null;
                 const img = z as GiftTemplateImageZone;
                 const fit = img.fit_mode ?? 'cover';
                 const hasContent = Boolean(img.default_image_url);
@@ -1782,6 +1848,32 @@ export function GiftTemplateEditor({
                 return (
                   <img
                     key={`cv-${i}`}
+                    src={dataUrl}
+                    alt=""
+                    className="pointer-events-none absolute"
+                    style={{
+                      left: `${(z.x_mm / TEMPLATE_W) * 100}%`,
+                      top: `${(z.y_mm / TEMPLATE_H) * 100}%`,
+                      width: `${(z.width_mm / TEMPLATE_W) * 100}%`,
+                      height: `${(z.height_mm / TEMPLATE_H) * 100}%`,
+                      transform: `rotate(${z.rotation_deg ?? 0}deg)`,
+                      transformOrigin: 'center',
+                    }}
+                  />
+                );
+              })}
+
+              {/* Decorative shape zones — pure SVG drawn from the same
+                  helper the customer preview + production composite use,
+                  so the canvas is byte-identical to what gets printed. */}
+              {zones.map((z, i) => {
+                if (!isShapeZone(z)) return null;
+                if ((z as any).hidden) return null;
+                const svg = shapeZoneSvg(z, z.width_mm, z.height_mm);
+                const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+                return (
+                  <img
+                    key={`sv-${i}`}
                     src={dataUrl}
                     alt=""
                     className="pointer-events-none absolute"
@@ -1864,8 +1956,9 @@ export function GiftTemplateEditor({
                 const height = (z.height_mm / TEMPLATE_H) * 100;
                 const isText = isTextZone(z);
                 const isAnchor = isRenderAnchorZone(z);
-                const accent = isAnchor ? '#E91E8C' : isText ? '#0a0a0a' : '#E91E8C';
-                const handleLabel = isAnchor ? 'A' : isText ? 'T' : 'I';
+                const isShape = isShapeZone(z);
+                const accent = isAnchor ? '#E91E8C' : isText ? '#0a0a0a' : isShape ? '#a855f7' : '#E91E8C';
+                const handleLabel = isAnchor ? 'A' : isText ? 'T' : isShape ? 'S' : 'I';
                 return (
                   <div
                     key={i}
@@ -2078,6 +2171,93 @@ function ImageZoneFields({ zone, onChange }: { zone: GiftTemplateImageZone; onCh
           Customer can rotate
         </label>
       </div>
+    </div>
+  );
+}
+
+function ShapeZoneFields({ zone, onChange }: { zone: GiftTemplateShapeZone; onChange: (p: Partial<GiftTemplateShapeZone>) => void }) {
+  const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
+  const isLine = zone.shape === 'line';
+  return (
+    <div className="space-y-3">
+      <label className="block">
+        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Label</span>
+        <input value={zone.label} onChange={(e) => onChange({ label: e.target.value })} className={inputCls} />
+      </label>
+
+      <div>
+        <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Shape</div>
+        <div className="grid grid-cols-3 gap-1">
+          {GIFT_SHAPE_KINDS.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => onChange({ shape: kind })}
+              className={`rounded border-2 px-2 py-1 text-[10px] font-bold uppercase ${
+                zone.shape === kind ? 'border-pink bg-pink text-white' : 'border-neutral-200 bg-white text-neutral-600'
+              }`}
+            >
+              {GIFT_SHAPE_LABEL[kind]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!isLine && (
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">Fill colour</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={zone.fill && /^#[0-9A-Fa-f]{6}$/.test(zone.fill) ? zone.fill : '#ec4899'}
+              onChange={(e) => onChange({ fill: e.target.value })}
+              className="h-9 w-12 cursor-pointer rounded border-2 border-neutral-200"
+            />
+            <input
+              type="text"
+              value={zone.fill ?? ''}
+              onChange={(e) => onChange({ fill: e.target.value || null })}
+              placeholder="#ec4899 (or empty for none)"
+              className={inputCls}
+            />
+          </div>
+        </label>
+      )}
+
+      <label className="block">
+        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+          {isLine ? 'Line colour' : 'Stroke colour (outline)'}
+        </span>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={zone.stroke && /^#[0-9A-Fa-f]{6}$/.test(zone.stroke) ? zone.stroke : '#0a0a0a'}
+            onChange={(e) => onChange({ stroke: e.target.value })}
+            className="h-9 w-12 cursor-pointer rounded border-2 border-neutral-200"
+          />
+          <input
+            type="text"
+            value={zone.stroke ?? ''}
+            onChange={(e) => onChange({ stroke: e.target.value || null })}
+            placeholder="#0a0a0a (or empty for none)"
+            className={inputCls}
+          />
+        </div>
+      </label>
+
+      <label className="block">
+        <span className="mb-1 block text-[10px] font-bold uppercase text-neutral-500">
+          {isLine ? 'Line thickness (mm)' : 'Stroke width (mm)'}
+        </span>
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={zone.stroke_width ?? 0}
+          onChange={(e) => onChange({ stroke_width: Math.max(0, parseFloat(e.target.value) || 0) })}
+          className={inputCls}
+        />
+      </label>
     </div>
   );
 }

@@ -14,9 +14,11 @@ import type {
   GiftTemplateImageZone,
   GiftTemplateTextZone,
   GiftTemplateCalendarZone,
+  GiftTemplateShapeZone,
 } from '@/lib/gifts/types';
 import { giftFontStack } from '@/lib/gifts/types';
 import { renderCalendarSvg, type CalendarFill } from '@/lib/gifts/pipeline/calendar-svg';
+import { shapeZoneSvg } from '@/lib/gifts/shape-zones';
 import { maskClipPathCss } from '@/lib/gifts/mask-shapes';
 import { MaskShapeDefs } from './mask-shape-defs';
 import { useEffect, useRef, useState } from 'react';
@@ -28,6 +30,9 @@ function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
 }
 function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
   return (z as GiftTemplateCalendarZone).type === 'calendar';
+}
+function isShapeZone(z: GiftTemplateZone): z is GiftTemplateShapeZone {
+  return (z as GiftTemplateShapeZone).type === 'shape';
 }
 
 type Props = {
@@ -116,7 +121,7 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
       )}
 
       {zones.map((z, i) => {
-        if (isTextZone(z) || isCalendarZone(z)) return null;
+        if (isTextZone(z) || isCalendarZone(z) || isShapeZone(z)) return null;
         const img = z as GiftTemplateImageZone;
         const thumb = thumbs[z.id];
         const content = thumb || img.default_image_url || null;
@@ -183,6 +188,32 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
               </span>
             )}
           </div>
+        );
+      })}
+
+      {/* Decorative shape zones — same SVG helper the editor canvas
+          and the production composite use, so the customer sees what
+          will print. */}
+      {zones.map((z, i) => {
+        if (!isShapeZone(z)) return null;
+        const svg = shapeZoneSvg(z, z.width_mm, z.height_mm);
+        const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        return (
+          <img
+            key={`shape-${i}`}
+            src={dataUrl}
+            alt=""
+            style={{
+              position: 'absolute',
+              left: `${(z.x_mm / CANVAS_UNITS) * 100}%`,
+              top: `${(z.y_mm / CANVAS_UNITS) * 100}%`,
+              width: `${(z.width_mm / CANVAS_UNITS) * 100}%`,
+              height: `${(z.height_mm / CANVAS_UNITS) * 100}%`,
+              transform: `rotate(${z.rotation_deg ?? 0}deg)`,
+              transformOrigin: 'center',
+              pointerEvents: 'none',
+            }}
+          />
         );
       })}
 
