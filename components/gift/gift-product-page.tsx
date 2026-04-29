@@ -217,10 +217,30 @@ export function GiftProductPage({
   const previewStageRef = useRef<HTMLDivElement | null>(null);
   const [capturingSnapshot, setCapturingSnapshot] = useState(false);
 
-  const shapeOptions: ShapeOption[] = (product.shape_options ?? []) as ShapeOption[];
+  const productShapeOptions: ShapeOption[] = (product.shape_options ?? []) as ShapeOption[];
+  // Per-template filter on the shape picker. The active template can
+  // narrow the customer's shape choices via allowed_shape_kinds; NULL
+  // (the default) inherits the full product list (legacy behaviour).
+  // Migration 0085.
+  const activeTemplateForShape = templates.find((t) => t.id === selectedTemplateId) ?? null;
+  const allowedShapeKinds = activeTemplateForShape?.allowed_shape_kinds ?? null;
+  const shapeOptions: ShapeOption[] =
+    allowedShapeKinds && allowedShapeKinds.length > 0
+      ? productShapeOptions.filter((o) => allowedShapeKinds.includes(o.kind))
+      : productShapeOptions;
   const shapePickerActive = shapeOptions.length > 0;
   const defaultShape: ShapeKind = shapeOptions[0]?.kind ?? 'rectangle';
   const [selectedShapeKind, setSelectedShapeKind] = useState<ShapeKind>(defaultShape);
+  // If a template flip drops the currently-selected shape from the
+  // visible list, bounce the customer onto the new first-allowed kind
+  // so the cart payload + price reflect what's actually on screen.
+  useEffect(() => {
+    if (shapeOptions.length === 0) return;
+    if (!shapeOptions.some((o) => o.kind === selectedShapeKind)) {
+      setSelectedShapeKind(shapeOptions[0].kind);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateId]);
   const [selectedShapeTemplateId, setSelectedShapeTemplateId] = useState<string | null>(() => {
     const tpl = shapeOptions.find((o) => o.kind === 'template');
     return tpl && tpl.kind === 'template' ? tpl.template_ids[0] ?? null : null;

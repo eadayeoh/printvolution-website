@@ -420,6 +420,10 @@ const TemplateSchema = z.object({
   // set, the customer-facing PDP only shows the template inside the
   // occasion's date window.
   occasion_id: z.string().uuid().nullable().optional(),
+  // Per-template "Pick your shape" allow-list (migration 0085). NULL =
+  // inherit every shape_options row from the product. When set, the
+  // customer's shape picker is filtered to just these kinds.
+  allowed_shape_kinds: z.array(z.enum(['cutout', 'rectangle', 'template'])).nullable().optional(),
 });
 
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {

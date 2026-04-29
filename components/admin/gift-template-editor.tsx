@@ -235,6 +235,19 @@ export function GiftTemplateEditor({
   // picker.
   const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
   const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
+  // Per-template allowed shape kinds (migration 0085). Empty Set =
+  // "inherit all from product" (the historical behaviour). Any non-empty
+  // selection narrows the PDP's "Pick your shape" picker.
+  const [allowedShapeKinds, setAllowedShapeKinds] = useState<Set<'cutout' | 'rectangle' | 'template'>>(
+    () => new Set((template?.allowed_shape_kinds ?? []) as Array<'cutout' | 'rectangle' | 'template'>),
+  );
+  function toggleAllowedShapeKind(k: 'cutout' | 'rectangle' | 'template') {
+    setAllowedShapeKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  }
   const FOIL_QUICK_ADDS: Array<{ name: string; hex: string }> = [
     { name: 'Gold',      hex: '#FFD700' },
     { name: 'Rose Gold', hex: '#B76E79' },
@@ -455,6 +468,7 @@ export function GiftTemplateEditor({
         .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
       mode_override: modeOverride.trim() || null,
       occasion_id: occasionId.trim() || null,
+      allowed_shape_kinds: allowedShapeKinds.size > 0 ? Array.from(allowedShapeKinds) : null,
     };
     startTransition(async () => {
       if (template) {
@@ -930,6 +944,35 @@ export function GiftTemplateEditor({
                   );
                 })}
               </select>
+            </div>
+
+            {/* ── Pick-your-shape filter (per-template) ─────────────── */}
+            <div className="rounded-lg border-2 border-neutral-200 p-4">
+              <div className="mb-2 text-sm font-bold text-ink">Allowed shape options</div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Which entries from the product&rsquo;s &ldquo;Pick your shape&rdquo; picker can the
+                customer use when they&rsquo;ve picked this template? Tick none to
+                inherit all shape options from the product (the default).
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {([
+                  { kind: 'cutout',    label: 'Cutout' },
+                  { kind: 'rectangle', label: 'Rectangle' },
+                  { kind: 'template',  label: 'Template-shape' },
+                ] as const).map((row) => (
+                  <label key={row.kind} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-xs hover:border-pink">
+                    <input
+                      type="checkbox"
+                      checked={allowedShapeKinds.has(row.kind)}
+                      onChange={() => toggleAllowedShapeKind(row.kind)}
+                    />
+                    <span className="font-bold text-ink">{row.label}</span>
+                  </label>
+                ))}
+              </div>
+              {allowedShapeKinds.size === 0 ? (
+                <div className="mt-2 text-[11px] text-neutral-500">All shape options visible (inheriting from product).</div>
+              ) : null}
             </div>
 
             {/* ── Production mode override (per-template) ───────────── */}
