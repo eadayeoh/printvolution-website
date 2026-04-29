@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
-import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
+import { createTemplate, updateTemplate, deleteTemplate, renameTemplateGroup, clearTemplateGroup } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { MaskShapeDefs } from '@/components/gift/mask-shape-defs';
 import { maskClipPathCss, maskPresetPath, MASK_PRESET_LABELS } from '@/lib/gifts/mask-shapes';
@@ -592,6 +592,12 @@ export function GiftTemplateEditor({
     });
   }
 
+  // saveRef is invoked by Cmd+S — avoids re-attaching the keydown
+  // listener every time `save`'s closed-over state changes (which is on
+  // every keystroke in any field). The listener stays mounted; the ref
+  // is updated on every render and points at the latest save closure.
+  const saveRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     function isEditableTarget(t: EventTarget | null): boolean {
       if (!t || !(t instanceof HTMLElement)) return false;
@@ -605,6 +611,15 @@ export function GiftTemplateEditor({
         if (!spaceHeld) setSpaceHeld(true);
       }
       const mod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl+S — save from any focus context (including text inputs,
+      // because the natural reflex when typing in the Name field is to
+      // hit save without moving the mouse).
+      if (mod && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        saveRef.current();
+        return;
+      }
 
       if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         if (isEditableTarget(e.target)) return;
@@ -771,6 +786,35 @@ export function GiftTemplateEditor({
     });
   }
 
+  // Keep saveRef pointed at the freshest save closure so Cmd+S sees the
+  // latest state without forcing the keydown listener to re-attach on
+  // every keystroke.
+  saveRef.current = save;
+
+  function renameCurrentGroup() {
+    const current = groupName.trim();
+    if (!current) return;
+    const next = (window.prompt(`Rename group "${current}" to:`, current) ?? '').trim();
+    if (!next || next === current) return;
+    startTransition(async () => {
+      const r = await renameTemplateGroup(current, next);
+      if (!r.ok) { setErr(r.error); return; }
+      setGroupName(next);
+      router.refresh();
+    });
+  }
+  function deleteCurrentGroup() {
+    const current = groupName.trim();
+    if (!current) return;
+    if (!confirm(`Remove the "${current}" group from every template that uses it? Templates stay; they just become Ungrouped.`)) return;
+    startTransition(async () => {
+      const r = await clearTemplateGroup(current);
+      if (!r.ok) { setErr(r.error); return; }
+      setGroupName('');
+      router.refresh();
+    });
+  }
+
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
 
   const imageCount = zones.filter((z) => !isTextZone(z) && !isCalendarZone(z)).length;
@@ -779,9 +823,27 @@ export function GiftTemplateEditor({
 
   return (
     <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+      {/* Sticky header — Save stays glued to the viewport top so admins
+          never have to scroll back up (or down to the old bottom bar)
+          to commit edits. Cmd+S works from any focus context too. */}
+      <div className="sticky top-0 z-30 -mx-6 -mt-6 mb-4 flex items-center justify-between gap-4 border-b-2 border-ink bg-white/95 px-6 py-3 backdrop-blur">
         <Link href="/admin/gifts/templates" className="text-sm font-bold text-neutral-500 hover:text-ink">← Back to templates</Link>
-        <div className="text-sm font-bold text-ink">{template ? 'Edit template' : 'New template'}</div>
+        <div className="flex items-center gap-3">
+          {err && <span className="text-xs font-bold text-red-600">{err}</span>}
+          {flash && <span className="text-xs font-bold text-green-600">✓ Saved</span>}
+          <span className="hidden text-sm font-bold text-ink sm:inline">{template ? 'Edit template' : 'New template'}</span>
+          {template && (
+            <button onClick={remove} disabled={isPending} className="text-[11px] font-bold text-red-600 hover:underline">Delete</button>
+          )}
+          <button
+            onClick={save}
+            disabled={isPending}
+            title="Cmd/Ctrl + S"
+            className="rounded-full bg-pink px-5 py-2 text-xs font-bold text-white shadow-brand hover:bg-pink-dark disabled:opacity-50"
+          >
+            {isPending ? 'Saving…' : template ? 'Save' : 'Create'}
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
@@ -817,6 +879,18 @@ export function GiftTemplateEditor({
               <span className="mt-1 block text-[11px] text-neutral-500">
                 Pick an existing group or add a new one. Templates in the admin list are bucketed by this label. The same group can hold templates that span multiple products.
               </span>
+              {groupName && (existingGroups ?? []).includes(groupName) && (
+                <div className="mt-1 flex items-center gap-2 text-[11px]">
+                  <button type="button" onClick={renameCurrentGroup} disabled={isPending} className="font-semibold text-pink hover:underline disabled:opacity-50">
+                    Rename group…
+                  </button>
+                  <span className="text-neutral-300">·</span>
+                  <button type="button" onClick={deleteCurrentGroup} disabled={isPending} className="font-semibold text-red-600 hover:underline disabled:opacity-50">
+                    Delete group
+                  </button>
+                  <span className="text-neutral-400">(applies to every template in this group)</span>
+                </div>
+              )}
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Description</span>

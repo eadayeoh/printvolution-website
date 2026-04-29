@@ -506,6 +506,41 @@ export async function deleteTemplate(id: string) {
   return { ok: true as const };
 }
 
+/** Bulk-rename every template tagged with `oldName` to `newName`. Used
+ *  by the editor's inline "Rename group" action so admins can fix typos
+ *  ("LED bases" → "LED Bases") without editing every template. No-op
+ *  when names are identical. */
+export async function renameTemplateGroup(oldName: string, newName: string) {
+  const sb = await requireAdmin();
+  const o = oldName.trim();
+  const n = newName.trim();
+  if (!o) return { ok: false as const, error: 'Old group name required' };
+  if (!n) return { ok: false as const, error: 'New group name required' };
+  if (o === n) return { ok: true as const, count: 0 };
+  const { error, count } = await sb
+    .from('gift_templates')
+    .update({ group_name: n }, { count: 'exact' })
+    .eq('group_name', o);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/templates');
+  return { ok: true as const, count: count ?? 0 };
+}
+
+/** Drop a group label from every template using it (sets group_name to
+ *  null). Templates stay; they just become Ungrouped. */
+export async function clearTemplateGroup(name: string) {
+  const sb = await requireAdmin();
+  const n = name.trim();
+  if (!n) return { ok: false as const, error: 'Group name required' };
+  const { error, count } = await sb
+    .from('gift_templates')
+    .update({ group_name: null }, { count: 'exact' })
+    .eq('group_name', n);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath('/admin/gifts/templates');
+  return { ok: true as const, count: count ?? 0 };
+}
+
 // Clone a template's row. Same zones / assets, new id, prefixed name,
 // inactive by default so it doesn't ship to customers until reviewed.
 // Product assignments (gift_product_templates) are NOT copied — admin
