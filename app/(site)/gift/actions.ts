@@ -28,6 +28,21 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
+/** Admin / staff users bypass all gift quota + rate limits — they need
+ *  unlimited generations to test products + handle support cases.
+ *  Returns true when profiles.role is 'admin' or 'staff'. */
+async function isPrivilegedUser(): Promise<boolean> {
+  try {
+    const sb = createUserClient();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    return profile?.role === 'admin' || profile?.role === 'staff';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
  * variants). Returns the gift_assets.id so the cart can stash it on the
@@ -203,15 +218,21 @@ export async function restylePreviewFromSource(input: {
     if (!productSlug) return { ok: false, error: 'Product slug missing' };
     if (!input.source_asset_id) return { ok: false, error: 'Source asset missing' };
 
+    // Admin / staff bypass all rate + quota limits — they need to be
+    // able to generate freely for QA + support work.
+    const isAdmin = await isPrivilegedUser();
+
     // Rate limit (anti-burst). Each call burns an OpenAI image-edit
     // credit, and source_asset_id is a guest-bearer UUID. Two layers:
     // per-IP and per-source UUID. The weekly quota check below is the
     // real spend gate; these stop a hot loop before it gets there.
     const ip = getClientIp();
-    const ipRl = await checkRateLimit(`gift-restyle:ip:${ip}`, { max: 30, windowSeconds: 3600 });
-    if (!ipRl.allowed) return { ok: false, error: `Too many regenerations — wait ${ipRl.retryAfterSeconds}s and try again.` };
-    const srcRl = await checkRateLimit(`gift-restyle:src:${input.source_asset_id}`, { max: 20, windowSeconds: 86400 });
-    if (!srcRl.allowed) return { ok: false, error: 'This photo has hit its regeneration limit for today. Re-upload to start fresh.' };
+    if (!isAdmin) {
+      const ipRl = await checkRateLimit(`gift-restyle:ip:${ip}`, { max: 30, windowSeconds: 3600 });
+      if (!ipRl.allowed) return { ok: false, error: `Too many regenerations — wait ${ipRl.retryAfterSeconds}s and try again.` };
+      const srcRl = await checkRateLimit(`gift-restyle:src:${input.source_asset_id}`, { max: 20, windowSeconds: 86400 });
+      if (!srcRl.allowed) return { ok: false, error: 'This photo has hit its regeneration limit for today. Re-upload to start fresh.' };
+    }
 
     const sb = createClient();
     const { data: product } = await sb
@@ -231,11 +252,12 @@ export async function restylePreviewFromSource(input: {
     // Weekly generation quota — only AI modes burn OpenAI tokens.
     // Anon: 3/wk per cookie + IP hard ceiling. Signed-in: 8/wk per
     // user_id (with anon usage backfilled on login so they don't get
-    // the full 8 if they already burned anon credits).
+    // the full 8 if they already burned anon credits). Admin/staff
+    // skip this entirely.
     const isAiMode = AI_MODES.has(product.mode);
     const userId = await getCurrentUserId();
     const anonSessionId = getOrSetAnonSessionId();
-    if (isAiMode) {
+    if (isAiMode && !isAdmin) {
       const q = await checkGiftGenerationQuota({ userId, anonSessionId, ip });
       if (!q.allowed) {
         return { ok: false, error: q.reason ?? 'Generation quota exceeded.' };
@@ -356,7 +378,8 @@ export async function restylePreviewFromSource(input: {
     }
 
     // Record successful AI generation against the weekly quota.
-    if (isAiMode) {
+    // Admin/staff don't count — they don't have a quota.
+    if (isAiMode && !isAdmin) {
       await recordGiftGeneration({
         userId, anonSessionId, ip,
         sourceAssetId: sourceAsset.id,
@@ -380,8 +403,20 @@ export async function restylePreviewFromSource(input: {
  * Read-only snapshot of how many generations the current viewer has
  * left this week. Used by the PDP to show "X of 8 left" + decide
  * whether the Generate button is enabled. Doesn't mutate state.
+ *
+ * Admin / staff get an "unlimited" sentinel state — the PDP renders
+ * it as a small badge instead of a remaining-count.
  */
 export async function getGiftGenerationQuota(): Promise<QuotaState> {
+  if (await isPrivilegedUser()) {
+    return {
+      allowed: true,
+      remaining: Number.POSITIVE_INFINITY,
+      used: 0,
+      limit: Number.POSITIVE_INFINITY,
+      isSignedIn: true,
+    };
+  }
   const ip = getClientIp();
   const userId = await getCurrentUserId();
   const anonSessionId = getOrSetAnonSessionId();
@@ -401,8 +436,10 @@ export async function uploadGiftSourceOnly(formData: FormData): Promise<
 > {
   try {
     const ip = getClientIp();
-    const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-    if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+    if (!(await isPrivilegedUser())) {
+      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+    }
 
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();

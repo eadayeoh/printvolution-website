@@ -3272,10 +3272,12 @@ export function GiftProductPage({
                     </button>
                     {quota && (
                       <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em', textAlign: 'center' }}>
-                        {quota.allowed
-                          ? `${quota.remaining} of ${quota.limit} ${quota.isSignedIn ? '' : 'free '}generations left this week`
-                          : (quota.reason ?? 'Quota reached.')}
-                        {!quota.isSignedIn && quota.allowed && quota.remaining <= 1 && (
+                        {!Number.isFinite(quota.limit)
+                          ? '∞ admin · no quota'
+                          : quota.allowed
+                            ? `${quota.remaining} of ${quota.limit} ${quota.isSignedIn ? '' : 'free '}generations left this week`
+                            : (quota.reason ?? 'Quota reached.')}
+                        {Number.isFinite(quota.limit) && !quota.isSignedIn && quota.allowed && quota.remaining <= 1 && (
                           <> · <Link href="/account/signup" style={{ color: 'var(--pv-magenta)', textDecoration: 'underline' }}>Sign up</Link> for {8} per week</>
                         )}
                       </div>
