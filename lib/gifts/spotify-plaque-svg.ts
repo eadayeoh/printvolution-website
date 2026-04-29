@@ -63,7 +63,34 @@ export type BuildSpotifyPlaqueSvgInput = {
   /** Black (default) or white scan-code bars. White is for darker
    *  backgrounds — the React preview blends the inverted background out. */
   scanCodeColor?: SpotifyScanCodeColor;
+  /** Admin-editable zones from the template's zones_json. When present,
+   *  the renderer reads positions/sizes/fonts from these zones instead
+   *  of the hardcoded defaults. Recognised IDs: photo, song_title,
+   *  artist_name, heart. The scancode and transport controls stay
+   *  locked to their default positions — admins can't move those. */
+  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; align?: string; color?: string }> | null;
 };
+
+/** Resolve zone position / size into SVG viewBox units. Zones store
+ *  positions in the admin editor's 0..200 normalised canvas (the
+ *  field names are "x_mm" but the editor's drag math uses TEMPLATE_W=200,
+ *  not real millimetres). We map those to the SVG's W/H. */
+function zoneToViewbox(
+  zone: { x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number } | undefined,
+  _refDims: { width_mm: number; height_mm: number } | null | undefined,
+  W: number,
+  H: number,
+): { x: number; y: number; w: number; h: number } | null {
+  if (!zone) return null;
+  if (zone.x_mm == null || zone.y_mm == null || zone.width_mm == null || zone.height_mm == null) return null;
+  const CANVAS = 200;
+  return {
+    x: (zone.x_mm / CANVAS) * W,
+    y: (zone.y_mm / CANVAS) * H,
+    w: (zone.width_mm / CANVAS) * W,
+    h: (zone.height_mm / CANVAS) * H,
+  };
+}
 
 /** Layout constants exported so React previews can position an HTML
  *  <img> overlay that lines up with what the SVG renderer would produce
@@ -97,6 +124,7 @@ export function buildSpotifyPlaqueSvg({
   omitScanCode = false,
   textColor,
   scanCodeColor = 'black',
+  zones,
 }: BuildSpotifyPlaqueSvgInput): string {
   const W = 100;
   const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
@@ -107,24 +135,24 @@ export function buildSpotifyPlaqueSvg({
   const subtleGrey = '#7a7a7a';
   const trackGrey = '#d4d4d4';
 
+  const zPhoto  = zones?.find((z) => z?.id === 'photo');
+  const zTitle  = zones?.find((z) => z?.id === 'song_title');
+  const zArtist = zones?.find((z) => z?.id === 'artist_name');
+  const zHeart  = zones?.find((z) => z?.id === 'heart');
+
   // Layout in viewBox units (W=100). Tuned for A4 portrait (H≈141.4) so
   // photo + title/artist/progress/controls + scannable strip stack
   // cleanly without overlap. Anchored bottom-up: scannable strip first,
   // then controls/text rolled up from there.
   const margin = 8;
-  const photoX = margin;
-  const photoW = W - margin * 2;          // 84
 
-  // Scannable strip pinned at the bottom. The Spotify scannables PNG
-  // already bundles the logo + bars in a single 4:1 image (640×160), so
-  // we use the full content width and let the strip's height follow that
-  // aspect — no hand-drawn logo, no cropping.
+  // Scannable strip pinned at the bottom (LOCKED — admin can't move).
   const scanW = W - margin * 2;             // 84
   const scanH = scanW / 4;                   // 21 (matches PNG 4:1 aspect)
   const scanX = margin;
   const scanY = H - margin - scanH;
 
-  // Transport controls sit above the scannable strip.
+  // Transport controls sit above the scannable strip (LOCKED).
   const ctrlSpacing = 9;
   const ctrlY = scanY - 6;
 
@@ -134,24 +162,28 @@ export function buildSpotifyPlaqueSvg({
 
   // Progress bar above the time markers.
   const progY = timeY - 3;
-  const progLeftX = photoX;
+  const progLeftX = margin;
   const progRightX = W - margin;
   const progLen = progRightX - progLeftX;
   const progHeadPct = 0.27;               // ~0:36 of 2:15
 
-  // Artist line above the progress bar.
-  const artistSize = 3.6;
-  const artistY = progY - 6;
+  // Artist + title — admin-editable via zones if present, else default
+  // bottom-up stacking above the progress bar.
+  const artistVb = zoneToViewbox(zArtist, templateRefDims, W, H);
+  const titleVb  = zoneToViewbox(zTitle,  templateRefDims, W, H);
+  const artistSize = artistVb?.h ? artistVb.h * 0.9 : 3.6;
+  const artistY = artistVb ? artistVb.y + artistVb.h * 0.65 : progY - 6;
+  const artistX = artistVb ? artistVb.x : margin;
+  const titleSize = titleVb?.h ? titleVb.h * 0.85 : 5;
+  const titleY = titleVb ? titleVb.y + titleVb.h * 0.65 : artistY - 5;
+  const titleX = titleVb ? titleVb.x : margin;
 
-  // Title above the artist line.
-  const titleSize = 5;
-  const titleY = artistY - 5;
-  const titleX = photoX;
-
-  // Photo fills the remaining top space, capped to a sensible square-ish
-  // crop so it doesn't dwarf the footer block.
-  const photoY = margin;
-  const photoH = Math.min(photoW, titleY - photoY - 4);
+  // Photo — admin-editable position/size via zone, else fill top.
+  const photoVb = zoneToViewbox(zPhoto, templateRefDims, W, H);
+  const photoX = photoVb ? photoVb.x : margin;
+  const photoY = photoVb ? photoVb.y : margin;
+  const photoW = photoVb ? photoVb.w : W - margin * 2;
+  const photoH = photoVb ? photoVb.h : Math.min(W - margin * 2, (titleVb ? titleY - margin - 4 : titleY - margin - 4));
 
   let body = '';
 
@@ -164,23 +196,27 @@ export function buildSpotifyPlaqueSvg({
   }
 
   // ── Title ───────────────────────────────────────────────────────────────
-  body += `<text x="${titleX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="Archivo, sans-serif" font-weight="700" fill="${inkColor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
+  // Font / weight / colour come from the zone if admin set them.
+  const titleFont   = zTitle?.font_family  ?? 'Archivo, sans-serif';
+  const titleWeight = zTitle?.font_weight  ?? '700';
+  const titleColor  = zTitle?.color        ?? inkColor;
+  body += `<text x="${titleX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="${esc(titleFont)}" font-weight="${esc(titleWeight)}" fill="${titleColor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
 
   // ── Artist ──────────────────────────────────────────────────────────────
   // Artist line uses the customer-picked text colour but at 65% opacity
   // so the title still reads louder than the artist (Spotify's UI does
   // the same — artist name is muted vs. the title).
-  body += `<text x="${titleX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">${esc(artistName.trim() || "Artist's Name")}</text>`;
+  const artistFont  = zArtist?.font_family ?? 'Archivo, sans-serif';
+  const artistColor = zArtist?.color       ?? inkColor;
+  body += `<text x="${artistX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="${esc(artistFont)}" fill="${artistColor}" fill-opacity="0.65">${esc(artistName.trim() || "Artist's Name")}</text>`;
 
-  // ── Heart icon (red, right-aligned with title/artist block) ────────────
-  // Material-icons "favorite" path scaled into viewBox units. Sits
-  // between the title and artist baselines, right edge flush with the
-  // progress bar's right edge so it lines up with the time stamp below.
+  // ── Heart icon (red, position admin-editable via 'heart' zone) ─────────
   const heartRed = '#FF3B5C';
-  const heartSize = 4.2;
+  const heartVb = zoneToViewbox(zHeart, templateRefDims, W, H);
+  const heartSize = heartVb?.w ?? 4.2;
   const heartScale = heartSize / 24;
-  const heartX = W - margin - heartSize;
-  const heartY = (titleY + artistY) / 2 - heartSize / 2 + 0.5;
+  const heartX = heartVb ? heartVb.x : W - margin - heartSize;
+  const heartY = heartVb ? heartVb.y : (titleY + artistY) / 2 - heartSize / 2 + 0.5;
   body += `<path transform="translate(${heartX} ${heartY}) scale(${heartScale.toFixed(4)})" d="M 12 21.35 l -1.45 -1.32 C 5.4 16.36 2 13.28 2 9.5 C 2 6.42 4.42 4 7.5 4 c 1.74 0 3.41 0.81 4.5 2.09 C 13.09 4.81 14.76 4 16.5 4 C 19.58 4 22 6.42 22 9.5 c 0 3.78 -3.4 6.86 -8.55 11.54 L 12 21.35 z" fill="${heartRed}"/>`;
 
   // ── Progress bar ────────────────────────────────────────────────────────

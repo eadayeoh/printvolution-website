@@ -113,6 +113,43 @@ function defaultZonesForRenderer(renderer: string): GiftTemplateZone[] {
       },
     ];
   }
+  if (renderer === 'spotify_plaque') {
+    // Editor canvas is 200×200 normalised units (TEMPLATE_W/H). Zones
+    // store positions there. The SVG builder maps 0..200 → its viewBox.
+    // These defaults mirror the current hardcoded layout (margin=8 in
+    // a 100-wide viewBox, A4 portrait) so admin starts with the same
+    // visual and can drag from there. Scancode + transport controls +
+    // progress bar are intentionally NOT zones — the builder pins
+    // them to the bottom strip.
+    return [
+      {
+        type: 'render_anchor', anchor_kind: 'spotify_photo' as any,
+        id: 'photo', label: 'Photo · drag to reposition / resize',
+        x_mm: 16, y_mm: 16, width_mm: 168, height_mm: 168,
+      } as any,
+      {
+        type: 'text', id: 'song_title', label: 'Song title',
+        x_mm: 16, y_mm: 195, width_mm: 168, height_mm: 14,
+        font_family: 'Archivo', font_size_mm: 10, font_weight: '700',
+        align: 'left', color: '#0a0a0a',
+        default_text: 'Your Favourite Song', placeholder: 'Your Favourite Song',
+        editable: true,
+      } as any,
+      {
+        type: 'text', id: 'artist_name', label: 'Artist name',
+        x_mm: 16, y_mm: 211, width_mm: 168, height_mm: 10,
+        font_family: 'Archivo', font_size_mm: 7, font_weight: '400',
+        align: 'left', color: '#0a0a0a',
+        default_text: "Artist's Name", placeholder: "Artist's Name",
+        editable: true,
+      } as any,
+      {
+        type: 'render_anchor', anchor_kind: 'spotify_heart' as any,
+        id: 'heart', label: 'Heart icon · drag to reposition',
+        x_mm: 174, y_mm: 199, width_mm: 9, height_mm: 9,
+      } as any,
+    ];
+  }
   return [];
 }
 
@@ -1121,6 +1158,7 @@ export function GiftTemplateEditor({
                         artistName="Artist's Name"
                         spotifyTrackId="6rqhFgbbKwnb9MLmUQDhG6"
                         templateRefDims={dims}
+                        zones={zones as any}
                       />
                     </div>
                   </div>

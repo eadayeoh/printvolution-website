@@ -1855,6 +1855,7 @@ export function GiftProductPage({
                         const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
                         return w && h ? { width_mm: w, height_mm: h } : null;
                       })()}
+                      zones={(templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque')?.zones_json as any) ?? null}
                     />
                   ) : null;
 

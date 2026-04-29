@@ -30,6 +30,9 @@ type Props = {
   /** Hex colour for title, artist, controls, progress bar, time
    *  markers, AND the Spotify scan-code bars + logo. */
   textColor?: string;
+  /** Admin-editable layout zones from the template's zones_json.
+   *  Recognised IDs: photo, song_title, artist_name, heart. */
+  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; color?: string }> | null;
 };
 
 export function SpotifyPlaqueTemplate({
@@ -39,6 +42,7 @@ export function SpotifyPlaqueTemplate({
   spotifyTrackId,
   templateRefDims,
   textColor,
+  zones,
 }: Props) {
   const svgMarkup = useMemo(
     () => buildSpotifyPlaqueSvg({
@@ -49,8 +53,9 @@ export function SpotifyPlaqueTemplate({
       templateRefDims,
       omitScanCode: true,
       textColor,
+      zones,
     }),
-    [photoUrl, songTitle, artistName, spotifyTrackId, templateRefDims, textColor],
+    [photoUrl, songTitle, artistName, spotifyTrackId, templateRefDims, textColor, zones],
   );
 
   const scanRect = spotifyPlaqueScanRect(templateRefDims);
