@@ -250,8 +250,13 @@ export function buildAllProductPricingFromPvpricelist(
 // Fetch rates from pvpricelist's Supabase (public anon key, read-only).
 // ────────────────────────────────────────────────────────────────────
 export async function fetchPvpricelistRates(): Promise<PvPricelistRates> {
-  const url = process.env.PVPRICELIST_URL || 'https://tjupqglepjackdqbgzql.supabase.co';
-  const key = process.env.PVPRICELIST_ANON_KEY || 'sb_publishable_mpx0Ol7nhKg1NJBpKnfsmA_KAiPUBo4';
+  const url = process.env.PVPRICELIST_URL;
+  const key = process.env.PVPRICELIST_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'PVPRICELIST_URL / PVPRICELIST_ANON_KEY env vars not set — see .env.example',
+    );
+  }
   const res = await fetch(
     `${url}/rest/v1/app_config?key=eq.rates_v1&select=value`,
     {

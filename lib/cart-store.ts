@@ -102,7 +102,9 @@ export const useCart = create<CartState>()(
               const oldTier = sorted.filter((t) => t.qty <= i.qty).pop();
               const newTier = sorted.filter((t) => t.qty <= qty).pop();
               const oldTierPrice = oldTier?.price_cents;
-              const newTierPrice = newTier?.price_cents;
+              // Below the smallest tier, snap to the smallest tier's price
+              // — otherwise the line keeps the prior (cheaper) tier rate.
+              const newTierPrice = newTier?.price_cents ?? sorted[0]?.price_cents;
               // Subtract the part of the old line that came from the
               // tier base, replace it with the new tier base. Anything
               // else baked into unit_price_cents (size deltas, shape,

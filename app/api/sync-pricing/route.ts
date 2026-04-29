@@ -26,7 +26,7 @@
 //       X-Sync-Secret: <same secret as PVPRICELIST_WEBHOOK_SECRET>
 
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { createServiceClient } from '@/lib/auth/require-admin';
 import {
   fetchPvpricelistRates,
@@ -35,12 +35,13 @@ import {
 
 /** Constant-time secret comparison. `===` short-circuits at the first
  *  mismatching byte, leaking position via timing — bad for header-borne
- *  shared secrets that an attacker can probe at high RPS. */
+ *  shared secrets that an attacker can probe at high RPS. Both inputs
+ *  are sha256-hashed first so the timingSafeEqual call always sees two
+ *  32-byte buffers and the secret length isn't leaked by an early exit. */
 function secretsMatch(got: string | null | undefined, want: string): boolean {
   if (!got) return false;
-  const a = Buffer.from(got);
-  const b = Buffer.from(want);
-  if (a.length !== b.length) return false;
+  const a = createHash('sha256').update(got).digest();
+  const b = createHash('sha256').update(want).digest();
   return timingSafeEqual(a, b);
 }
 

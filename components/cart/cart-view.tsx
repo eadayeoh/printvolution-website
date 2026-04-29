@@ -126,7 +126,14 @@ export function CartView() {
                       max={999}
                       value={item.qty}
                       onChange={(e) => {
-                        const n = parseInt(e.target.value, 10);
+                        // Empty input: treat as min (1) so the customer can
+                        // clear-and-retype without the field snapping back.
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          updateQty(item.id, 1);
+                          return;
+                        }
+                        const n = parseInt(raw, 10);
                         if (!Number.isFinite(n)) return;
                         const clamped = Math.max(1, Math.min(999, n));
                         updateQty(item.id, clamped);

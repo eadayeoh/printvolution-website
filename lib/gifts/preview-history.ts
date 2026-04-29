@@ -27,6 +27,9 @@ export type PreviewHit = {
 const VERSION = 1;
 const KEY_PREFIX = 'gift-preview-history:';
 const MAX_PER_STYLE = 6;
+// previewUrl is a 7-day signed URL — drop hits past that window so the
+// strip never surfaces broken thumbnails.
+const HIT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function storageKey(productSlug: string): string {
   return `${KEY_PREFIX}${productSlug}`;
@@ -39,8 +42,10 @@ export function loadPreviewHistory(productSlug: string): PreviewHit[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.v !== VERSION || !Array.isArray(parsed.hits)) return [];
+    const now = Date.now();
     return parsed.hits
       .filter(isValidHit)
+      .filter((h: PreviewHit) => now - h.ts <= HIT_TTL_MS)
       .map((h: PreviewHit) => ({
         ...h,
         shapeKind: h.shapeKind ?? null,
