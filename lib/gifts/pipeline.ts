@@ -104,8 +104,8 @@ async function resolveCustomerPrompt(
   const id = (n['prompt_id'] || '').trim();
   if (id) {
     const sb = createClient();
-    const { data } = await sb.from('gift_prompts').select('prompt').eq('id', id).maybeSingle();
-    const text = (data as { prompt?: string | null } | null)?.prompt;
+    const { data } = await sb.from('gift_prompts').select('transformation_prompt').eq('id', id).maybeSingle();
+    const text = (data as { transformation_prompt?: string | null } | null)?.transformation_prompt;
     if (text && text.trim()) return text;
   }
   return (product as any).ai_prompt ?? null;
