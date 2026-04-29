@@ -388,13 +388,28 @@ export async function createGiftMode(input: z.input<typeof NewModeSchema>) {
 
 // ---------------------------------------------------------------------------
 
+// Zone shape — at minimum, every saved zone must have id + type + the
+// four mm dimensions. Other fields (font_family, color, etc.) are
+// type-specific; we accept them via .passthrough() so the schema
+// doesn't have to enumerate every possible variant. Without this,
+// zones_json was z.record(unknown) which let admin save objects with
+// no id at all, breaking the renderer at customer time.
+const ZoneShape = z.object({
+  id: z.string().min(1),
+  type: z.enum(['image', 'text', 'calendar', 'render_anchor']),
+  x_mm: z.number().finite(),
+  y_mm: z.number().finite(),
+  width_mm: z.number().finite().positive(),
+  height_mm: z.number().finite().positive(),
+}).passthrough();
+
 const TemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().nullable().optional(),
   thumbnail_url: z.string().nullable().optional(),
   background_url: z.string().nullable().optional(),
   foreground_url: z.string().nullable().optional(),
-  zones_json: z.array(z.record(z.string(), z.unknown())).default([]),
+  zones_json: z.array(ZoneShape).default([]),
   display_order: z.number().int().default(0),
   is_active: z.boolean().default(true),
   reference_width_mm:  z.number().positive().nullable().optional(),
@@ -411,7 +426,14 @@ const TemplateSchema = z.object({
         mockup_url: z.string().default(''),
       }),
     )
-    .default([]),
+    .default([])
+    .refine(
+      (arr) => {
+        const names = arr.map((s) => s.name.trim().toLowerCase());
+        return new Set(names).size === names.length;
+      },
+      { message: 'Swatch names must be unique (case-insensitive).' },
+    ),
   // Per-template production-mode override (migration 0080). Free-form
   // string — must match a gift_modes.slug, but no DB FK so admins can
   // add custom slugs at runtime without breaking this validation.
@@ -423,9 +445,28 @@ const TemplateSchema = z.object({
   allowed_shape_kinds: z.array(z.enum(['cutout', 'rectangle', 'template'])).nullable().optional(),
 });
 
+/** Validates that mode_override (if set) matches an active gift_modes
+ *  row. Without this check, admin could save mode_override='nonexistent'
+ *  and the customer-facing checkout would silently fall back to the
+ *  product's primary mode, invisible until someone reports an order
+ *  shipped on the wrong machine. */
+async function validateModeOverride(sb: any, override: string | null | undefined): Promise<string | null> {
+  if (!override) return null;
+  const { data: row } = await sb
+    .from('gift_modes')
+    .select('slug, is_active')
+    .eq('slug', override)
+    .maybeSingle();
+  if (!row) return `mode_override "${override}" is not a known gift_modes slug.`;
+  if (row.is_active === false) return `mode_override "${override}" is paused — pick an active mode.`;
+  return null;
+}
+
 export async function createTemplate(input: z.input<typeof TemplateSchema>) {
   const sb = await requireAdmin();
   const parsed = TemplateSchema.parse(input);
+  const modeErr = await validateModeOverride(sb, parsed.mode_override);
+  if (modeErr) return { ok: false as const, error: modeErr };
   const { data, error } = await sb.from('gift_templates').insert(parsed as any).select('id').single();
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts/templates');
@@ -442,6 +483,10 @@ export async function updateTemplate(id: string, input: Partial<z.input<typeof T
     return { ok: false as const, error: friendlyZodError(parseResult.error) };
   }
   const parsed = parseResult.data;
+  if ('mode_override' in parsed) {
+    const modeErr = await validateModeOverride(sb, parsed.mode_override);
+    if (modeErr) return { ok: false as const, error: modeErr };
+  }
   const { error } = await sb.from('gift_templates').update(parsed as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts/templates');
@@ -748,7 +793,14 @@ const VariantSchema = z.object({
         mockup_url: z.string().default(''),
       }),
     )
-    .default([]),
+    .default([])
+    .refine(
+      (arr) => {
+        const names = arr.map((s) => s.name.trim().toLowerCase());
+        return new Set(names).size === names.length;
+      },
+      { message: 'Swatch names must be unique (case-insensitive).' },
+    ),
   surfaces: z
     .array(
       z.object({

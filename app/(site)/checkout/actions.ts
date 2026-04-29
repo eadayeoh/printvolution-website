@@ -51,7 +51,22 @@ async function queueGiftProduction(giftLines: ProductionQueueLine[]) {
 
 async function runOne(line: ProductionQueueLine) {
   const sb = serviceClient();
-  await sb.from('gift_order_items').update({ production_status: 'processing' }).eq('id', line.id);
+  // Idempotency gate: only proceed if the line is in 'pending'.
+  // Without this, a duplicate trigger (admin clicks Regenerate twice,
+  // background retry, etc.) would re-run the OpenAI pipeline AND
+  // create a second production_asset_id, leaving the first orphaned.
+  // Atomically transition pending → processing; if the WHERE clause
+  // matches no rows, another worker is already running.
+  const { data: claimed } = await sb
+    .from('gift_order_items')
+    .update({ production_status: 'processing' })
+    .eq('id', line.id)
+    .eq('production_status', 'pending')
+    .select('id');
+  if (!claimed || claimed.length === 0) {
+    console.warn('[gift production] line not pending, skipping duplicate run', line.id);
+    return;
+  }
   try {
     if (!line.source_asset_id) throw new Error('No source asset on order line');
     const [{ data: product }, { data: source }] = await Promise.all([
@@ -173,7 +188,14 @@ async function runOneLineSurfaces(it: { lineId: string; gift_product_id: string 
     : { data: null };
 
   for (const row of surfaces) {
-    await sb.from('gift_order_item_surfaces').update({ production_status: 'processing' }).eq('id', row.id);
+    // Idempotency gate per surface — same pattern as runOne above.
+    const { data: claimed } = await sb
+      .from('gift_order_item_surfaces')
+      .update({ production_status: 'processing' })
+      .eq('id', row.id)
+      .eq('production_status', 'pending')
+      .select('id');
+    if (!claimed || claimed.length === 0) continue;
     try {
       // Resolve this surface's areaMm from the variant config. The
       // surface.mockup_area is in percent; combine with the variant's

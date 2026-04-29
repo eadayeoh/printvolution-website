@@ -65,6 +65,17 @@ export async function checkRateLimit(
   key: string,
   opts: { max: number; windowSeconds: number }
 ): Promise<RateLimitResult> {
+  // Hardening: an "unknown" IP bucket pools every header-less request
+  // into one shared counter, leaking rate-limit state between unrelated
+  // users (one device hits limit → all unknown-IP devices blocked).
+  // Treat any key ending in :unknown as a tighter, separate-per-call
+  // window so a request without a real IP doesn't exhaust quota for
+  // legitimate users on the same fallback.
+  if (key.endsWith(':unknown')) {
+    // Tight cap keeps abusers without a routable IP at bay without
+    // poisoning the proper per-IP buckets.
+    opts = { max: Math.min(opts.max, 3), windowSeconds: opts.windowSeconds };
+  }
   try {
     const sb = adminClient();
     const sinceIso = new Date(Date.now() - opts.windowSeconds * 1000).toISOString();
