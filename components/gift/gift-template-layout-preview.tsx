@@ -93,7 +93,6 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
         // the wrapper / mockup behind the preview shows through (LED
         // light products, foil prints — empty really means empty).
         background: backgroundColor ?? 'transparent',
-        border: '2px solid var(--pv-ink)',
         overflow: 'hidden',
       }}
     >
