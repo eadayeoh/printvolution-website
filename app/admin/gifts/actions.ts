@@ -405,6 +405,10 @@ const ZoneShape = z.object({
 
 const TemplateSchema = z.object({
   name: z.string().min(1),
+  // Bucket label for the templates-list page. NULL / empty → "Ungrouped".
+  // Without this in the schema, Zod strips it before the DB update and
+  // every save silently reverts the group dropdown.
+  group_name: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   thumbnail_url: z.string().nullable().optional(),
   background_url: z.string().nullable().optional(),

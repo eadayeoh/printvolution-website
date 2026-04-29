@@ -7,6 +7,7 @@ import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
+import { validateHexColor } from '@/lib/gifts/personalisation-notes';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { checkGiftGenerationQuota, consumeGiftGeneration, type QuotaState } from '@/lib/gifts/quota';
@@ -667,10 +668,8 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // Customer-picked foreground tint colour. Strict #RRGGBB; anything
   // else falls through to "no tint" so a hand-crafted POST can't
   // inject CSS-like values into the rendered output.
-  const foregroundColorRaw = (formData.get('foreground_color') || '').toString().trim();
-  const foregroundColor = /^#[0-9A-Fa-f]{6}$/.test(foregroundColorRaw) ? foregroundColorRaw : null;
-  const backgroundColorRaw = (formData.get('background_color') || '').toString().trim();
-  const backgroundColor = /^#[0-9A-Fa-f]{6}$/.test(backgroundColorRaw) ? backgroundColorRaw : null;
+  const foregroundColor = validateHexColor((formData.get('foreground_color') || '').toString());
+  const backgroundColor = validateHexColor((formData.get('background_color') || '').toString());
   if (!(file instanceof File)) return { ok: false, error: 'No file' };
   if (file.size === 0) return { ok: false, error: 'Empty file' };
   if (file.size > MAX_BYTES) return { ok: false, error: 'File too large (max 20 MB)' };
@@ -699,10 +698,8 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       }
     } else if (k.startsWith('text_color_') && typeof v === 'string') {
       // Strict #RRGGBB only — anything else falls through to z.color.
-      const c = v.trim();
-      if (/^#[0-9A-Fa-f]{6}$/.test(c)) {
-        zoneTextColors[k.slice('text_color_'.length)] = c;
-      }
+      const c = validateHexColor(v);
+      if (c) zoneTextColors[k.slice('text_color_'.length)] = c;
     } else if (k.startsWith('text_font_') && typeof v === 'string') {
       // Whitelist against the ship-shipped GIFT_FONT_FAMILIES keys —
       // anything else could be a CSS-injection vector or a font we
