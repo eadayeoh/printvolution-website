@@ -186,6 +186,7 @@ export async function transformBytesForMode(
   product: GiftProduct,
   pipeline: GiftPipeline | null,
   preview: boolean,
+  promptText?: string | null,
 ): Promise<Uint8Array> {
   const buf = Buffer.from(bytes);
   switch (mode) {
@@ -197,7 +198,9 @@ export async function transformBytesForMode(
     case 'laser':
     case 'uv':
     case 'embroidery':
-      return await runAiTransform(buf, { ...product, mode }, pipeline, preview);
+      return await runAiTransform(buf, { ...product, mode }, pipeline, preview, {
+        prompt: promptText ?? (product as any).ai_prompt ?? null,
+      });
     default:
       return bytes;
   }

@@ -1185,6 +1185,9 @@ export function GiftProductPage({
     if (selectedTemplateId) {
       notes += `${notes ? ';' : ''}gift_template:${selectedTemplateId}`;
     }
+    if (selectedPromptId) {
+      notes += `${notes ? ';' : ''}prompt_id:${selectedPromptId}`;
+    }
     if (hasSurfaces && selectedVariant) {
       for (const s of selectedVariant.surfaces) {
         const fill = surfaceFills[s.id];

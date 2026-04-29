@@ -124,7 +124,10 @@ export async function renderTemplateComposite(
     Math.round((v / CANVAS_UNITS) * (axis === 'x' ? outW : outH));
 
   // Base canvas — customer-picked backgroundColor wins; otherwise
-  // white. Validated #RRGGBB upstream.
+  // transparent. White-default would paint a solid rectangle behind
+  // every composite, even when the template was authored without a
+  // background_url (e.g. LED light plaques where the back is the
+  // light shining through, foil prints where empty = no foil).
   const baseColor = (() => {
     if (backgroundColor && /^#[0-9A-Fa-f]{6}$/.test(backgroundColor)) {
       return {
@@ -134,7 +137,7 @@ export async function renderTemplateComposite(
         alpha: 1,
       };
     }
-    return { r: 255, g: 255, b: 255, alpha: 1 };
+    return { r: 0, g: 0, b: 0, alpha: 0 };
   })();
   let base: Buffer = await sharp({
     create: { width: outW, height: outH, channels: 4, background: baseColor },

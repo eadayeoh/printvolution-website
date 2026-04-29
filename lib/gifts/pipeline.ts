@@ -91,6 +91,26 @@ async function resolvePipeline(product: GiftProduct): Promise<GiftPipeline | nul
   return getDefaultPipelineForMode(product.mode);
 }
 
+/** Look up the customer-picked art-style prompt by id from the cart-line
+ *  notes. Falls through to product.ai_prompt when no prompt was picked.
+ *  Returns the prompt text to feed into the AI image edit, or null when
+ *  the product runs no AI (photo-resize / digital / etc.). */
+async function resolveCustomerPrompt(
+  notes: string | null | undefined,
+  product: GiftProduct,
+): Promise<string | null> {
+  const { parsePersonalisationNotes } = await import('./personalisation-notes');
+  const n = parsePersonalisationNotes(notes);
+  const id = (n['prompt_id'] || '').trim();
+  if (id) {
+    const sb = createClient();
+    const { data } = await sb.from('gift_prompts').select('prompt').eq('id', id).maybeSingle();
+    const text = (data as { prompt?: string | null } | null)?.prompt;
+    if (text && text.trim()) return text;
+  }
+  return (product as any).ai_prompt ?? null;
+}
+
 /** Mode-aware resolver for surface fan-out. Dual-mode products can
  *  set an override per mode: pipeline_id for the primary,
  *  secondary_pipeline_id for the secondary. The override is only
@@ -653,10 +673,16 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     }
     const distinctModes = Array.from(zoneModes);
 
+    // Resolve the customer-picked art-style prompt from the cart-line
+    // notes. Templated AI products would otherwise run with an empty
+    // prompt — every order gets the model's default style instead of
+    // the picker the customer actually used on the PDP.
+    const resolvedPrompt = await resolveCustomerPrompt(input.personalisationNotes, product);
+
     // Shared callback — runs the right transform on each zone's bytes.
     const transformZone = async (bytes: Uint8Array, mode: GiftMode) => {
       const p = await resolvePipelineForMode(product, mode);
-      return transformBytesForMode(bytes, mode, product, p, /*preview=*/false);
+      return transformBytesForMode(bytes, mode, product, p, /*preview=*/false, resolvedPrompt);
     };
 
     // Helper: produce one PNG + PDF pair and upload them, returning
