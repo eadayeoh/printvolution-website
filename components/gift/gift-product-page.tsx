@@ -1758,8 +1758,18 @@ export function GiftProductPage({
                       {cityFetchOverlay}
                     </div>
                   );
-                })() : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (
-                  <div style={{ width: '100%' }}>
+                })() : activeTemplate && (activeTemplate.zones_json?.length ?? 0) > 0 ? (() => {
+                  // Zones-based templates render through GiftTemplateLayoutPreview.
+                  // When the active variant carries a physical mockup + an
+                  // admin-drawn design rectangle (e.g. the LED base's
+                  // acrylic-plaque area), composite the layout INSIDE that
+                  // rectangle on top of the mockup — matching the
+                  // renderer-driven path. Without this the customer only
+                  // sees the bare zones on a flat cream background and
+                  // can't tell what the finished product looks like.
+                  const variantMockup = shapeMockup.url ?? null;
+                  const variantArea   = shapeMockup.area ?? null;
+                  const layoutPreview = (
                     <GiftTemplateLayoutPreview
                       template={activeTemplate}
                       thumbs={templateThumbs}
@@ -1773,8 +1783,20 @@ export function GiftProductPage({
                       widthMm={selectedVariant?.width_mm || product.width_mm}
                       heightMm={selectedVariant?.height_mm || product.height_mm}
                     />
-                  </div>
-                ) : (() => {
+                  );
+                  if (variantMockup && variantArea) {
+                    return (
+                      <RendererVariantStage
+                        mockupUrl={variantMockup}
+                        area={variantArea}
+                        templateAspect={null}
+                      >
+                        {layoutPreview}
+                      </RendererVariantStage>
+                    );
+                  }
+                  return <div style={{ width: '100%' }}>{layoutPreview}</div>;
+                })() : (() => {
                   // Surfaces flow: no server preview — composite the
                   // customer's uploaded thumb directly onto the active
                   // surface's mockup so flipping Side 1/Side 2 updates
