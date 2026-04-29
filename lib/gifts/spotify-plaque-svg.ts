@@ -63,12 +63,13 @@ export type BuildSpotifyPlaqueSvgInput = {
   /** Black (default) or white scan-code bars. White is for darker
    *  backgrounds — the React preview blends the inverted background out. */
   scanCodeColor?: SpotifyScanCodeColor;
-  /** Admin-editable zones from the template's zones_json. When present,
-   *  the renderer reads positions/sizes/fonts from these zones instead
-   *  of the hardcoded defaults. Recognised IDs: photo, song_title,
-   *  artist_name, heart. The scancode and transport controls stay
-   *  locked to their default positions — admins can't move those. */
-  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; align?: string; color?: string }> | null;
+  /** Admin-editable zones from the template's zones_json. When the
+   *  array is non-null, it's the source of truth: missing IDs = element
+   *  not rendered (admin deleted it); `hidden: true` = also not
+   *  rendered (toggled off via the editor's eye icon). When the array
+   *  is null/undefined entirely (legacy templates with no zones),
+   *  every element falls back to its hardcoded default position. */
+  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; align?: string; color?: string; hidden?: boolean }> | null;
 };
 
 /** Resolve zone position / size into SVG viewBox units. Zones store
@@ -135,12 +136,26 @@ export function buildSpotifyPlaqueSvg({
   const subtleGrey = '#7a7a7a';
   const trackGrey = '#d4d4d4';
 
-  const zPhoto    = zones?.find((z) => z?.id === 'photo');
-  const zTitle    = zones?.find((z) => z?.id === 'song_title');
-  const zArtist   = zones?.find((z) => z?.id === 'artist_name');
-  const zHeart    = zones?.find((z) => z?.id === 'heart');
-  const zProgress = zones?.find((z) => z?.id === 'progress');
-  const zControls = zones?.find((z) => z?.id === 'controls');
+  // When zones is non-null, treat it as authoritative: only render an
+  // element if its zone is present AND not hidden. When null, fall
+  // back to legacy hardcoded layout (every element renders).
+  const zonesProvided = Array.isArray(zones);
+  const findZone = (id: string) => {
+    const z = zones?.find((zz) => zz?.id === id);
+    if (!z) return undefined;
+    if (z.hidden) return undefined;
+    return z;
+  };
+  const shouldRender = (id: string): boolean => {
+    if (!zonesProvided) return true;            // legacy → render all
+    return findZone(id) !== undefined;          // zoned → only if present + visible
+  };
+  const zPhoto    = findZone('photo');
+  const zTitle    = findZone('song_title');
+  const zArtist   = findZone('artist_name');
+  const zHeart    = findZone('heart');
+  const zProgress = findZone('progress');
+  const zControls = findZone('controls');
 
   // Layout in viewBox units (W=100). Tuned for A4 portrait (H≈141.4) so
   // photo + title/artist/progress/controls + scannable strip stack
@@ -205,11 +220,13 @@ export function buildSpotifyPlaqueSvg({
   let body = '';
 
   // ── Photo (square, customer upload) ─────────────────────────────────────
-  if (photoUrl) {
-    body += `<image href="${esc(photoUrl)}" xlink:href="${esc(photoUrl)}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" preserveAspectRatio="xMidYMid slice"/>`;
-  } else {
-    body += `<rect x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" fill="${trackGrey}"/>`;
-    body += `<text x="${W / 2}" y="${photoY + photoH / 2}" text-anchor="middle" font-size="3.5" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Upload your photo</text>`;
+  if (shouldRender('photo')) {
+    if (photoUrl) {
+      body += `<image href="${esc(photoUrl)}" xlink:href="${esc(photoUrl)}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" preserveAspectRatio="xMidYMid slice"/>`;
+    } else {
+      body += `<rect x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}" fill="${trackGrey}"/>`;
+      body += `<text x="${W / 2}" y="${photoY + photoH / 2}" text-anchor="middle" font-size="3.5" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Upload your photo</text>`;
+    }
   }
 
   // ── Title ───────────────────────────────────────────────────────────────
@@ -228,7 +245,9 @@ export function buildSpotifyPlaqueSvg({
   const titleColor  = zTitle?.color        ?? inkColor;
   const titleAnchor = alignToAnchor(zTitle?.align);
   const titleAnchorX = xForAnchor(titleVb, titleX, zTitle?.align);
-  body += `<text x="${titleAnchorX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="${esc(titleFont)}" font-weight="${esc(titleWeight)}" fill="${titleColor}" text-anchor="${titleAnchor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
+  if (shouldRender('song_title')) {
+    body += `<text x="${titleAnchorX}" y="${titleY + titleSize * 0.35}" font-size="${titleSize}" font-family="${esc(titleFont)}" font-weight="${esc(titleWeight)}" fill="${titleColor}" text-anchor="${titleAnchor}">${esc(songTitle.trim() || 'Your Favourite Song')}</text>`;
+  }
 
   // ── Artist ──────────────────────────────────────────────────────────────
   // Artist line uses the customer-picked text colour but at 65% opacity
@@ -238,7 +257,9 @@ export function buildSpotifyPlaqueSvg({
   const artistColor  = zArtist?.color       ?? inkColor;
   const artistAnchor = alignToAnchor(zArtist?.align);
   const artistAnchorX = xForAnchor(artistVb, artistX, zArtist?.align);
-  body += `<text x="${artistAnchorX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="${esc(artistFont)}" fill="${artistColor}" fill-opacity="0.65" text-anchor="${artistAnchor}">${esc(artistName.trim() || "Artist's Name")}</text>`;
+  if (shouldRender('artist_name')) {
+    body += `<text x="${artistAnchorX}" y="${artistY + artistSize * 0.35}" font-size="${artistSize}" font-family="${esc(artistFont)}" fill="${artistColor}" fill-opacity="0.65" text-anchor="${artistAnchor}">${esc(artistName.trim() || "Artist's Name")}</text>`;
+  }
 
   // ── Heart icon (red, position admin-editable via 'heart' zone) ─────────
   // The heart is a path scaled uniformly — non-square zones would
@@ -250,18 +271,21 @@ export function buildSpotifyPlaqueSvg({
   const heartScale = heartSize / 24;
   const heartX = heartVb ? heartVb.x + (heartVb.w - heartSize) / 2 : W - margin - heartSize;
   const heartY = heartVb ? heartVb.y + (heartVb.h - heartSize) / 2 : (titleY + artistY) / 2 - heartSize / 2 + 0.5;
-  body += `<path transform="translate(${heartX} ${heartY}) scale(${heartScale.toFixed(4)})" d="M 12 21.35 l -1.45 -1.32 C 5.4 16.36 2 13.28 2 9.5 C 2 6.42 4.42 4 7.5 4 c 1.74 0 3.41 0.81 4.5 2.09 C 13.09 4.81 14.76 4 16.5 4 C 19.58 4 22 6.42 22 9.5 c 0 3.78 -3.4 6.86 -8.55 11.54 L 12 21.35 z" fill="${heartRed}"/>`;
+  if (shouldRender('heart')) {
+    body += `<path transform="translate(${heartX} ${heartY}) scale(${heartScale.toFixed(4)})" d="M 12 21.35 l -1.45 -1.32 C 5.4 16.36 2 13.28 2 9.5 C 2 6.42 4.42 4 7.5 4 c 1.74 0 3.41 0.81 4.5 2.09 C 13.09 4.81 14.76 4 16.5 4 C 19.58 4 22 6.42 22 9.5 c 0 3.78 -3.4 6.86 -8.55 11.54 L 12 21.35 z" fill="${heartRed}"/>`;
+  }
 
-  // ── Progress bar ────────────────────────────────────────────────────────
-  body += `<line x1="${progLeftX}" y1="${progY}" x2="${progRightX}" y2="${progY}" stroke="${trackGrey}" stroke-width="0.4" stroke-linecap="round"/>`;
-  body += `<line x1="${progLeftX}" y1="${progY}" x2="${progLeftX + progLen * progHeadPct}" y2="${progY}" stroke="${inkColor}" stroke-width="0.4" stroke-linecap="round"/>`;
-  body += `<circle cx="${progLeftX + progLen * progHeadPct}" cy="${progY}" r="0.9" fill="${inkColor}"/>`;
-
-  // ── Time markers (muted via 65% opacity, same hue as the title) ────────
-  body += `<text x="${progLeftX}" y="${timeY}" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">0:36</text>`;
-  body += `<text x="${progRightX}" y="${timeY}" text-anchor="end" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">2:15</text>`;
+  // ── Progress bar + time markers ────────────────────────────────────────
+  if (shouldRender('progress')) {
+    body += `<line x1="${progLeftX}" y1="${progY}" x2="${progRightX}" y2="${progY}" stroke="${trackGrey}" stroke-width="0.4" stroke-linecap="round"/>`;
+    body += `<line x1="${progLeftX}" y1="${progY}" x2="${progLeftX + progLen * progHeadPct}" y2="${progY}" stroke="${inkColor}" stroke-width="0.4" stroke-linecap="round"/>`;
+    body += `<circle cx="${progLeftX + progLen * progHeadPct}" cy="${progY}" r="0.9" fill="${inkColor}"/>`;
+    body += `<text x="${progLeftX}" y="${timeY}" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">0:36</text>`;
+    body += `<text x="${progRightX}" y="${timeY}" text-anchor="end" font-size="${timeSize}" font-family="Archivo, sans-serif" fill="${inkColor}" fill-opacity="0.65">2:15</text>`;
+  }
 
   // ── Transport controls (shuffle, prev, play, next, repeat) ──────────────
+  if (shouldRender('controls')) {
   const cy = ctrlY;
   const cxCenter = ctrlCenterX;
   const cxPrev = cxCenter - ctrlSpacing;
@@ -293,6 +317,7 @@ export function buildSpotifyPlaqueSvg({
   body += `<path d="M ${cxRepeat + 2.5} ${cy + 0.8} v 0.7 q 0 0.6 -0.6 0.6 h -4 q -0.6 0 -0.6 -0.6 v -1.5"/>`;
   body += `<polyline points="${cxRepeat + 1.5},${cy - 2.2} ${cxRepeat + 2.7},${cy - 1.6} ${cxRepeat + 1.5},${cy - 1}"/>`;
   body += `</g>`;
+  } // end shouldRender('controls')
 
   // ── Spotify scannable strip ─────────────────────────────────────────────
   // The PNG from scannables.scdn.co already includes the Spotify logo on

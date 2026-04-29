@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Copy, Image as ImageIcon, Type, Lock, Unlock, RotateCw, Upload, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
 import { createTemplate, updateTemplate, deleteTemplate } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { MaskShapeDefs } from '@/components/gift/mask-shape-defs';
@@ -340,27 +340,19 @@ export function GiftTemplateEditor({
     };
     const r = template?.renderer;
     if (raw.length > 0) {
-      const existing = raw.map((z) => clampZone({
+      // Don't auto-merge missing-by-id default zones back in — that
+      // regressed deletion (admin removes 'controls', merge re-adds
+      // it on next open). Saved zones are now the source of truth.
+      // Admin who needs an old default back can use the "Add zone"
+      // button in the editor (or copy-paste the JSON from another
+      // template with the renderer they want).
+      return raw.map((z) => clampZone({
         ...z,
         type: z.type ?? 'image',
       })) as GiftTemplateZone[];
-      // Merge in any new default zones the renderer expects but the
-      // saved template doesn't have yet. Without this, adding a new
-      // zone to defaultZonesForRenderer (e.g. 'progress' / 'controls'
-      // on spotify_plaque) would never appear in templates that were
-      // saved before the new zone existed — admin would see "old set"
-      // forever. We append; admin can re-order via the up/down arrows.
-      if (r && r !== 'zones') {
-        const have = new Set(existing.map((z) => z.id));
-        const fresh = defaultZonesForRenderer(r).filter((z) => !have.has(z.id));
-        if (fresh.length > 0) return [...existing, ...fresh];
-      }
-      return existing;
     }
     // Empty zones + renderer-driven template → seed defaults so the
     // admin can drag positions/fonts/sizes instead of starting blank.
-    // First save persists them. zones_json is the only schema slot
-    // we use for renderer layout — same column the editor already saves.
     if (r && r !== 'zones') {
       return defaultZonesForRenderer(r);
     }
@@ -708,7 +700,7 @@ export function GiftTemplateEditor({
                   const isAnchor = isRenderAnchorZone(z);
                   const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
                   return (
-                    <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''}`}>
+                    <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''}`}>
                       <div className="flex w-full items-center justify-between gap-2 p-3">
                         <button
                           type="button"
@@ -718,7 +710,7 @@ export function GiftTemplateEditor({
                           <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-white ${badgeBg}`}>
                             {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : <ImageIcon size={12} />}
                           </span>
-                          <span className="text-sm font-bold text-ink truncate">{z.label || 'Untitled'}</span>
+                          <span className={`text-sm font-bold text-ink truncate ${(z as any).hidden ? 'line-through' : ''}`}>{z.label || 'Untitled'}</span>
                           {isText && (z as GiftTemplateTextZone).editable === false && (
                             <Lock size={11} className="shrink-0 text-neutral-400" />
                           )}
@@ -727,6 +719,18 @@ export function GiftTemplateEditor({
                           <span className="text-[10px] text-neutral-500">
                             {Math.round(z.width_mm)}×{Math.round(z.height_mm)}
                           </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateZone(i, ({ hidden: !((z as any).hidden) } as any)); }}
+                            title={(z as any).hidden ? 'Show — render this layer' : 'Hide — skip this layer (still saved)'}
+                            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
+                              (z as any).hidden
+                                ? 'border-neutral-400 bg-neutral-200 text-neutral-600'
+                                : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
+                            }`}
+                          >
+                            {(z as any).hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                          </button>
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); updateZone(i, { locked: !z.locked }); }}
@@ -1321,6 +1325,7 @@ export function GiftTemplateEditor({
                   admin can see typography while authoring. */}
               {zones.map((z, i) => {
                 if (!isTextZone(z)) return null;
+                if ((z as any).hidden) return null;
                 const pxPerMm = canvasSize.w / TEMPLATE_W;
                 const fontPx = Math.max(6, (z.font_size_mm ?? 14) * pxPerMm);
                 const vAlign = z.vertical_align ?? 'middle';
