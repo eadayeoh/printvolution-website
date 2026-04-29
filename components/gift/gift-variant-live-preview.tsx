@@ -20,6 +20,7 @@
 
 import { useState } from 'react';
 import type { GiftProductVariant, GiftVariantColourSwatch } from '@/lib/gifts/types';
+import { validateHexColor } from '@/lib/gifts/personalisation-notes';
 import { formatSGD } from '@/lib/utils';
 
 type Props = {
@@ -236,7 +237,7 @@ export function GiftVariantLivePreview({
                             width: 32,
                             height: 32,
                             borderRadius: '50%',
-                            background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                            background: validateHexColor(s.hex) ?? '#ccc',
                             border: activeSwatch
                               ? '3px solid var(--pv-ink)'
                               : '2px solid var(--pv-ink)',

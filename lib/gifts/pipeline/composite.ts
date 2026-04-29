@@ -26,6 +26,7 @@ import { renderSvgWithFonts } from './fonts';
 import { renderCalendarSvg, type CalendarFill } from './calendar-svg';
 import { shapeZoneSvg } from '@/lib/gifts/shape-zones';
 import { maskPresetSvg } from '@/lib/gifts/mask-shapes';
+import { parseHexColor } from '@/lib/gifts/personalisation-notes';
 
 const CANVAS_UNITS = 200; // zones_json x/y/w/h are on a 0..200 canvas
 const DEFAULT_DPI_PREVIEW = 150;
@@ -129,17 +130,10 @@ export async function renderTemplateComposite(
   // every composite, even when the template was authored without a
   // background_url (e.g. LED light plaques where the back is the
   // light shining through, foil prints where empty = no foil).
-  const baseColor = (() => {
-    if (backgroundColor && /^#[0-9A-Fa-f]{6}$/.test(backgroundColor)) {
-      return {
-        r: parseInt(backgroundColor.slice(1, 3), 16),
-        g: parseInt(backgroundColor.slice(3, 5), 16),
-        b: parseInt(backgroundColor.slice(5, 7), 16),
-        alpha: 1,
-      };
-    }
-    return { r: 0, g: 0, b: 0, alpha: 0 };
-  })();
+  const bgRgb = parseHexColor(backgroundColor);
+  const baseColor = bgRgb
+    ? { r: bgRgb.r, g: bgRgb.g, b: bgRgb.b, alpha: 1 }
+    : { r: 0, g: 0, b: 0, alpha: 0 };
   let base: Buffer = await sharp({
     create: { width: outW, height: outH, channels: 4, background: baseColor },
   }).png().toBuffer();
@@ -287,11 +281,10 @@ export async function renderTemplateComposite(
       // Mirrors the live preview's CSS mask-image cascade so what the
       // customer sees in preview is what gets printed.
       let fgFinal = fgResized;
-      if (foregroundColor && /^#[0-9A-Fa-f]{6}$/.test(foregroundColor)) {
+      const fgRgb = parseHexColor(foregroundColor);
+      if (fgRgb) {
         try {
-          const r = parseInt(foregroundColor.slice(1, 3), 16);
-          const g = parseInt(foregroundColor.slice(3, 5), 16);
-          const b = parseInt(foregroundColor.slice(5, 7), 16);
+          const { r, g, b } = fgRgb;
           const alphaRaw = await sharp(fgResized)
             .ensureAlpha()
             .extractChannel(3)

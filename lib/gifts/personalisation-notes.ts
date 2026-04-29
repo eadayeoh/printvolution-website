@@ -43,6 +43,19 @@ export function validateHexColor(s: string | null | undefined): string | null {
   return /^#[0-9A-Fa-f]{6}$/.test(t) ? t : null;
 }
 
+/** Parse a #RRGGBB string to an {r, g, b} 0..255 triplet. Returns null
+ *  for anything that fails validation, so callers can branch once
+ *  instead of validating + parseInt-slicing inline. */
+export function parseHexColor(s: string | null | undefined): { r: number; g: number; b: number } | null {
+  const valid = validateHexColor(s);
+  if (!valid) return null;
+  return {
+    r: parseInt(valid.slice(1, 3), 16),
+    g: parseInt(valid.slice(3, 5), 16),
+    b: parseInt(valid.slice(5, 7), 16),
+  };
+}
+
 /** Validate a customer-supplied font reference against a whitelist.
  *  Two whitelists in play:
  *    - GIFT_FONT_FAMILIES.value (template-zone fonts, short keys like 'inter')

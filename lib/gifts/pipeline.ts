@@ -535,6 +535,10 @@ async function renderRendererTemplate(args: {
   const refDims = template.reference_width_mm && template.reference_height_mm
     ? { width_mm: template.reference_width_mm, height_mm: template.reference_height_mm }
     : null;
+  // Foil-mode products take a per-renderer "foil" branch downstream
+  // (skip raster background, emit single-colour traces, etc.). Every
+  // case-arm needs the same boolean — hoist once.
+  const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
 
   switch (template.renderer) {
     case 'spotify_plaque': {
@@ -561,15 +565,14 @@ async function renderRendererTemplate(args: {
         }
       }
       const photoDataUri = `data:${photoMime};base64,${Buffer.from(photoBytes).toString('base64')}`;
-      const { buildSpotifyPlaqueSvg } = await import('./spotify-plaque-svg');
+      const { buildSpotifyPlaqueSvg, validateSpotifyTrackId } = await import('./spotify-plaque-svg');
       // Spotify track ids are 22 base62 chars. Anything else (notes
       // tampered with by hand, an old cart line that smuggled a URL)
       // would otherwise be interpolated raw into
       // https://scannables.scdn.co/.../spotify:track:${trackId}, opening
       // a server-side request-shaping path. Drop bad ids → renderer
       // falls back to the empty-state placeholder.
-      const rawTrackId = (n['spotify_track_id'] ?? '').trim();
-      const safeTrackId = /^[A-Za-z0-9]{16,32}$/.test(rawTrackId) ? rawTrackId : null;
+      const safeTrackId = validateSpotifyTrackId(n['spotify_track_id']);
       const svg = buildSpotifyPlaqueSvg({
         photoUrl: photoDataUri,
         songTitle:  n['spotify_title']  ?? '',
@@ -587,7 +590,6 @@ async function renderRendererTemplate(args: {
     case 'song_lyrics': {
       const { buildSongLyricsSvg } = await import('./song-lyrics-svg');
       const layout = (n['song_layout'] as 'song' | 'wedding' | 'foil') || 'song';
-      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
       const svg = buildSongLyricsSvg({
         photoUrl: null,
         lyrics: n['song_lyrics'] ?? '',
@@ -619,7 +621,6 @@ async function renderRendererTemplate(args: {
       }
       const vectors = await fetchCityMapVectors(lat, lng, Math.max(1, Math.min(15, radius || 5)));
       const showCoords = n['city_show_coords'] === '1';
-      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
       const svg = buildCityMapSvg({
         vectors,
         names:     n['city_names']   ?? '',
@@ -674,7 +675,6 @@ async function renderRendererTemplate(args: {
             : `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`)
         : undefined;
 
-      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
       const svg = buildStarMapSvg({
         scene,
         dateUtc,

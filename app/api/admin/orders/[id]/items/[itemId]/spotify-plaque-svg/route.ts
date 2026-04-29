@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
-import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
+import { buildSpotifyPlaqueSvg, validateSpotifyTrackId } from '@/lib/gifts/spotify-plaque-svg';
 import { parsePersonalisationNotes, validateHexColor } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
@@ -42,8 +42,7 @@ export async function GET(
     // attribute-injection payloads can't ride the raw note string into
     // the rendered SVG. Bad values become null/undefined and the
     // builder falls back to its defaults.
-    const rawTrackId = (n['spotify_track_id'] ?? '').trim();
-    const safeTrackId = /^[A-Za-z0-9]{16,32}$/.test(rawTrackId) ? rawTrackId : null;
+    const safeTrackId = validateSpotifyTrackId(n['spotify_track_id']);
     const safeTextColor = validateHexColor(n['spotify_text_color']) ?? undefined;
     const svgMarkup = buildSpotifyPlaqueSvg({
       photoUrl: null,

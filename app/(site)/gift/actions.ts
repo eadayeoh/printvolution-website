@@ -71,6 +71,19 @@ const isPrivilegedUser = cache(async (): Promise<boolean> => {
   }
 });
 
+/** Per-IP rate limit for any customer-facing upload endpoint. Same key
+ *  + window across every action so 5 different uploaders share one
+ *  budget — otherwise an attacker can stack quota by hopping endpoints.
+ *  Privileged users (admin / staff) bypass entirely so their seeding
+ *  scripts don't trip on the limit. */
+async function enforceUploadRateLimit(): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (await isPrivilegedUser()) return { ok: true };
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+  if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+  return { ok: true };
+}
+
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
  * variants). Returns the gift_assets.id so the cart can stash it on the
@@ -85,11 +98,8 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
   { ok: true; sourceAssetId: string } | { ok: false; error: string }
 > {
   try {
-    const ip = getClientIp();
-    if (!(await isPrivilegedUser())) {
-      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
-    }
+    const limit = await enforceUploadRateLimit();
+    if (!limit.ok) return { ok: false, error: limit.error };
 
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
@@ -157,11 +167,8 @@ export async function uploadSongLyricsPhoto(formData: FormData): Promise<
   { ok: true; sourceAssetId: string; displayUrl: string } | { ok: false; error: string }
 > {
   try {
-    const ip = getClientIp();
-    if (!(await isPrivilegedUser())) {
-      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
-    }
+    const limit = await enforceUploadRateLimit();
+    if (!limit.ok) return { ok: false, error: limit.error };
 
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
@@ -516,11 +523,8 @@ export async function uploadGiftSourceOnly(formData: FormData): Promise<
   { ok: true; sourceAssetId: string } | { ok: false; error: string }
 > {
   try {
-    const ip = getClientIp();
-    if (!(await isPrivilegedUser())) {
-      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
-    }
+    const limit = await enforceUploadRateLimit();
+    if (!limit.ok) return { ok: false, error: limit.error };
 
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
@@ -586,11 +590,8 @@ export async function uploadGiftCartSnapshot(formData: FormData): Promise<
   { ok: true; url: string } | { ok: false; error: string }
 > {
   try {
-    const ip = getClientIp();
-    if (!(await isPrivilegedUser())) {
-      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
-    }
+    const limit = await enforceUploadRateLimit();
+    if (!limit.ok) return { ok: false, error: limit.error };
 
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
@@ -648,10 +649,10 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // Per-IP rate limit. Each upload writes to the storage bucket and
   // typically triggers an OpenAI image-edit. 20/hour is generous for
   // an honest customer (re-upload + a few style flips) but caps a
-  // bad actor at ~$0.60/hr in OpenAI spend per IP.
-  const ip = getClientIp();
-  const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
-  if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+  // bad actor at ~$0.60/hr in OpenAI spend per IP. Admins / staff
+  // bypass via enforceUploadRateLimit so seeding scripts don't trip.
+  const limit = await enforceUploadRateLimit();
+  if (!limit.ok) return { ok: false, error: limit.error };
 
   const file = formData.get('file');
   const productSlug = (formData.get('product_slug') || '').toString();

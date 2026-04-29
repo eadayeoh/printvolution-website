@@ -14,11 +14,26 @@
  */
 
 const SPOTIFY_TRACK_URL_RE = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/|spotify:track:)([a-zA-Z0-9]+)/;
+// Bare-id whitelist used downstream of parseSpotifyTrackId. Spotify
+// track IDs are base62; clamp to a sane length window to keep an
+// attacker from stuffing arbitrary text into the scannable URL.
+const SPOTIFY_TRACK_ID_RE = /^[A-Za-z0-9]{16,32}$/;
 
 export function parseSpotifyTrackId(input: string): string | null {
   if (!input) return null;
   const m = input.match(SPOTIFY_TRACK_URL_RE);
   return m ? m[1] : null;
+}
+
+/** Validate a bare Spotify track ID (already parsed out of a URL or
+ *  pulled from cart-line notes). Returns the trimmed ID when it matches
+ *  the base62 length window, else null — used by the SVG route and the
+ *  production pipeline so the scannable URL never receives unsanitised
+ *  customer input. */
+export function validateSpotifyTrackId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const t = raw.trim();
+  return SPOTIFY_TRACK_ID_RE.test(t) ? t : null;
 }
 
 export type SpotifyScanCodeColor = 'black' | 'white';
