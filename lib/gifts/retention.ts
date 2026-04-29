@@ -73,10 +73,13 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
     if (nowMs < cutoff) continue;
 
     // Delete source object
+    let sourceOk = false;
+    let sourceAttempted = false;
     if (!item.source_purged_at && item.source?.path) {
+      sourceAttempted = true;
       const { error: e } = await sb.storage.from(item.source.bucket ?? GIFT_BUCKETS.sources).remove([item.source.path]);
       if (e) result.errors.push(`src ${item.id}: ${e.message}`);
-      else result.sourcesDeleted++;
+      else { result.sourcesDeleted++; sourceOk = true; }
     }
 
     // Delete production PNG + PDF, plus dual-mode per-file entries
@@ -104,7 +107,10 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
       if (s.production_asset_id) surfaceAssetIds.push(s.production_asset_id);
       if (s.production_pdf_id) surfaceAssetIds.push(s.production_pdf_id);
     }
+    let productionOk = false;
+    let productionAttempted = false;
     if (!item.production_purged_at && prodPaths.length) {
+      productionAttempted = true;
       // group by bucket for one remove() call per bucket
       const byBucket = new Map<string, string[]>();
       for (const p of prodPaths) {
@@ -118,7 +124,7 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
       for (const { error: e } of results) {
         if (e) { result.errors.push(`prod ${item.id}: ${e.message}`); ok = false; }
       }
-      if (ok) result.productionDeleted++;
+      if (ok) { result.productionDeleted++; productionOk = true; }
     }
 
     if (surfaceAssetIds.length > 0) {
@@ -126,13 +132,23 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
       if (e) result.errors.push(`surface assets ${item.id}: ${e.message}`);
     }
 
-    // Flip timestamps (always — so we don't retry next run on the same item
-    // even if the storage delete silently no-oped because the object was
-    // already gone).
-    await sb.from('gift_order_items').update({
-      source_purged_at: now.toISOString(),
-      production_purged_at: now.toISOString(),
-    }).eq('id', item.id);
+    // First-set-wins: only stamp *_purged_at when this run's storage
+    // delete actually succeeded, and only when the existing column is
+    // still NULL. Patch each column separately so the WHERE NULL guard
+    // applies independently (combined update would AND both nulls and
+    // skip cases where one column was already set in a prior run).
+    if (sourceAttempted && sourceOk) {
+      await sb.from('gift_order_items')
+        .update({ source_purged_at: now.toISOString() })
+        .eq('id', item.id)
+        .is('source_purged_at', null);
+    }
+    if (productionAttempted && productionOk) {
+      await sb.from('gift_order_items')
+        .update({ production_purged_at: now.toISOString() })
+        .eq('id', item.id)
+        .is('production_purged_at', null);
+    }
   }
 
   await logRun(sb, result);

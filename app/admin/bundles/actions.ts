@@ -19,6 +19,15 @@ const BundleSchema = z.object({
   })).min(1),
   whys: z.array(z.string()),
   faqs: z.array(z.object({ question: z.string(), answer: z.string() })),
+}).superRefine((d, ctx) => {
+  // Cap pct discount at 100; prevents 200%-off blow-ups from a typo or
+  // forged client payload. Flat is in cents — cap at $10,000 as sanity.
+  if (d.discount_type === 'pct' && d.discount_value > 100) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['discount_value'], message: 'Percent discount must be 0-100' });
+  }
+  if (d.discount_type === 'flat' && d.discount_value > 1_000_000) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['discount_value'], message: 'Flat discount unreasonably large' });
+  }
 });
 
 export type BundleUpdateInput = z.infer<typeof BundleSchema>;

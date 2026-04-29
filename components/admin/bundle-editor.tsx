@@ -162,7 +162,11 @@ export function BundleEditor({ mode, slug, initial, productOptions }: Props) {
                   max={d.discount_type === 'pct' ? 100 : undefined}
                   step={d.discount_type === 'pct' ? 1 : 0.01}
                   value={d.discount_value || 0}
-                  onChange={(e) => setD({ ...d, discount_value: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    const raw = parseFloat(e.target.value) || 0;
+                    const clamped = d.discount_type === 'pct' ? Math.max(0, Math.min(100, raw)) : Math.max(0, raw);
+                    setD({ ...d, discount_value: clamped });
+                  }}
                   className={`${inputCls} w-32`}
                 />
               </Field>

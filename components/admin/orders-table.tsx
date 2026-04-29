@@ -34,6 +34,14 @@ export function OrdersTable({ orders, initialStatus, initialSearch }: Props) {
   }
 
   function exportCSV() {
+    // Customer-supplied strings beginning with =, +, -, @, tab or CR can
+    // execute as formulas in Excel/Numbers — prefix a single quote to
+    // neutralise. Standard CSV-injection defence.
+    const escapeCell = (raw: unknown) => {
+      const s = String(raw ?? '');
+      const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
     const headers = ['Order', 'Customer', 'Email', 'Phone', 'Delivery', 'Items', 'Subtotal', 'Total', 'Status', 'Date'];
     const rows = orders.map((o) => [
       o.order_number, o.customer_name, o.email, o.phone, o.delivery_method,
@@ -42,7 +50,7 @@ export function OrdersTable({ orders, initialStatus, initialSearch }: Props) {
       new Date(o.created_at).toLocaleString('en-SG'),
     ]);
     const csv = [headers, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .map((r) => r.map(escapeCell).join(','))
       .join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);

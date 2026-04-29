@@ -12,7 +12,7 @@ import { reportError } from '@/lib/observability';
 import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 import { parseShapeOptions, shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
 import { createClient as createUserClient } from '@/lib/supabase/server';
-import { getAnonSessionId } from '@/lib/gifts/anon-session';
+import { getOrSetAnonSessionId } from '@/lib/gifts/anon-session';
 
 /**
  * Public coupon-validation endpoint used by the checkout form
@@ -658,7 +658,11 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // columns null) get a free pass + log so in-flight carts don't break
   // while the column rolls forward — strict mode is a follow-up.
   if (giftItems.length > 0) {
-    const callerAnon = getAnonSessionId();
+    // Mint the anon-session cookie on first-touch checkout — first-time
+    // visitors who uploaded via routes that didn't go through the
+    // get-or-set helper would otherwise read null here and fail the
+    // ownership check below for any asset they actually own.
+    const callerAnon = getOrSetAnonSessionId();
     const allRefs: string[] = [];
     for (const it of giftItems) {
       const r = parseGiftRefs(it.personalisation_notes);

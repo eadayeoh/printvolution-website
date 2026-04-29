@@ -24,9 +24,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!product) return { title: 'Not found' };
 
   const routes = await getProductRoutes();
-  const url = `https://printvolution.sg${productHref(productSlug, routes)}`;
+  const href = productHref(productSlug, routes);
+  const url = `https://printvolution.sg${href}`;
   const title = product.extras?.seo_title ?? `${product.name} Printing Singapore`;
   const description = product.extras?.seo_desc ?? product.tagline ?? undefined;
+
+  // Orphan / inactive products (not in routes table) collapse to /shop.
+  // Pointing every orphan canonical at /shop creates duplicate-content
+  // signals — emit noindex instead so search engines drop the URL.
+  const orphan = !href.includes(productSlug);
+  if (orphan) {
+    return {
+      title: { absolute: title },
+      description,
+      robots: { index: false, follow: false },
+    };
+  }
 
   // DB seo_title already ends with "| Printvolution", so bypass the
   // "%s | Printvolution" template from the root layout with an absolute
@@ -68,6 +81,7 @@ export default async function Page({ params }: PageProps) {
   }
 
   const slugPath = productHref(productSlug, routes);
+  const orphan = !slugPath.includes(productSlug);
 
   return (
     <>
@@ -81,14 +95,16 @@ export default async function Page({ params }: PageProps) {
           { name: product.name },
         ]}
       />
-      <ProductSchema
-        name={product.name}
-        slug={slugPath.replace(/^\/product\//, '').replace(/\/$/, '')}
-        description={product.description}
-        category={product.category?.name}
-        imageUrl={product.extras?.image_url}
-        priceFromCents={minPrice}
-      />
+      {!orphan && (
+        <ProductSchema
+          name={product.name}
+          slug={slugPath.replace(/^\/product\//, '').replace(/\/$/, '')}
+          description={product.description}
+          category={product.category?.name}
+          imageUrl={product.extras?.image_url}
+          priceFromCents={minPrice}
+        />
+      )}
       <ProductPage product={product} productRoutes={routes} features={settings.product_features} />
     </>
   );

@@ -9,8 +9,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PVPL_URL = 'https://tjupqglepjackdqbgzql.supabase.co';
-const PVPL_KEY = 'sb_publishable_mpx0Ol7nhKg1NJBpKnfsmA_KAiPUBo4';
+const PVPL_URL = process.env.PVPRICELIST_URL;
+const PVPL_KEY = process.env.PVPRICELIST_ANON_KEY;
+if (!PVPL_URL || !PVPL_KEY) {
+  console.error('Missing env vars: set PVPRICELIST_URL and PVPRICELIST_ANON_KEY before running this script.');
+  console.error('See .env.example.');
+  process.exit(1);
+}
 
 const res = await fetch(
   `${PVPL_URL}/rest/v1/app_config?key=eq.rates_v1&select=value,updated_at`,
