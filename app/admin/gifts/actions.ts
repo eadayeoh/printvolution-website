@@ -2,17 +2,16 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
 import { putObject, GIFT_BUCKETS } from '@/lib/gifts/storage';
 import { parseShapeOptions } from '@/lib/gifts/shape-options';
+import { requireAdmin as sharedRequireAdmin } from '@/lib/auth/require-admin';
+
+// Local wrapper preserves the historical { sb } return shape used by
+// every call site below — `const sb = await requireAdmin()`. The shared
+// helper returns more (user, role, actor); call sharedRequireAdmin()
+// directly when those are needed.
 async function requireAdmin() {
-  const sb = createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error('Not signed in');
-  const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
-    throw new Error('Admin/staff only');
-  }
+  const { sb } = await sharedRequireAdmin();
   return sb;
 }
 
@@ -707,7 +706,7 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
   const { serviceClient, GIFT_BUCKETS } = await import('@/lib/gifts/storage');
   const sb = serviceClient();
   const { data: line } = await sb.from('gift_order_items')
-    .select('id, gift_product_id, variant_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes')
+    .select('id, gift_product_id, variant_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes, production_asset_id, production_pdf_id')
     .eq('id', lineId).maybeSingle();
   if (!line) return { ok: false, error: 'Line not found' };
 
@@ -886,12 +885,43 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
       height_px: f.heightPx,
       dpi: f.dpi,
     })) ?? [];
+    // Capture the OLD production asset IDs BEFORE swapping so we can
+    // garbage-collect their storage objects + rows. Without this, every
+    // rerun strands the previous run's production PNG/PDF in
+    // gift-production with no DB reference (Supabase storage has no GC).
+    const oldProdId = (line as any).production_asset_id as string | null;
+    const oldPdfId  = (line as any).production_pdf_id  as string | null;
+
     await sb.from('gift_order_items').update({
       production_asset_id: prodAsset?.id ?? null,
       production_pdf_id: pdfAsset?.id ?? null,
       production_files: productionFiles,
       production_status: 'ready',
     }).eq('id', lineId);
+
+    // Best-effort cleanup of the prior run. Failures here don't fail the
+    // rerun (the new files are already authoritative) — they just leave
+    // an orphan we can sweep later.
+    const oldIds = [oldProdId, oldPdfId].filter((x): x is string => !!x && x !== prodAsset?.id && x !== pdfAsset?.id);
+    if (oldIds.length > 0) {
+      try {
+        const { data: oldRows } = await sb
+          .from('gift_assets')
+          .select('id, bucket, path')
+          .in('id', oldIds);
+        const byBucket: Record<string, string[]> = {};
+        for (const r of oldRows ?? []) {
+          const b = (r as any).bucket as string;
+          (byBucket[b] = byBucket[b] ?? []).push((r as any).path as string);
+        }
+        for (const [bucket, paths] of Object.entries(byBucket)) {
+          await sb.storage.from(bucket).remove(paths);
+        }
+        await sb.from('gift_assets').delete().in('id', oldIds);
+      } catch (e) {
+        console.warn('[rerun] old asset cleanup failed', (e as any)?.message);
+      }
+    }
     return { ok: true };
   } catch (e: any) {
     await sb.from('gift_order_items').update({ production_status: 'failed', production_error: e?.message ?? 'unknown' }).eq('id', lineId);

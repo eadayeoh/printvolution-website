@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { serviceClient, GIFT_BUCKETS, makeKey, putObject } from '@/lib/gifts/storage';
+import { serviceClient, GIFT_BUCKETS, makeKey } from '@/lib/gifts/storage';
 import { runPreviewPipeline } from '@/lib/gifts/pipeline';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
@@ -115,7 +115,10 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
         size_bytes: file.size,
       })
       .select('id').single();
-    if (aErr || !asset) return { ok: false, error: 'asset row failed' };
+    if (aErr || !asset) {
+      await service.storage.from(GIFT_BUCKETS.sources).remove([key]).catch(() => {});
+      return { ok: false, error: 'asset row failed' };
+    }
 
     return { ok: true, sourceAssetId: asset.id as string };
   } catch (e: any) {
@@ -176,7 +179,10 @@ export async function uploadSongLyricsPhoto(formData: FormData): Promise<
         size_bytes: file.size,
       })
       .select('id').single();
-    if (aErr || !asset) return { ok: false, error: 'asset row failed' };
+    if (aErr || !asset) {
+      await service.storage.from(GIFT_BUCKETS.sources).remove([key]).catch(() => {});
+      return { ok: false, error: 'asset row failed' };
+    }
 
     const { data: signed, error: sErr } = await service.storage
       .from(GIFT_BUCKETS.sources)
@@ -309,6 +315,11 @@ export async function restylePreviewFromSource(input: {
     }
 
     const service = serviceClient();
+    // TODO(asset-ownership): no user_id / anon_session_id on
+    // gift_assets, so any caller can pin an arbitrary source_asset_id
+    // here and burn quota / re-style someone else's photo. Fix needs
+    // a schema migration to track asset ownership at insert time, then
+    // gate this lookup on it. Out of scope for this audit pass.
     const { data: sourceAsset } = await service
       .from('gift_assets')
       .select('id, bucket, path, mime_type')
@@ -550,10 +561,25 @@ export async function uploadGiftCartSnapshot(formData: FormData): Promise<
     if (!detected || detected.mime !== 'image/png') {
       return { ok: false, error: 'Expected a PNG snapshot' };
     }
+    // Cart thumbnails contain the customer's photo. Writing to the
+    // public previews bucket made them world-readable forever — anyone
+    // with the URL could fetch the photo. Move to the private sources
+    // bucket and hand back a 7-day signed URL so the cart UI still
+    // renders them while the underlying object stays gated.
     const key = makeKey(`cart-${productSlug}`, 'png');
-    const { publicUrl } = await putObject(GIFT_BUCKETS.previews, key, bytes, 'image/png');
-    if (!publicUrl) return { ok: false, error: 'No public URL available' };
-    return { ok: true, url: publicUrl };
+    const service = serviceClient();
+    const { error: upErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .upload(key, bytes, { contentType: 'image/png', upsert: false, cacheControl: '3600' });
+    if (upErr) return { ok: false, error: 'upload failed' };
+    const { data: signed, error: sErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .createSignedUrl(key, 60 * 60 * 24 * 7);
+    if (sErr || !signed) {
+      await service.storage.from(GIFT_BUCKETS.sources).remove([key]).catch(() => {});
+      return { ok: false, error: 'sign url failed' };
+    }
+    return { ok: true, url: signed.signedUrl };
   } catch (e: any) {
     console.error('[gift cart-snapshot] uncaught error');
     return { ok: false, error: 'Server error during snapshot upload' };
@@ -561,7 +587,7 @@ export async function uploadGiftCartSnapshot(formData: FormData): Promise<
 }
 
 export async function uploadAndPreviewGift(formData: FormData): Promise<
-  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
+  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string; zoneSourceAssetIds?: Record<string, string> }
   | { ok: false; error: string }
 > {
   try {
@@ -574,7 +600,7 @@ export async function uploadAndPreviewGift(formData: FormData): Promise<
 }
 
 async function uploadAndPreviewGiftInner(formData: FormData): Promise<
-  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
+  { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string; zoneSourceAssetIds?: Record<string, string> }
   | { ok: false; error: string }
 > {
   // Per-IP rate limit. Each upload writes to the storage bucket and
@@ -753,6 +779,10 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // Multi-slot: persist every per-zone source under its own storage key
   // so admin can purge them independently. Gracefully skip on failure —
   // the primary file above still drives a valid preview.
+  // Capture each zone's gift_assets.id so the cart line can encode them
+  // into personalisation_notes (image_<zone_id>:<asset_id>) — production
+  // needs the per-zone asset trail to render dual-photo templates.
+  const zoneSourceAssetIds: Record<string, string> = {};
   for (const [zoneId, meta] of Object.entries(zoneFileMetas)) {
     const zoneExt = EXT_FOR_MIME[meta.mime] ?? 'bin';
     const zoneKey = makeKey(`src-${productSlug}-${zoneId}`, zoneExt);
@@ -762,13 +792,20 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       .upload(zoneKey, zbytes, { contentType: meta.mime, upsert: false, cacheControl: '3600' });
     if (!zUpErr) {
       meta.key = zoneKey;
-      await service.from('gift_assets').insert({
+      const { data: zAsset, error: zAErr } = await service.from('gift_assets').insert({
         role: 'source',
         bucket: GIFT_BUCKETS.sources,
         path: zoneKey,
         mime_type: meta.mime,
         size_bytes: meta.size,
-      });
+      }).select('id').single();
+      if (zAErr || !zAsset) {
+        // Storage uploaded but the row failed — orphan would otherwise
+        // sit in the bucket forever. Mirror the primary-source cleanup.
+        await service.storage.from(GIFT_BUCKETS.sources).remove([zoneKey]).catch(() => {});
+      } else {
+        zoneSourceAssetIds[zoneId] = zAsset.id as string;
+      }
     }
   }
 
@@ -877,6 +914,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     sourceAssetId: sourceAsset.id,
     previewAssetId: previewAsset.id,
     previewUrl: preview.previewPublicUrl,
+    zoneSourceAssetIds: Object.keys(zoneSourceAssetIds).length > 0 ? zoneSourceAssetIds : undefined,
   };
 }
 

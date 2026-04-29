@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { runProductionPipeline, runSurfaceProductionPipeline } from '@/lib/gifts/pipeline';
 import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
+import { giftUnitPrice } from '@/lib/gifts/types';
 import { evaluateCouponForOrder } from '@/lib/coupons';
 import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
 import { reportError } from '@/lib/observability';
@@ -488,20 +489,18 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
         return { ok: false, error: `Invalid variant for ${item.product_name}. Please refresh your cart.` };
       }
 
-      // Lowest possible tier price wins as the floor's base — every
-      // legitimate cart at any qty falls at or above this number.
-      const baseTiers: Array<{ qty?: number; price_cents?: number }> = (variant && Array.isArray(variant.price_tiers) && variant.price_tiers.length > 0)
+      // Tier base for THIS line's qty. Earlier we used the lowest
+      // tier as the floor — that let a qty=1 customer pay the qty=100
+      // tier price and pass. The correct gate is the tier whose qty
+      // bracket the line falls into; below the smallest tier, the
+      // base price applies.
+      const baseTiers: Array<{ qty: number; price_cents: number }> = ((variant && Array.isArray(variant.price_tiers) && variant.price_tiers.length > 0)
         ? variant.price_tiers
-        : giftInfo.price_tiers;
+        : giftInfo.price_tiers) as any;
       const baselineBase = (variant && typeof variant.base_price_cents === 'number')
         ? variant.base_price_cents
         : giftInfo.base_price_cents;
-      let variantBase = baselineBase;
-      for (const t of baseTiers) {
-        if (typeof t?.price_cents === 'number' && t.price_cents > 0 && t.price_cents < variantBase) {
-          variantBase = t.price_cents;
-        }
-      }
+      const variantBase = giftUnitPrice(baselineBase, baseTiers, item.qty);
 
       const notes = parsePersonalisationNotes(item.personalisation_notes ?? '');
 
@@ -599,6 +598,13 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // there as "gift_source:<uuid>;gift_preview:<uuid>;gift_template:<uuid>".
   // The template id is optional: products with template_mode='none' or
   // a single auto-selected template don't smuggle it.
+  //
+  // TODO(asset-ownership): a customer can paste another customer's
+  // gift_source UUID into their cart and have that photo printed on
+  // their order. Mitigation requires a schema change: add user_id +
+  // anon_session_id to gift_assets at insert time, then verify here
+  // that the asset row's owner matches the calling user / session.
+  // Out of scope for this audit pass — needs migration + backfill.
   function parseGiftRefs(
     notes: string | undefined,
   ): { sourceId?: string; previewId?: string; templateId?: string } {
@@ -789,13 +795,16 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     void queueSurfaceProduction(itemsWithSurfaces);
     const giftProductIds = Array.from(new Set(giftRows.map((r) => r.gift_product_id)));
     if (giftProductIds.length > 0) {
-      // Use upsert-like filter: only set first_ordered_at if null
-      for (const gpId of giftProductIds) {
-        await sb.from('gift_products')
-          .update({ first_ordered_at: new Date().toISOString() })
+      // Fan out — sequential awaits stalled multi-product carts on each
+      // RTT. The .is('first_ordered_at', null) filter still keeps it
+      // upsert-like even with concurrent updates.
+      const stamp = new Date().toISOString();
+      await Promise.all(giftProductIds.map((gpId) =>
+        sb.from('gift_products')
+          .update({ first_ordered_at: stamp })
           .eq('id', gpId)
-          .is('first_ordered_at', null);
-      }
+          .is('first_ordered_at', null)
+      ));
     }
   }
 

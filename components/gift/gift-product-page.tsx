@@ -333,7 +333,12 @@ export function GiftProductPage({
   }, [selectedVariantId, selectedShapeKind, selectedShapeTemplateId, selectedPromptId, activeSurfaceId]);
 
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string } | null>(null);
+  // Gates handleAddToCart against double-clicks. `uploading` only covers
+  // the surface-photo-upload phase; this stays true through the whole
+  // add-to-cart flow (snapshot capture + cart mutation) so a fast second
+  // click can't fire a duplicate cart line.
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [preview, setPreview] = useState<{ sourceAssetId: string; previewAssetId: string; previewUrl: string; zoneSourceAssetIds?: Record<string, string> } | null>(null);
   // Drives the Regenerate CTA — drift from this marks the preview stale.
   const [lastGeneratedPromptId, setLastGeneratedPromptId] = useState<string | null>(null);
   const [restyling, setRestyling] = useState(false);
@@ -1102,7 +1107,11 @@ export function GiftProductPage({
   async function handleAddToCart() {
     if (!hasSurfaces && !preview) return;
     if (hasSurfaces && !surfacesReady) return;
-
+    // Re-entrancy gate: a fast double-click would otherwise fire two
+    // upload+add cycles, producing duplicate cart lines.
+    if (addingToCart) return;
+    setAddingToCart(true);
+    try {
     // Surfaces flow: before adding to cart, upload each photo-surface
     // to storage so the cart line carries asset IDs. Text surfaces
     // just pass their string through — no upload.
@@ -1257,6 +1266,38 @@ export function GiftProductPage({
     for (const z of extraTextZones) {
       const v = (extraTextValues[z.id] ?? '').trim();
       if (v) notes += `${notes ? ';' : ''}text_${z.id}:${encodeNoteValue(v)}`;
+    }
+    // Multi-slot template state — text / colour / font / calendar /
+    // foreground+background pickers. Production needs every customer
+    // pick to redraw the composite at 300 DPI; without this the order
+    // gets the template's admin defaults instead.
+    if (selectedTemplateId) {
+      for (const [zid, txt] of Object.entries(templateTexts)) {
+        const v = (txt ?? '').trim();
+        if (v) notes += `${notes ? ';' : ''}text_${zid}:${encodeNoteValue(v)}`;
+      }
+      for (const [zid, c] of Object.entries(templateTextColors)) {
+        if (c) notes += `${notes ? ';' : ''}text_color_${zid}:${c}`;
+      }
+      for (const [zid, f] of Object.entries(templateTextFonts)) {
+        if (f) notes += `${notes ? ';' : ''}text_font_${zid}:${f}`;
+      }
+      for (const [zid, fill] of Object.entries(templateCalendars)) {
+        if (fill) notes += `${notes ? ';' : ''}cal_${zid}:${encodeNoteValue(JSON.stringify(fill))}`;
+      }
+      for (const [zid, c] of Object.entries(templateCalendarColors)) {
+        if (c) notes += `${notes ? ';' : ''}cal_color_${zid}:${c}`;
+      }
+      if (templateForegroundColor) notes += `${notes ? ';' : ''}fg_color:${templateForegroundColor}`;
+      if (templateBackgroundColor) notes += `${notes ? ';' : ''}bg_color:${templateBackgroundColor}`;
+      // Per-zone uploaded asset IDs — production reads these to fetch
+      // the right photo for each image zone (multi-photo templates like
+      // the LED-bases 4-photo grid).
+      if (preview?.zoneSourceAssetIds) {
+        for (const [zid, aid] of Object.entries(preview.zoneSourceAssetIds)) {
+          if (aid) notes += `${notes ? ';' : ''}image_${zid}:${aid}`;
+        }
+      }
     }
     // Song-lyrics-photo-frame: serialise the four custom text fields + photo
     // URL into the cart line so the production pipeline can re-render the
@@ -1422,6 +1463,9 @@ export function GiftProductPage({
     clearDesignDraft(product.slug);
     setAddedFlash(true);
     setTimeout(() => setAddedFlash(false), 2200);
+    } finally {
+      setAddingToCart(false);
+    }
   }
 
   const modeLabel = GIFT_MODE_LABEL[product.mode];
@@ -3788,7 +3832,7 @@ export function GiftProductPage({
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    disabled={!canAdd || uploading || capturingSnapshot}
+                    disabled={!canAdd || uploading || capturingSnapshot || addingToCart}
                     style={{
                       background: addedFlash ? 'var(--pv-green)' : !canAdd ? 'rgba(255,255,255,0.15)' : 'var(--pv-orange)',
                       color: !canAdd ? 'rgba(255,255,255,0.4)' : '#fff',

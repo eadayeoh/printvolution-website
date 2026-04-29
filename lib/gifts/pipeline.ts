@@ -19,6 +19,7 @@ import type { GiftCropRect, GiftProduct, GiftPipeline, GiftTemplate, GiftMode } 
 import { renderTemplateComposite } from './pipeline/composite';
 import { renderPhotoResize, runAiTransform, transformBytesForMode } from './pipeline/transforms';
 import { createClient } from '@/lib/supabase/server';
+import { parsePersonalisationNotes, validateHexColor, validateFontKey } from './personalisation-notes';
 
 /** Per-mode production output format spec. Maps a snapshot mode
  *  string to (a) the primary file format the production pipeline
@@ -99,7 +100,6 @@ async function resolveCustomerPrompt(
   notes: string | null | undefined,
   product: GiftProduct,
 ): Promise<string | null> {
-  const { parsePersonalisationNotes } = await import('./personalisation-notes');
   const n = parsePersonalisationNotes(notes);
   const id = (n['prompt_id'] || '').trim();
   if (id) {
@@ -109,6 +109,84 @@ async function resolveCustomerPrompt(
     if (text && text.trim()) return text;
   }
   return (product as any).ai_prompt ?? null;
+}
+
+/** Walk the cart-line `personalisation_notes` and pull every customer
+ *  pick that the template composite needs at production time:
+ *  per-zone text / colour / font / calendar overrides, plus the
+ *  template-wide foreground + background fills. Per-zone uploaded
+ *  asset IDs come back as `imageAssetIdsByZoneId` so the caller can
+ *  fetch the bytes from gift-sources.
+ *
+ *  Validation happens at THIS boundary (strict #RRGGBB on colours,
+ *  whitelist check on fonts) so the SVG builders downstream can trust
+ *  their inputs. */
+function parseTemplateCustomerInputs(notes: string | null | undefined): {
+  textByZoneId: Record<string, string>;
+  textColorsByZoneId: Record<string, string>;
+  textFontsByZoneId: Record<string, string>;
+  calendarsByZoneId: Record<string, { month: number; year: number; highlightedDay: number | null }>;
+  calendarColorsByZoneId: Record<string, string>;
+  imageAssetIdsByZoneId: Record<string, string>;
+  foregroundColor: string | undefined;
+  backgroundColor: string | undefined;
+} {
+  const n = parsePersonalisationNotes(notes);
+
+  const textByZoneId: Record<string, string> = {};
+  const textColorsByZoneId: Record<string, string> = {};
+  const textFontsByZoneId: Record<string, string> = {};
+  const calendarsByZoneId: Record<string, { month: number; year: number; highlightedDay: number | null }> = {};
+  const calendarColorsByZoneId: Record<string, string> = {};
+  const imageAssetIdsByZoneId: Record<string, string> = {};
+
+  for (const [k, v] of Object.entries(n)) {
+    if (k.startsWith('text_color_')) {
+      const c = validateHexColor(v);
+      if (c) textColorsByZoneId[k.slice('text_color_'.length)] = c;
+    } else if (k.startsWith('text_font_')) {
+      const f = validateFontKey(v);
+      if (f) textFontsByZoneId[k.slice('text_font_'.length)] = f;
+    } else if (k.startsWith('text_')) {
+      // text_<zone_id>:<value> — surface text + extra-text-zone +
+      // template text-zone overrides all share this prefix.
+      textByZoneId[k.slice('text_'.length)] = (v ?? '').slice(0, 500);
+    } else if (k.startsWith('cal_color_')) {
+      const c = validateHexColor(v);
+      if (c) calendarColorsByZoneId[k.slice('cal_color_'.length)] = c;
+    } else if (k.startsWith('cal_')) {
+      try {
+        const parsed = JSON.parse(v);
+        const month = Number(parsed?.month);
+        const year = Number(parsed?.year);
+        const day = parsed?.highlightedDay;
+        if (Number.isFinite(month) && Number.isFinite(year)) {
+          calendarsByZoneId[k.slice('cal_'.length)] = {
+            month: Math.min(12, Math.max(1, Math.round(month))),
+            year: Math.min(2100, Math.max(1900, Math.round(year))),
+            highlightedDay:
+              day === null || day === undefined
+                ? null
+                : Math.min(31, Math.max(1, Math.round(Number(day)))),
+          };
+        }
+      } catch { /* ignore malformed */ }
+    } else if (k.startsWith('image_')) {
+      const aid = (v ?? '').trim();
+      if (aid) imageAssetIdsByZoneId[k.slice('image_'.length)] = aid;
+    }
+  }
+
+  return {
+    textByZoneId,
+    textColorsByZoneId,
+    textFontsByZoneId,
+    calendarsByZoneId,
+    calendarColorsByZoneId,
+    imageAssetIdsByZoneId,
+    foregroundColor: validateHexColor(n['fg_color']) ?? undefined,
+    backgroundColor: validateHexColor(n['bg_color']) ?? undefined,
+  };
 }
 
 /** Mode-aware resolver for surface fan-out. Dual-mode products can
@@ -428,8 +506,13 @@ async function renderRendererTemplate(args: {
   personalisationNotes: string | null;
 }): Promise<ProductionOutput> {
   const { product, template, sourceBytes, sourceMime, personalisationNotes } = args;
-  const { parsePersonalisationNotes } = await import('./personalisation-notes');
   const n = parsePersonalisationNotes(personalisationNotes);
+  // Renderer templates accept full font names (Playfair Display, Archivo,
+  // …) sourced from product.allowed_fonts — that's the whitelist for
+  // these products. Any value outside it is dropped so a hand-crafted
+  // notes blob can't inject CSS / SVG attribute payloads via font names.
+  const allowedFontList = (product as any).allowed_fonts ?? [];
+  const safeFont = (raw: string | undefined | null) => validateFontKey(raw, allowedFontList) ?? undefined;
 
   // Customer-picked size overrides for renderer products that expose a
   // size picker on the PDP (city / star map). Falls back to the
@@ -468,7 +551,7 @@ async function renderRendererTemplate(args: {
         artistName: n['spotify_artist'] ?? '',
         spotifyTrackId: n['spotify_track_id'] || null,
         templateRefDims: refDims,
-        textColor: n['spotify_text_color'] || undefined,
+        textColor: validateHexColor(n['spotify_text_color']) ?? undefined,
         zones: (template.zones_json as any) ?? null,
       });
       const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
@@ -488,9 +571,9 @@ async function renderRendererTemplate(args: {
         year:    n['song_year']    ?? '',
         subtitle: n['song_subtitle'] ?? '',
         tagline:  n['song_tagline']  ?? '',
-        titleFont: n['song_title_font'],
-        namesFont: n['song_names_font'],
-        yearFont:  n['song_year_font'],
+        titleFont: safeFont(n['song_title_font']),
+        namesFont: safeFont(n['song_names_font']),
+        yearFont:  safeFont(n['song_year_font']),
         lyricsScale: n['song_lyrics_scale'] ? parseFloat(n['song_lyrics_scale']) : 1,
         layout,
         materialColor: isFoilMode ? null : undefined,
@@ -519,10 +602,10 @@ async function renderRendererTemplate(args: {
         cityLabel: n['city_label']   ?? '',
         tagline:   n['city_tagline'] ?? '',
         coordinates: showCoords ? `${lat.toFixed(4)}° N · ${lng.toFixed(4)}° E` : undefined,
-        cityFont:    n['city_font_title']   ?? undefined,
-        namesFont:   n['city_font_names']   ?? undefined,
-        eventFont:   n['city_font_event']   ?? undefined,
-        taglineFont: n['city_font_tagline'] ?? undefined,
+        cityFont:    safeFont(n['city_font_title']),
+        namesFont:   safeFont(n['city_font_names']),
+        eventFont:   safeFont(n['city_font_event']),
+        taglineFont: safeFont(n['city_font_tagline']),
         materialColor: isFoilMode ? null : undefined,
       });
       const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
@@ -578,10 +661,10 @@ async function renderRendererTemplate(args: {
         showLines,
         showLabels,
         layout,
-        locationFont: n['star_font_loc']     ?? undefined,
-        namesFont:    n['star_font_names']   ?? undefined,
-        eventFont:    n['star_font_event']   ?? undefined,
-        taglineFont:  n['star_font_tagline'] ?? undefined,
+        locationFont: safeFont(n['star_font_loc']),
+        namesFont:    safeFont(n['star_font_names']),
+        eventFont:    safeFont(n['star_font_event']),
+        taglineFont:  safeFont(n['star_font_tagline']),
         materialColor: layout === 'foil' ? null : undefined,
       });
       const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
@@ -709,6 +792,41 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     // the picker the customer actually used on the PDP.
     const resolvedPrompt = await resolveCustomerPrompt(input.personalisationNotes, product);
 
+    // Customer-picked text / colour / font / calendar / fg+bg picks
+    // serialised into personalisation_notes at add-to-cart time.
+    // Without this thread-through, production renders the template's
+    // admin defaults instead of the order's actual personalisation.
+    const customer = parseTemplateCustomerInputs(input.personalisationNotes);
+
+    // Per-zone uploaded photos: fetch each asset's bytes from
+    // gift-sources so multi-photo templates (e.g. LED-bases 4-photo
+    // grid) composite the right photo into each image zone. Lookup
+    // failures (deleted asset / wrong bucket) skip the zone — the
+    // composite renderer falls back to the primary `src` bytes.
+    const imagesByZoneId: Record<string, Uint8Array> = {};
+    if (Object.keys(customer.imageAssetIdsByZoneId).length > 0) {
+      const sb = createClient();
+      const ids = Object.values(customer.imageAssetIdsByZoneId);
+      const { data: assetRows } = await sb
+        .from('gift_assets')
+        .select('id, bucket, path')
+        .in('id', ids);
+      const byId = new Map<string, { bucket: string; path: string }>();
+      for (const r of assetRows ?? []) {
+        byId.set((r as any).id as string, { bucket: (r as any).bucket, path: (r as any).path });
+      }
+      for (const [zoneId, assetId] of Object.entries(customer.imageAssetIdsByZoneId)) {
+        const row = byId.get(assetId);
+        if (!row) continue;
+        try {
+          const bytes = await getObject(row.bucket, row.path);
+          imagesByZoneId[zoneId] = bytes;
+        } catch (e) {
+          console.warn('[pipeline] zone image fetch failed', zoneId, (e as any)?.message);
+        }
+      }
+    }
+
     // Shared callback — runs the right transform on each zone's bytes.
     const transformZone = async (bytes: Uint8Array, mode: GiftMode) => {
       const p = await resolvePipelineForMode(product, mode);
@@ -728,6 +846,14 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       const out = await renderTemplateComposite(sharp, {
         template,
         sourceBytes: src,
+        imagesByZoneId: Object.keys(imagesByZoneId).length > 0 ? imagesByZoneId : undefined,
+        textByZoneId: Object.keys(customer.textByZoneId).length > 0 ? customer.textByZoneId : undefined,
+        textColorsByZoneId: Object.keys(customer.textColorsByZoneId).length > 0 ? customer.textColorsByZoneId : undefined,
+        textFontsByZoneId: Object.keys(customer.textFontsByZoneId).length > 0 ? customer.textFontsByZoneId : undefined,
+        calendarsByZoneId: Object.keys(customer.calendarsByZoneId).length > 0 ? customer.calendarsByZoneId : undefined,
+        calendarColorsByZoneId: Object.keys(customer.calendarColorsByZoneId).length > 0 ? customer.calendarColorsByZoneId : undefined,
+        foregroundColor: customer.foregroundColor,
+        backgroundColor: customer.backgroundColor,
         targetWidthMm:  product.width_mm,
         targetHeightMm: product.height_mm,
         kind: 'production',
