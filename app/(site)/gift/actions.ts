@@ -8,6 +8,7 @@ import type { GiftProduct } from '@/lib/gifts/types';
 import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // AI image edits via gpt-image-2 take 30-60s at medium quality. Fluid
 // Compute defaults to 300s but we set it explicitly so a slow OpenAI
@@ -189,6 +190,16 @@ export async function restylePreviewFromSource(input: {
     const productSlug = input.product_slug;
     if (!productSlug) return { ok: false, error: 'Product slug missing' };
     if (!input.source_asset_id) return { ok: false, error: 'Source asset missing' };
+
+    // Rate limit. Each call burns an OpenAI image-edit credit, and the
+    // source_asset_id is a guest-bearer UUID — no user_id to scope on.
+    // Two layers: per-IP (caps a single attacker), and per-source
+    // (caps abuse if a UUID leaks via cart export / shared link).
+    const ip = getClientIp();
+    const ipRl = await checkRateLimit(`gift-restyle:ip:${ip}`, { max: 30, windowSeconds: 3600 });
+    if (!ipRl.allowed) return { ok: false, error: `Too many regenerations — wait ${ipRl.retryAfterSeconds}s and try again.` };
+    const srcRl = await checkRateLimit(`gift-restyle:src:${input.source_asset_id}`, { max: 20, windowSeconds: 86400 });
+    if (!srcRl.allowed) return { ok: false, error: 'This photo has hit its regeneration limit for today. Re-upload to start fresh.' };
 
     const sb = createClient();
     const { data: product } = await sb
@@ -379,6 +390,14 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   { ok: true; sourceAssetId: string; previewAssetId: string; previewUrl: string }
   | { ok: false; error: string }
 > {
+  // Per-IP rate limit. Each upload writes to the storage bucket and
+  // typically triggers an OpenAI image-edit. 20/hour is generous for
+  // an honest customer (re-upload + a few style flips) but caps a
+  // bad actor at ~$0.60/hr in OpenAI spend per IP.
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+  if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+
   const file = formData.get('file');
   const productSlug = (formData.get('product_slug') || '').toString();
   const templateId = (formData.get('template_id') || '').toString() || null;
