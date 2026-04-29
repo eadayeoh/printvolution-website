@@ -428,6 +428,15 @@ export function GiftTemplateEditor({
     return () => window.removeEventListener('resize', measure);
   }, []);
 
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const panDragRef = useRef<{ startX: number; startY: number; startPan: { x: number; y: number } } | null>(null);
+
+  const [zonesHistory, setZonesHistory] = useState<GiftTemplateZone[][]>([]);
+  const [zonesFuture, setZonesFuture] = useState<GiftTemplateZone[][]>([]);
+  const HISTORY_CAP = 50;
+
   const [activeZoneIdx, setActiveZoneIdx] = useState<number | null>(null);
   // Grid overlay + snap-to-grid for the live-preview canvas. Step is in
   // canvas units (the same 0..200 grid x_mm/y_mm/width_mm/height_mm
@@ -437,25 +446,38 @@ export function GiftTemplateEditor({
   const [gridStep, setGridStep] = useState(5);
   const snapV = (v: number) => (snapOn && gridStep > 0 ? Math.round(v / gridStep) * gridStep : v);
 
+  function pushHistorySnapshot(snapshot: GiftTemplateZone[]) {
+    setZonesHistory((h) => {
+      const next = [...h, snapshot];
+      return next.length > HISTORY_CAP ? next.slice(next.length - HISTORY_CAP) : next;
+    });
+    setZonesFuture([]);
+  }
+
+  function commitZones(next: GiftTemplateZone[]) {
+    pushHistorySnapshot(zones);
+    setZones(next);
+  }
+
   function updateZone<T extends GiftTemplateZone>(i: number, patch: Partial<T>) {
     setZones(zones.map((z, j) => (j === i ? ({ ...z, ...patch } as GiftTemplateZone) : z)));
   }
 
   function addImageZone() {
     const n = zones.filter((z) => !isTextZone(z)).length + 1;
-    setZones([...zones, makeImageZone(n)]);
+    commitZones([...zones, makeImageZone(n)]);
     setActiveZoneIdx(zones.length);
   }
 
   function addTextZone() {
     const n = zones.filter(isTextZone).length + 1;
-    setZones([...zones, makeTextZone(n)]);
+    commitZones([...zones, makeTextZone(n)]);
     setActiveZoneIdx(zones.length);
   }
 
   function addCalendarZone() {
     const n = zones.filter(isCalendarZone).length + 1;
-    setZones([...zones, makeCalendarZone(n)]);
+    commitZones([...zones, makeCalendarZone(n)]);
     setActiveZoneIdx(zones.length);
   }
 
@@ -468,7 +490,7 @@ export function GiftTemplateEditor({
       x_mm: Math.min(TEMPLATE_W - z.width_mm, z.x_mm + 10),
       y_mm: Math.min(TEMPLATE_H - z.height_mm, z.y_mm + 10),
     };
-    setZones([...zones, copy]);
+    commitZones([...zones, copy]);
   }
 
   // HTML5 drag-and-drop reordering for the zone list. Tracks the
@@ -481,13 +503,13 @@ export function GiftTemplateEditor({
     const next = [...zones];
     const [moved] = next.splice(from, 1);
     next.splice(to > from ? to - 1 : to, 0, moved);
-    setZones(next);
+    commitZones(next);
     // Active selection should follow the moved row.
     if (activeZoneIdx === from) setActiveZoneIdx(to > from ? to - 1 : to);
   }
 
   function removeZone(i: number) {
-    setZones(zones.filter((_, j) => j !== i));
+    commitZones(zones.filter((_, j) => j !== i));
     if (activeZoneIdx === i) setActiveZoneIdx(null);
   }
 
@@ -496,15 +518,25 @@ export function GiftTemplateEditor({
     if (j < 0 || j >= zones.length) return;
     const next = [...zones];
     [next[i], next[j]] = [next[j], next[i]];
-    setZones(next);
+    commitZones(next);
   }
 
   const [drag, setDrag] = useState<null | { type: 'move' | 'resize'; idx: number; startX: number; startY: number; startZone: GiftTemplateZone }>(null);
 
+  function beginZoneDrag(payload: { type: 'move' | 'resize'; idx: number; startX: number; startY: number; startZone: GiftTemplateZone }) {
+    pushHistorySnapshot(zones);
+    setDrag(payload);
+  }
+
   function onCanvasPointerMove(e: React.PointerEvent) {
+    if (panDragRef.current) {
+      const p = panDragRef.current;
+      setPan({ x: p.startPan.x + (e.clientX - p.startX), y: p.startPan.y + (e.clientY - p.startY) });
+      return;
+    }
     if (!drag) return;
-    const dx = ((e.clientX - drag.startX) / canvasSize.w) * TEMPLATE_W;
-    const dy = ((e.clientY - drag.startY) / canvasSize.h) * TEMPLATE_H;
+    const dx = ((e.clientX - drag.startX) / canvasSize.w) * TEMPLATE_W / zoom;
+    const dy = ((e.clientY - drag.startY) / canvasSize.h) * TEMPLATE_H / zoom;
     const z = drag.startZone;
     if (drag.type === 'move') {
       const nx = clamp(snapV(z.x_mm + dx), 0, TEMPLATE_W - z.width_mm);
@@ -516,7 +548,154 @@ export function GiftTemplateEditor({
       updateZone(drag.idx, { width_mm: nw, height_mm: nh });
     }
   }
-  function endDrag() { setDrag(null); }
+  function endDrag() {
+    setDrag(null);
+    panDragRef.current = null;
+  }
+
+  function undoZones() {
+    setZonesHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setZonesFuture((f) => [...f, zones]);
+      setZones(prev);
+      return h.slice(0, -1);
+    });
+  }
+
+  function redoZones() {
+    setZonesFuture((f) => {
+      if (f.length === 0) return f;
+      const next = f[f.length - 1];
+      setZonesHistory((h) => {
+        const updated = [...h, zones];
+        return updated.length > HISTORY_CAP ? updated.slice(updated.length - HISTORY_CAP) : updated;
+      });
+      setZones(next);
+      return f.slice(0, -1);
+    });
+  }
+
+  useEffect(() => {
+    function isEditableTarget(t: EventTarget | null): boolean {
+      if (!t || !(t instanceof HTMLElement)) return false;
+      const tag = t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (t.isContentEditable) return true;
+      return false;
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === ' ' && !isEditableTarget(e.target)) {
+        if (!spaceHeld) setSpaceHeld(true);
+      }
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        undoZones();
+        return;
+      }
+      if (mod && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        if (isEditableTarget(e.target)) return;
+        e.preventDefault();
+        redoZones();
+        return;
+      }
+
+      if (isEditableTarget(e.target)) return;
+      if (activeZoneIdx === null || activeZoneIdx < 0 || activeZoneIdx >= zones.length) return;
+
+      if (mod && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        const z = zones[activeZoneIdx];
+        const newId = `${z.id}-copy-${Math.random().toString(36).slice(2, 7)}`;
+        const copy: GiftTemplateZone = {
+          ...z,
+          id: newId,
+          label: `${z.label} (copy)`,
+          x_mm: clamp(z.x_mm + 8, 0, TEMPLATE_W - z.width_mm),
+          y_mm: clamp(z.y_mm + 8, 0, TEMPLATE_H - z.height_mm),
+        };
+        commitZones([...zones, copy]);
+        setActiveZoneIdx(zones.length);
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        commitZones(zones.filter((_, j) => j !== activeZoneIdx));
+        setActiveZoneIdx(null);
+        return;
+      }
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        if (mod) return;
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const z = zones[activeZoneIdx];
+        let nx = z.x_mm;
+        let ny = z.y_mm;
+        if (e.key === 'ArrowLeft') nx = clamp(z.x_mm - step, 0, TEMPLATE_W - z.width_mm);
+        if (e.key === 'ArrowRight') nx = clamp(z.x_mm + step, 0, TEMPLATE_W - z.width_mm);
+        if (e.key === 'ArrowUp') ny = clamp(z.y_mm - step, 0, TEMPLATE_H - z.height_mm);
+        if (e.key === 'ArrowDown') ny = clamp(z.y_mm + step, 0, TEMPLATE_H - z.height_mm);
+        commitZones(zones.map((zz, j) => (j === activeZoneIdx ? { ...zz, x_mm: nx, y_mm: ny } : zz)));
+      }
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.key === ' ') setSpaceHeld(false);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+    };
+  }, [zones, activeZoneIdx, spaceHeld]);
+
+  function fitZoom() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  function setZoomAroundPoint(nextZoom: number, cx: number, cy: number) {
+    const clamped = Math.max(0.25, Math.min(4, nextZoom));
+    if (clamped === zoom) return;
+    const k = clamped / zoom;
+    if (clamped === 1) {
+      setPan({ x: 0, y: 0 });
+    } else {
+      setPan({ x: cx - k * (cx - pan.x), y: cy - k * (cy - pan.y) });
+    }
+    setZoom(clamped);
+  }
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    function handleWheel(e: WheelEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const node = canvasRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      setZoomAroundPoint(zoom * factor, cx, cy);
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [zoom, pan]);
+
+  function onCanvasPanPointerDown(e: React.PointerEvent) {
+    const middleMouse = e.button === 1;
+    if (!middleMouse && !spaceHeld) return;
+    if (zoom <= 1 && !middleMouse) return;
+    e.preventDefault();
+    panDragRef.current = { startX: e.clientX, startY: e.clientY, startPan: { ...pan } };
+  }
 
   function save() {
     setErr(null);
@@ -1235,16 +1414,57 @@ export function GiftTemplateEditor({
                     title="Grid step in canvas units (0..200). 5 ≈ 2.5% of canvas."
                   />
                 </label>
+                <div className="flex items-center gap-1 rounded border border-neutral-200 bg-white px-1 py-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setZoomAroundPoint(zoom / 1.25, canvasSize.w / 2, canvasSize.h / 2)}
+                    className="px-1.5 text-[12px] font-bold text-neutral-700 hover:text-pink"
+                    title="Zoom out"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[34px] text-center font-mono text-[10px] text-neutral-500">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomAroundPoint(zoom * 1.25, canvasSize.w / 2, canvasSize.h / 2)}
+                    className="px-1.5 text-[12px] font-bold text-neutral-700 hover:text-pink"
+                    title="Zoom in"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fitZoom}
+                    className="ml-1 rounded px-1.5 text-[10px] font-bold text-neutral-700 hover:text-pink"
+                    title="Reset zoom + pan"
+                  >
+                    Fit
+                  </button>
+                </div>
               </div>
             </div>
             <div
               ref={canvasRef}
               className="relative mx-auto my-6 w-full max-w-xl select-none overflow-hidden rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-100"
               onPointerMove={onCanvasPointerMove}
+              onPointerDown={onCanvasPanPointerDown}
               onPointerUp={endDrag}
               onPointerLeave={endDrag}
-              style={{ touchAction: 'none', aspectRatio: previewAspect }}
+              style={{
+                touchAction: 'none',
+                aspectRatio: previewAspect,
+                cursor: panDragRef.current ? 'grabbing' : spaceHeld && zoom > 1 ? 'grab' : undefined,
+              }}
             >
+              <div
+                className="pv-canvas-content absolute inset-0"
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: '0 0',
+                }}
+              >
               <MaskShapeDefs />
               {background && (
                 <img src={background} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
@@ -1518,7 +1738,7 @@ export function GiftTemplateEditor({
                       e.preventDefault();
                       setActiveZoneIdx(i);
                       if (z.locked) return; // locked zones can be selected but not dragged
-                      setDrag({ type: 'move', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
+                      beginZoneDrag({ type: 'move', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
                     }}
                   >
                     <div
@@ -1540,7 +1760,7 @@ export function GiftTemplateEditor({
                         onPointerDown={(e) => {
                           e.preventDefault(); e.stopPropagation();
                           setActiveZoneIdx(i);
-                          setDrag({ type: 'resize', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
+                          beginZoneDrag({ type: 'resize', idx: i, startX: e.clientX, startY: e.clientY, startZone: z });
                         }}
                         className="absolute -bottom-1 -right-1 h-3 w-3 cursor-nwse-resize rounded-full border-2 bg-white"
                         style={{ borderColor: accent }}
@@ -1550,6 +1770,7 @@ export function GiftTemplateEditor({
                 );
               })}
 
+              </div>
               {!background && zones.length === 0 && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-neutral-400">
                   <div className="mb-2 text-3xl">🖼️</div>
