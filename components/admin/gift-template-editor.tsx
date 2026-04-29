@@ -114,31 +114,29 @@ function defaultZonesForRenderer(renderer: string): GiftTemplateZone[] {
     ];
   }
   if (renderer === 'spotify_plaque') {
-    // Editor canvas is 200×200 normalised units (TEMPLATE_W/H). Zones
-    // store positions there. The SVG builder maps 0..200 → its viewBox.
-    // These defaults mirror the current hardcoded layout (margin=8 in
-    // a 100-wide viewBox, A4 portrait) so admin starts with the same
-    // visual and can drag from there. Scancode + transport controls +
-    // progress bar are intentionally NOT zones — the builder pins
-    // them to the bottom strip.
+    // Editor canvas is 0..200 in BOTH axes (TEMPLATE_W=TEMPLATE_H=200),
+    // even though the canvas DOM displays at the template's reference
+    // aspect (e.g. A4 portrait). Zones store percentage-of-canvas, so
+    // keep every zone's bottom edge ≤ 200. font_size_mm uses the same
+    // 0..200 unit space as x/y/w/h.
     return [
       {
         type: 'render_anchor', anchor_kind: 'spotify_photo' as any,
         id: 'photo', label: 'Photo · drag to reposition / resize',
-        x_mm: 16, y_mm: 16, width_mm: 168, height_mm: 168,
+        x_mm: 16, y_mm: 11, width_mm: 168, height_mm: 110,
       } as any,
       {
         type: 'text', id: 'song_title', label: 'Song title',
-        x_mm: 16, y_mm: 195, width_mm: 168, height_mm: 14,
-        font_family: 'Archivo', font_size_mm: 10, font_weight: '700',
+        x_mm: 16, y_mm: 126, width_mm: 138, height_mm: 9,
+        font_family: 'inter', font_size_mm: 7, font_weight: '700',
         align: 'left', color: '#0a0a0a',
         default_text: 'Your Favourite Song', placeholder: 'Your Favourite Song',
         editable: true,
       } as any,
       {
         type: 'text', id: 'artist_name', label: 'Artist name',
-        x_mm: 16, y_mm: 211, width_mm: 168, height_mm: 10,
-        font_family: 'Archivo', font_size_mm: 7, font_weight: '400',
+        x_mm: 16, y_mm: 137, width_mm: 138, height_mm: 7,
+        font_family: 'inter', font_size_mm: 5, font_weight: '400',
         align: 'left', color: '#0a0a0a',
         default_text: "Artist's Name", placeholder: "Artist's Name",
         editable: true,
@@ -146,7 +144,17 @@ function defaultZonesForRenderer(renderer: string): GiftTemplateZone[] {
       {
         type: 'render_anchor', anchor_kind: 'spotify_heart' as any,
         id: 'heart', label: 'Heart icon · drag to reposition',
-        x_mm: 174, y_mm: 199, width_mm: 9, height_mm: 9,
+        x_mm: 175, y_mm: 130, width_mm: 9, height_mm: 9,
+      } as any,
+      {
+        type: 'render_anchor', anchor_kind: 'spotify_progress' as any,
+        id: 'progress', label: 'Progress bar + time markers',
+        x_mm: 16, y_mm: 149, width_mm: 168, height_mm: 10,
+      } as any,
+      {
+        type: 'render_anchor', anchor_kind: 'spotify_controls' as any,
+        id: 'controls', label: 'Transport controls (play / skip)',
+        x_mm: 60, y_mm: 162, width_mm: 80, height_mm: 10,
       } as any,
     ];
   }
@@ -319,8 +327,19 @@ export function GiftTemplateEditor({
   })();
   const [zones, setZones] = useState<GiftTemplateZone[]>(() => {
     const raw = (template?.zones_json as GiftTemplateZone[]) ?? [];
+    // Clamp any zone whose bounds extend past the 0..200 canvas back
+    // inside it. Past out-of-bounds saves (or older seed defaults)
+    // would leave handles off-screen and unreachable; this lets admin
+    // grab + reposition them.
+    const clampZone = (z: any) => {
+      const w = Math.min(Math.max(z.width_mm ?? 60, 4), TEMPLATE_W);
+      const h = Math.min(Math.max(z.height_mm ?? 30, 4), TEMPLATE_H);
+      const x = Math.min(Math.max(z.x_mm ?? 0, 0), TEMPLATE_W - w);
+      const y = Math.min(Math.max(z.y_mm ?? 0, 0), TEMPLATE_H - h);
+      return { ...z, x_mm: x, y_mm: y, width_mm: w, height_mm: h };
+    };
     if (raw.length > 0) {
-      return raw.map((z) => ({
+      return raw.map((z) => clampZone({
         ...z,
         type: z.type ?? 'image',
       })) as GiftTemplateZone[];

@@ -135,10 +135,12 @@ export function buildSpotifyPlaqueSvg({
   const subtleGrey = '#7a7a7a';
   const trackGrey = '#d4d4d4';
 
-  const zPhoto  = zones?.find((z) => z?.id === 'photo');
-  const zTitle  = zones?.find((z) => z?.id === 'song_title');
-  const zArtist = zones?.find((z) => z?.id === 'artist_name');
-  const zHeart  = zones?.find((z) => z?.id === 'heart');
+  const zPhoto    = zones?.find((z) => z?.id === 'photo');
+  const zTitle    = zones?.find((z) => z?.id === 'song_title');
+  const zArtist   = zones?.find((z) => z?.id === 'artist_name');
+  const zHeart    = zones?.find((z) => z?.id === 'heart');
+  const zProgress = zones?.find((z) => z?.id === 'progress');
+  const zControls = zones?.find((z) => z?.id === 'controls');
 
   // Layout in viewBox units (W=100). Tuned for A4 portrait (H≈141.4) so
   // photo + title/artist/progress/controls + scannable strip stack
@@ -152,20 +154,24 @@ export function buildSpotifyPlaqueSvg({
   const scanX = margin;
   const scanY = H - margin - scanH;
 
-  // Transport controls sit above the scannable strip (LOCKED).
-  const ctrlSpacing = 9;
-  const ctrlY = scanY - 6;
+  // Transport controls — admin-editable via zone, else sit above the
+  // scannable strip.
+  const controlsVb = zoneToViewbox(zControls, templateRefDims, W, H);
+  const ctrlSpacing = controlsVb ? Math.min(controlsVb.w / 6, 12) : 9;
+  const ctrlY = controlsVb ? controlsVb.y + controlsVb.h / 2 : scanY - 6;
+  const ctrlCenterX = controlsVb ? controlsVb.x + controlsVb.w / 2 : W / 2;
 
-  // Time markers above the controls.
-  const timeY = ctrlY - 5;
-  const timeSize = 2.6;
-
-  // Progress bar above the time markers.
-  const progY = timeY - 3;
-  const progLeftX = margin;
-  const progRightX = W - margin;
+  // Progress bar + time markers — admin-editable via zone, else stacked
+  // above the controls.
+  const progressVb = zoneToViewbox(zProgress, templateRefDims, W, H);
+  const progY = progressVb ? progressVb.y + progressVb.h * 0.35 : ctrlY - 8;
+  const progLeftX = progressVb ? progressVb.x : margin;
+  const progRightX = progressVb ? progressVb.x + progressVb.w : W - margin;
   const progLen = progRightX - progLeftX;
   const progHeadPct = 0.27;               // ~0:36 of 2:15
+  // Time markers below the progress bar.
+  const timeY = progressVb ? progressVb.y + progressVb.h * 0.85 : progY + 3;
+  const timeSize = 2.6;
 
   // Artist + title — admin-editable via zones if present, else default
   // bottom-up stacking above the progress bar. font_size_mm wins over
@@ -257,7 +263,7 @@ export function buildSpotifyPlaqueSvg({
 
   // ── Transport controls (shuffle, prev, play, next, repeat) ──────────────
   const cy = ctrlY;
-  const cxCenter = W / 2;
+  const cxCenter = ctrlCenterX;
   const cxPrev = cxCenter - ctrlSpacing;
   const cxNext = cxCenter + ctrlSpacing;
   const cxShuffle = cxPrev - ctrlSpacing;
