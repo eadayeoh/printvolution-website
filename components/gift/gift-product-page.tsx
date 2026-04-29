@@ -661,7 +661,7 @@ export function GiftProductPage({
     () => filterPromptsByTemplate(prompts, selectedTemplateId),
     [prompts, selectedTemplateId],
   );
-  const showPromptPicker = visiblePrompts.length >= 2 && variantHasPhotoSurface;
+  const showPromptPicker = visiblePrompts.length >= 2 && variantHasPhotoSurface && !selectedTemplateId;
   const needPrompt = showPromptPicker && !selectedPromptId;
   // If a template flip removes the currently-picked prompt from the
   // visible list, reset to the first remaining one so the form stays
@@ -1604,7 +1604,7 @@ export function GiftProductPage({
             {/* Preview shell */}
             <div
               style={{
-                background: '#fff',
+                background: 'transparent',
                 border: '2px solid var(--pv-ink)',
                 boxShadow: '8px 8px 0 var(--pv-ink)',
                 overflow: 'hidden',
