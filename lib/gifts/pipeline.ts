@@ -288,6 +288,11 @@ export type ProductionInput = {
   sourceMime: string;
   cropRect?: GiftCropRect | null;
   templateId?: string | null;
+  /** Customer's shape choice at order time. 'cutout' triggers the
+   *  bg-remove + SVG silhouette path at production resolution; null
+   *  or 'rectangle' is the standard rectangular print. 'template'
+   *  routes through the template composite path above. */
+  shapeKind?: 'cutout' | 'rectangle' | 'template' | null;
 };
 
 export type ProductionOutput = {

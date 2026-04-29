@@ -338,17 +338,29 @@ export function GiftTemplateEditor({
       const y = Math.min(Math.max(z.y_mm ?? 0, 0), TEMPLATE_H - h);
       return { ...z, x_mm: x, y_mm: y, width_mm: w, height_mm: h };
     };
+    const r = template?.renderer;
     if (raw.length > 0) {
-      return raw.map((z) => clampZone({
+      const existing = raw.map((z) => clampZone({
         ...z,
         type: z.type ?? 'image',
       })) as GiftTemplateZone[];
+      // Merge in any new default zones the renderer expects but the
+      // saved template doesn't have yet. Without this, adding a new
+      // zone to defaultZonesForRenderer (e.g. 'progress' / 'controls'
+      // on spotify_plaque) would never appear in templates that were
+      // saved before the new zone existed — admin would see "old set"
+      // forever. We append; admin can re-order via the up/down arrows.
+      if (r && r !== 'zones') {
+        const have = new Set(existing.map((z) => z.id));
+        const fresh = defaultZonesForRenderer(r).filter((z) => !have.has(z.id));
+        if (fresh.length > 0) return [...existing, ...fresh];
+      }
+      return existing;
     }
     // Empty zones + renderer-driven template → seed defaults so the
     // admin can drag positions/fonts/sizes instead of starting blank.
     // First save persists them. zones_json is the only schema slot
     // we use for renderer layout — same column the editor already saves.
-    const r = template?.renderer;
     if (r && r !== 'zones') {
       return defaultZonesForRenderer(r);
     }

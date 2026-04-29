@@ -33,15 +33,23 @@ export async function validateCouponForCheckout(
  * non-blocking so the customer sees their order confirmation right away.
  * Each line's production_status transitions pending → processing → ready/failed.
  */
-async function queueGiftProduction(
-  giftLines: Array<{ id: string; gift_product_id: string; source_asset_id: string | null; mode: string }>
-) {
+type ProductionQueueLine = {
+  id: string;
+  gift_product_id: string;
+  source_asset_id: string | null;
+  mode: string;
+  template_id: string | null;
+  shape_kind: string | null;
+  shape_template_id: string | null;
+};
+
+async function queueGiftProduction(giftLines: ProductionQueueLine[]) {
   for (const line of giftLines) {
     runOne(line).catch(() => console.error('[gift production] line failed', line.id));
   }
 }
 
-async function runOne(line: { id: string; gift_product_id: string; source_asset_id: string | null; mode: string }) {
+async function runOne(line: ProductionQueueLine) {
   const sb = serviceClient();
   await sb.from('gift_order_items').update({ production_status: 'processing' }).eq('id', line.id);
   try {
@@ -52,11 +60,21 @@ async function runOne(line: { id: string; gift_product_id: string; source_asset_
     ]);
     if (!product || !source) throw new Error('Product or source asset not found');
 
+    // Resolve the template the customer picked at order time. Without
+    // this, templated gifts (Spotify Plaque, zone composites, cutouts)
+    // would silently ship as plain photos because runProductionPipeline
+    // has no template_id to dispatch on.
+    const effectiveTemplateId = line.shape_kind === 'template'
+      ? (line.shape_template_id ?? line.template_id)
+      : line.template_id;
+
     const out = await runProductionPipeline({
       product: product as unknown as GiftProduct,
       sourcePath: source.path,
       sourceMime: source.mime_type ?? 'image/jpeg',
-    });
+      templateId: effectiveTemplateId ?? null,
+      shapeKind: (line.shape_kind as 'cutout' | 'rectangle' | 'template' | null) ?? null,
+    } as any);
 
     // Register the primary production assets (always populated —
     // dual-mode runs still write the primary-mode file here so the
@@ -551,7 +569,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     const { data: insertedGifts, error: giErr } = await sb
       .from('gift_order_items')
       .insert(giftRows)
-      .select('id, gift_product_id, source_asset_id, mode');
+      .select('id, gift_product_id, source_asset_id, mode, template_id, shape_kind, shape_template_id');
     if (giErr) {
       await sb.from('order_items').delete().eq('order_id', order.id);
       await sb.from('orders').delete().eq('id', order.id);
