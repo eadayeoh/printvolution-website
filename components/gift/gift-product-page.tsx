@@ -3833,6 +3833,9 @@ export function GiftProductPage({
                           const filled = Boolean(fill?.text?.trim() || fill?.photoFile || fill?.photoThumb);
                           return filled ? sum + (s.price_delta_cents ?? 0) : sum;
                         }, 0)
+                      + (selectedTemplateId
+                          ? (templates.find((t) => t.id === selectedTemplateId)?.price_delta_cents ?? 0)
+                          : 0)
                     ) * qty)}
                   </div>
                 </div>

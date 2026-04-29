@@ -7,13 +7,7 @@
 // caller scales the resulting <svg> to fit its zone box.
 
 import type { GiftTemplateShapeZone, GiftShapeKind } from './types';
-
-const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
-
-function safeHex(c: string | null | undefined): string | null {
-  if (!c) return null;
-  return HEX_RE.test(c) ? c : null;
-}
+import { validateHexColor } from './personalisation-notes';
 
 /** Produce the SVG path / element string for a shape inside a (w, h)
  *  rectangle. Returns just the inner element(s) — the caller wraps in
@@ -71,8 +65,8 @@ function shapeBody(kind: GiftShapeKind, w: number, h: number, fill: string, stro
  *  they fall back to black; closed shapes fall back to no fill +
  *  visible black outline so a misconfigured zone still shows up). */
 export function shapeZoneSvg(zone: GiftTemplateShapeZone, w: number, h: number): string {
-  const fillHex = safeHex(zone.fill);
-  const strokeHex = safeHex(zone.stroke);
+  const fillHex = validateHexColor(zone.fill);
+  const strokeHex = validateHexColor(zone.stroke);
   const strokeWidth = Math.max(0, Math.min(w, h, zone.stroke_width ?? 0));
 
   let fill = fillHex ?? 'none';

@@ -71,6 +71,12 @@ function isTextZone(z: GiftTemplateZone): z is GiftTemplateTextZone {
 function isCalendarZone(z: GiftTemplateZone): z is GiftTemplateCalendarZone {
   return (z as GiftTemplateCalendarZone).type === 'calendar';
 }
+function isShapeZone(z: GiftTemplateZone): boolean {
+  return (z as { type?: string }).type === 'shape';
+}
+function isRenderAnchorZone(z: GiftTemplateZone): boolean {
+  return (z as { type?: string }).type === 'render_anchor';
+}
 
 export function TemplateMultiSlotForm({
   template,
@@ -84,7 +90,9 @@ export function TemplateMultiSlotForm({
 }: Props) {
   const zones = template.zones_json ?? [];
   const imageZones = useMemo(
-    () => zones.filter((z): z is GiftTemplateImageZone => !isTextZone(z) && !isCalendarZone(z)),
+    () => zones.filter((z): z is GiftTemplateImageZone =>
+      !isTextZone(z) && !isCalendarZone(z) && !isShapeZone(z) && !isRenderAnchorZone(z),
+    ),
     [zones],
   );
   const editableTextZones = useMemo(

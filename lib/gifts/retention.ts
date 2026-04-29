@@ -121,6 +121,11 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
       if (ok) result.productionDeleted++;
     }
 
+    if (surfaceAssetIds.length > 0) {
+      const { error: e } = await sb.from('gift_assets').delete().in('id', surfaceAssetIds);
+      if (e) result.errors.push(`surface assets ${item.id}: ${e.message}`);
+    }
+
     // Flip timestamps (always — so we don't retry next run on the same item
     // even if the storage delete silently no-oped because the object was
     // already gone).

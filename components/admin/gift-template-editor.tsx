@@ -297,7 +297,6 @@ export function GiftTemplateEditor({
     (((template?.price_delta_cents ?? 0) as number) / 100).toFixed(2),
   );
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
-  const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
   const [customerCanRecolorBackground, setCustomerCanRecolorBackground] = useState(
     (template?.customer_can_recolor_background ?? template?.customer_can_recolor) ?? false,
   );
@@ -2002,8 +2001,8 @@ export function GiftTemplateEditor({
                     className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''} ${dragSrcIdx === i ? 'opacity-30' : ''}`}
                     style={{
                       cursor: dragSrcIdx !== null ? 'grabbing' : 'grab',
-                      borderTop: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
-                      borderBottom: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                      borderBottom: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                      borderTop: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
                     }}
                   >
                     <div className="flex w-full items-center justify-between gap-2 p-2">
