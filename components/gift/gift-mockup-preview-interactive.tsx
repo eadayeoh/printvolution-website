@@ -176,24 +176,38 @@ export function GiftMockupPreviewInteractive({
     return () => ro.disconnect();
   }, []);
 
+  // Match the admin variant editor's stage aspect so admin's saved
+  // %-coordinates map to the same physical position. Admin sets the
+  // canvas to either the mockup PNG's natural aspect (default) or a
+  // template-locked aspect (e.g. A4 portrait 0.707). Loading the mockup
+  // image gives us the natural aspect; until it's loaded, fall back to
+  // 1:1 so the layout doesn't jump.
+  const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!mockupUrl) { setImgDims(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setImgDims({ w: img.naturalWidth, h: img.naturalHeight });
+      }
+    };
+    img.src = mockupUrl;
+  }, [mockupUrl]);
+  const stageAspect = imgDims ? `${imgDims.w} / ${imgDims.h}` : '1 / 1';
+
   return (
     <div
       ref={stageRef}
       style={{
         position: 'relative',
-        background: '#fafaf7',
+        background: 'transparent',
         borderRadius: 12,
         overflow: 'hidden',
         border: '2px solid #0a0a0a',
         userSelect: 'none',
         touchAction: 'none',
         width: '100%',
-        // Force 1:1 stage to match the admin editor (which forces aspectRatio
-        // 1/1). Without this, the customer stage stretches to the image's
-        // natural aspect, so an area at e.g. (23.9%, 83.1%) lands on a
-        // different physical pixel here than admin saw, and the SAFE ZONE
-        // appears in the wrong place.
-        aspectRatio: '1 / 1',
+        aspectRatio: stageAspect,
       }}
     >
       <img
