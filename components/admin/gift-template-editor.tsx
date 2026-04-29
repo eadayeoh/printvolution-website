@@ -740,7 +740,7 @@ export function GiftTemplateEditor({
                             <button type="button" onClick={() => moveZone(i, 1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move down"><ArrowDown size={12} /></button>
                             <button type="button" onClick={() => duplicateZone(i)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Duplicate"><Copy size={12} /></button>
                             <div className="flex-1" />
-                            <button type="button" onClick={() => removeZone(i)} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove"><Trash2 size={12} /></button>
+                            <button type="button" onClick={() => { if (confirm(`Remove zone ${i + 1}? Reload before save to undo.`)) removeZone(i); }} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove"><Trash2 size={12} /></button>
                           </div>
                         </div>
                       )}

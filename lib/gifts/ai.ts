@@ -59,7 +59,10 @@ export async function runOpenAiImageEdit(opts: OpenAiEditInput): Promise<Buffer>
   }
   if (first?.url) {
     const imgRes = await fetch(first.url);
-    if (!imgRes.ok) throw new Error(`OpenAI output download failed: ${imgRes.status}`);
+    if (!imgRes.ok) {
+      const body = await imgRes.text().catch(() => '');
+      throw new Error(`OpenAI output download failed: ${imgRes.status} ${imgRes.statusText} ${body.slice(0, 200)}`);
+    }
     return Buffer.from(await imgRes.arrayBuffer());
   }
   throw new Error(`OpenAI returned no image (body=${JSON.stringify(body).slice(0, 400)})`);

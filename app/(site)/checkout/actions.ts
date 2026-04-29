@@ -361,9 +361,14 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
     if (isGift) {
       // Gifts: unit price must equal base_price_cents (configurators on gifts
-      // don't exist yet — flat pricing).
-      const expected = giftSlugToInfo.get(item.product_slug)!.base_price_cents ?? 0;
-      if (expected > 0 && item.unit_price_cents < expected) {
+      // don't exist yet — flat pricing). Reject if the product is misconfigured
+      // (NULL or zero base_price) instead of letting expected fall to 0 and
+      // pass any positive client-supplied unit price through.
+      const expected = giftSlugToInfo.get(item.product_slug)!.base_price_cents;
+      if (!expected || expected <= 0) {
+        return { ok: false, error: `Product is not priced: ${item.product_name}. Please contact us.` };
+      }
+      if (item.unit_price_cents < expected) {
         return { ok: false, error: `Price mismatch on ${item.product_name}. Please refresh your cart.` };
       }
     } else {
@@ -386,9 +391,11 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       return { ok: false, error: `Invalid price on ${item.product_name}. Please refresh your cart.` };
     }
 
-    // line_total sanity: must equal unit * qty (or within 1 cent rounding)
+    // line_total sanity: must equal unit * qty (1 cent rounding tolerance).
+    // The previous Math.max(1, qty) tolerance scaled with qty — a qty=200
+    // order could be off by $2 silently. Fixed cap keeps the cart honest.
     const expectedLine = item.unit_price_cents * item.qty;
-    if (Math.abs(item.line_total_cents - expectedLine) > Math.max(1, item.qty)) {
+    if (Math.abs(item.line_total_cents - expectedLine) > 1) {
       return { ok: false, error: `Line total mismatch on ${item.product_name}. Please refresh your cart.` };
     }
   }
@@ -445,20 +452,20 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
   // Best-effort: a failure here doesn't roll back the order — the
   // customer already got their discount, we just lose accounting.
-  // Race-y under concurrency (no increment-RPC); max_uses is a soft cap.
+  // Use the atomic increment RPC (migration 0087) so two concurrent
+  // checkouts can't both read uses_count=N and both write N+1, skipping
+  // a use against max_uses.
   if (couponId && couponDiscount > 0) {
-    const [redRes, curRes] = await Promise.all([
+    const [redRes, incRes] = await Promise.all([
       sb.from('coupon_redemptions').insert({
         coupon_id: couponId,
         order_id: order.id,
         discount_cents: couponDiscount,
       }),
-      sb.from('coupons').select('uses_count').eq('id', couponId).single(),
+      sb.rpc('increment_coupon_uses', { p_coupon_id: couponId }),
     ]);
     if (redRes.error) console.error('[coupon] redemption insert', redRes.error.message);
-    if (curRes.data) {
-      await sb.from('coupons').update({ uses_count: (curRes.data.uses_count ?? 0) + 1 }).eq('id', couponId);
-    }
+    if (incRes.error) console.error('[coupon] uses increment', incRes.error.message);
   }
 
   // Insert PRINT line items into order_items (existing flow)

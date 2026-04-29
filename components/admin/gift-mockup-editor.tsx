@@ -180,7 +180,14 @@ function Num({ label, value, onChange }: { label: string; value: number; onChang
           type="number"
           step="1"
           value={Math.round(value)}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          onChange={(e) => {
+            const next = parseFloat(e.target.value);
+            // Empty input → keep prior value rather than collapsing the
+            // rect to 0%. parseFloat('') is NaN; the old `|| 0` fallback
+            // silently corrupted the rectangle on every keystroke that
+            // briefly cleared the field.
+            if (Number.isFinite(next)) onChange(next);
+          }}
           className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 pr-6 text-xs font-mono focus:border-pink focus:outline-none"
         />
         <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-neutral-400">%</span>

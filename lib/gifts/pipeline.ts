@@ -250,10 +250,13 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
         console.error('[gift cutout] cut_file persist failed — continuing with preview only', e);
       }
     } catch (e: any) {
-      // Bg-remove upstream failed — fall back to rectangle preview so
-      // the customer still sees something. The caller can inspect the
-      // returned preview and offer a retry in the UI.
-      console.error('[gift cutout] bg-remove failed, falling back to rectangle', e?.message || e);
+      // Bg-remove upstream failed. Don't silently fall back to a
+      // rectangle — the customer asked for a cutout, and shipping a
+      // watermarked rectangle preview makes them think the cutout
+      // worked. Surface the failure so the action can return ok:false
+      // and the UI can prompt a retry.
+      console.error('[gift cutout] bg-remove failed', e?.message || e);
+      throw new Error(`Cutout generation failed: ${e?.message || 'bg-remove upstream error'}. Try again or pick a different shape.`);
     }
   }
 

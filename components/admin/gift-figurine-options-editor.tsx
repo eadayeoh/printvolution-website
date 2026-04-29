@@ -165,7 +165,10 @@ export function GiftFigurineOptionsEditor({
                     </span>
                     <button
                       type="button"
-                      onClick={() => removeRow(i)}
+                      onClick={() => {
+                        const label = row.label?.trim() || `Figurine ${i + 1}`;
+                        if (confirm(`Remove "${label}"? This is undone only by reloading before save.`)) removeRow(i);
+                      }}
                       className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50"
                     >
                       <Trash2 size={11} /> Remove

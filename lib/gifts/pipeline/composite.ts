@@ -166,10 +166,18 @@ export async function renderTemplateComposite(
     // Fan-out: skip zones whose mode doesn't match this pass.
     if (onlyMode && zoneMode !== onlyMode) continue;
 
-    const zx = zoneToPx(zone.x_mm, 'x');
-    const zy = zoneToPx(zone.y_mm, 'y');
-    const zw = zoneToPx(zone.width_mm, 'x');
-    const zh = zoneToPx(zone.height_mm, 'y');
+    // Clamp zone rectangles to canvas bounds. A misconfigured template
+    // (e.g. zone at x=300mm on a 100mm-wide product) would otherwise
+    // make sharp throw on the composite step or silently clip in ways
+    // that surprise the admin.
+    const rawZx = zoneToPx(zone.x_mm, 'x');
+    const rawZy = zoneToPx(zone.y_mm, 'y');
+    const rawZw = zoneToPx(zone.width_mm, 'x');
+    const rawZh = zoneToPx(zone.height_mm, 'y');
+    const zx = Math.max(0, Math.min(outW, rawZx));
+    const zy = Math.max(0, Math.min(outH, rawZy));
+    const zw = Math.max(0, Math.min(outW - zx, rawZw));
+    const zh = Math.max(0, Math.min(outH - zy, rawZh));
     if (zw <= 0 || zh <= 0) continue;
 
     if (isCalendar(zone)) {

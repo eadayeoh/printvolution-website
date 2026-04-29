@@ -63,7 +63,7 @@ export async function renderCutoutPreview(opts: {
     imageMime: opts.styledMime,
     prompt: BG_REMOVE_PROMPT,
     defaults: {
-      quality: 'high',
+      quality: 'medium',
       background: 'transparent',
       output_format: 'png',
       size: 'auto',

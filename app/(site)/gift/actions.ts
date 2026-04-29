@@ -9,6 +9,12 @@ import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 
+// AI image edits via gpt-image-2 take 30-60s at medium quality. Fluid
+// Compute defaults to 300s but we set it explicitly so a slow OpenAI
+// call can't kill the request before the response is returned and
+// leave the UI spinning forever.
+export const maxDuration = 300;
+
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
  * variants). Returns the gift_assets.id so the cart can stash it on the
@@ -307,7 +313,10 @@ export async function restylePreviewFromSource(input: {
       })
       .select('id')
       .single();
-    if (prevErr || !previewAsset) return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
+    if (prevErr || !previewAsset) {
+      await service.storage.from(GIFT_BUCKETS.previews).remove([preview.previewPath]).catch(() => {});
+      return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
+    }
 
     return {
       ok: true,
@@ -573,7 +582,9 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     }
   }
 
-  // 2. Register source asset row
+  // 2. Register source asset row. If the insert fails, the bucket
+  // upload above is orphaned — Supabase storage has no GC, so without
+  // an explicit delete the bucket grows forever with untracked files.
   const { data: sourceAsset, error: srcErr } = await service
     .from('gift_assets')
     .insert({
@@ -585,7 +596,10 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     })
     .select('id')
     .single();
-  if (srcErr || !sourceAsset) return { ok: false, error: 'source asset failed' };
+  if (srcErr || !sourceAsset) {
+    await service.storage.from(GIFT_BUCKETS.sources).remove([sourceKey]).catch(() => {});
+    return { ok: false, error: 'source asset failed' };
+  }
 
   // 3. Run preview pipeline
   let preview;
@@ -609,7 +623,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
         ...(variantDims ? { width_mm: variantDims.width_mm, height_mm: variantDims.height_mm } : {}),
       },
       sourceBytes: bytes,
-      sourceMime: file.type,
+      sourceMime: actualMime,
       cropRect: cropRect ?? null,
       // Shape='template' carries its own template id — it wins over the
       // legacy top-level template_id path so admin-enabled shape-picker
@@ -647,7 +661,10 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
     })
     .select('id')
     .single();
-  if (prevErr || !previewAsset) return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
+  if (prevErr || !previewAsset) {
+    await service.storage.from(GIFT_BUCKETS.previews).remove([preview.previewPath]).catch(() => {});
+    return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
+  }
 
   return {
     ok: true,
