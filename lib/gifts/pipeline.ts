@@ -93,22 +93,31 @@ async function resolvePipeline(product: GiftProduct): Promise<GiftPipeline | nul
 }
 
 /** Look up the customer-picked art-style prompt by id from the cart-line
- *  notes. Falls through to product.ai_prompt when no prompt was picked.
- *  Returns the prompt text to feed into the AI image edit, or null when
- *  the product runs no AI (photo-resize / digital / etc.). */
+ *  notes. Returns BOTH the prompt text and the prompt's pipeline_id so
+ *  the production transform can route to the right AI infrastructure
+ *  per-style — a single product can offer >2 art styles even though
+ *  product.{pipeline_id,secondary_pipeline_id} caps it at 2 mode-level
+ *  pipelines. Falls through to product.ai_prompt + product.pipeline_id
+ *  when no prompt was picked. */
 async function resolveCustomerPrompt(
   notes: string | null | undefined,
   product: GiftProduct,
-): Promise<string | null> {
+): Promise<{ text: string | null; pipelineId: string | null }> {
   const n = parsePersonalisationNotes(notes);
   const id = (n['prompt_id'] || '').trim();
   if (id) {
     const sb = createClient();
-    const { data } = await sb.from('gift_prompts').select('transformation_prompt').eq('id', id).maybeSingle();
-    const text = (data as { transformation_prompt?: string | null } | null)?.transformation_prompt;
-    if (text && text.trim()) return text;
+    const { data } = await sb
+      .from('gift_prompts')
+      .select('transformation_prompt, pipeline_id')
+      .eq('id', id)
+      .maybeSingle();
+    const row = data as { transformation_prompt?: string | null; pipeline_id?: string | null } | null;
+    if (row?.transformation_prompt && row.transformation_prompt.trim()) {
+      return { text: row.transformation_prompt, pipelineId: row.pipeline_id ?? null };
+    }
   }
-  return (product as any).ai_prompt ?? null;
+  return { text: (product as any).ai_prompt ?? null, pipelineId: null };
 }
 
 /** Walk the cart-line `personalisation_notes` and pull every customer
@@ -828,9 +837,16 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     }
 
     // Shared callback — runs the right transform on each zone's bytes.
+    // If the customer's picked prompt has its own pipeline_id, that wins
+    // over the product's mode-default pipeline so a single product can
+    // offer >2 art styles (each style row carries its own infra config).
     const transformZone = async (bytes: Uint8Array, mode: GiftMode) => {
-      const p = await resolvePipelineForMode(product, mode);
-      return transformBytesForMode(bytes, mode, product, p, /*preview=*/false, resolvedPrompt);
+      let p = null as Awaited<ReturnType<typeof resolvePipelineForMode>>;
+      if (resolvedPrompt.pipelineId) {
+        p = await getPipelineByIdAdmin(resolvedPrompt.pipelineId);
+      }
+      if (!p) p = await resolvePipelineForMode(product, mode);
+      return transformBytesForMode(bytes, mode, product, p, /*preview=*/false, resolvedPrompt.text);
     };
 
     // Composite always rasterizes — if the resolved primary is 'svg'
@@ -936,7 +952,13 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     };
   }
 
-  const pipeline = await resolvePipeline(product);
+  // Customer-picked art-style prompt drives BOTH the prompt text AND
+  // (when set on the gift_prompts row) the pipeline. Without this, a
+  // single product is capped at the 2 mode-pipelines on its row; with
+  // this, it can offer N art styles each running their own infra.
+  const stylePick = await resolveCustomerPrompt(input.personalisationNotes, product);
+  const stylePipeline = stylePick.pipelineId ? await getPipelineByIdAdmin(stylePick.pipelineId) : null;
+  const pipeline = stylePipeline ?? await resolvePipeline(product);
   const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(src);
   buf = await sharp(buf).rotate().toBuffer();
@@ -952,7 +974,7 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     case 'uv':
     case 'embroidery':
       buf = await runAiTransform(buf, product, pipeline, /*preview=*/false, {
-        prompt: (product as any).ai_prompt ?? null,
+        prompt: stylePick.text ?? (product as any).ai_prompt ?? null,
         negativePrompt: (product as any).ai_negative_prompt ?? null,
       });
       break;
