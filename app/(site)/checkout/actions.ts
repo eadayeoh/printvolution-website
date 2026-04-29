@@ -8,6 +8,8 @@ import type { GiftProduct } from '@/lib/gifts/types';
 import { evaluateCouponForOrder } from '@/lib/coupons';
 import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
 import { reportError } from '@/lib/observability';
+import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
+import { parseShapeOptions, shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
 
 /**
  * Public coupon-validation endpoint used by the checkout form
@@ -314,6 +316,7 @@ const OrderSchema = z.object({
       gift_variant_id: z.string().uuid().optional(),
       shape_kind: z.enum(['cutout', 'rectangle', 'template']).nullable().optional(),
       shape_template_id: z.string().uuid().nullable().optional(),
+      figurine_slug: z.string().max(120).nullable().optional(),
       surfaces: z.array(z.object({
         id: z.string().min(1),
         label: z.string().min(1),
@@ -389,14 +392,42 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   const slugs = Array.from(new Set(data.items.map((i) => i.product_slug)));
   const [printRes, giftRes, pricingRes] = await Promise.all([
     sb.from('products').select('id, slug, is_active').in('slug', slugs),
-    sb.from('gift_products').select('id, slug, mode, base_price_cents, is_active').in('slug', slugs),
+    sb.from('gift_products').select('id, slug, mode, base_price_cents, is_active, sizes, figurine_options, shape_options, price_tiers').in('slug', slugs),
     sb.from('product_pricing').select('product_id, rows'),
   ]);
   if (printRes.error) return { ok: false, error: 'Product lookup failed: ' + printRes.error.message };
   const printSlugToId = new Map((printRes.data ?? []).map((p: any) => [p.slug, p.id]));
   const printActive = new Map((printRes.data ?? []).map((p: any) => [p.slug, p.is_active]));
   const giftSlugToInfo = new Map(
-    (giftRes.data ?? []).map((p: any) => [p.slug, { id: p.id, mode: p.mode, base_price_cents: p.base_price_cents, is_active: p.is_active }])
+    (giftRes.data ?? []).map((p: any) => [p.slug, {
+      id: p.id,
+      mode: p.mode,
+      base_price_cents: p.base_price_cents,
+      is_active: p.is_active,
+      sizes: Array.isArray(p.sizes) ? p.sizes : [],
+      figurine_options: Array.isArray(p.figurine_options) ? p.figurine_options : [],
+      shape_options: p.shape_options ?? null,
+      price_tiers: Array.isArray(p.price_tiers) ? p.price_tiers : [],
+    }])
+  );
+
+  // Fetch any gift variants the cart references, so server can recompute
+  // the per-line expected unit price (variant base + size delta + shape
+  // upcharge + figurine delta + per-surface deltas) without trusting the
+  // client snapshot. Missing variant_id falls through to the product's
+  // base_price_cents.
+  const variantIds = Array.from(new Set(
+    data.items
+      .map((i) => i.gift_variant_id)
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+  ));
+  const variantsRes = variantIds.length > 0
+    ? await sb.from('gift_product_variants')
+        .select('id, gift_product_id, base_price_cents, price_tiers, size_overrides, surfaces')
+        .in('id', variantIds)
+    : { data: [] as any[], error: null };
+  const variantById = new Map(
+    ((variantsRes.data ?? []) as any[]).map((v: any) => [v.id, v])
   );
 
   // Compute PRICE FLOOR per print product — the lowest unit price in
@@ -432,15 +463,106 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     }
 
     if (isGift) {
-      // Gifts: unit price must equal base_price_cents (configurators on gifts
-      // don't exist yet — flat pricing). Reject if the product is misconfigured
-      // (NULL or zero base_price) instead of letting expected fall to 0 and
-      // pass any positive client-supplied unit price through.
-      const expected = giftSlugToInfo.get(item.product_slug)!.base_price_cents;
-      if (!expected || expected <= 0) {
+      // Gifts: server recomputes the expected BASE unit-price floor
+      // (deltas for the customer's picks, with tier-discounted base
+      // allowed). Reject the line when its claimed unit price is
+      // below this server-computed floor.
+      //
+      // Floor = lowest tier-allowed base for the active variant or
+      //         product (so a legitimate qty-tier discount on the
+      //         base passes — tier discounts apply to the qty
+      //         multiplier, not to the deltas)
+      //       + size delta (variant override → product default)
+      //       + shape upcharge (cutout +200c canonical, or custom from product.shape_options)
+      //       + figurine delta (matched on figurine_slug)
+      //       + per-surface deltas (each filled surface's price_delta_cents)
+      const giftInfo = giftSlugToInfo.get(item.product_slug)!;
+      if (!giftInfo.base_price_cents || giftInfo.base_price_cents <= 0) {
         return { ok: false, error: `Product is not priced: ${item.product_name}. Please contact us.` };
       }
-      if (item.unit_price_cents < expected) {
+
+      const variant = item.gift_variant_id ? variantById.get(item.gift_variant_id) : null;
+      // Variant must belong to the cart's product, otherwise the client
+      // smuggled a cheaper variant id under a richer product slug.
+      if (item.gift_variant_id && (!variant || variant.gift_product_id !== giftInfo.id)) {
+        return { ok: false, error: `Invalid variant for ${item.product_name}. Please refresh your cart.` };
+      }
+
+      // Lowest possible tier price wins as the floor's base — every
+      // legitimate cart at any qty falls at or above this number.
+      const baseTiers: Array<{ qty?: number; price_cents?: number }> = (variant && Array.isArray(variant.price_tiers) && variant.price_tiers.length > 0)
+        ? variant.price_tiers
+        : giftInfo.price_tiers;
+      const baselineBase = (variant && typeof variant.base_price_cents === 'number')
+        ? variant.base_price_cents
+        : giftInfo.base_price_cents;
+      let variantBase = baselineBase;
+      for (const t of baseTiers) {
+        if (typeof t?.price_cents === 'number' && t.price_cents > 0 && t.price_cents < variantBase) {
+          variantBase = t.price_cents;
+        }
+      }
+
+      const notes = parsePersonalisationNotes(item.personalisation_notes ?? '');
+
+      // Size delta — read from product.sizes[].price_delta_cents,
+      // overridable per variant via variant.size_overrides[slug].price_delta_cents.
+      let sizeDelta = 0;
+      const sizeSlug = notes['size_slug'];
+      if (sizeSlug) {
+        const size = giftInfo.sizes.find((s: any) => s?.slug === sizeSlug);
+        if (size) {
+          const override = variant?.size_overrides?.[sizeSlug];
+          sizeDelta = (typeof override?.price_delta_cents === 'number')
+            ? override.price_delta_cents
+            : (typeof size.price_delta_cents === 'number' ? size.price_delta_cents : 0);
+        }
+      }
+
+      // Shape upcharge — cutout canonical fallback is 200 cents (no
+      // shared constant in the codebase as of this write); admin-
+      // configured product.shape_options[].price_delta_cents wins when
+      // present.
+      let shapeDelta = 0;
+      if (item.shape_kind) {
+        try {
+          const shapeOptions = parseShapeOptions(giftInfo.shape_options);
+          const fromOptions = shapeOptionsPriceDelta(shapeOptions, item.shape_kind);
+          shapeDelta = fromOptions > 0
+            ? fromOptions
+            : (item.shape_kind === 'cutout' ? 200 : 0);
+        } catch {
+          shapeDelta = item.shape_kind === 'cutout' ? 200 : 0;
+        }
+      }
+
+      // Figurine delta — keyed by figurine_slug on the cart line.
+      let figurineDelta = 0;
+      if (item.figurine_slug) {
+        const fig = giftInfo.figurine_options.find((f: any) => f?.slug === item.figurine_slug);
+        if (fig && typeof fig.price_delta_cents === 'number') {
+          figurineDelta = fig.price_delta_cents;
+        }
+      }
+
+      // Per-surface deltas — each surface filled by the customer pays
+      // its variant.surfaces[].price_delta_cents (when surfaces exist).
+      // "Filled" matches the customer-side definition: typed text OR an
+      // uploaded photo asset. Empty surfaces don't bill.
+      let surfaceDelta = 0;
+      if (Array.isArray(item.surfaces) && variant && Array.isArray(variant.surfaces)) {
+        for (const s of item.surfaces) {
+          const filled = Boolean((s.text && s.text.trim()) || s.source_asset_id);
+          if (!filled) continue;
+          const cfg = variant.surfaces.find((vs: any) => vs?.id === s.id);
+          if (cfg && typeof cfg.price_delta_cents === 'number') {
+            surfaceDelta += cfg.price_delta_cents;
+          }
+        }
+      }
+
+      const expectedUnitCents = variantBase + sizeDelta + shapeDelta + figurineDelta + surfaceDelta;
+      if (item.unit_price_cents < expectedUnitCents) {
         return { ok: false, error: `Price mismatch on ${item.product_name}. Please refresh your cart.` };
       }
     } else {

@@ -73,6 +73,12 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
   { ok: true; sourceAssetId: string } | { ok: false; error: string }
 > {
   try {
+    const ip = getClientIp();
+    if (!(await isPrivilegedUser())) {
+      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+    }
+
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
     const surfaceId   = (formData.get('surface_id')   || '').toString();
@@ -134,6 +140,12 @@ export async function uploadSongLyricsPhoto(formData: FormData): Promise<
   { ok: true; sourceAssetId: string; displayUrl: string } | { ok: false; error: string }
 > {
   try {
+    const ip = getClientIp();
+    if (!(await isPrivilegedUser())) {
+      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+    }
+
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
     if (!(file instanceof File)) return { ok: false, error: 'No file' };
@@ -382,7 +394,7 @@ export async function restylePreviewFromSource(input: {
         role: 'preview',
         bucket: GIFT_BUCKETS.previews,
         path: preview.previewPath,
-        mime_type: 'image/jpeg',
+        mime_type: preview.previewMime,
         width_px: preview.widthPx,
         height_px: preview.heightPx,
       })
@@ -521,6 +533,12 @@ export async function uploadGiftCartSnapshot(formData: FormData): Promise<
   { ok: true; url: string } | { ok: false; error: string }
 > {
   try {
+    const ip = getClientIp();
+    if (!(await isPrivilegedUser())) {
+      const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+      if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+    }
+
     const file = formData.get('file');
     const productSlug = (formData.get('product_slug') || '').toString();
     if (!(file instanceof File)) return { ok: false, error: 'No file' };
@@ -843,7 +861,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       role: 'preview',
       bucket: GIFT_BUCKETS.previews,
       path: preview.previewPath,
-      mime_type: 'image/jpeg',
+      mime_type: preview.previewMime,
       width_px: preview.widthPx,
       height_px: preview.heightPx,
     })

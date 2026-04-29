@@ -75,6 +75,11 @@ export const useCart = create<CartState>()(
         set((s) => ({
           items: s.items.map((i) => {
             if (i.id !== id) return i;
+            // TODO(price-tiers): cart lines should snapshot
+            // {base_price_cents, price_tiers} at add-time so updateQty
+            // can re-derive the tier price. Until that's threaded
+            // through gift-product-page → CartItem, fall back to the
+            // existing per-line unit price (no tier re-evaluation).
             const unit = i.qty > 0 ? i.line_total_cents / i.qty : i.unit_price_cents;
             return { ...i, qty, line_total_cents: Math.round(unit * qty) };
           }),

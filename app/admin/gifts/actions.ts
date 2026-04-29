@@ -698,15 +698,156 @@ export async function testGiftPrompt(formData: FormData): Promise<{ ok: boolean;
   }
 }
 
-/** Re-run the production pipeline for a failed or stale gift line */
+/** Re-run the production pipeline for a failed or stale gift line.
+ *  Three rules: (1) surface lines fan out per surface, (2) the status
+ *  CAS prevents two workers running the same line at once, (3) the
+ *  per-mode `production_files` JSONB is refreshed for dual-mode runs. */
 export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean; error?: string }> {
   try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
-  const sb = (await import('@/lib/gifts/storage')).serviceClient();
-  const { data: line } = await sb.from('gift_order_items').select('id, gift_product_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes').eq('id', lineId).maybeSingle();
+  const { serviceClient, GIFT_BUCKETS } = await import('@/lib/gifts/storage');
+  const sb = serviceClient();
+  const { data: line } = await sb.from('gift_order_items')
+    .select('id, gift_product_id, variant_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes')
+    .eq('id', lineId).maybeSingle();
   if (!line) return { ok: false, error: 'Line not found' };
-  if (!line.source_asset_id) return { ok: false, error: 'No source asset on this line' };
 
-  await sb.from('gift_order_items').update({ production_status: 'processing', production_error: null }).eq('id', lineId);
+  // Idempotency gate: only re-run if the line is currently failed,
+  // pending, or already ready (admin-initiated retry can re-run a
+  // successful one). Bail when another worker is mid-run.
+  const { data: claimed } = await sb
+    .from('gift_order_items')
+    .update({ production_status: 'processing', production_error: null })
+    .eq('id', lineId)
+    .in('production_status', ['failed', 'pending', 'ready'])
+    .select('id');
+  if (!claimed || claimed.length === 0) {
+    return { ok: false, error: 'Line is already being processed by another worker' };
+  }
+
+  // Surfaces-driven lines fan out per surface (mirrors checkout's
+  // queueSurfaceProduction). Each surface has its own production
+  // pipeline + status; the parent's production_status is rolled up.
+  const { data: surfaces } = await sb
+    .from('gift_order_item_surfaces')
+    .select('id')
+    .eq('order_item_id', lineId);
+  const hasSurfaces = (surfaces ?? []).length > 0;
+
+  if (hasSurfaces) {
+    try {
+      const { runSurfaceProductionPipeline } = await import('@/lib/gifts/pipeline');
+      const [{ data: product }, { data: surfaceRows }] = await Promise.all([
+        sb.from('gift_products').select('*').eq('id', line.gift_product_id).maybeSingle(),
+        sb.from('gift_order_item_surfaces').select('*').eq('order_item_id', lineId).order('display_order'),
+      ]);
+      if (!product) throw new Error('Product missing');
+      const variantId = (line as any).variant_id ?? null;
+      const { data: variant } = variantId
+        ? await sb.from('gift_product_variants').select('surfaces, width_mm, height_mm').eq('id', variantId).maybeSingle()
+        : { data: null };
+
+      for (const row of (surfaceRows ?? [])) {
+        // Reset each surface so it can be re-claimed below regardless
+        // of its prior state (mirrors the parent CAS — admin retry
+        // overrides any per-surface state).
+        await sb.from('gift_order_item_surfaces').update({
+          production_status: 'pending',
+          production_error: null,
+        }).eq('id', row.id);
+        const { data: surfClaim } = await sb
+          .from('gift_order_item_surfaces')
+          .update({ production_status: 'processing' })
+          .eq('id', row.id)
+          .eq('production_status', 'pending')
+          .select('id');
+        if (!surfClaim || surfClaim.length === 0) continue;
+        try {
+          let areaMm: { widthMm: number; heightMm: number } | null = null;
+          const variantSurfaces = Array.isArray(variant?.surfaces) ? variant!.surfaces : [];
+          const surfCfg = variantSurfaces.find((s: any) => s.id === row.surface_id);
+          const physW = Number(variant?.width_mm ?? product.width_mm);
+          const physH = Number(variant?.height_mm ?? product.height_mm);
+          if (surfCfg?.mockup_area && Number.isFinite(physW) && Number.isFinite(physH)) {
+            areaMm = {
+              widthMm:  (Number(surfCfg.mockup_area.width)  / 100) * physW,
+              heightMm: (Number(surfCfg.mockup_area.height) / 100) * physH,
+            };
+          }
+
+          let sourcePath: string | null = null;
+          let sourceMime: string | null = null;
+          if (row.source_asset_id) {
+            const { data: src } = await sb.from('gift_assets').select('path, mime_type').eq('id', row.source_asset_id).maybeSingle();
+            sourcePath = (src as any)?.path ?? null;
+            sourceMime = (src as any)?.mime_type ?? null;
+          }
+
+          const out = await runSurfaceProductionPipeline({
+            product: product as any,
+            mode: row.mode,
+            text: row.text ?? undefined,
+            sourcePath,
+            sourceMime,
+            surfaceLabel: row.surface_label,
+            areaMm,
+          });
+
+          const { data: prodAsset } = await sb.from('gift_assets').insert({
+            role: 'production',
+            bucket: GIFT_BUCKETS.production,
+            path: out.productionPath,
+            mime_type: out.productionMime,
+            width_px: out.widthPx,
+            height_px: out.heightPx,
+            dpi: out.dpi,
+          }).select('id').single();
+          const pdfAsset = out.productionPdfPath
+            ? (await sb.from('gift_assets').insert({
+                role: 'production-pdf',
+                bucket: GIFT_BUCKETS.production,
+                path: out.productionPdfPath,
+                mime_type: out.productionPdfMime,
+              }).select('id').single()).data
+            : null;
+
+          await sb.from('gift_order_item_surfaces').update({
+            production_asset_id: prodAsset?.id ?? null,
+            production_pdf_id: pdfAsset?.id ?? null,
+            production_status: 'ready',
+          }).eq('id', row.id);
+        } catch (e: any) {
+          await sb.from('gift_order_item_surfaces').update({
+            production_status: 'failed',
+            production_error: e?.message ?? 'unknown',
+          }).eq('id', row.id);
+        }
+      }
+
+      // Roll up parent status — mirrors checkout's tail.
+      const { data: final } = await sb
+        .from('gift_order_item_surfaces')
+        .select('production_status')
+        .eq('order_item_id', lineId);
+      const statuses = (final ?? []).map((r: any) => r.production_status);
+      const rollup = statuses.length > 0 && statuses.every((s: string) => s === 'ready')
+        ? 'ready'
+        : statuses.some((s: string) => s === 'failed')
+          ? 'failed'
+          : 'processing';
+      await sb.from('gift_order_items').update({ production_status: rollup }).eq('id', lineId);
+      return { ok: rollup === 'ready' };
+    } catch (e: any) {
+      await sb.from('gift_order_items').update({ production_status: 'failed', production_error: e?.message ?? 'unknown' }).eq('id', lineId);
+      return { ok: false, error: e.message };
+    }
+  }
+
+  // Single-source line — original path, plus production_files refresh
+  // so dual-mode template runs surface their per-mode files.
+  if (!line.source_asset_id) {
+    await sb.from('gift_order_items').update({ production_status: 'failed', production_error: 'No source asset on this line' }).eq('id', lineId);
+    return { ok: false, error: 'No source asset on this line' };
+  }
   try {
     const [{ data: product }, { data: source }] = await Promise.all([
       sb.from('gift_products').select('*').eq('id', line.gift_product_id).maybeSingle(),
@@ -714,7 +855,6 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
     ]);
     if (!product || !source) throw new Error('Product or source missing');
     const { runProductionPipeline } = await import('@/lib/gifts/pipeline');
-    const { GIFT_BUCKETS } = await import('@/lib/gifts/storage');
     const effectiveTemplateId = (line as any).shape_kind === 'template'
       ? ((line as any).shape_template_id ?? (line as any).template_id)
       : (line as any).template_id;
@@ -735,9 +875,21 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
           role: 'production-pdf', bucket: GIFT_BUCKETS.production, path: out.productionPdfPath, mime_type: out.productionPdfMime,
         }).select('id').single()).data
       : null;
+    // Mirror the checkout flow: persist the dual-mode per-file set so
+    // the admin order view shows each emitted file with its mode label.
+    // Empty array when single-mode.
+    const productionFiles = out.files?.map((f) => ({
+      mode: f.mode,
+      png_path: f.pngPath,
+      pdf_path: f.pdfPath,
+      width_px: f.widthPx,
+      height_px: f.heightPx,
+      dpi: f.dpi,
+    })) ?? [];
     await sb.from('gift_order_items').update({
       production_asset_id: prodAsset?.id ?? null,
       production_pdf_id: pdfAsset?.id ?? null,
+      production_files: productionFiles,
       production_status: 'ready',
     }).eq('id', lineId);
     return { ok: true };

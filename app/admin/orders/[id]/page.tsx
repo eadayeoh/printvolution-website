@@ -4,6 +4,7 @@ import { getOrderById } from '@/lib/data/admin';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { OrderStatusUpdater } from '@/components/admin/order-status-updater';
 import { GiftOrderLine } from '@/components/admin/gift-order-line';
+import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 
 export const metadata = { title: 'Order Detail' };
 
@@ -75,11 +76,24 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                         ))}
                       </div>
                     )}
-                    {item.personalisation_notes && (
-                      <div className="mt-1 text-xs text-neutral-700">
-                        <strong>Notes:</strong> {item.personalisation_notes}
-                      </div>
-                    )}
+                    {item.personalisation_notes && (() => {
+                      const parsed = parsePersonalisationNotes(item.personalisation_notes);
+                      const entries = Object.entries(parsed);
+                      if (entries.length === 0) return null;
+                      return (
+                        <div className="mt-1 text-xs text-neutral-700">
+                          <strong>Notes:</strong>
+                          <ul className="mt-1 ml-4 space-y-0.5">
+                            {entries.map(([k, v]) => (
+                              <li key={k}>
+                                <span className="text-neutral-500">{k}:</span>{' '}
+                                <span className="font-semibold text-neutral-700">{v}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
                     {/* Foil-print SVG download — admin only, generated server-
                         side from the line's notes. Customers never see this. */}
                     {item.product_slug === 'song-lyrics-photo-frame' && (

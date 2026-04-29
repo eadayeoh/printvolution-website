@@ -3788,7 +3788,7 @@ export function GiftProductPage({
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    disabled={!canAdd || uploading}
+                    disabled={!canAdd || uploading || capturingSnapshot}
                     style={{
                       background: addedFlash ? 'var(--pv-green)' : !canAdd ? 'rgba(255,255,255,0.15)' : 'var(--pv-orange)',
                       color: !canAdd ? 'rgba(255,255,255,0.4)' : '#fff',

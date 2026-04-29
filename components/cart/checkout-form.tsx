@@ -109,6 +109,7 @@ export function CheckoutForm() {
           gift_variant_id: i.gift_variant_id,
           shape_kind: i.shape_kind ?? null,
           shape_template_id: i.shape_template_id ?? null,
+          figurine_slug: i.figurine_slug ?? null,
           surfaces: i.surfaces,
         })),
       });

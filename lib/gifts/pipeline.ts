@@ -195,7 +195,7 @@ export type PreviewInput = {
 export type PreviewOutput = {
   previewPath: string;
   previewPublicUrl: string;
-  previewMime: 'image/jpeg';
+  previewMime: 'image/jpeg' | 'image/png';
   widthPx: number;
   heightPx: number;
 };
@@ -277,10 +277,17 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       break;
   }
 
-  // Resize to preview size (max 1200 px long edge). Flatten before
-  // JPEG so a transparent stylised buffer doesn't render with a
-  // black background.
-  buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
+  // Resize to preview size (max 1200 px long edge). For pipelines that
+  // emit a transparent PNG (laser / UV cut paths), keep the alpha so
+  // the customer sees through to the mockup material; otherwise flatten
+  // over white and emit JPEG.
+  const preMeta = await sharp(buf).metadata();
+  const keepAlpha = preMeta.hasAlpha === true;
+  if (keepAlpha) {
+    buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).png().toBuffer();
+  } else {
+    buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
+  }
 
   // Cutout shape: bg-remove + SVG silhouette trace. Runs AFTER the mode
   // transform so it cuts the stylised subject, not the raw photo. Stores
@@ -292,7 +299,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       const { renderCutoutPreview } = await import('./pipeline/cutout');
       const cutout = await renderCutoutPreview({
         styledBytes: buf,
-        styledMime: 'image/jpeg',
+        styledMime: styledMeta.format === 'png' ? 'image/png' : 'image/jpeg',
         canvasWidthPx:  styledMeta.width ?? 1200,
         canvasHeightPx: styledMeta.height ?? 1200,
       });
@@ -336,18 +343,23 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
   // Watermark
   buf = await applyWatermark(buf);
 
-  // Upload to public preview bucket
+  // Upload to public preview bucket. Match the file extension + mime
+  // to whether the buffer is still alpha (transparent laser / UV) or a
+  // flattened JPEG.
+  const outMeta = await sharp(buf).metadata();
+  const isPng = outMeta.format === 'png' || outMeta.hasAlpha === true;
+  const previewMime: 'image/jpeg' | 'image/png' = isPng ? 'image/png' : 'image/jpeg';
+  const ext = isPng ? 'png' : 'jpg';
   const keyPrefix = input.shapeKind === 'cutout' ? `pv-cutout-${product.slug}` : `pv-${product.slug}`;
-  const key = makeKey(keyPrefix, 'jpg');
-  const { path, publicUrl } = await putObject(GIFT_BUCKETS.previews, key, buf, 'image/jpeg');
+  const key = makeKey(keyPrefix, ext);
+  const { path, publicUrl } = await putObject(GIFT_BUCKETS.previews, key, buf, previewMime);
 
-  const meta = await sharp(buf).metadata();
   return {
     previewPath: path,
     previewPublicUrl: publicUrl!,
-    previewMime: 'image/jpeg',
-    widthPx: meta.width ?? 1200,
-    heightPx: meta.height ?? 1200,
+    previewMime,
+    widthPx: outMeta.width ?? 1200,
+    heightPx: outMeta.height ?? 1200,
   };
 }
 
@@ -1082,7 +1094,15 @@ async function applyWatermark(input: Buffer): Promise<Buffer> {
       <rect width="100%" height="100%" fill="url(#wm)"/>
     </svg>`;
   const overlay = Buffer.from(svg);
-  return sharp(input).composite([{ input: overlay, blend: 'over' }]).flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
+  // Preserve alpha through the watermark step — the laser/UV preview
+  // pipelines rely on the transparent buffer surviving so the customer
+  // sees through to the mockup material. Flatten + JPEG only when the
+  // input was already opaque.
+  const composed = sharp(input).composite([{ input: overlay, blend: 'over' }]);
+  if (meta.hasAlpha === true) {
+    return composed.png().toBuffer();
+  }
+  return composed.flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
 }
 
 // ---------------------------------------------------------------------------
