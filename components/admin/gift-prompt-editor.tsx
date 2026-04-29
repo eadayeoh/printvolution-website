@@ -7,7 +7,8 @@ import { Trash2 } from 'lucide-react';
 import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt, testGiftPrompt } from '@/app/admin/gifts/actions';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
-import type { GiftPrompt, PromptVisibility } from '@/lib/gifts/prompts';
+import type { GiftPrompt } from '@/lib/gifts/prompts-shared';
+import type { PromptVisibility } from '@/lib/gifts/prompts';
 import type { GiftMode, GiftPipeline, GiftTemplate } from '@/lib/gifts/types';
 
 export function GiftPromptEditor({

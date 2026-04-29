@@ -10,12 +10,6 @@ import { detectImage } from '@/lib/upload/detect-image';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
-// AI image edits via gpt-image-2 take 30-60s at medium quality. Fluid
-// Compute defaults to 300s but we set it explicitly so a slow OpenAI
-// call can't kill the request before the response is returned and
-// leave the UI spinning forever.
-export const maxDuration = 300;
-
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
  * variants). Returns the gift_assets.id so the cart can stash it on the

@@ -10,6 +10,13 @@ import { giftFromPrice } from '@/lib/gifts/types';
 
 export const dynamic = 'force-dynamic';
 
+// AI image edits via gpt-image-2 take 30-60s at medium quality. Server
+// actions invoked from this page (uploadAndPreviewGift, restyle…)
+// inherit the page's maxDuration. Without this, a slow OpenAI call can
+// kill the request before the response is returned and leave the UI
+// spinning forever.
+export const maxDuration = 300;
+
 function rawTemplatesNeedOccasionFilter(templateMode: string | null | undefined): boolean {
   // Skip the occasions query for products that don't render a template
   // picker at all (template_mode = 'none'). Anything else may have

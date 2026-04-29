@@ -12,7 +12,7 @@ import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect, GiftV
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surfaces';
-import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts';
+import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts-shared';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
