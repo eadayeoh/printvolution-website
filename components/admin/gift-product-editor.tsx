@@ -93,6 +93,12 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
     product?.preview_max_width_px ? String(product.preview_max_width_px) : '',
   );
 
+  const [productionPrimaryFormat, setProductionPrimaryFormat] = useState<string>(
+    product?.production_primary_format ?? '',
+  );
+  const [productionIncludePdf, setProductionIncludePdf] = useState<string>(
+    product?.production_include_pdf == null ? '' : (product.production_include_pdf ? 'yes' : 'no'),
+  );
 
   const [basePrice, setBasePrice] = useState(((product?.base_price_cents ?? 0) / 100).toFixed(2));
   const [priceTiers, setPriceTiers] = useState<Array<{ qty: string; price: string }>>(
@@ -239,6 +245,8 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
         ? figurineOptions.filter((o) => o.slug && o.name && o.image_url)
         : null,
       figurine_area: figurinePickerEnabled && figurineOptions.length > 0 ? figurineArea : null,
+      production_primary_format: (productionPrimaryFormat || null) as 'png' | 'jpg' | 'svg' | null,
+      production_include_pdf: productionIncludePdf === '' ? null : productionIncludePdf === 'yes',
     };
     if (!modeLocked) payload.mode = mode;
     payload.secondary_mode = secondaryMode;
@@ -809,6 +817,35 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
             </div>
             <div className="mt-3 rounded border border-neutral-200 bg-neutral-50 p-3 text-[11px] text-neutral-600">
               <strong>Recommended:</strong> bleed <strong>2 mm</strong>, safe zone <strong>3 mm</strong>, minimum source <strong>{Math.ceil((Math.max(parseFloat(widthMm), parseFloat(heightMm)) / 25.4) * 300)} px</strong> for 300 DPI at your current dimensions. Sizes under the <strong>Design</strong> tab override these per chosen size.
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-white p-6">
+            <div className="mb-3 text-sm font-black text-ink">Production output</div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Primary format</span>
+                <select value={productionPrimaryFormat} onChange={(e) => setProductionPrimaryFormat(e.target.value)} className={inputCls}>
+                  <option value="">Inherit from mode</option>
+                  <option value="png">PNG</option>
+                  <option value="jpg">JPG</option>
+                  <option value="svg">SVG</option>
+                </select>
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold text-ink">Wrap in PDF</span>
+                <select value={productionIncludePdf} onChange={(e) => setProductionIncludePdf(e.target.value)} className={inputCls}>
+                  <option value="">Inherit from mode</option>
+                  <option value="yes">Yes (PNG + PDF)</option>
+                  <option value="no">No (skip PDF)</option>
+                </select>
+                <span className="mt-1 block text-[11px] text-neutral-500">
+                  Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
+                </span>
+              </label>
             </div>
           </div>
         </div>

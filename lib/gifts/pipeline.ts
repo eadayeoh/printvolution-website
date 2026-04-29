@@ -49,6 +49,25 @@ function productionFormatsForMode(mode: string | null | undefined): {
   }
 }
 
+/** Resolve the production output format with template > product > mode-default
+ *  precedence. Either field on the template wins individually — a template
+ *  can change just the primary format and still inherit the product's
+ *  PDF-wrap choice. NULL means "inherit from the next layer down". */
+function resolveProductionFormat(
+  template: GiftTemplate | null | undefined,
+  product: GiftProduct,
+): { primary: 'png' | 'jpg' | 'svg'; includePdf: boolean } {
+  const fallback = productionFormatsForMode(product.mode);
+  return {
+    primary: template?.production_primary_format
+      ?? product.production_primary_format
+      ?? fallback.primary,
+    includePdf: template?.production_include_pdf
+      ?? product.production_include_pdf
+      ?? fallback.includePdf,
+  };
+}
+
 async function loadTemplate(templateId: string | null): Promise<GiftTemplate | null> {
   if (!templateId) return null;
   const sb = createClient();
@@ -383,7 +402,7 @@ async function renderRendererTemplate(args: {
   const physicalWmm = Number.isFinite(sizeWmm) && sizeWmm > 0 ? sizeWmm : product.width_mm;
   const physicalHmm = Number.isFinite(sizeHmm) && sizeHmm > 0 ? sizeHmm : product.height_mm;
 
-  const fmt = productionFormatsForMode(product.mode);
+  const fmt = resolveProductionFormat(template, product);
   const refDims = template.reference_width_mm && template.reference_height_mm
     ? { width_mm: template.reference_width_mm, height_mm: template.reference_height_mm }
     : null;
@@ -773,10 +792,8 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     }
   }
 
-  // Per-mode output format. Laser/UV/digital → PNG only, embroidery
-  // → JPG only, foil → SVG only, everything else → PNG + PDF (the
-  // legacy default).
-  const fmt = productionFormatsForMode(product.mode);
+  // Per-mode output format with template / product overrides.
+  const fmt = resolveProductionFormat(template, product);
   // Always render a high-quality bitmap first; we either ship the PNG
   // / JPG directly or wrap it inside an SVG.
   const bitmapBuf = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();

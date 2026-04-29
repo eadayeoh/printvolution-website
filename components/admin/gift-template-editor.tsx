@@ -285,6 +285,12 @@ export function GiftTemplateEditor({
   // SKUs (e.g. foil vs poster) selectable via the customer template
   // picker.
   const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
+  const [productionPrimaryFormat, setProductionPrimaryFormat] = useState<string>(
+    template?.production_primary_format ?? '',
+  );
+  const [productionIncludePdf, setProductionIncludePdf] = useState<string>(
+    template?.production_include_pdf == null ? '' : (template.production_include_pdf ? 'yes' : 'no'),
+  );
   const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
   // Empty Set = inherit all product shape_options. Any non-empty
   // selection narrows the PDP's "Pick your shape" picker.
@@ -728,6 +734,8 @@ export function GiftTemplateEditor({
       mode_override: modeOverride.trim() || null,
       occasion_id: occasionId.trim() || null,
       allowed_shape_kinds: allowedShapeKinds.size > 0 ? Array.from(allowedShapeKinds) : null,
+      production_primary_format: (productionPrimaryFormat || null) as 'png' | 'jpg' | 'svg' | null,
+      production_include_pdf: productionIncludePdf === '' ? null : productionIncludePdf === 'yes',
     };
     startTransition(async () => {
       if (template) {
@@ -1248,6 +1256,47 @@ export function GiftTemplateEditor({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="rounded-lg border-2 border-neutral-200 p-4">
+              <div className="mb-2 text-sm font-bold text-ink">Production output</div>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                    Primary format
+                  </span>
+                  <select
+                    value={productionPrimaryFormat}
+                    onChange={(e) => setProductionPrimaryFormat(e.target.value)}
+                    className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                  >
+                    <option value="">Inherit from mode</option>
+                    <option value="png">PNG</option>
+                    <option value="jpg">JPG</option>
+                    <option value="svg">SVG</option>
+                  </select>
+                  <span className="mt-1 block text-[10px] text-neutral-500">
+                    Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
+                  </span>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                    Wrap in PDF
+                  </span>
+                  <select
+                    value={productionIncludePdf}
+                    onChange={(e) => setProductionIncludePdf(e.target.value)}
+                    className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs"
+                  >
+                    <option value="">Inherit from mode</option>
+                    <option value="yes">Yes (PNG + PDF)</option>
+                    <option value="no">No (skip PDF)</option>
+                  </select>
+                  <span className="mt-1 block text-[10px] text-neutral-500">
+                    Leave blank to derive from product.mode (e.g. UV → PNG, foil → SVG).
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
