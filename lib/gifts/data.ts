@@ -85,7 +85,7 @@ export async function listActiveOccasions(): Promise<GiftOccasion[]> {
   const sb = createClient();
   const { data } = await sb
     .from('gift_occasions')
-    .select('*')
+    .select('id, name, badge_label, target_date, days_before, days_after, is_active')
     .eq('is_active', true)
     .order('target_date', { ascending: true });
   return (data ?? []) as GiftOccasion[];

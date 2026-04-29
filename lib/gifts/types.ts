@@ -345,22 +345,19 @@ export type GiftTemplate = {
    *  gift_modes.slug (no DB FK; gift_modes is admin-extendable per
    *  migration 0072). Migration 0080. */
   mode_override?: string | null;
-  /** Optional gift_occasions FK. When set, the template only appears in
-   *  the customer-facing PDP picker during the occasion's date window
-   *  (target_date ± days_before/days_after). NULL = always-on, shows
-   *  year-round. Admin sees all templates regardless. Migration 0084. */
+  /** Optional gift_occasions FK. When set, the template only appears
+   *  in the customer-facing PDP picker during the occasion's date
+   *  window. NULL = always-on. */
   occasion_id?: string | null;
   /** When set, the customer-facing "Pick your shape" picker only shows
    *  shape_options whose `kind` is in this list. NULL = inherit all
-   *  shape_options from the gift_products row (legacy behaviour). Lets
-   *  admin scope shapes per template (e.g. a layered photo collage
-   *  template that only makes sense as a rectangle). Migration 0085. */
-  allowed_shape_kinds?: Array<'cutout' | 'rectangle' | 'template'> | null;
+   *  shape_options from the gift_products row. */
+  allowed_shape_kinds?: import('./shape-options').ShapeKind[] | null;
 };
 
 /** Date-windowed occasion (e.g. Mother's Day 2026). Tagged on
  *  gift_templates via occasion_id; PDP hides out-of-window templates,
- *  in-window templates render with a badge and sort first. Migration 0084. */
+ *  in-window templates render with a badge and sort first. */
 export type GiftOccasion = {
   id: string;
   name: string;

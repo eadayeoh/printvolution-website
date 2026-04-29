@@ -22,6 +22,7 @@ import {
   type GiftTemplateRenderAnchorZone,
   type GiftMode,
 } from '@/lib/gifts/types';
+import type { ShapeKind } from '@/lib/gifts/shape-options';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
@@ -196,7 +197,7 @@ export function GiftTemplateEditor({
   availableModes: Array<Pick<GiftModeMeta, 'slug' | 'label'>>;
   /** All gift_occasions rows (active + paused). Drives the optional
    *  occasion dropdown — picking one date-windows the template on the
-   *  customer-facing PDP. Migration 0084. */
+   *  customer-facing PDP. */
   availableOccasions?: GiftOccasion[];
 }) {
   const router = useRouter();
@@ -235,13 +236,12 @@ export function GiftTemplateEditor({
   // picker.
   const [modeOverride, setModeOverride] = useState<string>(template?.mode_override ?? '');
   const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
-  // Per-template allowed shape kinds (migration 0085). Empty Set =
-  // "inherit all from product" (the historical behaviour). Any non-empty
+  // Empty Set = inherit all product shape_options. Any non-empty
   // selection narrows the PDP's "Pick your shape" picker.
-  const [allowedShapeKinds, setAllowedShapeKinds] = useState<Set<'cutout' | 'rectangle' | 'template'>>(
-    () => new Set((template?.allowed_shape_kinds ?? []) as Array<'cutout' | 'rectangle' | 'template'>),
+  const [allowedShapeKinds, setAllowedShapeKinds] = useState<Set<ShapeKind>>(
+    () => new Set(template?.allowed_shape_kinds ?? []),
   );
-  function toggleAllowedShapeKind(k: 'cutout' | 'rectangle' | 'template') {
+  function toggleAllowedShapeKind(k: ShapeKind) {
     setAllowedShapeKinds((prev) => {
       const next = new Set(prev);
       if (next.has(k)) next.delete(k); else next.add(k);
@@ -959,7 +959,7 @@ export function GiftTemplateEditor({
                   { kind: 'cutout',    label: 'Cutout' },
                   { kind: 'rectangle', label: 'Rectangle' },
                   { kind: 'template',  label: 'Template-shape' },
-                ] as const).map((row) => (
+                ] satisfies Array<{ kind: ShapeKind; label: string }>).map((row) => (
                   <label key={row.kind} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-xs hover:border-pink">
                     <input
                       type="checkbox"

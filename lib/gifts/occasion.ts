@@ -1,24 +1,33 @@
 import type { GiftOccasion, GiftTemplate } from './types';
 
+// Parse YYYY-MM-DD as UTC midnight so the window boundaries don't shift
+// with the server's local timezone (Vercel runs in UTC; admin previews
+// elsewhere). Returns null on malformed input.
+function parseTargetDateUtc(yyyyMmDd: string): Date | null {
+  const d = new Date(yyyyMmDd + 'T00:00:00Z');
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addDaysUtc(d: Date, days: number): Date {
+  const copy = new Date(d);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
 export function isOccasionInWindow(o: GiftOccasion, now: Date = new Date()): boolean {
   if (!o.is_active) return false;
-  const target = new Date(o.target_date + 'T00:00:00');
-  if (Number.isNaN(target.getTime())) return false;
-  const from = new Date(target);
-  from.setDate(from.getDate() - (o.days_before ?? 0));
-  from.setHours(0, 0, 0, 0);
-  const until = new Date(target);
-  until.setDate(until.getDate() + (o.days_after ?? 0));
-  until.setHours(23, 59, 59, 999);
+  const target = parseTargetDateUtc(o.target_date);
+  if (!target) return false;
+  const from = addDaysUtc(target, -(o.days_before ?? 0));
+  const until = addDaysUtc(target, +(o.days_after ?? 0));
+  until.setUTCHours(23, 59, 59, 999);
   return now >= from && now <= until;
 }
 
 export function describeOccasionWindow(o: GiftOccasion): { fromIso: string; untilIso: string } {
-  const target = new Date(o.target_date + 'T00:00:00');
-  const from = new Date(target);
-  from.setDate(from.getDate() - (o.days_before ?? 0));
-  const until = new Date(target);
-  until.setDate(until.getDate() + (o.days_after ?? 0));
+  const target = parseTargetDateUtc(o.target_date) ?? new Date(NaN);
+  const from = addDaysUtc(target, -(o.days_before ?? 0));
+  const until = addDaysUtc(target, +(o.days_after ?? 0));
   return {
     fromIso: from.toISOString().slice(0, 10),
     untilIso: until.toISOString().slice(0, 10),

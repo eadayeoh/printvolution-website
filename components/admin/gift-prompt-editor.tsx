@@ -8,13 +8,14 @@ import { createGiftPrompt, updateGiftPrompt, deleteGiftPrompt, testGiftPrompt } 
 import { ImageUpload } from '@/components/admin/image-upload';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
 import type { GiftPrompt, PromptVisibility } from '@/lib/gifts/prompts';
-import type { GiftMode, GiftPipeline } from '@/lib/gifts/types';
+import type { GiftMode, GiftPipeline, GiftTemplate } from '@/lib/gifts/types';
 
 export function GiftPromptEditor({
   prompt,
   defaultMode,
   pipelines = [],
   visibility = [],
+  availableTemplates = [],
 }: {
   prompt: GiftPrompt | null;
   defaultMode?: GiftMode;
@@ -22,6 +23,10 @@ export function GiftPromptEditor({
   /** For an existing prompt: which active gift products would actually
    *  show this prompt to customers, and why. Computed server-side. */
   visibility?: PromptVisibility[];
+  /** Every gift_template (active + inactive). Drives the per-template
+   *  scope multi-select — empty selection = the prompt applies to all
+   *  templates (the default). */
+  availableTemplates?: Pick<GiftTemplate, 'id' | 'name' | 'group_name' | 'is_active'>[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -39,6 +44,16 @@ export function GiftPromptEditor({
   const [negative, setNegative] = useState(prompt?.negative_prompt ?? '');
   const [displayOrder, setDisplayOrder] = useState((prompt?.display_order ?? 0).toString());
   const [isActive, setIsActive] = useState(prompt?.is_active ?? true);
+  const [appliesToTemplateIds, setAppliesToTemplateIds] = useState<Set<string>>(
+    () => new Set(prompt?.applies_to_template_ids ?? []),
+  );
+  function toggleAppliesToTemplate(id: string) {
+    setAppliesToTemplateIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   // Test panel state
   const testFileRef = useRef<HTMLInputElement | null>(null);
@@ -80,6 +95,7 @@ export function GiftPromptEditor({
       negative_prompt: negative.trim() || null,
       display_order: parseInt(displayOrder, 10) || 0,
       is_active: isActive,
+      applies_to_template_ids: appliesToTemplateIds.size > 0 ? Array.from(appliesToTemplateIds) : null,
     };
     startTransition(async () => {
       if (prompt) {
@@ -256,6 +272,38 @@ export function GiftPromptEditor({
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               Active (customer sees this option)
             </label>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <div className="mb-1 text-xs font-bold text-ink">Show this style only for…</div>
+            <p className="mb-3 text-[11px] text-neutral-500">
+              Optional. Tick templates if this style should only appear when one of them is selected. Leave all unticked to show for every template (the default).
+            </p>
+            {availableTemplates.length === 0 ? (
+              <div className="text-[11px] text-neutral-500">No templates exist yet.</div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto pr-1 space-y-1">
+                {availableTemplates.map((t) => (
+                  <label key={t.id} className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-[11px] hover:bg-neutral-50">
+                    <input
+                      type="checkbox"
+                      checked={appliesToTemplateIds.has(t.id)}
+                      onChange={() => toggleAppliesToTemplate(t.id)}
+                    />
+                    <span className="truncate">
+                      <span className={t.is_active ? 'text-ink' : 'text-neutral-400'}>{t.name}</span>
+                      {t.group_name ? <span className="ml-1 text-neutral-400">· {t.group_name}</span> : null}
+                      {!t.is_active ? <span className="ml-1 text-neutral-400">(inactive)</span> : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {appliesToTemplateIds.size === 0 ? (
+              <div className="mt-2 text-[11px] text-neutral-500">Currently visible for all templates.</div>
+            ) : (
+              <div className="mt-2 text-[11px] text-neutral-500">{appliesToTemplateIds.size} template{appliesToTemplateIds.size === 1 ? '' : 's'} selected.</div>
+            )}
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white p-5">

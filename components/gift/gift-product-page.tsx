@@ -12,7 +12,7 @@ import type { GiftProduct, GiftProductVariant, GiftTemplate, GiftCropRect, GiftV
 import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surfaces';
-import type { GiftPrompt } from '@/lib/gifts/prompts';
+import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
@@ -62,6 +62,48 @@ import { parseSpotifyTrackId } from '@/lib/gifts/spotify-plaque-svg';
  *  inside the template-aspect stage if its photographed aspect
  *  differs. That's a clean visual hint to admins to crop their
  *  mockups to the template's proportions for best presentation. */
+function OccasionBadge({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        position: 'absolute',
+        top: 6,
+        left: 6,
+        background: 'var(--pv-magenta)',
+        color: '#fff',
+        fontSize: 9,
+        fontWeight: 800,
+        padding: '3px 6px',
+        borderRadius: 3,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function OccasionFallbackBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        marginBottom: 8,
+        padding: '8px 10px',
+        background: 'var(--pv-cream)',
+        border: '1px dashed var(--pv-rule)',
+        fontFamily: 'var(--pv-f-mono)',
+        fontSize: 11,
+        color: 'var(--pv-ink)',
+        letterSpacing: '0.02em',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function RendererVariantStage({
   mockupUrl,
   area,
@@ -129,11 +171,8 @@ type Props = {
   prompts: GiftPrompt[];
   variants?: GiftProductVariant[];
   relatedGifts?: Array<Pick<GiftProduct, 'slug' | 'name' | 'thumbnail_url' | 'base_price_cents' | 'price_tiers'>>;
-  /** Template ID → human badge label ("Mother's Day"). The PDP renders
-   *  this as a small ribbon overlay on the in-window tile. Templates
-   *  not in this map are either always-on or out-of-window (and the
-   *  data layer has already filtered them out for customer-facing
-   *  reads). Migration 0084. */
+  /** Template ID → human badge label ("Mother's Day"). Rendered as a
+   *  small ribbon overlay on the in-window tile. */
   occasionBadgeByTemplateId?: Record<string, string>;
 };
 
@@ -217,34 +256,33 @@ export function GiftProductPage({
   const previewStageRef = useRef<HTMLDivElement | null>(null);
   const [capturingSnapshot, setCapturingSnapshot] = useState(false);
 
-  const productShapeOptions: ShapeOption[] = (product.shape_options ?? []) as ShapeOption[];
-  // Per-template filter on the shape picker. The active template can
-  // narrow the customer's shape choices via allowed_shape_kinds; NULL
-  // (the default) inherits the full product list (legacy behaviour).
-  // Migration 0085.
-  const activeTemplateForShape = templates.find((t) => t.id === selectedTemplateId) ?? null;
-  const allowedShapeKinds = activeTemplateForShape?.allowed_shape_kinds ?? null;
-  const shapeOptions: ShapeOption[] =
-    allowedShapeKinds && allowedShapeKinds.length > 0
-      ? productShapeOptions.filter((o) => allowedShapeKinds.includes(o.kind))
-      : productShapeOptions;
+  const shapeOptions: ShapeOption[] = useMemo(() => {
+    const all = (product.shape_options ?? []) as ShapeOption[];
+    const active = templates.find((t) => t.id === selectedTemplateId) ?? null;
+    const allowed = active?.allowed_shape_kinds ?? null;
+    return allowed && allowed.length > 0 ? all.filter((o) => allowed.includes(o.kind)) : all;
+  }, [product.shape_options, templates, selectedTemplateId]);
   const shapePickerActive = shapeOptions.length > 0;
   const defaultShape: ShapeKind = shapeOptions[0]?.kind ?? 'rectangle';
   const [selectedShapeKind, setSelectedShapeKind] = useState<ShapeKind>(defaultShape);
-  // If a template flip drops the currently-selected shape from the
-  // visible list, bounce the customer onto the new first-allowed kind
-  // so the cart payload + price reflect what's actually on screen.
+  const [selectedShapeTemplateId, setSelectedShapeTemplateId] = useState<string | null>(() => {
+    const tpl = shapeOptions.find((o) => o.kind === 'template');
+    return tpl && tpl.kind === 'template' ? tpl.template_ids[0] ?? null : null;
+  });
+  // Bounce both shape selections when a template flip narrows or drops
+  // the currently-selected ones — keeps the cart payload + price
+  // consistent with what's visible.
   useEffect(() => {
     if (shapeOptions.length === 0) return;
     if (!shapeOptions.some((o) => o.kind === selectedShapeKind)) {
       setSelectedShapeKind(shapeOptions[0].kind);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTemplateId]);
-  const [selectedShapeTemplateId, setSelectedShapeTemplateId] = useState<string | null>(() => {
     const tpl = shapeOptions.find((o) => o.kind === 'template');
-    return tpl && tpl.kind === 'template' ? tpl.template_ids[0] ?? null : null;
-  });
+    const allowedTemplateIds = tpl && tpl.kind === 'template' ? tpl.template_ids : [];
+    if (selectedShapeTemplateId && !allowedTemplateIds.includes(selectedShapeTemplateId)) {
+      setSelectedShapeTemplateId(allowedTemplateIds[0] ?? null);
+    }
+  }, [shapeOptions, selectedShapeKind, selectedShapeTemplateId]);
   const [lastRenderedShape, setLastRenderedShape] = useState<ShapeKind | null>(null);
   const [lastRenderedShapeTemplateId, setLastRenderedShapeTemplateId] = useState<string | null>(null);
 
@@ -309,24 +347,15 @@ export function GiftProductPage({
     typeof window !== 'undefined' ? loadDesignDraft(product.slug) : null,
   );
   const [draftRestored, setDraftRestored] = useState(false);
-  // Surfaces a one-line notice in the picker when a saved/bookmarked
-  // template id no longer matches anything visible — happens when an
-  // occasion-tagged template (e.g. Mother's Day) goes out of window
-  // between visits. We silently flip to the new default and explain why.
   const [occasionFallbackNotice, setOccasionFallbackNotice] = useState(false);
   useEffect(() => {
     if (!savedDraft) return;
     if (savedDraft.templateId) {
-      // If the saved id still resolves in the visible list, restore as before.
-      // Otherwise the template is hidden by occasion windowing — leave the
-      // auto-picked default and surface a notice.
       const stillVisible = templates.some((t) => t.id === savedDraft.templateId);
       if (stillVisible) {
         setSelectedTemplateId(savedDraft.templateId);
       } else if (templates.length > 0) {
         setOccasionFallbackNotice(true);
-        const dismiss = setTimeout(() => setOccasionFallbackNotice(false), 6000);
-        return () => clearTimeout(dismiss);
       }
     }
     if (savedDraft.promptId) setSelectedPromptId(savedDraft.promptId);
@@ -340,9 +369,13 @@ export function GiftProductPage({
     setDraftRestored(true);
     const t = setTimeout(() => setDraftRestored(false), 4500);
     return () => clearTimeout(t);
-  // Mount-only — applying again on changes would clobber in-progress edits.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!occasionFallbackNotice) return;
+    const t = setTimeout(() => setOccasionFallbackNotice(false), 6000);
+    return () => clearTimeout(t);
+  }, [occasionFallbackNotice]);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
@@ -622,8 +655,21 @@ export function GiftProductPage({
   const variantHasPhotoSurface =
     variantSurfaces.length === 0 ||
     variantSurfaces.some((s) => s.accepts === 'photo' || s.accepts === 'both');
-  const showPromptPicker = prompts.length >= 2 && variantHasPhotoSurface;
+  const visiblePrompts = useMemo(
+    () => filterPromptsByTemplate(prompts, selectedTemplateId),
+    [prompts, selectedTemplateId],
+  );
+  const showPromptPicker = visiblePrompts.length >= 2 && variantHasPhotoSurface;
   const needPrompt = showPromptPicker && !selectedPromptId;
+  // If a template flip removes the currently-picked prompt from the
+  // visible list, reset to the first remaining one so the form stays
+  // consistent with what's on screen.
+  useEffect(() => {
+    if (!selectedPromptId) return;
+    if (!visiblePrompts.some((p) => p.id === selectedPromptId)) {
+      setSelectedPromptId(visiblePrompts[0]?.id ?? null);
+    }
+  }, [visiblePrompts, selectedPromptId]);
   const showTextStep =
     product.show_text_step !== null && product.show_text_step !== undefined
       ? product.show_text_step
@@ -2399,20 +2445,9 @@ export function GiftProductPage({
                   hasTemplates && templates.length >= 2 ? (
                     <ComposeSection letter={sectionLetters.template!} title="Pick a layout">
                       {occasionFallbackNotice ? (
-                        <div
-                          style={{
-                            marginBottom: 8,
-                            padding: '8px 10px',
-                            background: 'var(--pv-cream)',
-                            border: '1px dashed var(--pv-rule)',
-                            fontFamily: 'var(--pv-f-mono)',
-                            fontSize: 11,
-                            color: 'var(--pv-ink)',
-                            letterSpacing: '0.02em',
-                          }}
-                        >
+                        <OccasionFallbackBanner>
                           That layout is out of season — showing today&apos;s lineup instead.
-                        </div>
+                        </OccasionFallbackBanner>
                       ) : null}
                       <div
                         style={{
@@ -2482,26 +2517,7 @@ export function GiftProductPage({
                                 ) : (
                                   <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
                                 )}
-                                {badge ? (
-                                  <span
-                                    style={{
-                                      position: 'absolute',
-                                      top: 6,
-                                      left: 6,
-                                      background: 'var(--pv-magenta)',
-                                      color: '#fff',
-                                      fontSize: 9,
-                                      fontWeight: 800,
-                                      padding: '3px 6px',
-                                      borderRadius: 3,
-                                      letterSpacing: '0.04em',
-                                      textTransform: 'uppercase',
-                                      boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                                    }}
-                                  >
-                                    {badge}
-                                  </span>
-                                ) : null}
+                                {badge ? <OccasionBadge label={badge} /> : null}
                               </div>
                               <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                                 {t.name}
@@ -2719,20 +2735,9 @@ export function GiftProductPage({
               {hasTemplates && (
                 <ComposeSection letter={sectionLetters.template!} title="Pick a template">
                   {occasionFallbackNotice ? (
-                    <div
-                      style={{
-                        marginBottom: 8,
-                        padding: '8px 10px',
-                        background: 'var(--pv-cream)',
-                        border: '1px dashed var(--pv-rule)',
-                        fontFamily: 'var(--pv-f-mono)',
-                        fontSize: 11,
-                        color: 'var(--pv-ink)',
-                        letterSpacing: '0.02em',
-                      }}
-                    >
+                    <OccasionFallbackBanner>
                       That template is out of season — showing today&apos;s lineup instead.
-                    </div>
+                    </OccasionFallbackBanner>
                   ) : null}
                   <div
                     style={{
@@ -2804,26 +2809,7 @@ export function GiftProductPage({
                             ) : (
                               <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
                             )}
-                            {badge ? (
-                              <span
-                                style={{
-                                  position: 'absolute',
-                                  top: 6,
-                                  left: 6,
-                                  background: 'var(--pv-magenta)',
-                                  color: '#fff',
-                                  fontSize: 9,
-                                  fontWeight: 800,
-                                  padding: '3px 6px',
-                                  borderRadius: 3,
-                                  letterSpacing: '0.04em',
-                                  textTransform: 'uppercase',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                                }}
-                              >
-                                {badge}
-                              </span>
-                            ) : null}
+                            {badge ? <OccasionBadge label={badge} /> : null}
                           </div>
                           <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                             {t.name}
@@ -3171,7 +3157,7 @@ export function GiftProductPage({
                       gap: 8,
                     }}
                   >
-                    {prompts.map((p) => {
+                    {visiblePrompts.map((p) => {
                       const active = selectedPromptId === p.id;
                       return (
                         <button
