@@ -68,10 +68,12 @@ export function SpotifyPlaqueTemplate({
 
   const scanRect = spotifyPlaqueScanRect(templateRefDims, zones ?? null);
   const fillColor = textColor && textColor.trim() ? textColor : '#0a0a0a';
-  // The scannable URL we mask off — request black-on-white so the
-  // luminance mask makes the bars opaque and the background drop out.
+  // The scannable URL we mask off — request white-bars on black bg so
+  // the luminance mask makes the BARS opaque (background-color shows
+  // through them = bars get the customer's colour) and the BACKGROUND
+  // drops out (transparent rectangle, no coloured backdrop).
   const maskUrl = spotifyTrackId
-    ? `url(${spotifyScannableUrl(spotifyTrackId, 'black')})`
+    ? `url(${spotifyScannableUrl(spotifyTrackId, 'white')})`
     : undefined;
 
   return (
