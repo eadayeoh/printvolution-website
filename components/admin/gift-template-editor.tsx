@@ -25,6 +25,7 @@ import {
   type GiftMode,
 } from '@/lib/gifts/types';
 import { shapeZoneSvg, GIFT_SHAPE_KINDS, GIFT_SHAPE_LABEL } from '@/lib/gifts/shape-zones';
+import { validateHexColor } from '@/lib/gifts/personalisation-notes';
 import type { ShapeKind } from '@/lib/gifts/shape-options';
 import type { GiftModeMeta } from '@/lib/gifts/modes';
 import { renderCalendarSvg } from '@/lib/gifts/pipeline/calendar-svg';
@@ -792,7 +793,7 @@ export function GiftTemplateEditor({
       // not naming them don't pollute the saved data.
       customer_swatches: customerSwatches
         .map((s) => ({ name: s.name.trim(), hex: s.hex, mockup_url: (s.mockup_url ?? '').trim() }))
-        .filter((s) => s.name && /^#[0-9A-Fa-f]{6}$/.test(s.hex)),
+        .filter((s) => s.name && validateHexColor(s.hex) !== null),
       occasion_id: occasionId.trim() || null,
       allowed_shape_kinds: allowedShapeKinds.size > 0 ? Array.from(allowedShapeKinds) : null,
       production_files: productionFiles.length > 0 ? productionFiles : null,
@@ -800,8 +801,13 @@ export function GiftTemplateEditor({
     startTransition(async () => {
       if (template) {
         const r = await updateTemplate(template.id, payload);
-        if (!r.ok) setErr(r.error);
-        else { setFlash(true); setTimeout(() => setFlash(false), 1600); }
+        if (!r.ok) { setErr(r.error); return; }
+        setFlash(true);
+        setTimeout(() => setFlash(false), 1600);
+        // Re-fetch the page server-side so the loader picks up the
+        // freshly written group_name (and any newly-coined group label
+        // makes the existingGroups list for the dropdown).
+        router.refresh();
       } else {
         const r = await createTemplate(payload);
         if (!r.ok) setErr(r.error);
@@ -892,7 +898,7 @@ export function GiftTemplateEditor({
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Group</span>
               <select
-                value={(existingGroups ?? []).includes(groupName) || groupName === '' ? groupName : '__custom__'}
+                value={groupName || ''}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === '__custom__') {
@@ -1307,7 +1313,7 @@ export function GiftTemplateEditor({
                               hex, not just the quick-add chips. */}
                           <input
                             type="color"
-                            value={/^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#000000'}
+                            value={validateHexColor(s.hex) ?? '#000000'}
                             onChange={(e) => updateCustomerSwatch(i, { hex: e.target.value })}
                             className="h-9 w-9 cursor-pointer rounded border-2 border-ink"
                             title="Pick any colour"
@@ -2209,7 +2215,7 @@ function ShapeZoneFields({ zone, onChange }: { zone: GiftTemplateShapeZone; onCh
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={zone.fill && /^#[0-9A-Fa-f]{6}$/.test(zone.fill) ? zone.fill : '#ec4899'}
+              value={validateHexColor(zone.fill) ?? '#ec4899'}
               onChange={(e) => onChange({ fill: e.target.value })}
               className="h-9 w-12 cursor-pointer rounded border-2 border-neutral-200"
             />
@@ -2231,7 +2237,7 @@ function ShapeZoneFields({ zone, onChange }: { zone: GiftTemplateShapeZone; onCh
         <div className="flex items-center gap-2">
           <input
             type="color"
-            value={zone.stroke && /^#[0-9A-Fa-f]{6}$/.test(zone.stroke) ? zone.stroke : '#0a0a0a'}
+            value={validateHexColor(zone.stroke) ?? '#0a0a0a'}
             onChange={(e) => onChange({ stroke: e.target.value })}
             className="h-9 w-12 cursor-pointer rounded border-2 border-neutral-200"
           />

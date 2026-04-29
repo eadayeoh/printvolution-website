@@ -14,7 +14,7 @@ import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surfaces';
 import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts-shared';
-import { encodeNoteValue } from '@/lib/gifts/personalisation-notes';
+import { encodeNoteValue, validateHexColor } from '@/lib/gifts/personalisation-notes';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
@@ -2872,7 +2872,7 @@ export function GiftProductPage({
                                   width: 22,
                                   height: 22,
                                   borderRadius: '50%',
-                                  background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                                  background: validateHexColor(s.hex) ?? '#ccc',
                                   border: '1px solid var(--pv-ink)',
                                   flexShrink: 0,
                                 }}

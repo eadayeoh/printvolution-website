@@ -7,6 +7,7 @@ import { ImageUpload } from '@/components/admin/image-upload';
 import { upsertGiftVariant, deleteGiftVariant } from '@/app/admin/gifts/actions';
 import type { GiftProductVariant, GiftVariantColourSwatch, GiftVariantSurface, GiftInputMode, GiftTemplate, GiftTemplateZone, GiftSize } from '@/lib/gifts/types';
 import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+import { validateHexColor } from '@/lib/gifts/personalisation-notes';
 import type { ShapeKind, ShapeOption } from '@/lib/gifts/shape-options';
 import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
@@ -355,7 +356,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
     }
     for (const [si, s] of d.colour_swatches.entries()) {
       if (!s.name.trim()) { setErr(`Colour swatch #${si + 1} needs a name.`); return false; }
-      if (!/^#[0-9A-Fa-f]{6}$/.test(s.hex)) { setErr(`Colour swatch #${si + 1} hex must be #RRGGBB.`); return false; }
+      if (!validateHexColor(s.hex)) { setErr(`Colour swatch #${si + 1} hex must be #RRGGBB.`); return false; }
       // Two valid shapes:
       //  - Mockup swatch: name + hex + mockup_url (swaps the displayed
       //    photo when picked, e.g. T-shirt with red / navy / black tiles).
@@ -1045,7 +1046,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     width: 22,
                                     height: 22,
                                     borderRadius: '50%',
-                                    background: /^#[0-9A-Fa-f]{6}$/.test(s.hex) ? s.hex : '#ccc',
+                                    background: validateHexColor(s.hex) ?? '#ccc',
                                     border: '2px solid #0a0a0a',
                                   }}
                                 />
