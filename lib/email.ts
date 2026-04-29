@@ -18,6 +18,18 @@ import { BRAND, SITE } from '@/lib/brand';
 const FROM = process.env.EMAIL_FROM || 'Printvolution <orders@printvolution.sg>';
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || '';
 
+// On Vercel, NEXT_PUBLIC_VERCEL_URL is the deployment-specific URL
+// (printvolution-abc123-team.vercel.app), not the production domain —
+// emails using it would link to preview deploys. Prefer
+// NEXT_PUBLIC_SITE_URL, fall back to the hard-coded production host
+// so links work even before the env var is provisioned.
+// TODO(env): set NEXT_PUBLIC_SITE_URL=https://printvolution.sg in Vercel
+function siteOrigin(): string {
+  const url = process.env.NEXT_PUBLIC_SITE_URL;
+  if (url && url.length > 0) return url.replace(/\/$/, '');
+  return 'https://printvolution.sg';
+}
+
 let _client: Resend | null = null;
 function client() {
   if (_client) return _client;
@@ -207,7 +219,7 @@ export function adminNewOrderEmail(p: OrderEmailPayload): { subject: string; htm
       </table>
     </div>
 
-    <a href="https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'printvolution.sg'}/admin/orders" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;">
+    <a href="${siteOrigin()}/admin/orders" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;">
       Open in admin →
     </a>
   `;
@@ -269,7 +281,7 @@ export function welcomeEmail(email: string, name: string | null): { subject: str
         </td>
       </tr>
     </table>
-    <a href="https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'printvolution.sg'}/shop" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;">
+    <a href="${siteOrigin()}/shop" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;">
       Browse the shop →
     </a>
   `;
@@ -287,7 +299,7 @@ export function orderShippedEmail(p: ShippedEmailPayload): { subject: string; ht
   const first = p.customer_name.split(/\s+/)[0] || 'there';
   const subject = `Your Printvolution order is on the way — ${p.order_number}`;
   const trackingUrl = p.tracking_url
-    || `https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'printvolution.sg'}/track?order=${encodeURIComponent(p.order_number)}`;
+    || `${siteOrigin()}/track?order=${encodeURIComponent(p.order_number)}`;
   const trackingPill = p.tracking_number
     ? `<div style="display:inline-block;background:#fafaf7;border:1px dashed #ccc;border-radius:8px;padding:10px 14px;font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:${BRAND_INK};margin:12px 0;">
          ${escapeHtml(p.tracking_number)}

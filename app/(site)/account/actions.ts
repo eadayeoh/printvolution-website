@@ -247,6 +247,8 @@ export async function changeMyPassword(input: { currentPassword: string; newPass
   // Re-verify identity with the current password. Supabase's
   // signInWithPassword on an already-signed-in client refreshes the
   // session if the password matches and throws otherwise.
+  // Side effect: this rotates the refresh token and invalidates other
+  // device sessions — the form UI surfaces this warning to the user.
   const { error: reAuthErr } = await sb.auth.signInWithPassword({
     email: user.email,
     password: current,

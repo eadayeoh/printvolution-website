@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 export function CartView() {
   const items = useCart((s) => s.items);
   const remove = useCart((s) => s.remove);
+  const updateQty = useCart((s) => s.updateQty);
   const subtotal = useCart((s) => s.subtotalCents());
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -99,8 +100,59 @@ export function CartView() {
                     ))}
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#888' }}>Qty {item.qty}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    border: '1.5px solid #0a0a0a', borderRadius: 999, overflow: 'hidden',
+                    background: '#fff',
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => updateQty(item.id, Math.max(1, item.qty - 1))}
+                      disabled={item.qty <= 1}
+                      aria-label="Decrease quantity"
+                      style={{
+                        width: 32, height: 32, border: 'none', background: 'transparent',
+                        cursor: item.qty <= 1 ? 'not-allowed' : 'pointer',
+                        color: item.qty <= 1 ? '#ccc' : '#0a0a0a',
+                        fontSize: 16, fontWeight: 700, lineHeight: 1,
+                      }}
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={item.qty}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10);
+                        if (!Number.isFinite(n)) return;
+                        const clamped = Math.max(1, Math.min(999, n));
+                        updateQty(item.id, clamped);
+                      }}
+                      aria-label="Quantity"
+                      style={{
+                        width: 44, height: 32, border: 'none', outline: 'none',
+                        textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#0a0a0a',
+                        background: 'transparent', MozAppearance: 'textfield',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateQty(item.id, Math.min(999, item.qty + 1))}
+                      disabled={item.qty >= 999}
+                      aria-label="Increase quantity"
+                      style={{
+                        width: 32, height: 32, border: 'none', background: 'transparent',
+                        cursor: item.qty >= 999 ? 'not-allowed' : 'pointer',
+                        color: item.qty >= 999 ? '#ccc' : '#0a0a0a',
+                        fontSize: 16, fontWeight: 700, lineHeight: 1,
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                   <span style={{
                     fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700, color: '#E91E8C',
                   }}>

@@ -71,6 +71,9 @@ export function PasswordChangeForm() {
           autoComplete="new-password"
         />
       </label>
+      <p className="text-xs text-neutral-500">
+        Changing your password will sign you out on other devices.
+      </p>
       {err && (
         <div className="rounded border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800">
           ✗ {err}

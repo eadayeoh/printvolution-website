@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { listActiveGiftProducts } from '@/lib/gifts/data';
-import { GIFT_MODE_LABEL } from '@/lib/gifts/types';
+import { GIFT_MODE_LABEL, giftFromPrice } from '@/lib/gifts/types';
 import { formatSGD } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -88,7 +88,7 @@ export default async function GiftsLandingPage() {
                       </div>
                     )}
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#E91E8C', marginTop: 'auto' }}>
-                      From {formatSGD(p.base_price_cents)}
+                      From {formatSGD(giftFromPrice(p))}
                     </div>
                   </div>
                 </article>
