@@ -782,19 +782,29 @@ export function GiftTemplateEditor({
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Group</span>
-              <input
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
+              <select
+                value={(existingGroups ?? []).includes(groupName) || groupName === '' ? groupName : '__custom__'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '__custom__') {
+                    const fresh = (window.prompt('New group name:') ?? '').trim();
+                    if (fresh) setGroupName(fresh);
+                    return;
+                  }
+                  setGroupName(v);
+                }}
                 className={inputCls}
-                list="gift-template-groups"
-                placeholder="Wall art · Necklaces · Embroidery on tees"
-              />
+              >
+                <option value="">Ungrouped</option>
+                {(existingGroups ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
+                {groupName && !(existingGroups ?? []).includes(groupName) && (
+                  <option value={groupName}>{groupName} (current)</option>
+                )}
+                <option value="__custom__">+ Add new group…</option>
+              </select>
               <span className="mt-1 block text-[11px] text-neutral-500">
-                Optional. Templates in the admin list are bucketed by this label. Typing a new value creates a new bucket; leave empty to drop into &ldquo;Ungrouped&rdquo;.
+                Pick an existing group or add a new one. Templates in the admin list are bucketed by this label. The same group can hold templates that span multiple products.
               </span>
-              <datalist id="gift-template-groups">
-                {(existingGroups ?? []).map((g) => <option key={g} value={g} />)}
-              </datalist>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Description</span>
@@ -1818,6 +1828,28 @@ export function GiftTemplateEditor({
           {isPending ? 'Saving…' : template ? 'Save changes' : 'Create template'}
         </button>
       </div>
+
+      {/* Floating success toast — visible regardless of scroll position. */}
+      {flash && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-6 top-6 z-50 flex items-center gap-3 rounded-lg border-2 border-green-600 bg-green-50 px-5 py-3 text-base font-bold text-green-700 shadow-brand"
+        >
+          <span aria-hidden className="text-xl">✓</span>
+          Template saved
+        </div>
+      )}
+      {err && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-6 top-6 z-50 flex items-center gap-3 rounded-lg border-2 border-red-600 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 shadow-brand"
+        >
+          <span aria-hidden className="text-xl">✗</span>
+          {err}
+        </div>
+      )}
     </div>
   );
 }
