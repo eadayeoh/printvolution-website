@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
-import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
+import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
   _req: NextRequest,
@@ -86,6 +86,14 @@ export async function GET(
           : `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`)
       : undefined;
 
+    // Sanitise font/colour customer-supplied notes at the parsing
+    // boundary — anything outside the whitelists falls through to the
+    // builder defaults so an attribute-injection payload can't ride the
+    // raw note string into the rendered SVG.
+    const safeLocFont    = validateFontKey(n['star_font_loc'])     ?? undefined;
+    const safeNamesFont  = validateFontKey(n['star_font_names'])   ?? undefined;
+    const safeEventFont  = validateFontKey(n['star_font_event'])   ?? undefined;
+    const safeTaglineFnt = validateFontKey(n['star_font_tagline']) ?? undefined;
     const svgMarkup = buildStarMapSvg({
       scene,
       dateUtc,
@@ -97,10 +105,10 @@ export async function GET(
       showLines,
       showLabels,
       layout,
-      locationFont: n['star_font_loc']     ?? undefined,
-      namesFont:    n['star_font_names']   ?? undefined,
-      eventFont:    n['star_font_event']   ?? undefined,
-      taglineFont:  n['star_font_tagline'] ?? undefined,
+      locationFont: safeLocFont,
+      namesFont:    safeNamesFont,
+      eventFont:    safeEventFont,
+      taglineFont:  safeTaglineFnt,
       // Foil: drop the navy background so only the gold paths ship to
       // the foil printer. Poster: keep the white background — paper
       // prints need the full artwork.

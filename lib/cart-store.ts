@@ -15,6 +15,8 @@ export type CartItemSurface = {
   mode: string;
 };
 
+export type CartLineTier = { qty: number; price_cents: number };
+
 export type CartItem = {
   id: string;             // local ID (ci_<timestamp>)
   product_slug: string;
@@ -44,6 +46,13 @@ export type CartItem = {
   /** Migration 0060 — picked figurine slug (from product.figurine_options).
    *  NULL when the product has no figurine picker. */
   figurine_slug?: string | null;
+  /** Snapshot of the variant's (or product's) qty-tier table at
+   *  add-to-cart time. updateQty re-derives the per-unit price from
+   *  this when the customer changes quantity in the cart, so a tier
+   *  break (e.g. qty 50+) actually drops the unit price. Empty / null
+   *  means the line had no tier table — fall back to existing
+   *  per-unit price preservation. */
+  price_tiers?: CartLineTier[];
 };
 
 type CartState = {
@@ -75,13 +84,37 @@ export const useCart = create<CartState>()(
         set((s) => ({
           items: s.items.map((i) => {
             if (i.id !== id) return i;
-            // TODO(price-tiers): cart lines should snapshot
-            // {base_price_cents, price_tiers} at add-time so updateQty
-            // can re-derive the tier price. Until that's threaded
-            // through gift-product-page → CartItem, fall back to the
-            // existing per-line unit price (no tier re-evaluation).
-            const unit = i.qty > 0 ? i.line_total_cents / i.qty : i.unit_price_cents;
-            return { ...i, qty, line_total_cents: Math.round(unit * qty) };
+            // Re-derive unit price from the line's price_tiers snapshot
+            // (captured at add-to-cart). Pick the tier whose qty bracket
+            // newQty falls into; below the smallest tier the existing
+            // unit price applies. Empty/missing tiers means the line was
+            // added before tier capture — fall back to keeping the same
+            // per-unit price the line already carried.
+            let unit = i.qty > 0 ? i.line_total_cents / i.qty : i.unit_price_cents;
+            const tiers = (i.price_tiers ?? []).filter(
+              (t) => Number.isFinite(t?.qty) && Number.isFinite(t?.price_cents),
+            );
+            if (tiers.length > 0) {
+              const sorted = [...tiers].sort((a, b) => a.qty - b.qty);
+              const oldTier = sorted.filter((t) => t.qty <= i.qty).pop();
+              const newTier = sorted.filter((t) => t.qty <= qty).pop();
+              const oldTierPrice = oldTier?.price_cents;
+              const newTierPrice = newTier?.price_cents;
+              // Subtract the part of the old line that came from the
+              // tier base, replace it with the new tier base. Anything
+              // else baked into unit_price_cents (size deltas, shape,
+              // figurine, surface) stays untouched.
+              if (typeof newTierPrice === 'number') {
+                const carry = i.unit_price_cents - (oldTierPrice ?? i.unit_price_cents);
+                unit = newTierPrice + (Number.isFinite(carry) ? carry : 0);
+              }
+            }
+            return {
+              ...i,
+              qty,
+              unit_price_cents: Math.round(unit),
+              line_total_cents: Math.round(unit * qty),
+            };
           }),
           lastUpdated: Date.now(),
         })),

@@ -13,6 +13,17 @@ import { checkGiftGenerationQuota, consumeGiftGeneration, type QuotaState } from
 import { getOrSetAnonSessionId } from '@/lib/gifts/anon-session';
 import { createClient as createUserClient } from '@/lib/supabase/server';
 
+/** Stamp { user_id, anon_session_id } onto a gift_assets insert payload
+ *  so later callers (parseGiftRefs at checkout, restylePreviewFromSource)
+ *  can verify the asset belongs to the same user / browser. user_id wins
+ *  when signed in; anon_session_id is captured otherwise. Both null means
+ *  the row was created from server context with no caller (legacy). */
+async function giftAssetOwner(): Promise<{ user_id: string | null; anon_session_id: string | null }> {
+  const userId = await getCurrentUserId();
+  if (userId) return { user_id: userId, anon_session_id: null };
+  return { user_id: null, anon_session_id: getOrSetAnonSessionId() };
+}
+
 /** Modes whose pipeline calls OpenAI — only these count against the
  *  weekly generation quota. photo-resize / eco-solvent / digital /
  *  uv-dtf do CPU-only resize and don't burn tokens. */
@@ -105,6 +116,7 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
       .upload(key, bytes, { contentType: detected.mime, upsert: false, cacheControl: '3600' });
     if (upErr) return { ok: false, error: 'upload failed' };
 
+    const owner = await giftAssetOwner();
     const { data: asset, error: aErr } = await service
       .from('gift_assets')
       .insert({
@@ -113,6 +125,7 @@ export async function uploadGiftSurfacePhoto(formData: FormData): Promise<
         path: key,
         mime_type: detected.mime,
         size_bytes: file.size,
+        ...owner,
       })
       .select('id').single();
     if (aErr || !asset) {
@@ -169,6 +182,7 @@ export async function uploadSongLyricsPhoto(formData: FormData): Promise<
       .upload(key, bytes, { contentType: detected.mime, upsert: false, cacheControl: '3600' });
     if (upErr) return { ok: false, error: 'upload failed' };
 
+    const owner = await giftAssetOwner();
     const { data: asset, error: aErr } = await service
       .from('gift_assets')
       .insert({
@@ -177,6 +191,7 @@ export async function uploadSongLyricsPhoto(formData: FormData): Promise<
         path: key,
         mime_type: detected.mime,
         size_bytes: file.size,
+        ...owner,
       })
       .select('id').single();
     if (aErr || !asset) {
@@ -315,18 +330,38 @@ export async function restylePreviewFromSource(input: {
     }
 
     const service = serviceClient();
-    // TODO(asset-ownership): no user_id / anon_session_id on
-    // gift_assets, so any caller can pin an arbitrary source_asset_id
-    // here and burn quota / re-style someone else's photo. Fix needs
-    // a schema migration to track asset ownership at insert time, then
-    // gate this lookup on it. Out of scope for this audit pass.
+    // Asset-ownership guard. Migration 0092 added user_id /
+    // anon_session_id to gift_assets — newly-inserted rows carry the
+    // caller. Legacy rows are NULL on both columns and get a free pass
+    // (logged) so we don't break carts in flight while the column rolls
+    // forward. After ~1 week of new orders, promote this to strict.
     const { data: sourceAsset } = await service
       .from('gift_assets')
-      .select('id, bucket, path, mime_type')
+      .select('id, bucket, path, mime_type, user_id, anon_session_id')
       .eq('id', input.source_asset_id)
       .eq('role', 'source')
       .maybeSingle();
     if (!sourceAsset) return { ok: false, error: 'Source asset not found' };
+    {
+      const assetUserId = (sourceAsset as any).user_id as string | null;
+      const assetAnon = (sourceAsset as any).anon_session_id as string | null;
+      const hasOwner = assetUserId !== null || assetAnon !== null;
+      if (hasOwner) {
+        const callerAnon = anonSessionId;
+        const ownedByUser = userId !== null && assetUserId === userId;
+        const ownedByAnon = !ownedByUser && assetAnon !== null && assetAnon === callerAnon;
+        if (!ownedByUser && !ownedByAnon) {
+          console.warn('[gift restyle] asset ownership mismatch', {
+            asset_id: sourceAsset.id, asset_user_id: assetUserId, caller_user_id: userId,
+          });
+          return { ok: false, error: 'Source asset not found' };
+        }
+      } else {
+        console.warn('[gift restyle] legacy asset without owner — free pass', {
+          asset_id: sourceAsset.id,
+        });
+      }
+    }
 
     // Download the original bytes so the pipeline can re-run against
     // the same photo the customer already uploaded.
@@ -399,6 +434,9 @@ export async function restylePreviewFromSource(input: {
       return { ok: false, error: `preview failed: ${e.message}` };
     }
 
+    const previewOwner = userId
+      ? { user_id: userId, anon_session_id: null as string | null }
+      : { user_id: null as string | null, anon_session_id: anonSessionId };
     const { data: previewAsset, error: prevErr } = await service
       .from('gift_assets')
       .insert({
@@ -408,6 +446,7 @@ export async function restylePreviewFromSource(input: {
         mime_type: preview.previewMime,
         width_px: preview.widthPx,
         height_px: preview.heightPx,
+        ...previewOwner,
       })
       .select('id')
       .single();
@@ -510,6 +549,7 @@ export async function uploadGiftSourceOnly(formData: FormData): Promise<
       .upload(sourceKey, bytes, { contentType: actualMime, upsert: false, cacheControl: '3600' });
     if (upErr) return { ok: false, error: 'upload failed' };
 
+    const owner = await giftAssetOwner();
     const { data: sourceAsset, error: srcErr } = await service
       .from('gift_assets')
       .insert({
@@ -518,6 +558,7 @@ export async function uploadGiftSourceOnly(formData: FormData): Promise<
         path: sourceKey,
         mime_type: actualMime,
         size_bytes: file.size,
+        ...owner,
       })
       .select('id')
       .single();
@@ -783,6 +824,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
   // into personalisation_notes (image_<zone_id>:<asset_id>) — production
   // needs the per-zone asset trail to render dual-photo templates.
   const zoneSourceAssetIds: Record<string, string> = {};
+  const owner = await giftAssetOwner();
   for (const [zoneId, meta] of Object.entries(zoneFileMetas)) {
     const zoneExt = EXT_FOR_MIME[meta.mime] ?? 'bin';
     const zoneKey = makeKey(`src-${productSlug}-${zoneId}`, zoneExt);
@@ -798,6 +840,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
         path: zoneKey,
         mime_type: meta.mime,
         size_bytes: meta.size,
+        ...owner,
       }).select('id').single();
       if (zAErr || !zAsset) {
         // Storage uploaded but the row failed — orphan would otherwise
@@ -836,6 +879,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       path: sourceKey,
       mime_type: actualMime,
       size_bytes: file.size,
+      ...owner,
     })
     .select('id')
     .single();
@@ -901,6 +945,7 @@ async function uploadAndPreviewGiftInner(formData: FormData): Promise<
       mime_type: preview.previewMime,
       width_px: preview.widthPx,
       height_px: preview.heightPx,
+      ...owner,
     })
     .select('id')
     .single();

@@ -71,6 +71,29 @@ export async function POST(req: NextRequest) {
     const ourStatus = statusMap[params.status ?? ''] ?? null;
 
     if (orderId && ourStatus) {
+      // Amount-tampering guard. HitPay POSTs `amount` (dollars) in the
+      // webhook body. A signature-valid event from a different (smaller)
+      // PaymentRequest replayed with our reference_number would otherwise
+      // mark the order paid for less than its expected charge. Compare
+      // against orders.payment_amount_cents (set when we created the
+      // PaymentRequest); reject if it doesn't match within 1c.
+      if (ourStatus === 'paid' || ourStatus === 'pending') {
+        const { data: ord } = await sb
+          .from('orders')
+          .select('payment_amount_cents, total_cents')
+          .eq('id', orderId)
+          .maybeSingle();
+        const expectedCents = (ord as any)?.payment_amount_cents ?? (ord as any)?.total_cents ?? null;
+        const gotCents = Math.round(parseFloat(params.amount ?? 'NaN') * 100);
+        if (expectedCents == null || !Number.isFinite(gotCents) || Math.abs(gotCents - expectedCents) > 1) {
+          reportError(new Error('hitpay amount mismatch'), {
+            route: 'webhook.hitpay', action: 'amount_check',
+            extras: { order_id: orderId, expected_cents: expectedCents, got_cents: gotCents },
+          });
+          return NextResponse.json({ ok: false, error: 'amount_mismatch' });
+        }
+      }
+
       const patch: Record<string, unknown> = { payment_status: ourStatus };
       if (ourStatus === 'paid') patch.payment_paid_at = new Date().toISOString();
       if (ourStatus === 'failed') patch.payment_failed_reason = (params.message ?? 'gateway reported failure').slice(0, 500);

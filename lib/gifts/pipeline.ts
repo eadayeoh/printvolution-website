@@ -541,24 +541,40 @@ async function renderRendererTemplate(args: {
       // librsvg / sharp's SVG rasterizer can't decode HEIC inside an
       // <image> tag — the photo silently renders blank. Pre-decode any
       // non-{png,jpeg,webp} mime (typically iOS HEIC/HEIF) to JPEG.
+      // Throw loud on failure: a silent fallback ships a blank-photo
+      // plaque to the customer; better to mark the line failed and
+      // alert the admin.
       const rawMime = (sourceMime || 'image/jpeg').toLowerCase();
       const isWebSafe = rawMime === 'image/png' || rawMime === 'image/jpeg' || rawMime === 'image/jpg' || rawMime === 'image/webp';
       let photoBytes: Uint8Array = sourceBytes;
       let photoMime = rawMime || 'image/jpeg';
       if (!isWebSafe) {
         const sharp = await loadSharp();
-        if (sharp) {
+        if (!sharp) {
+          throw new Error(`Spotify Plaque: cannot decode ${rawMime} — sharp not available on this runtime`);
+        }
+        try {
           photoBytes = await sharp(Buffer.from(sourceBytes)).jpeg({ quality: 90 }).toBuffer();
           photoMime = 'image/jpeg';
+        } catch (e: any) {
+          throw new Error(`Spotify Plaque: failed to decode ${rawMime} photo: ${e?.message ?? 'unknown'}`);
         }
       }
       const photoDataUri = `data:${photoMime};base64,${Buffer.from(photoBytes).toString('base64')}`;
       const { buildSpotifyPlaqueSvg } = await import('./spotify-plaque-svg');
+      // Spotify track ids are 22 base62 chars. Anything else (notes
+      // tampered with by hand, an old cart line that smuggled a URL)
+      // would otherwise be interpolated raw into
+      // https://scannables.scdn.co/.../spotify:track:${trackId}, opening
+      // a server-side request-shaping path. Drop bad ids → renderer
+      // falls back to the empty-state placeholder.
+      const rawTrackId = (n['spotify_track_id'] ?? '').trim();
+      const safeTrackId = /^[A-Za-z0-9]{16,32}$/.test(rawTrackId) ? rawTrackId : null;
       const svg = buildSpotifyPlaqueSvg({
         photoUrl: photoDataUri,
         songTitle:  n['spotify_title']  ?? '',
         artistName: n['spotify_artist'] ?? '',
-        spotifyTrackId: n['spotify_track_id'] || null,
+        spotifyTrackId: safeTrackId,
         templateRefDims: refDims,
         textColor: validateHexColor(n['spotify_text_color']) ?? undefined,
         zones: (template.zones_json as any) ?? null,

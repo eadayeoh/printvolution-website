@@ -709,7 +709,7 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
   const { serviceClient, GIFT_BUCKETS } = await import('@/lib/gifts/storage');
   const sb = serviceClient();
   const { data: line } = await sb.from('gift_order_items')
-    .select('id, gift_product_id, variant_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes, production_asset_id, production_pdf_id')
+    .select('id, gift_product_id, variant_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes, production_asset_id, production_pdf_id, production_files')
     .eq('id', lineId).maybeSingle();
   if (!line) return { ok: false, error: 'Line not found' };
 
@@ -894,6 +894,13 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
     // gift-production with no DB reference (Supabase storage has no GC).
     const oldProdId = (line as any).production_asset_id as string | null;
     const oldPdfId  = (line as any).production_pdf_id  as string | null;
+    // Same problem for the dual-mode per-file array: the old run wrote
+    // png_path / pdf_path keys directly into production_files (no
+    // gift_assets row), so swapping the JSONB without clearing storage
+    // strands them too.
+    const oldProductionFiles = Array.isArray((line as any).production_files)
+      ? ((line as any).production_files as Array<{ png_path?: string; pdf_path?: string }>)
+      : [];
 
     await sb.from('gift_order_items').update({
       production_asset_id: prodAsset?.id ?? null,
@@ -923,6 +930,25 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
         await sb.from('gift_assets').delete().in('id', oldIds);
       } catch (e) {
         console.warn('[rerun] old asset cleanup failed', (e as any)?.message);
+      }
+    }
+    if (oldProductionFiles.length > 0) {
+      try {
+        const newPaths = new Set<string>();
+        for (const f of productionFiles) {
+          if (f.png_path) newPaths.add(f.png_path);
+          if (f.pdf_path) newPaths.add(f.pdf_path);
+        }
+        const stalePaths: string[] = [];
+        for (const f of oldProductionFiles) {
+          if (f.png_path && !newPaths.has(f.png_path)) stalePaths.push(f.png_path);
+          if (f.pdf_path && !newPaths.has(f.pdf_path)) stalePaths.push(f.pdf_path);
+        }
+        if (stalePaths.length > 0) {
+          await sb.storage.from(GIFT_BUCKETS.production).remove(stalePaths);
+        }
+      } catch (e) {
+        console.warn('[rerun] old production_files cleanup failed', (e as any)?.message);
       }
     }
     return { ok: true };

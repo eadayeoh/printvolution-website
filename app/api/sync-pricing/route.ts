@@ -26,11 +26,23 @@
 //       X-Sync-Secret: <same secret as PVPRICELIST_WEBHOOK_SECRET>
 
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { createServiceClient } from '@/lib/auth/require-admin';
 import {
   fetchPvpricelistRates,
   buildAllProductPricingFromPvpricelist,
 } from '@/lib/pricing/pvpricelist-sync';
+
+/** Constant-time secret comparison. `===` short-circuits at the first
+ *  mismatching byte, leaking position via timing — bad for header-borne
+ *  shared secrets that an attacker can probe at high RPS. */
+function secretsMatch(got: string | null | undefined, want: string): boolean {
+  if (!got) return false;
+  const a = Buffer.from(got);
+  const b = Buffer.from(want);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 export const runtime = 'nodejs';
 // Webhooks must hit a fresh handler every time — no ISR / cache.
@@ -45,7 +57,7 @@ export async function POST(req: Request) {
     );
   }
   const got = req.headers.get('x-sync-secret');
-  if (got !== secret) {
+  if (!secretsMatch(got, secret)) {
     return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
   }
 
@@ -94,7 +106,7 @@ export async function POST(req: Request) {
 // wiring up the Supabase webhook.
 export async function GET(req: Request) {
   const secret = process.env.PVPRICELIST_WEBHOOK_SECRET;
-  if (!secret || req.headers.get('x-sync-secret') !== secret) {
+  if (!secret || !secretsMatch(req.headers.get('x-sync-secret'), secret)) {
     return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
   }
   try {

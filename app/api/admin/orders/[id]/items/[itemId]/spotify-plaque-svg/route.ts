@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
-import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
+import { parsePersonalisationNotes, validateHexColor } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
   _req: NextRequest,
@@ -38,12 +38,19 @@ export async function GET(
 
     const n = parsePersonalisationNotes(row.personalisation_notes as string | null);
 
+    // Sanitise customer-supplied values at the parsing boundary so
+    // attribute-injection payloads can't ride the raw note string into
+    // the rendered SVG. Bad values become null/undefined and the
+    // builder falls back to its defaults.
+    const rawTrackId = (n['spotify_track_id'] ?? '').trim();
+    const safeTrackId = /^[A-Za-z0-9]{16,32}$/.test(rawTrackId) ? rawTrackId : null;
+    const safeTextColor = validateHexColor(n['spotify_text_color']) ?? undefined;
     const svgMarkup = buildSpotifyPlaqueSvg({
       photoUrl: null,
       songTitle:  n['spotify_title']  ?? '',
       artistName: n['spotify_artist'] ?? '',
-      spotifyTrackId: n['spotify_track_id'] || null,
-      textColor: n['spotify_text_color'] || undefined,
+      spotifyTrackId: safeTrackId,
+      textColor: safeTextColor,
       zones: null,
     });
 

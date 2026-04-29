@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildCityMapSvg, fetchCityMapVectors } from '@/lib/gifts/city-map-svg';
-import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
+import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
   _req: NextRequest,
@@ -49,6 +49,13 @@ export async function GET(
     const vectors = await fetchCityMapVectors(lat, lng, Math.max(1, Math.min(15, radius || 5)));
 
     const showCoords = n['city_show_coords'] === '1';
+    // Whitelist customer-supplied font keys; anything outside the
+    // GIFT_FONT_FAMILIES whitelist becomes undefined and the builder
+    // falls back to its defaults.
+    const safeCityFont    = validateFontKey(n['city_font_title'])   ?? undefined;
+    const safeNamesFont   = validateFontKey(n['city_font_names'])   ?? undefined;
+    const safeEventFont   = validateFontKey(n['city_font_event'])   ?? undefined;
+    const safeTaglineFnt  = validateFontKey(n['city_font_tagline']) ?? undefined;
     const svgMarkup = buildCityMapSvg({
       vectors,
       names:     n['city_names']   ?? '',
@@ -56,10 +63,10 @@ export async function GET(
       cityLabel: n['city_label']   ?? '',
       tagline:   n['city_tagline'] ?? '',
       coordinates: showCoords ? `${lat.toFixed(4)}° N · ${lng.toFixed(4)}° E` : undefined,
-      cityFont:    n['city_font_title']   ?? undefined,
-      namesFont:   n['city_font_names']   ?? undefined,
-      eventFont:   n['city_font_event']   ?? undefined,
-      taglineFont: n['city_font_tagline'] ?? undefined,
+      cityFont:    safeCityFont,
+      namesFont:   safeNamesFont,
+      eventFont:   safeEventFont,
+      taglineFont: safeTaglineFnt,
       // Drop the navy background — foil printer wants only the gold paths.
       materialColor: null,
     });

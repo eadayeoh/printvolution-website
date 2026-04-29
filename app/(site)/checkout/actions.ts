@@ -11,6 +11,8 @@ import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates'
 import { reportError } from '@/lib/observability';
 import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 import { parseShapeOptions, shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
+import { createClient as createUserClient } from '@/lib/supabase/server';
+import { getAnonSessionId } from '@/lib/gifts/anon-session';
 
 /**
  * Public coupon-validation endpoint used by the checkout form
@@ -598,13 +600,6 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // there as "gift_source:<uuid>;gift_preview:<uuid>;gift_template:<uuid>".
   // The template id is optional: products with template_mode='none' or
   // a single auto-selected template don't smuggle it.
-  //
-  // TODO(asset-ownership): a customer can paste another customer's
-  // gift_source UUID into their cart and have that photo printed on
-  // their order. Mitigation requires a schema change: add user_id +
-  // anon_session_id to gift_assets at insert time, then verify here
-  // that the asset row's owner matches the calling user / session.
-  // Out of scope for this audit pass — needs migration + backfill.
   function parseGiftRefs(
     notes: string | undefined,
   ): { sourceId?: string; previewId?: string; templateId?: string } {
@@ -628,6 +623,60 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
   const giftItems = data.items.filter((i) => giftSlugToInfo.has(i.product_slug));
   const printItems = data.items.filter((i) => !giftSlugToInfo.has(i.product_slug));
+
+  // Asset-ownership verification. Migration 0092 adds {user_id,
+  // anon_session_id} to gift_assets at insert time. For every gift line
+  // in this checkout we look up the source/preview/surface assets and
+  // confirm the row's owner matches the caller. Legacy rows (both
+  // columns null) get a free pass + log so in-flight carts don't break
+  // while the column rolls forward — strict mode is a follow-up.
+  if (giftItems.length > 0) {
+    const callerUserId = await (async () => {
+      try {
+        const c = createUserClient();
+        const { data: u } = await c.auth.getUser();
+        return u?.user?.id ?? null;
+      } catch { return null; }
+    })();
+    const callerAnon = getAnonSessionId();
+    const allRefs: string[] = [];
+    for (const it of giftItems) {
+      const r = parseGiftRefs(it.personalisation_notes);
+      if (r.sourceId) allRefs.push(r.sourceId);
+      if (r.previewId) allRefs.push(r.previewId);
+      if (Array.isArray(it.surfaces)) {
+        for (const s of it.surfaces) if (s.source_asset_id) allRefs.push(s.source_asset_id);
+      }
+    }
+    const uniqueRefs = Array.from(new Set(allRefs));
+    if (uniqueRefs.length > 0) {
+      const { data: rows } = await sb
+        .from('gift_assets')
+        .select('id, user_id, anon_session_id')
+        .in('id', uniqueRefs);
+      const byId = new Map((rows ?? []).map((r: any) => [r.id as string, r]));
+      for (const ref of uniqueRefs) {
+        const row = byId.get(ref);
+        if (!row) continue;
+        const ownerUser = (row as any).user_id as string | null;
+        const ownerAnon = (row as any).anon_session_id as string | null;
+        const hasOwner = ownerUser !== null || ownerAnon !== null;
+        if (!hasOwner) {
+          console.warn('[checkout] legacy gift_asset without owner — free pass', { asset_id: ref });
+          continue;
+        }
+        const ownedByUser = callerUserId !== null && ownerUser === callerUserId;
+        const ownedByAnon = !ownedByUser && ownerAnon !== null && ownerAnon === callerAnon;
+        if (!ownedByUser && !ownedByAnon) {
+          reportError(new Error('gift_asset ownership mismatch at checkout'), {
+            route: 'checkout', action: 'asset_ownership',
+            extras: { asset_id: ref, asset_user_id: ownerUser, caller_user_id: callerUserId },
+          });
+          return { ok: false, error: 'One of your photos is not available for this order. Please re-upload it.' };
+        }
+      }
+    }
+  }
 
   // Insert the order
   const { data: order, error: oErr } = await sb

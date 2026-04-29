@@ -78,32 +78,42 @@ export async function checkRateLimit(
   }
   try {
     const sb = adminClient();
-    const sinceIso = new Date(Date.now() - opts.windowSeconds * 1000).toISOString();
-
-    const { data, error } = await sb
-      .from('rate_limit_attempts')
-      .select('created_at')
-      .eq('key', key)
-      .gte('created_at', sinceIso)
-      .order('created_at', { ascending: true });
+    // Atomic check+record via Postgres function. Without this the
+    // SELECT count → INSERT pair was a TOCTOU window: two concurrent
+    // requests could both see `count < max` and both insert, sneaking
+    // past the cap. The RPC takes a per-key advisory lock so the two
+    // calls serialise.
+    const { data, error } = await sb.rpc('try_consume_rate_limit', {
+      p_key: key,
+      p_max: opts.max,
+      p_window_seconds: opts.windowSeconds,
+    });
 
     if (error) {
       console.warn('[rate-limit] DB error, falling back to memory bucket');
       return memoryCheck(key, opts);
     }
 
-    const attempts = (data ?? []) as Array<{ created_at: string }>;
-
-    if (attempts.length >= opts.max) {
-      const oldest = attempts[0].created_at;
-      const expiresAt = new Date(oldest).getTime() + opts.windowSeconds * 1000;
+    if (data === false) {
+      // Need a retryAfter — fetch the oldest entry in window. Best-effort:
+      // if the secondary read fails we return a default 60s.
+      const sinceIso = new Date(Date.now() - opts.windowSeconds * 1000).toISOString();
+      const { data: oldest } = await sb
+        .from('rate_limit_attempts')
+        .select('created_at')
+        .eq('key', key)
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      const oldestAt = oldest?.[0]?.created_at;
+      const expiresAt = oldestAt
+        ? new Date(oldestAt).getTime() + opts.windowSeconds * 1000
+        : Date.now() + opts.windowSeconds * 1000;
       const retryAfterSeconds = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
       return { allowed: false, remaining: 0, retryAfterSeconds };
     }
 
-    // Record the attempt
-    await sb.from('rate_limit_attempts').insert({ key });
-    return { allowed: true, remaining: opts.max - attempts.length - 1 };
+    return { allowed: true, remaining: Math.max(0, opts.max - 1) };
   } catch (e) {
     console.warn('[rate-limit] unexpected error, falling back to memory bucket');
     return memoryCheck(key, opts);

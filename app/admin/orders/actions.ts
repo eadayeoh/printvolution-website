@@ -42,9 +42,21 @@ export async function updateOrderStatus(
   }
   if (status === 'cancelled') {
     const cents = Number.isFinite(extras.refund_cents) ? Math.max(0, Math.floor(extras.refund_cents!)) : 0;
+    const orderTotal = Number((before as any)?.total_cents ?? 0);
+    if (cents > orderTotal) {
+      return { ok: false, error: `Refund cannot exceed order total ($${(orderTotal / 100).toFixed(2)}).` };
+    }
     patch.refund_cents = cents;
     patch.refunded_at  = cents > 0 ? new Date().toISOString() : null;
     patch.refund_note  = (extras.refund_note ?? '').trim().slice(0, 500) || null;
+    // Sync the payment_status enum so accounting / receipts reflect the
+    // refund alongside the cancellation. Partial < total → partially_refunded
+    // would be ideal, but the current orders.payment_status enum (migration
+    // 0016) only allows 'unpaid'|'pending'|'paid'|'failed'|'refunded'.
+    // Map both partial + full to 'refunded' until the enum gains a partial
+    // state — better to over-flag than to leave the order looking 'paid'
+    // after we've returned money.
+    if (cents > 0) patch.payment_status = 'refunded';
   }
 
   const { error } = await supabase.from('orders').update(patch).eq('id', orderId);

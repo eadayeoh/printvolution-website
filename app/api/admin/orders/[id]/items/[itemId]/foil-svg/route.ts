@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildSongLyricsSvg } from '@/lib/gifts/song-lyrics-svg';
-import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
+import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
 import type { SongLyricsLayout } from '@/components/gift/song-lyrics-template';
 
 export async function GET(
@@ -41,6 +41,11 @@ export async function GET(
     const n = parsePersonalisationNotes(row.personalisation_notes as string | null);
     const layout: SongLyricsLayout = (n['song_layout'] as SongLyricsLayout) || 'song';
 
+    // Whitelist customer-supplied font keys; anything outside
+    // GIFT_FONT_FAMILIES becomes undefined and the builder defaults.
+    const safeTitleFont = validateFontKey(n['song_title_font']) ?? undefined;
+    const safeNamesFont = validateFontKey(n['song_names_font']) ?? undefined;
+    const safeYearFont  = validateFontKey(n['song_year_font'])  ?? undefined;
     // materialColor=null drops the background <rect> so the file ships only
     // the printable foil paths — what the foil printer expects.
     const svgMarkup = buildSongLyricsSvg({
@@ -51,9 +56,9 @@ export async function GET(
       year:    n['song_year']    ?? '',
       subtitle: n['song_subtitle'] ?? '',
       tagline:  n['song_tagline']  ?? '',
-      titleFont: n['song_title_font'],
-      namesFont: n['song_names_font'],
-      yearFont:  n['song_year_font'],
+      titleFont: safeTitleFont,
+      namesFont: safeNamesFont,
+      yearFont:  safeYearFont,
       lyricsScale: n['song_lyrics_scale'] ? parseFloat(n['song_lyrics_scale']) : 1,
       layout,
       materialColor: null,

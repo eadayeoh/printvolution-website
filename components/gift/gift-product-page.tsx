@@ -1441,6 +1441,15 @@ export function GiftProductPage({
       }
     }
 
+    // Snapshot the live qty-tier table at add-to-cart so updateQty in the
+    // cart can re-derive the unit price when the customer changes qty.
+    // Variant tiers win over product tiers; empty list when neither exists.
+    const tiersForLine = (selectedVariant?.price_tiers && selectedVariant.price_tiers.length > 0
+      ? selectedVariant.price_tiers
+      : (product.price_tiers ?? [])
+    ).map((t) => ({ qty: Number(t.qty), price_cents: Number(t.price_cents) }))
+      .filter((t) => Number.isFinite(t.qty) && Number.isFinite(t.price_cents));
+
     addToCart({
       product_slug: product.slug,
       product_name: product.name,
@@ -1461,6 +1470,7 @@ export function GiftProductPage({
       shape_kind: shapePickerActive ? selectedShapeKind : null,
       shape_template_id: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
       figurine_slug: selectedFigurineSlug,
+      price_tiers: tiersForLine,
     });
     clearDesignDraft(product.slug);
     setAddedFlash(true);
