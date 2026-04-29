@@ -385,7 +385,7 @@ export type ProductionOutput = {
   files?: Array<{
     mode: GiftMode;
     pngPath: string;
-    pngMime: 'image/png';
+    pngMime: 'image/png' | 'image/jpeg';
     pdfPath: string;
     pdfMime: 'application/pdf';
     widthPx: number;
@@ -431,8 +431,21 @@ async function renderRendererTemplate(args: {
 
   switch (template.renderer) {
     case 'spotify_plaque': {
-      const photoMime = sourceMime || 'image/jpeg';
-      const photoDataUri = `data:${photoMime};base64,${Buffer.from(sourceBytes).toString('base64')}`;
+      // librsvg / sharp's SVG rasterizer can't decode HEIC inside an
+      // <image> tag — the photo silently renders blank. Pre-decode any
+      // non-{png,jpeg,webp} mime (typically iOS HEIC/HEIF) to JPEG.
+      const rawMime = (sourceMime || 'image/jpeg').toLowerCase();
+      const isWebSafe = rawMime === 'image/png' || rawMime === 'image/jpeg' || rawMime === 'image/jpg' || rawMime === 'image/webp';
+      let photoBytes: Uint8Array = sourceBytes;
+      let photoMime = rawMime || 'image/jpeg';
+      if (!isWebSafe) {
+        const sharp = await loadSharp();
+        if (sharp) {
+          photoBytes = await sharp(Buffer.from(sourceBytes)).jpeg({ quality: 90 }).toBuffer();
+          photoMime = 'image/jpeg';
+        }
+      }
+      const photoDataUri = `data:${photoMime};base64,${Buffer.from(photoBytes).toString('base64')}`;
       const { buildSpotifyPlaqueSvg } = await import('./spotify-plaque-svg');
       const svg = buildSpotifyPlaqueSvg({
         photoUrl: photoDataUri,
@@ -685,8 +698,15 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       return transformBytesForMode(bytes, mode, product, p, /*preview=*/false, resolvedPrompt);
     };
 
-    // Helper: produce one PNG + PDF pair and upload them, returning
-    // keys + image metadata.
+    // Composite always rasterizes — if the resolved primary is 'svg'
+    // we silently fall through to PNG (zones output is bitmap by nature).
+    const fmt = resolveProductionFormat(template, product);
+    const primaryFormat: 'png' | 'jpg' = fmt.primary === 'jpg' ? 'jpg' : 'png';
+    const primaryMime: 'image/png' | 'image/jpeg' =
+      primaryFormat === 'jpg' ? 'image/jpeg' : 'image/png';
+
+    // Helper: produce one primary file (+ optional PDF) pair and upload
+    // them, returning keys + image metadata.
     const renderOnePass = async (onlyMode: GiftMode | null, slugSuffix: string) => {
       const out = await renderTemplateComposite(sharp, {
         template,
@@ -698,19 +718,32 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
         onlyMode,
         transformZone,
       });
-      const pngKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'png');
       const pngBuf = await sharp(out.buffer).png({ compressionLevel: 6 }).toBuffer();
       const pngMeta = await sharp(pngBuf).metadata();
-      await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
-      const pdfKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'pdf');
-      const pdfBuf = await wrapPdf(pngBuf, {
-        trimWidthMm:  product.width_mm,
-        trimHeightMm: product.height_mm,
-        bleedMm:      product.bleed_mm,
-      });
-      await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+
+      let primaryKey: string;
+      if (primaryFormat === 'jpg') {
+        primaryKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'jpg');
+        const jpgBuf = await sharp(pngBuf).jpeg({ quality: 92 }).toBuffer();
+        await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
+      } else {
+        primaryKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'png');
+        await putObject(GIFT_BUCKETS.production, primaryKey, pngBuf, primaryMime);
+      }
+
+      let pdfKey = '';
+      if (fmt.includePdf) {
+        pdfKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'pdf');
+        const pdfBuf = await wrapPdf(pngBuf, {
+          trimWidthMm:  product.width_mm,
+          trimHeightMm: product.height_mm,
+          bleedMm:      product.bleed_mm,
+        });
+        await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+      }
+
       return {
-        pngKey, pdfKey,
+        primaryKey, pdfKey,
         widthPx:  pngMeta.width ?? 0,
         heightPx: pngMeta.height ?? 0,
         dpi: computeDpiForDimensions(pngMeta.width ?? 0, product.width_mm),
@@ -724,7 +757,7 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
         const r = await renderOnePass(m, m);
         files.push({
           mode: m,
-          pngPath: r.pngKey, pngMime: 'image/png',
+          pngPath: r.primaryKey, pngMime: primaryMime,
           pdfPath: r.pdfKey, pdfMime: 'application/pdf',
           widthPx: r.widthPx, heightPx: r.heightPx, dpi: r.dpi,
         });
@@ -735,7 +768,7 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       const primary = files.find((f) => f.mode === product.mode) ?? files[0];
       return {
         productionPath: primary.pngPath,
-        productionMime: 'image/png',
+        productionMime: primaryMime,
         productionPdfPath: primary.pdfPath,
         productionPdfMime: 'application/pdf',
         widthPx: primary.widthPx,
@@ -749,8 +782,8 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     // the transform callback so zones with AI modes render properly.
     const r = await renderOnePass(null, 'main');
     return {
-      productionPath: r.pngKey,
-      productionMime: 'image/png',
+      productionPath: r.primaryKey,
+      productionMime: primaryMime,
       productionPdfPath: r.pdfKey,
       productionPdfMime: 'application/pdf',
       widthPx: r.widthPx,

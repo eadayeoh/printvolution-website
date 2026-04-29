@@ -14,6 +14,7 @@ import { TemplateMultiSlotForm } from './template-multi-slot-form';
 import { GiftTemplateLayoutPreview } from './gift-template-layout-preview';
 import { GiftVariantSurfaces, type SurfaceFillMap } from './gift-variant-surfaces';
 import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts-shared';
+import { encodeNoteValue } from '@/lib/gifts/personalisation-notes';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
@@ -1172,7 +1173,7 @@ export function GiftProductPage({
     if (preview) {
       notes = `gift_source:${preview.sourceAssetId};gift_preview:${preview.previewAssetId}`;
       if (engravedText.trim()) {
-        notes += `;text:${engravedText.trim()}`;
+        notes += `;text:${encodeNoteValue(engravedText.trim())}`;
         notes += `;text_font:${engravedFont}`;
         notes += `;text_size:${engravedSizePct}`;
         notes += `;text_pos:${textPos.x.toFixed(1)},${textPos.y.toFixed(1)}`;
@@ -1193,18 +1194,18 @@ export function GiftProductPage({
         const fill = surfaceFills[s.id];
         if (!fill) continue;
         const txt = (fill.text ?? '').trim();
-        if (txt) notes += `${notes ? ';' : ''}text_${s.id}:${txt}`;
+        if (txt) notes += `${notes ? ';' : ''}text_${s.id}:${encodeNoteValue(txt)}`;
         if (s.mode) notes += `${notes ? ';' : ''}mode_${s.id}:${s.mode}`;
       }
     }
-    if (selectedColour) notes += `${notes ? ';' : ''}colour:${selectedColour.name}`;
+    if (selectedColour) notes += `${notes ? ';' : ''}colour:${encodeNoteValue(selectedColour.name)}`;
     // Extra text zones (admin-configured, no template). Each non-empty
     // field becomes one text_<id>:<value> entry — same shape as
     // surfaces-driven text fields, so admin order detail + production
     // pipeline read them identically.
     for (const z of extraTextZones) {
       const v = (extraTextValues[z.id] ?? '').trim();
-      if (v) notes += `${notes ? ';' : ''}text_${z.id}:${v}`;
+      if (v) notes += `${notes ? ';' : ''}text_${z.id}:${encodeNoteValue(v)}`;
     }
     // Song-lyrics-photo-frame: serialise the four custom text fields + photo
     // URL into the cart line so the production pipeline can re-render the
@@ -1214,13 +1215,13 @@ export function GiftProductPage({
       if (songTitleFont) notes += `;song_title_font:${songTitleFont}`;
       if (songNamesFont) notes += `;song_names_font:${songNamesFont}`;
       if (songYearFont)  notes += `;song_year_font:${songYearFont}`;
-      if (songSubtitle.trim()) notes += `;song_subtitle:${songSubtitle.trim()}`;
-      if (songTagline.trim())  notes += `;song_tagline:${songTagline.trim()}`;
+      if (songSubtitle.trim()) notes += `;song_subtitle:${encodeNoteValue(songSubtitle.trim())}`;
+      if (songTagline.trim())  notes += `;song_tagline:${encodeNoteValue(songTagline.trim())}`;
       if (songLyricsScale !== 1) notes += `;song_lyrics_scale:${songLyricsScale.toFixed(2)}`;
-      if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${songLyrics.trim()}`;
-      if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${songTitle.trim()}`;
-      if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${songNames.trim()}`;
-      if (songYear.trim())    notes += `${notes ? ';' : ''}song_year:${songYear.trim()}`;
+      if (songLyrics.trim())  notes += `${notes ? ';' : ''}song_lyrics:${encodeNoteValue(songLyrics.trim())}`;
+      if (songTitle.trim())   notes += `${notes ? ';' : ''}song_title:${encodeNoteValue(songTitle.trim())}`;
+      if (songNames.trim())   notes += `${notes ? ';' : ''}song_names:${encodeNoteValue(songNames.trim())}`;
+      if (songYear.trim())    notes += `${notes ? ';' : ''}song_year:${encodeNoteValue(songYear.trim())}`;
       // Emit the stable asset id, NOT the signed URL (which expires in 1 h
       // and would balloon notes). Production reads the asset from
       // gift-sources via this id.
@@ -1234,9 +1235,9 @@ export function GiftProductPage({
       if (selectedSize) {
         notes += `${notes ? ';' : ''}size_slug:${selectedSize.slug};size_w_mm:${selectedSize.width_mm};size_h_mm:${selectedSize.height_mm}`;
       }
-      if (spotifySongTitle.trim())  notes += `${notes ? ';' : ''}spotify_title:${spotifySongTitle.trim()}`;
-      if (spotifyArtistName.trim()) notes += `${notes ? ';' : ''}spotify_artist:${spotifyArtistName.trim()}`;
-      if (spotifyUrl.trim())        notes += `${notes ? ';' : ''}spotify_url:${spotifyUrl.trim()}`;
+      if (spotifySongTitle.trim())  notes += `${notes ? ';' : ''}spotify_title:${encodeNoteValue(spotifySongTitle.trim())}`;
+      if (spotifyArtistName.trim()) notes += `${notes ? ';' : ''}spotify_artist:${encodeNoteValue(spotifyArtistName.trim())}`;
+      if (spotifyUrl.trim())        notes += `${notes ? ';' : ''}spotify_url:${encodeNoteValue(spotifyUrl.trim())}`;
       const trackId = parseSpotifyTrackId(spotifyUrl);
       if (trackId)                  notes += `${notes ? ';' : ''}spotify_track_id:${trackId}`;
       if (spotifyPhotoAssetId)      notes += `${notes ? ';' : ''}spotify_photo_asset:${spotifyPhotoAssetId}`;
@@ -1253,10 +1254,10 @@ export function GiftProductPage({
       if (cityLat != null && cityLng != null) {
         notes += `${notes ? ';' : ''}city_lat:${cityLat.toFixed(5)};city_lng:${cityLng.toFixed(5)};city_radius:${cityRadius.toFixed(1)}`;
       }
-      if (cityLabel.trim())   notes += `${notes ? ';' : ''}city_label:${cityLabel.trim()}`;
-      if (cityNames.trim())   notes += `${notes ? ';' : ''}city_names:${cityNames.trim()}`;
-      if (cityEvent.trim())   notes += `${notes ? ';' : ''}city_event:${cityEvent.trim()}`;
-      if (cityTagline.trim()) notes += `${notes ? ';' : ''}city_tagline:${cityTagline.trim()}`;
+      if (cityLabel.trim())   notes += `${notes ? ';' : ''}city_label:${encodeNoteValue(cityLabel.trim())}`;
+      if (cityNames.trim())   notes += `${notes ? ';' : ''}city_names:${encodeNoteValue(cityNames.trim())}`;
+      if (cityEvent.trim())   notes += `${notes ? ';' : ''}city_event:${encodeNoteValue(cityEvent.trim())}`;
+      if (cityTagline.trim()) notes += `${notes ? ';' : ''}city_tagline:${encodeNoteValue(cityTagline.trim())}`;
       if (cityShowCoords)     notes += `${notes ? ';' : ''}city_show_coords:1`;
       if (cityFontTitle)      notes += `${notes ? ';' : ''}city_font_title:${cityFontTitle}`;
       if (cityFontNames)      notes += `${notes ? ';' : ''}city_font_names:${cityFontNames}`;
@@ -1285,10 +1286,10 @@ export function GiftProductPage({
       // Local-time round-trip — admin order detail can show the customer
       // what they entered, not the UTC equivalent.
       notes += `${notes ? ';' : ''}star_local_date:${starDateIso};star_local_time:${starTimeHm};star_tz_offset:${starTzOffsetMin}`;
-      if (starLocLabel.trim()) notes += `${notes ? ';' : ''}star_label:${starLocLabel.trim()}`;
-      if (starNames.trim())    notes += `${notes ? ';' : ''}star_names:${starNames.trim()}`;
-      if (starEvent.trim())    notes += `${notes ? ';' : ''}star_event:${starEvent.trim()}`;
-      if (starTagline.trim())  notes += `${notes ? ';' : ''}star_tagline:${starTagline.trim()}`;
+      if (starLocLabel.trim()) notes += `${notes ? ';' : ''}star_label:${encodeNoteValue(starLocLabel.trim())}`;
+      if (starNames.trim())    notes += `${notes ? ';' : ''}star_names:${encodeNoteValue(starNames.trim())}`;
+      if (starEvent.trim())    notes += `${notes ? ';' : ''}star_event:${encodeNoteValue(starEvent.trim())}`;
+      if (starTagline.trim())  notes += `${notes ? ';' : ''}star_tagline:${encodeNoteValue(starTagline.trim())}`;
       if (starShowCoords)      notes += `${notes ? ';' : ''}star_show_coords:1`;
       if (starShowLines)       notes += `${notes ? ';' : ''}star_show_lines:1`;
       if (starShowLabels)      notes += `${notes ? ';' : ''}star_show_labels:1`;

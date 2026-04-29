@@ -229,6 +229,11 @@ export async function renderTemplateComposite(
         const fetched = await fetchAsBuffer(imgZone.default_image_url);
         if (fetched) zoneBytes = fetched;
       }
+      // Decorative-empty: a masked zone (e.g. heart cutout) with neither
+      // a customer upload nor a default image is meant to stay empty.
+      // Falling through to sourceBytes here would print the customer's
+      // primary photo heart-clipped on top of itself.
+      if (!zoneBytes && imgZone.mask_preset) continue;
       let finalBytes = zoneBytes ?? sourceBytes;
       // Per-zone transform: when a mode is resolved AND a transform
       // hook is provided, run it before compositing. Lets the caller

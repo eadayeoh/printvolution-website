@@ -245,12 +245,18 @@ async function runOneLineSurfaces(it: { lineId: string; gift_product_id: string 
         height_px: out.heightPx,
         dpi: out.dpi,
       }).select('id').single();
-      const { data: pdfAsset } = await sb.from('gift_assets').insert({
-        role: 'production-pdf',
-        bucket: GIFT_BUCKETS.production,
-        path: out.productionPdfPath,
-        mime_type: out.productionPdfMime,
-      }).select('id').single();
+      // Mirror the parent path (line ~110): only persist a production-pdf
+      // asset row when the pipeline actually produced a PDF. Without the
+      // gate, skipping PDF emission for laser/uv/embroidery surfaces
+      // would still create an asset row pointing at an empty key.
+      const pdfAsset = out.productionPdfPath
+        ? (await sb.from('gift_assets').insert({
+            role: 'production-pdf',
+            bucket: GIFT_BUCKETS.production,
+            path: out.productionPdfPath,
+            mime_type: out.productionPdfMime,
+          }).select('id').single()).data
+        : null;
 
       await sb.from('gift_order_item_surfaces').update({
         production_asset_id: prodAsset?.id ?? null,

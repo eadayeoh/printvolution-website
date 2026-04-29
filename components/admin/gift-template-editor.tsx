@@ -556,6 +556,10 @@ export function GiftTemplateEditor({
   }
 
   function undoZones() {
+    // Cancel any in-flight drag first — otherwise the next pointermove
+    // re-applies drag.startZone as the baseline and silently re-undoes
+    // the rewind we just performed.
+    if (drag) setDrag(null);
     setZonesHistory((h) => {
       if (h.length === 0) return h;
       const prev = h[h.length - 1];
@@ -566,6 +570,7 @@ export function GiftTemplateEditor({
   }
 
   function redoZones() {
+    if (drag) setDrag(null);
     setZonesFuture((f) => {
       if (f.length === 0) return f;
       const next = f[f.length - 1];
