@@ -811,104 +811,9 @@ export function GiftTemplateEditor({
                           </button>
                         </div>
                       </div>
-                      {active && (
-                        <div className="space-y-3 border-t border-neutral-200 p-3">
-                          {isAnchor ? (
-                            <div className="rounded border-2 border-magenta/30 bg-magenta/5 p-3 text-[12px] leading-snug text-ink">
-                              <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
-                                Code-driven region · {(z as GiftTemplateRenderAnchorZone).anchor_kind}
-                              </div>
-                              The renderer owns what gets drawn inside
-                              this rectangle. You can drag and resize
-                              the box (X / Y / W / H below) to move the
-                              region on the canvas, but the contents
-                              themselves come from code.
-                            </div>
-                          ) : isCal
-                            ? <CalendarZoneFields zone={z as GiftTemplateCalendarZone} onChange={(p) => updateZone<GiftTemplateCalendarZone>(i, p)} />
-                            : isText
-                              ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
-                              : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
-
-                          {/* Canvas-align quick buttons. Snap the zone
-                              to canvas edges or centre it horizontally
-                              / vertically without manually editing X/Y. */}
-                          <div className="border-t border-neutral-200 pt-3">
-                            <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Align on canvas</div>
-                            <div className="grid grid-cols-7 gap-1">
-                              {([
-                                { lbl: '⇤',  title: 'Align left edge',          patch: { x_mm: 0 } },
-                                { lbl: '↔',  title: 'Centre horizontally',     patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2 } },
-                                { lbl: '⇥',  title: 'Align right edge',         patch: { x_mm: TEMPLATE_W - z.width_mm } },
-                                { lbl: '⇡',  title: 'Align top edge',           patch: { y_mm: 0 } },
-                                { lbl: '↕',  title: 'Centre vertically',       patch: { y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
-                                { lbl: '⇣',  title: 'Align bottom edge',        patch: { y_mm: TEMPLATE_H - z.height_mm } },
-                                { lbl: '⊕',  title: 'Centre both',              patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2, y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
-                              ] as const).map((btn) => (
-                                <button
-                                  key={btn.title}
-                                  type="button"
-                                  onClick={() => updateZone(i, btn.patch as any)}
-                                  title={btn.title}
-                                  className="rounded border-2 border-neutral-200 bg-white px-1 py-1 text-sm text-neutral-700 hover:border-pink hover:text-pink"
-                                >
-                                  {btn.lbl}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-4 gap-1.5 border-t border-neutral-200 pt-3">
-                            <NumField label="X" value={z.x_mm} onChange={(v) => updateZone(i, { x_mm: v })} />
-                            <NumField label="Y" value={z.y_mm} onChange={(v) => updateZone(i, { y_mm: v })} />
-                            <NumField label="W" value={z.width_mm} onChange={(v) => updateZone(i, { width_mm: v })} />
-                            <NumField label="H" value={z.height_mm} onChange={(v) => updateZone(i, { height_mm: v })} />
-                          </div>
-                          <div>
-                            <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Production mode</div>
-                            <select
-                              value={z.mode ?? ''}
-                              onChange={(e) => updateZone(i, { mode: (e.target.value || null) as GiftMode | null })}
-                              className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs"
-                            >
-                              <option value="">Inherit from product</option>
-                              {GIFT_MODES.map((m) => (
-                                <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
-                              ))}
-                            </select>
-                            <div className="mt-1 text-[9px] text-neutral-400">
-                              Override the product&apos;s mode for this zone. Use for dual-mode templates (e.g. UV photo + laser-engraved border text). Leave blank on single-mode templates.
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Rotation</div>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="range"
-                                min={-180} max={180} step={1}
-                                value={z.rotation_deg ?? 0}
-                                onChange={(e) => updateZone(i, { rotation_deg: parseInt(e.target.value, 10) })}
-                                className="flex-1"
-                              />
-                              <input
-                                type="number"
-                                value={Math.round(z.rotation_deg ?? 0)}
-                                onChange={(e) => updateZone(i, { rotation_deg: parseFloat(e.target.value) || 0 })}
-                                className="w-14 rounded border-2 border-neutral-200 px-1 py-0.5 text-xs font-mono"
-                              />
-                              <RotateCw size={11} className="text-neutral-400" />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 pt-1">
-                            <button type="button" onClick={() => moveZone(i, -1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move up"><ArrowUp size={12} /></button>
-                            <button type="button" onClick={() => moveZone(i, 1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move down"><ArrowDown size={12} /></button>
-                            <button type="button" onClick={() => duplicateZone(i)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Duplicate"><Copy size={12} /></button>
-                            <div className="flex-1" />
-                            <button type="button" onClick={() => { if (confirm(`Remove zone ${i + 1}? Reload before save to undo.`)) removeZone(i); }} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove"><Trash2 size={12} /></button>
-                          </div>
-                        </div>
-                      )}
+                      {/* Properties panel moved to a fixed sidebar
+                          above the canvas — see ZonePropertiesPanel
+                          render below. */}
                     </div>
                   );
                 })}
@@ -1168,8 +1073,122 @@ export function GiftTemplateEditor({
           </div>
         </div>
 
-        {/* RIGHT: visual canvas */}
+        {/* RIGHT: visual canvas + sticky properties panel */}
         <div className="space-y-4">
+          {/* Properties panel — always visible at the top of the
+              right column. Pulls layer-properties out of the cramped
+              layer-list expansion so admin can see X / Y / W / H /
+              align / font / rotation while the canvas stays in
+              view. Empty state when nothing is selected. */}
+          {(() => {
+            const i = activeZoneIdx;
+            if (i === null || i < 0 || i >= zones.length) {
+              return (
+                <div className="rounded-lg border-2 border-dashed border-neutral-200 bg-neutral-50 px-4 py-3 text-[11px] text-neutral-500">
+                  Click a layer in the list on the left to edit its position, font, alignment, and other properties here.
+                </div>
+              );
+            }
+            const z = zones[i];
+            const isText = isTextZone(z);
+            const isCal = isCalendarZone(z);
+            const isAnchor = isRenderAnchorZone(z);
+            return (
+              <div className="rounded-lg border-2 border-pink bg-white shadow-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-neutral-200 px-3 py-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-pink">
+                    Editing: <span className="text-ink">{z.label || 'Untitled'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => moveZone(i, -1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move back"><ArrowDown size={12} /></button>
+                    <button type="button" onClick={() => moveZone(i, 1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move forward"><ArrowUp size={12} /></button>
+                    <button type="button" onClick={() => duplicateZone(i)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Duplicate"><Copy size={12} /></button>
+                    <button type="button" onClick={() => { if (confirm(`Remove zone ${i + 1}? Reload before save to undo.`)) removeZone(i); }} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove"><Trash2 size={12} /></button>
+                  </div>
+                </div>
+                <div className="space-y-3 p-3">
+                  {isAnchor ? (
+                    <div className="rounded border-2 border-magenta/30 bg-magenta/5 p-3 text-[12px] leading-snug text-ink">
+                      <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
+                        Code-driven region · {(z as GiftTemplateRenderAnchorZone).anchor_kind}
+                      </div>
+                      The renderer owns what gets drawn inside this rectangle. You can drag and resize the box (X / Y / W / H below) to move the region on the canvas, but the contents themselves come from code.
+                    </div>
+                  ) : isCal
+                    ? <CalendarZoneFields zone={z as GiftTemplateCalendarZone} onChange={(p) => updateZone<GiftTemplateCalendarZone>(i, p)} />
+                    : isText
+                      ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
+                      : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
+
+                  <div className="border-t border-neutral-200 pt-3">
+                    <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Align on canvas</div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {([
+                        { lbl: '⇤',  title: 'Align left edge',          patch: { x_mm: 0 } },
+                        { lbl: '↔',  title: 'Centre horizontally',     patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2 } },
+                        { lbl: '⇥',  title: 'Align right edge',         patch: { x_mm: TEMPLATE_W - z.width_mm } },
+                        { lbl: '⇡',  title: 'Align top edge',           patch: { y_mm: 0 } },
+                        { lbl: '↕',  title: 'Centre vertically',       patch: { y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
+                        { lbl: '⇣',  title: 'Align bottom edge',        patch: { y_mm: TEMPLATE_H - z.height_mm } },
+                        { lbl: '⊕',  title: 'Centre both',              patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2, y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
+                      ] as const).map((btn) => (
+                        <button
+                          key={btn.title}
+                          type="button"
+                          onClick={() => updateZone(i, btn.patch as any)}
+                          title={btn.title}
+                          className="rounded border-2 border-neutral-200 bg-white px-1 py-1 text-sm text-neutral-700 hover:border-pink hover:text-pink"
+                        >
+                          {btn.lbl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5 border-t border-neutral-200 pt-3">
+                    <NumField label="X" value={z.x_mm} onChange={(v) => updateZone(i, { x_mm: v })} />
+                    <NumField label="Y" value={z.y_mm} onChange={(v) => updateZone(i, { y_mm: v })} />
+                    <NumField label="W" value={z.width_mm} onChange={(v) => updateZone(i, { width_mm: v })} />
+                    <NumField label="H" value={z.height_mm} onChange={(v) => updateZone(i, { height_mm: v })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 border-t border-neutral-200 pt-3">
+                    <div>
+                      <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Production mode</div>
+                      <select
+                        value={z.mode ?? ''}
+                        onChange={(e) => updateZone(i, { mode: (e.target.value || null) as GiftMode | null })}
+                        className="w-full rounded border-2 border-neutral-200 bg-white px-2 py-1 text-xs"
+                      >
+                        <option value="">Inherit from product</option>
+                        {GIFT_MODES.map((m) => (
+                          <option key={m} value={m}>{GIFT_MODE_LABEL[m]}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Rotation</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={-180} max={180} step={1}
+                          value={z.rotation_deg ?? 0}
+                          onChange={(e) => updateZone(i, { rotation_deg: parseInt(e.target.value, 10) })}
+                          className="flex-1"
+                        />
+                        <input
+                          type="number"
+                          value={Math.round(z.rotation_deg ?? 0)}
+                          onChange={(e) => updateZone(i, { rotation_deg: parseFloat(e.target.value) || 0 })}
+                          className="w-14 rounded border-2 border-neutral-200 px-1 py-0.5 text-xs font-mono"
+                        />
+                        <RotateCw size={11} className="text-neutral-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {isRendererTemplate && (
             <div className="rounded-lg border-2 border-magenta/30 bg-magenta/5 px-4 py-3 text-[12px] leading-snug text-ink">
               <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
