@@ -32,7 +32,7 @@ type Props = {
   textColor?: string;
   /** Admin-editable layout zones from the template's zones_json.
    *  Recognised IDs: photo, song_title, artist_name, heart. */
-  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; color?: string }> | null;
+  zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; color?: string; hidden?: boolean; default_image_url?: string | null }> | null;
   /** Optional template background — renders behind the SVG (admin-
    *  uploaded acrylic-plaque texture, finish render, etc.). */
   backgroundUrl?: string | null;
@@ -94,6 +94,35 @@ export function SpotifyPlaqueTemplate({
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
         />
       )}
+      {/* Generic image zones from zones_json — admin can drop a PNG into
+       *  any image-type zone (e.g. a controls-graphic overlay, decorative
+       *  band, etc.). Mirrors the admin canvas's z-order: rendered ABOVE
+       *  the SVG dynamic content so transparent regions in the PNG let
+       *  the photo / title / artist show through. Coordinates are in the
+       *  editor's 0..200 canvas, so percentages map directly. */}
+      {(zones ?? []).map((z, i) => {
+        if (z?.type !== 'image' || z.hidden) return null;
+        const url = (z as { default_image_url?: string | null }).default_image_url;
+        if (!url) return null;
+        const x = z.x_mm, y = z.y_mm, w = z.width_mm, h = z.height_mm;
+        if (x == null || y == null || w == null || h == null) return null;
+        return (
+          <img
+            key={`img-zone-${i}`}
+            src={url}
+            alt=""
+            style={{
+              position: 'absolute',
+              left: `${(x / 200) * 100}%`,
+              top: `${(y / 200) * 100}%`,
+              width: `${(w / 200) * 100}%`,
+              height: `${(h / 200) * 100}%`,
+              objectFit: 'contain',
+              pointerEvents: 'none',
+            }}
+          />
+        );
+      })}
       {!scanRect.hidden && (
       <div
         style={{
