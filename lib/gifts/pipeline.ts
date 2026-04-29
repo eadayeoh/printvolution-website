@@ -831,15 +831,26 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       for (const r of assetRows ?? []) {
         byId.set((r as any).id as string, { bucket: (r as any).bucket, path: (r as any).path });
       }
-      for (const [zoneId, assetId] of Object.entries(customer.imageAssetIdsByZoneId)) {
-        const row = byId.get(assetId);
-        if (!row) continue;
-        try {
-          const bytes = await getObject(row.bucket, row.path);
-          imagesByZoneId[zoneId] = bytes;
-        } catch (e) {
-          console.warn('[pipeline] zone image fetch failed', zoneId, (e as any)?.message);
-        }
+      // Fetch every zone's image in parallel — one storage round-trip
+      // per photo, and a 4-photo template was previously running them
+      // back-to-back. Failures still don't abort the composite (the
+      // catch downgrades to "skip this zone").
+      const zoneEntries = Object.entries(customer.imageAssetIdsByZoneId);
+      const fetched = await Promise.all(
+        zoneEntries.map(async ([zoneId, assetId]) => {
+          const row = byId.get(assetId);
+          if (!row) return null;
+          try {
+            const bytes = await getObject(row.bucket, row.path);
+            return [zoneId, bytes] as const;
+          } catch (e) {
+            console.warn('[pipeline] zone image fetch failed', zoneId, (e as any)?.message);
+            return null;
+          }
+        }),
+      );
+      for (const entry of fetched) {
+        if (entry) imagesByZoneId[entry[0]] = entry[1];
       }
     }
 

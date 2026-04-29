@@ -787,21 +787,16 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
         ? await sb.from('gift_product_variants').select('surfaces, width_mm, height_mm').eq('id', variantId).maybeSingle()
         : { data: null };
 
-      for (const row of (surfaceRows ?? [])) {
-        // Reset each surface so it can be re-claimed below regardless
-        // of its prior state (mirrors the parent CAS — admin retry
-        // overrides any per-surface state).
+      // Render every surface in parallel — they're independent and the
+      // per-surface try/catch already isolates failures. Skip the prior
+      // reset-then-CAS pair: admin is the only caller of rerunGiftProduction,
+      // so claim races aren't real here. One UPDATE to `processing` is
+      // enough.
+      await Promise.all((surfaceRows ?? []).map(async (row) => {
         await sb.from('gift_order_item_surfaces').update({
-          production_status: 'pending',
+          production_status: 'processing',
           production_error: null,
         }).eq('id', row.id);
-        const { data: surfClaim } = await sb
-          .from('gift_order_item_surfaces')
-          .update({ production_status: 'processing' })
-          .eq('id', row.id)
-          .eq('production_status', 'pending')
-          .select('id');
-        if (!surfClaim || surfClaim.length === 0) continue;
         try {
           let areaMm: { widthMm: number; heightMm: number } | null = null;
           const variantSurfaces = Array.isArray(variant?.surfaces) ? variant!.surfaces : [];
@@ -862,7 +857,7 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
             production_error: e?.message ?? 'unknown',
           }).eq('id', row.id);
         }
-      }
+      }));
 
       // Roll up parent status — mirrors checkout's tail.
       const { data: final } = await sb
@@ -963,9 +958,9 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
           const b = (r as any).bucket as string;
           (byBucket[b] = byBucket[b] ?? []).push((r as any).path as string);
         }
-        for (const [bucket, paths] of Object.entries(byBucket)) {
-          await sb.storage.from(bucket).remove(paths);
-        }
+        await Promise.all(
+          Object.entries(byBucket).map(([bucket, paths]) => sb.storage.from(bucket).remove(paths)),
+        );
         await sb.from('gift_assets').delete().in('id', oldIds);
       } catch (e) {
         console.warn('[rerun] old asset cleanup failed', (e as any)?.message);

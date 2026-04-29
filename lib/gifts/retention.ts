@@ -44,6 +44,28 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
   result.inspected = items?.length ?? 0;
   const nowMs = now.getTime();
 
+  // Pre-fetch surface rows for every inspected item in ONE query (was
+  // an N+1 inside the loop — N=500 ran 500 sequential roundtrips). Group
+  // by order_item_id so the loop body can look up O(1) instead of
+  // dispatching its own query.
+  const itemIds = (items ?? []).map((i: any) => i.id).filter(Boolean);
+  const surfacesByItemId = new Map<string, any[]>();
+  if (itemIds.length > 0) {
+    const { data: allSurfaces } = await sb
+      .from('gift_order_item_surfaces')
+      .select(`
+        id, order_item_id, production_asset_id, production_pdf_id,
+        production:gift_assets!production_asset_id(bucket, path),
+        production_pdf:gift_assets!production_pdf_id(bucket, path)
+      `)
+      .in('order_item_id', itemIds);
+    for (const s of (allSurfaces ?? []) as any[]) {
+      const list = surfacesByItemId.get(s.order_item_id) ?? [];
+      list.push(s);
+      surfacesByItemId.set(s.order_item_id, list);
+    }
+  }
+
   for (const item of (items ?? []) as any[]) {
     const orderCreated = new Date(item.order.created_at).getTime();
     const retentionDays = item.product.source_retention_days ?? 30;
@@ -72,17 +94,11 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
     }
     // Surfaces-driven lines fan out into gift_order_item_surfaces; each
     // row carries its own production_asset_id / production_pdf_id. Pull
-    // the assets and add their paths to the same per-bucket batch.
-    const { data: surfaceRows } = await sb
-      .from('gift_order_item_surfaces')
-      .select(`
-        id, production_asset_id, production_pdf_id,
-        production:gift_assets!production_asset_id(bucket, path),
-        production_pdf:gift_assets!production_pdf_id(bucket, path)
-      `)
-      .eq('order_item_id', item.id);
+    // from the pre-fetched map and add their paths to the same
+    // per-bucket batch.
+    const surfaceRows = surfacesByItemId.get(item.id) ?? [];
     const surfaceAssetIds: string[] = [];
-    for (const s of (surfaceRows ?? []) as any[]) {
+    for (const s of surfaceRows) {
       if (s.production?.path) prodPaths.push({ bucket: s.production.bucket ?? GIFT_BUCKETS.production, path: s.production.path });
       if (s.production_pdf?.path) prodPaths.push({ bucket: s.production_pdf.bucket ?? GIFT_BUCKETS.production, path: s.production_pdf.path });
       if (s.production_asset_id) surfaceAssetIds.push(s.production_asset_id);
@@ -95,9 +111,11 @@ export async function purgeEligible(now: Date = new Date()): Promise<PurgeResult
         if (!byBucket.has(p.bucket)) byBucket.set(p.bucket, []);
         byBucket.get(p.bucket)!.push(p.path);
       }
+      const results = await Promise.all(
+        Array.from(byBucket).map(([bucket, paths]) => sb.storage.from(bucket).remove(paths)),
+      );
       let ok = true;
-      for (const [bucket, paths] of byBucket) {
-        const { error: e } = await sb.storage.from(bucket).remove(paths);
+      for (const { error: e } of results) {
         if (e) { result.errors.push(`prod ${item.id}: ${e.message}`); ok = false; }
       }
       if (ok) result.productionDeleted++;

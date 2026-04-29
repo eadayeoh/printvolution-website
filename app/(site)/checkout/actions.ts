@@ -631,13 +631,6 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // columns null) get a free pass + log so in-flight carts don't break
   // while the column rolls forward — strict mode is a follow-up.
   if (giftItems.length > 0) {
-    const callerUserId = await (async () => {
-      try {
-        const c = createUserClient();
-        const { data: u } = await c.auth.getUser();
-        return u?.user?.id ?? null;
-      } catch { return null; }
-    })();
     const callerAnon = getAnonSessionId();
     const allRefs: string[] = [];
     for (const it of giftItems) {
@@ -650,11 +643,20 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     }
     const uniqueRefs = Array.from(new Set(allRefs));
     if (uniqueRefs.length > 0) {
-      const { data: rows } = await sb
-        .from('gift_assets')
-        .select('id, user_id, anon_session_id')
-        .in('id', uniqueRefs);
-      const byId = new Map((rows ?? []).map((r: any) => [r.id as string, r]));
+      // Auth + asset-row fetch don't depend on each other — kick both
+      // off together. Saves one roundtrip's worth of latency on every
+      // checkout that has at least one gift line.
+      const [callerUserId, assetRows] = await Promise.all([
+        (async () => {
+          try {
+            const c = createUserClient();
+            const { data: u } = await c.auth.getUser();
+            return u?.user?.id ?? null;
+          } catch { return null; }
+        })(),
+        sb.from('gift_assets').select('id, user_id, anon_session_id').in('id', uniqueRefs).then(({ data }) => data),
+      ]);
+      const byId = new Map((assetRows ?? []).map((r: any) => [r.id as string, r]));
       for (const ref of uniqueRefs) {
         const row = byId.get(ref);
         if (!row) continue;
