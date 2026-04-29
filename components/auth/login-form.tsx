@@ -50,13 +50,20 @@ export function LoginForm() {
     }
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
       await recordFailedLogin(email);
       setError(authError.message);
       setCaptchaToken(null);
       setLoading(false);
       return;
+    }
+    // Backfill anon gift-credit usage onto the user_id so the weekly
+    // quota carries over (otherwise burning 3 anon then signing in
+    // would refresh to a full 8).
+    if (data?.user?.id) {
+      const { claimAnonGiftCreditsAfterLogin } = await import('@/app/login/actions');
+      await claimAnonGiftCreditsAfterLogin(data.user.id).catch(() => {});
     }
     router.push(redirectTo);
     router.refresh();

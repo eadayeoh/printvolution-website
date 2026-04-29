@@ -47,10 +47,18 @@ export async function loginWithPassword(input: { email: string; password: string
   }
 
   const sb = createClient();
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) {
     // Generic message — don't leak whether the account exists.
     return { ok: false as const, error: 'Invalid email or password' };
+  }
+  // Backfill any anon gift generations onto the user_id so the weekly
+  // quota survives the conversion (anon used 3 → user has 5 left).
+  if (data?.user?.id) {
+    try {
+      const { claimAnonGiftCreditsAfterLogin } = await import('@/app/login/actions');
+      await claimAnonGiftCreditsAfterLogin(data.user.id);
+    } catch { /* non-fatal */ }
   }
   return { ok: true as const };
 }
@@ -77,7 +85,7 @@ export async function signUpWithPassword(input: { email: string; password: strin
   }
 
   const sb = createClient();
-  const { error } = await sb.auth.signUp({
+  const { data, error } = await sb.auth.signUp({
     email,
     password,
     options: { data: name ? { full_name: name } : undefined },
@@ -85,6 +93,14 @@ export async function signUpWithPassword(input: { email: string; password: strin
   if (error) {
     // Generic message — don't confirm whether the email is registered.
     return { ok: false as const, error: 'Could not create account' };
+  }
+  // Backfill anon gift generations onto the new user_id so they don't
+  // get a fresh 8 after burning their 3 anon credits.
+  if (data?.user?.id) {
+    try {
+      const { claimAnonGiftCreditsAfterLogin } = await import('@/app/login/actions');
+      await claimAnonGiftCreditsAfterLogin(data.user.id);
+    } catch { /* non-fatal */ }
   }
 
   // Background welcome email — registered via Vercel's waitUntil so the

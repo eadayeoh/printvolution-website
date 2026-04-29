@@ -9,6 +9,24 @@ import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkGiftGenerationQuota, recordGiftGeneration, type QuotaState } from '@/lib/gifts/quota';
+import { getOrSetAnonSessionId } from '@/lib/gifts/anon-session';
+import { createClient as createUserClient } from '@/lib/supabase/server';
+
+/** Modes whose pipeline calls OpenAI — only these count against the
+ *  weekly generation quota. photo-resize / eco-solvent / digital /
+ *  uv-dtf do CPU-only resize and don't burn tokens. */
+const AI_MODES = new Set(['laser', 'uv', 'embroidery']);
+
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const sb = createUserClient();
+    const { data } = await sb.auth.getUser();
+    return data?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven
@@ -185,10 +203,10 @@ export async function restylePreviewFromSource(input: {
     if (!productSlug) return { ok: false, error: 'Product slug missing' };
     if (!input.source_asset_id) return { ok: false, error: 'Source asset missing' };
 
-    // Rate limit. Each call burns an OpenAI image-edit credit, and the
-    // source_asset_id is a guest-bearer UUID — no user_id to scope on.
-    // Two layers: per-IP (caps a single attacker), and per-source
-    // (caps abuse if a UUID leaks via cart export / shared link).
+    // Rate limit (anti-burst). Each call burns an OpenAI image-edit
+    // credit, and source_asset_id is a guest-bearer UUID. Two layers:
+    // per-IP and per-source UUID. The weekly quota check below is the
+    // real spend gate; these stop a hot loop before it gets there.
     const ip = getClientIp();
     const ipRl = await checkRateLimit(`gift-restyle:ip:${ip}`, { max: 30, windowSeconds: 3600 });
     if (!ipRl.allowed) return { ok: false, error: `Too many regenerations — wait ${ipRl.retryAfterSeconds}s and try again.` };
@@ -208,6 +226,20 @@ export async function restylePreviewFromSource(input: {
     // the original preview is already the final output.
     if (product.mode === 'photo-resize') {
       return { ok: false, error: 'This product has no AI styles to regenerate' };
+    }
+
+    // Weekly generation quota — only AI modes burn OpenAI tokens.
+    // Anon: 3/wk per cookie + IP hard ceiling. Signed-in: 8/wk per
+    // user_id (with anon usage backfilled on login so they don't get
+    // the full 8 if they already burned anon credits).
+    const isAiMode = AI_MODES.has(product.mode);
+    const userId = await getCurrentUserId();
+    const anonSessionId = getOrSetAnonSessionId();
+    if (isAiMode) {
+      const q = await checkGiftGenerationQuota({ userId, anonSessionId, ip });
+      if (!q.allowed) {
+        return { ok: false, error: q.reason ?? 'Generation quota exceeded.' };
+      }
     }
 
     // Validate shape_kind against the product's shape_options config.
@@ -323,6 +355,15 @@ export async function restylePreviewFromSource(input: {
       return { ok: false, error: `preview asset failed: ${prevErr?.message}` };
     }
 
+    // Record successful AI generation against the weekly quota.
+    if (isAiMode) {
+      await recordGiftGeneration({
+        userId, anonSessionId, ip,
+        sourceAssetId: sourceAsset.id,
+        previewAssetId: previewAsset.id,
+      });
+    }
+
     return {
       ok: true,
       sourceAssetId: sourceAsset.id,
@@ -332,6 +373,85 @@ export async function restylePreviewFromSource(input: {
   } catch (e: any) {
     console.error('[gift restyle] uncaught error');
     return { ok: false, error: 'Server error during restyle' };
+  }
+}
+
+/**
+ * Read-only snapshot of how many generations the current viewer has
+ * left this week. Used by the PDP to show "X of 8 left" + decide
+ * whether the Generate button is enabled. Doesn't mutate state.
+ */
+export async function getGiftGenerationQuota(): Promise<QuotaState> {
+  const ip = getClientIp();
+  const userId = await getCurrentUserId();
+  const anonSessionId = getOrSetAnonSessionId();
+  return checkGiftGenerationQuota({ userId, anonSessionId, ip });
+}
+
+/**
+ * Upload a single source photo without running the AI preview pipeline.
+ * Used by the explicit-Generate flow on AI products: customer picks a
+ * file, we store it cheaply, then they click Generate (which fires
+ * restylePreviewFromSource) once they're happy with their picks.
+ *
+ * Returns sourceAssetId; the customer-visible preview comes later.
+ */
+export async function uploadGiftSourceOnly(formData: FormData): Promise<
+  { ok: true; sourceAssetId: string } | { ok: false; error: string }
+> {
+  try {
+    const ip = getClientIp();
+    const rl = await checkRateLimit(`gift-upload:ip:${ip}`, { max: 20, windowSeconds: 3600 });
+    if (!rl.allowed) return { ok: false, error: `Too many uploads — wait ${rl.retryAfterSeconds}s and try again.` };
+
+    const file = formData.get('file');
+    const productSlug = (formData.get('product_slug') || '').toString();
+    if (!(file instanceof File)) return { ok: false, error: 'No file' };
+    if (file.size === 0) return { ok: false, error: 'Empty file' };
+    if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'File too large (max 20 MB)' };
+    if (!productSlug) return { ok: false, error: 'Product slug missing' };
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detected = detectImage(bytes);
+    const actualMime = detected?.mime;
+    if (!actualMime || !ALLOWED_MIME.has(actualMime)) {
+      return { ok: false, error: 'File is not a supported image format' };
+    }
+
+    const sb = createClient();
+    const { data: product } = await sb
+      .from('gift_products').select('id, slug')
+      .eq('slug', productSlug).eq('is_active', true).maybeSingle();
+    if (!product) return { ok: false, error: 'Product not found' };
+
+    const ext = EXT_FOR_MIME[actualMime] ?? 'bin';
+    const sourceKey = makeKey(`src-${productSlug}`, ext);
+    const service = serviceClient();
+    const { error: upErr } = await service.storage
+      .from(GIFT_BUCKETS.sources)
+      .upload(sourceKey, bytes, { contentType: actualMime, upsert: false, cacheControl: '3600' });
+    if (upErr) return { ok: false, error: 'upload failed' };
+
+    const { data: sourceAsset, error: srcErr } = await service
+      .from('gift_assets')
+      .insert({
+        role: 'source',
+        bucket: GIFT_BUCKETS.sources,
+        path: sourceKey,
+        mime_type: actualMime,
+        size_bytes: file.size,
+      })
+      .select('id')
+      .single();
+    if (srcErr || !sourceAsset) {
+      await service.storage.from(GIFT_BUCKETS.sources).remove([sourceKey]).catch(() => {});
+      return { ok: false, error: 'source asset failed' };
+    }
+
+    return { ok: true, sourceAssetId: sourceAsset.id };
+  } catch {
+    console.error('[gift upload-source-only] uncaught error');
+    return { ok: false, error: 'Server error during upload' };
   }
 }
 

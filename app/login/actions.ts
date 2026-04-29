@@ -1,6 +1,8 @@
 'use server';
 
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { claimAnonUsageForUser } from '@/lib/gifts/quota';
+import { getAnonSessionId } from '@/lib/gifts/anon-session';
 
 /**
  * Called BEFORE attempting a login. If OK, client proceeds with
@@ -26,5 +28,24 @@ export async function recordFailedLogin(email: string) {
   // Record once per email so a single attacker can't spread across
   // emails to bypass. Per-IP is already counted by checkLoginRateLimit.
   await checkRateLimit(`login:email:${email.toLowerCase()}`, { max: 5, windowSeconds: 300 });
+  return { ok: true };
+}
+
+/**
+ * Called after a successful login/signup. Backfills the new user's
+ * anon-session gift generations onto their user_id so the weekly cap
+ * survives the conversion (anon used 3 → user has 5 left, not 8).
+ *
+ * Safe to call without an anon session cookie or for users who never
+ * generated as anon — in both cases it's a no-op.
+ */
+export async function claimAnonGiftCreditsAfterLogin(userId: string) {
+  const anonId = getAnonSessionId();
+  if (!anonId || !userId) return { ok: true };
+  try {
+    await claimAnonUsageForUser(userId, anonId);
+  } catch (e) {
+    console.error('[login] anon gift-credit claim failed', e);
+  }
   return { ok: true };
 }

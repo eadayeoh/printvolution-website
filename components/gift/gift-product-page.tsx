@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot } from '@/app/(site)/gift/actions';
+import { uploadAndPreviewGift, uploadGiftSurfacePhoto, restylePreviewFromSource, uploadGiftCartSnapshot, uploadGiftSourceOnly, getGiftGenerationQuota } from '@/app/(site)/gift/actions';
+import type { QuotaState } from '@/lib/gifts/quota-shared';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { GIFT_MODE_LABEL, giftUnitPrice, giftFromPrice } from '@/lib/gifts/types';
@@ -717,9 +718,41 @@ export function GiftProductPage({
     await doUpload(file, null);
   }
 
+  // For AI products: cheap upload that just stores the source. The
+  // customer then clicks Generate to actually burn an OpenAI credit.
+  // For non-AI products: keep the auto-fire pipeline (no token cost).
   async function doUpload(file: File, cropRect: GiftCropRect | null) {
     setErr(null);
     setUploading(true);
+    const isAi = !isNonAiMode;
+    if (isAi) {
+      // Source-only path. No template / prompt / shape sent — those
+      // are picked AFTER upload and applied at Generate time.
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('product_slug', product.slug);
+      try {
+        const r = await uploadGiftSourceOnly(fd);
+        if (!r || typeof r !== 'object') {
+          setErr('Server returned no response. Please try again in a moment.');
+        } else if (r.ok === true) {
+          setPendingSourceAssetId(r.sourceAssetId);
+          // Clear any prior preview — the customer's about to pick
+          // styles for a fresh photo.
+          setPreview(null);
+          setLastGeneratedPromptId(null);
+        } else {
+          setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
+        }
+      } catch (e: any) {
+        setErr(e?.message || e?.toString?.() || 'Upload failed');
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+    // Non-AI: auto-fire pipeline — output is just resize/crop, no
+    // OpenAI tokens, so showing the preview immediately costs nothing.
     const fd = new FormData();
     fd.append('file', file);
     fd.append('product_slug', product.slug);
@@ -759,6 +792,60 @@ export function GiftProductPage({
       setErr(e?.message || e?.toString?.() || 'Upload failed');
     } finally {
       setUploading(false);
+    }
+  }
+
+  // Source uploaded but no AI run yet. Drives the Generate button.
+  const [pendingSourceAssetId, setPendingSourceAssetId] = useState<string | null>(null);
+  const [quota, setQuota] = useState<QuotaState | null>(null);
+  useEffect(() => {
+    // Fire-and-forget on mount + after each successful generation.
+    getGiftGenerationQuota().then(setQuota).catch(() => {});
+  }, [preview?.previewAssetId]);
+
+  // Click Generate — fires the AI pipeline with the customer's current
+  // picks. Uses pendingSourceAssetId after the fresh upload, OR the
+  // preview's existing sourceAssetId if they're tweaking after a first
+  // generation. Records against the weekly quota server-side.
+  async function doGenerate() {
+    const sourceId = pendingSourceAssetId ?? preview?.sourceAssetId ?? null;
+    if (!sourceId) { setErr('Upload a photo first'); return; }
+    setErr(null);
+    setRestyling(true);
+    try {
+      const r = await restylePreviewFromSource({
+        product_slug: product.slug,
+        source_asset_id: sourceId,
+        prompt_id: selectedPromptId,
+        variant_id: selectedVariantId,
+        shape_kind: shapePickerActive ? selectedShapeKind : null,
+        shape_template_id: shapePickerActive && selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
+      });
+      if (!r || typeof r !== 'object') {
+        setErr('Server returned no response. Please try again in a moment.');
+      } else if (r.ok === true) {
+        setPreview(r);
+        setLastGeneratedPromptId(selectedPromptId);
+        if (shapePickerActive) {
+          setLastRenderedShape(selectedShapeKind);
+          setLastRenderedShapeTemplateId(selectedShapeKind === 'template' ? selectedShapeTemplateId : null);
+        }
+        setHistory(appendPreviewHit(product.slug, {
+          promptId: selectedPromptId,
+          shapeKind: shapePickerActive ? selectedShapeKind : null,
+          templateId: selectedShapeKind === 'template' ? selectedShapeTemplateId : null,
+          sourceAssetId: r.sourceAssetId,
+          previewAssetId: r.previewAssetId,
+          previewUrl: r.previewUrl,
+        }));
+        setPendingSourceAssetId(null);
+      } else {
+        setErr(('error' in r && r.error) ? String(r.error) : 'Generate failed');
+      }
+    } catch (e: any) {
+      setErr(e?.message || e?.toString?.() || 'Generate failed');
+    } finally {
+      setRestyling(false);
     }
   }
 
@@ -1299,8 +1386,44 @@ export function GiftProductPage({
     ? product.process_steps
     : buildProcessSteps(product);
 
+  // Fullscreen blocking overlay shown during Generate / Add-to-cart so
+  // the customer can't double-click or wander off mid-operation.
+  const showFullscreenOverlay = restyling || uploading;
+  const overlayMessage = restyling
+    ? 'Generating your preview…'
+    : uploading
+      ? (preview || pendingSourceAssetId ? 'Adding to cart…' : (isNonAiMode ? 'Cropping and adding bleed…' : 'Saving your photo…'))
+      : '';
+
   return (
     <article>
+      {showFullscreenOverlay && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(10, 10, 10, 0.82)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 16,
+            color: '#fff',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <Loader2 size={56} className="animate-spin" />
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.3 }}>{overlayMessage}</div>
+          {restyling && (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', maxWidth: 320, textAlign: 'center' }}>
+              gpt-image-2 takes 15–45s · don&apos;t close this tab
+            </div>
+          )}
+        </div>
+      )}
       {draftRestored && (
         <div
           role="status"
@@ -3047,7 +3170,7 @@ export function GiftProductPage({
                     </div>
                   </div>
                 )}
-                {preview && (
+                {(preview || pendingSourceAssetId) && (
                   <div
                     style={{
                       background: 'var(--pv-cream)',
@@ -3063,7 +3186,8 @@ export function GiftProductPage({
                         width: 56,
                         height: 56,
                         border: '2px solid var(--pv-ink)',
-                        backgroundImage: `url(${preview.previewUrl})`,
+                        backgroundImage: preview ? `url(${preview.previewUrl})` : 'none',
+                        background: preview ? undefined : 'var(--pv-cream)',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         flexShrink: 0,
@@ -3115,6 +3239,49 @@ export function GiftProductPage({
                     e.target.value = '';
                   }}
                 />
+                {/* Generate button — AI products only. Source must be
+                    uploaded; pickers (variant/size/prompt) must be
+                    valid. Each click burns 1 OpenAI image-edit credit
+                    and counts against the weekly quota. */}
+                {!isNonAiMode && (preview || pendingSourceAssetId) && (
+                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={doGenerate}
+                      disabled={restyling || (quota ? !quota.allowed : false)}
+                      style={{
+                        background: restyling ? 'var(--pv-muted)' : 'var(--pv-magenta)',
+                        color: '#fff',
+                        border: '2px solid var(--pv-ink)',
+                        padding: '14px 18px',
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 16,
+                        fontWeight: 800,
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                        cursor: (restyling || (quota && !quota.allowed)) ? 'not-allowed' : 'pointer',
+                        boxShadow: '3px 3px 0 var(--pv-ink)',
+                        opacity: (quota && !quota.allowed) ? 0.5 : 1,
+                      }}
+                    >
+                      {restyling
+                        ? 'Generating…'
+                        : preview
+                          ? 'Regenerate preview'
+                          : 'Generate preview'}
+                    </button>
+                    {quota && (
+                      <div style={{ fontFamily: 'var(--pv-f-mono)', fontSize: 10, color: 'var(--pv-muted)', letterSpacing: '0.04em', textAlign: 'center' }}>
+                        {quota.allowed
+                          ? `${quota.remaining} of ${quota.limit} ${quota.isSignedIn ? '' : 'free '}generations left this week`
+                          : (quota.reason ?? 'Quota reached.')}
+                        {!quota.isSignedIn && quota.allowed && quota.remaining <= 1 && (
+                          <> · <Link href="/account/signup" style={{ color: 'var(--pv-magenta)', textDecoration: 'underline' }}>Sign up</Link> for {8} per week</>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {err && (
                   <div
                     style={{
