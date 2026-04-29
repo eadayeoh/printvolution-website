@@ -424,13 +424,31 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       .map((i) => i.gift_variant_id)
       .filter((v): v is string => typeof v === 'string' && v.length > 0)
   ));
-  const variantsRes = variantIds.length > 0
-    ? await sb.from('gift_product_variants')
-        .select('id, gift_product_id, base_price_cents, price_tiers, size_overrides, surfaces')
-        .in('id', variantIds)
-    : { data: [] as any[], error: null };
+  // Pre-fetch templates the cart references so the price floor can
+  // include each template's price_delta_cents. Templates the customer
+  // didn't pick (or that aren't in the row) contribute zero.
+  const templateIdsForFloor = Array.from(new Set(
+    data.items
+      .map((i) => parseGiftRefs(i.personalisation_notes).templateId)
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+  ));
+  const [variantsRes, templatesForFloorRes] = await Promise.all([
+    variantIds.length > 0
+      ? sb.from('gift_product_variants')
+          .select('id, gift_product_id, base_price_cents, price_tiers, size_overrides, surfaces')
+          .in('id', variantIds)
+      : Promise.resolve({ data: [] as any[], error: null }),
+    templateIdsForFloor.length > 0
+      ? sb.from('gift_templates')
+          .select('id, price_delta_cents')
+          .in('id', templateIdsForFloor)
+      : Promise.resolve({ data: [] as any[], error: null }),
+  ]);
   const variantById = new Map(
     ((variantsRes.data ?? []) as any[]).map((v: any) => [v.id, v])
+  );
+  const templateDeltaById = new Map(
+    ((templatesForFloorRes.data ?? []) as any[]).map((t: any) => [t.id as string, (t.price_delta_cents as number) ?? 0])
   );
 
   // Compute PRICE FLOOR per print product — the lowest unit price in
@@ -562,7 +580,16 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
         }
       }
 
-      const expectedUnitCents = variantBase + sizeDelta + shapeDelta + figurineDelta + surfaceDelta;
+      // Template delta — when the cart line references a template,
+      // pick up its admin-configured upcharge from the templates batch
+      // we pre-fetched above. Templates not used (or with delta=0)
+      // contribute nothing.
+      const refsForFloor = parseGiftRefs(item.personalisation_notes);
+      const templateDelta = refsForFloor.templateId
+        ? (templateDeltaById.get(refsForFloor.templateId) ?? 0)
+        : 0;
+
+      const expectedUnitCents = variantBase + sizeDelta + shapeDelta + figurineDelta + surfaceDelta + templateDelta;
       if (item.unit_price_cents < expectedUnitCents) {
         return { ok: false, error: `Price mismatch on ${item.product_name}. Please refresh your cart.` };
       }

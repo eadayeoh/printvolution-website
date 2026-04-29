@@ -1169,6 +1169,11 @@ export function GiftProductPage({
       const filled = Boolean(fill?.text?.trim() || fill?.photoFile || fill?.photoThumb);
       return filled ? sum + (s.price_delta_cents ?? 0) : sum;
     }, 0);
+    // Per-template upcharge — picked template's admin-set delta. Server
+    // floor enforces the same value at checkout (gift_templates.price_delta_cents).
+    const selectedTemplateDelta = selectedTemplateId
+      ? (templates.find((t) => t.id === selectedTemplateId)?.price_delta_cents ?? 0)
+      : 0;
     // Tiered base: variant tiers if a variant is picked, else product
     // tiers. Falls back to base_price_cents below the first tier.
     const tieredBase = selectedVariant
@@ -1178,7 +1183,8 @@ export function GiftProductPage({
       + effectiveSizeDeltaCents
       + shapeDelta
       + figurineDelta
-      + surfacesDelta;
+      + surfacesDelta
+      + selectedTemplateDelta;
     const lineTotal = unit * qty;
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
@@ -2769,6 +2775,11 @@ export function GiftProductPage({
                               </div>
                               <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                                 {t.name}
+                                {t.price_delta_cents && t.price_delta_cents > 0 ? (
+                                  <span style={{ display: 'block', marginTop: 2, color: 'var(--pv-magenta)', fontWeight: 800, fontSize: 10 }}>
+                                    +{formatSGD(t.price_delta_cents / 100)}
+                                  </span>
+                                ) : null}
                               </div>
                             </button>
                           );
@@ -3061,6 +3072,11 @@ export function GiftProductPage({
                           </div>
                           <div style={{ padding: '8px 10px', fontFamily: 'var(--pv-f-body)', fontSize: 11, fontWeight: 700 }}>
                             {t.name}
+                            {t.price_delta_cents && t.price_delta_cents > 0 ? (
+                              <span style={{ display: 'block', marginTop: 2, color: 'var(--pv-magenta)', fontWeight: 800, fontSize: 10 }}>
+                                +{formatSGD(t.price_delta_cents / 100)}
+                              </span>
+                            ) : null}
                           </div>
                         </button>
                       );

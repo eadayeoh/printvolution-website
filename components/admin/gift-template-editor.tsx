@@ -291,6 +291,11 @@ export function GiftTemplateEditor({
   const [background, setBackground] = useState(template?.background_url ?? '');
   const [foreground, setForeground] = useState(template?.foreground_url ?? '');
   const [displayOrder, setDisplayOrder] = useState(template?.display_order?.toString() ?? '0');
+  // Per-template upcharge — stored in cents on the row, edited as
+  // dollars in the input so admin doesn't have to think in cents.
+  const [priceDeltaDollars, setPriceDeltaDollars] = useState(
+    (((template?.price_delta_cents ?? 0) as number) / 100).toFixed(2),
+  );
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
   const [customerCanRecolorBackground, setCustomerCanRecolorBackground] = useState(
@@ -780,6 +785,7 @@ export function GiftTemplateEditor({
       foreground_url: foreground || null,
       zones_json: zones,
       display_order: parseInt(displayOrder, 10) || 0,
+      price_delta_cents: Math.max(0, Math.round((parseFloat(priceDeltaDollars) || 0) * 100)),
       is_active: isActive,
       reference_width_mm:  Number.isFinite(refWParsed) && refWParsed > 0 ? refWParsed : null,
       reference_height_mm: Number.isFinite(refHParsed) && refHParsed > 0 ? refHParsed : null,
@@ -1176,6 +1182,21 @@ export function GiftTemplateEditor({
             <label className="block">
               <span className="mb-1 block text-[11px] text-neutral-600">Display order</span>
               <input type="number" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-neutral-600">Price add-on (S$)</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceDeltaDollars}
+                onChange={(e) => setPriceDeltaDollars(e.target.value)}
+                className={inputCls}
+                placeholder="0.00"
+              />
+              <span className="mt-1 block text-[10px] text-neutral-500">
+                Charged on top of the variant base when the customer picks this template. Leave at 0 for no upcharge.
+              </span>
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />

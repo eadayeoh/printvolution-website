@@ -333,6 +333,11 @@ export type GiftTemplate = {
   /** Admin-assigned grouping label ("Wall art", "Necklaces", …).
    *  Null = "Ungrouped". Drives the buckets in the templates list. */
   group_name?: string | null;
+  /** Optional per-template upcharge in cents. Added to the line's
+   *  expected unit price at checkout when the customer picks this
+   *  template. 0 / undefined = no upcharge. Customer sees the delta
+   *  on the picker tile so the premium is visible before commit. */
+  price_delta_cents?: number;
   /** When true, customer sees colour pickers in the "Fill the
    *  template" form (Theme color + per-text-zone + per-calendar-zone).
    *  Default false — admin opts in per template. */

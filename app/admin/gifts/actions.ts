@@ -409,6 +409,10 @@ const TemplateSchema = z.object({
   // Without this in the schema, Zod strips it before the DB update and
   // every save silently reverts the group dropdown.
   group_name: z.string().nullable().optional(),
+  // Per-template upcharge (in cents) — added to expected unit price
+  // at checkout when this template is selected. Server-side floor
+  // enforces it; client-side display surfaces it on the picker tile.
+  price_delta_cents: z.number().int().nonnegative().default(0).optional(),
   description: z.string().nullable().optional(),
   thumbnail_url: z.string().nullable().optional(),
   background_url: z.string().nullable().optional(),
