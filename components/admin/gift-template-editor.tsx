@@ -712,7 +712,15 @@ export function GiftTemplateEditor({
                 No slots yet. Add image zones for customer photos, text zones for customizable messages.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="flex flex-col-reverse gap-2">
+                {/* flex-col-reverse so the layer list reads
+                    top-of-list = front-of-canvas, matching the
+                    Photoshop/Figma convention. Saved zones[] order
+                    stays the same (zones[0] = back, zones[N-1] =
+                    front), so customer-facing renderers and
+                    composite production still walk the array in
+                    z-order. Only the editor list is visually
+                    flipped. */}
                 {zones.map((z, i) => {
                   const active = activeZoneIdx === i;
                   const isText = isTextZone(z);
@@ -733,10 +741,12 @@ export function GiftTemplateEditor({
                         if (dragSrcIdx === null) return;
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
-                        // Hover above midpoint = insert before; below = insert after.
+                        // List is flex-col-reverse so visually-above = closer
+                        // to FRONT in the array (higher idx). Hovering above
+                        // element i visually means dropping at arr idx i+1.
                         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                        const before = e.clientY < r.top + r.height / 2;
-                        setDragOverIdx(before ? i : i + 1);
+                        const above = e.clientY < r.top + r.height / 2;
+                        setDragOverIdx(above ? i + 1 : i);
                       }}
                       onDragLeave={() => setDragOverIdx(null)}
                       onDrop={(e) => {
@@ -751,8 +761,10 @@ export function GiftTemplateEditor({
                       className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''} ${dragSrcIdx === i ? 'opacity-30' : ''}`}
                       style={{
                         cursor: dragSrcIdx !== null ? 'grabbing' : 'grab',
-                        borderTop: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
-                        borderBottom: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                        // Reversed list: dragOverIdx i+1 = drop ABOVE element i
+                        // visually = magenta line at element i's top edge.
+                        borderTop: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                        borderBottom: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
                       }}
                     >
                       <div className="flex w-full items-center justify-between gap-2 p-3">
@@ -818,6 +830,33 @@ export function GiftTemplateEditor({
                               ? <TextZoneFields zone={z as GiftTemplateTextZone} onChange={(p) => updateZone<GiftTemplateTextZone>(i, p)} />
                               : <ImageZoneFields zone={z as GiftTemplateImageZone} onChange={(p) => updateZone<GiftTemplateImageZone>(i, p)} />}
 
+                          {/* Canvas-align quick buttons. Snap the zone
+                              to canvas edges or centre it horizontally
+                              / vertically without manually editing X/Y. */}
+                          <div className="border-t border-neutral-200 pt-3">
+                            <div className="mb-1 text-[10px] font-bold uppercase text-neutral-500">Align on canvas</div>
+                            <div className="grid grid-cols-7 gap-1">
+                              {([
+                                { lbl: '⇤',  title: 'Align left edge',          patch: { x_mm: 0 } },
+                                { lbl: '↔',  title: 'Centre horizontally',     patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2 } },
+                                { lbl: '⇥',  title: 'Align right edge',         patch: { x_mm: TEMPLATE_W - z.width_mm } },
+                                { lbl: '⇡',  title: 'Align top edge',           patch: { y_mm: 0 } },
+                                { lbl: '↕',  title: 'Centre vertically',       patch: { y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
+                                { lbl: '⇣',  title: 'Align bottom edge',        patch: { y_mm: TEMPLATE_H - z.height_mm } },
+                                { lbl: '⊕',  title: 'Centre both',              patch: { x_mm: (TEMPLATE_W - z.width_mm) / 2, y_mm: (TEMPLATE_H - z.height_mm) / 2 } },
+                              ] as const).map((btn) => (
+                                <button
+                                  key={btn.title}
+                                  type="button"
+                                  onClick={() => updateZone(i, btn.patch as any)}
+                                  title={btn.title}
+                                  className="rounded border-2 border-neutral-200 bg-white px-1 py-1 text-sm text-neutral-700 hover:border-pink hover:text-pink"
+                                >
+                                  {btn.lbl}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <div className="grid grid-cols-4 gap-1.5 border-t border-neutral-200 pt-3">
                             <NumField label="X" value={z.x_mm} onChange={(v) => updateZone(i, { x_mm: v })} />
                             <NumField label="Y" value={z.y_mm} onChange={(v) => updateZone(i, { y_mm: v })} />
