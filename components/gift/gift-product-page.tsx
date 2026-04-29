@@ -1859,8 +1859,7 @@ export function GiftProductPage({
                         foregroundUrl={(t as any)?.foreground_url ?? null}
                       />
                     );
-                  })()
-                  ) : null;
+                  })() : null;
 
                   // City map "Generating…" overlay — only used in the
                   // standalone-render branch since it's about an OSM
