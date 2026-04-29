@@ -88,10 +88,11 @@ export function GiftTemplateLayoutPreview({ template, thumbs, texts, textColors,
         position: 'relative',
         width: '100%',
         aspectRatio: `${widthMm} / ${heightMm}`,
-        // Customer's backgroundColor wins over the template's. Falls
-        // back to the editor's cream so empty templates still look
-        // intentional.
-        background: backgroundColor ?? '#fafaf7',
+        // Customer's backgroundColor wins over the template's
+        // background_url. When neither is set, stay transparent so
+        // the wrapper / mockup behind the preview shows through (LED
+        // light products, foil prints — empty really means empty).
+        background: backgroundColor ?? 'transparent',
         border: '2px solid var(--pv-ink)',
         overflow: 'hidden',
       }}
