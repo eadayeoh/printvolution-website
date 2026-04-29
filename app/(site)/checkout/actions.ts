@@ -284,6 +284,11 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     return { ok: false, error: 'Invalid order data: ' + parsed.error.issues[0].message };
   }
   const data = parsed.data;
+  // Schema declares min(1) but z.array().min() can be skipped if the
+  // field is omitted entirely — defend explicitly.
+  if (!data.items || data.items.length === 0) {
+    return { ok: false, error: 'Cart is empty.' };
+  }
 
   // Service-role client so we can insert regardless of RLS session
   const sb = serviceClient();
@@ -411,10 +416,17 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     if (!notes) return {};
     const out: { sourceId?: string; previewId?: string; templateId?: string } = {};
     for (const part of notes.split(';')) {
-      const [k, v] = part.split(':');
-      if (k === 'gift_source' && v) out.sourceId = v.trim();
-      if (k === 'gift_preview' && v) out.previewId = v.trim();
-      if (k === 'gift_template' && v) out.templateId = v.trim();
+      // Use split(':', 2) limit so values containing ':' (e.g. URLs)
+      // don't get truncated, and so a missing-colon part doesn't
+      // silently produce undefined values.
+      const idx = part.indexOf(':');
+      if (idx <= 0) continue;
+      const k = part.slice(0, idx).trim();
+      const v = part.slice(idx + 1).trim();
+      if (!v) continue;
+      if (k === 'gift_source')   out.sourceId   = v;
+      if (k === 'gift_preview')  out.previewId  = v;
+      if (k === 'gift_template') out.templateId = v;
     }
     return out;
   }

@@ -104,12 +104,47 @@ export async function recordGiftGeneration(opts: {
   });
 }
 
+/** Atomic check+record. Two concurrent generations both running this
+ *  RPC see consistent counts via a single SQL transaction — neither
+ *  can sneak past the cap. Returns true on success. Use this instead
+ *  of separate checkGiftGenerationQuota + recordGiftGeneration when
+ *  you want race-safe quota enforcement. */
+export async function consumeGiftGeneration(opts: {
+  userId: string | null;
+  anonSessionId: string;
+  ip: string;
+  sourceAssetId: string;
+  previewAssetId: string;
+}): Promise<{ ok: boolean }> {
+  const sb = serviceClient();
+  const { data, error } = await sb.rpc('consume_gift_generation', {
+    p_user_id: opts.userId,
+    p_anon_session_id: opts.anonSessionId,
+    p_ip: opts.ip,
+    p_source_asset_id: opts.sourceAssetId,
+    p_preview_asset_id: opts.previewAssetId,
+    p_user_limit: USER_LIMIT,
+    p_anon_limit: ANON_LIMIT,
+    p_ip_ceiling: IP_HARD_CEILING,
+  });
+  if (error) {
+    console.error('[quota] consume rpc failed', error.message);
+    return { ok: false };
+  }
+  return { ok: data === true };
+}
+
 /** Backfill anon → user. Called from the post-login flow so a user
  *  who burned their 3 anon generations and signs up keeps that history
- *  (8 - 3 = 5 left this week). */
-export async function claimAnonUsageForUser(userId: string, anonSessionId: string): Promise<void> {
-  const sb = serviceClient();
-  await sb.rpc('claim_anon_gift_usage', { p_user_id: userId, p_anon_session_id: anonSessionId });
+ *  (8 - 3 = 5 left this week). The RPC enforces auth.uid() = the
+ *  target user, so anon callers can never transfer rows onto someone
+ *  else's account. */
+export async function claimAnonUsageForUser(_userId: string, anonSessionId: string): Promise<void> {
+  // Use the user-scoped client (NOT serviceClient) so auth.uid() resolves
+  // to the just-signed-in user inside the security-definer RPC.
+  const { createClient } = await import('@/lib/supabase/server');
+  const sb = createClient();
+  await sb.rpc('claim_anon_gift_usage', { p_anon_session_id: anonSessionId });
 }
 
 function daysUntilReset(_used: number, sinceIso: string): number {

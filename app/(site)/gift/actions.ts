@@ -9,7 +9,7 @@ import { GIFT_FONT_FAMILIES } from '@/lib/gifts/types';
 import { detectImage } from '@/lib/upload/detect-image';
 import { fetchCityMapVectors, type CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { checkGiftGenerationQuota, recordGiftGeneration, type QuotaState } from '@/lib/gifts/quota';
+import { checkGiftGenerationQuota, consumeGiftGeneration, type QuotaState } from '@/lib/gifts/quota';
 import { getOrSetAnonSessionId } from '@/lib/gifts/anon-session';
 import { createClient as createUserClient } from '@/lib/supabase/server';
 
@@ -378,9 +378,11 @@ export async function restylePreviewFromSource(input: {
     }
 
     // Record successful AI generation against the weekly quota.
-    // Admin/staff don't count — they don't have a quota.
+    // Admin/staff don't count — they don't have a quota. Uses the
+    // atomic consume_gift_generation RPC so two concurrent restyles
+    // can't both increment past the cap.
     if (isAiMode && !isAdmin) {
-      await recordGiftGeneration({
+      await consumeGiftGeneration({
         userId, anonSessionId, ip,
         sourceAssetId: sourceAsset.id,
         previewAssetId: previewAsset.id,

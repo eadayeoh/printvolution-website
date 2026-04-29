@@ -3210,7 +3210,7 @@ export function GiftProductPage({
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setPreview(null); fileRef.current?.click(); }}
+                      onClick={() => { setPreview(null); setPendingSourceAssetId(null); fileRef.current?.click(); }}
                       style={{
                         background: 'var(--pv-ink)',
                         color: '#fff',
@@ -3248,7 +3248,7 @@ export function GiftProductPage({
                     <button
                       type="button"
                       onClick={doGenerate}
-                      disabled={restyling || (quota ? !quota.allowed : false)}
+                      disabled={restyling || quota === null || (quota && !quota.allowed)}
                       style={{
                         background: restyling ? 'var(--pv-muted)' : 'var(--pv-magenta)',
                         color: '#fff',
