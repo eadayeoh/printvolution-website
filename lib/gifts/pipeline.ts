@@ -20,6 +20,7 @@ import { renderTemplateComposite } from './pipeline/composite';
 import { renderPhotoResize, runAiTransform, transformBytesForMode } from './pipeline/transforms';
 import { createClient } from '@/lib/supabase/server';
 import { parsePersonalisationNotes, validateHexColor, validateFontKey } from './personalisation-notes';
+import { stampSvgSize } from './svg-size';
 
 /** Per-mode production output format spec. Maps a snapshot mode
  *  string to (a) the primary file format the production pipeline
@@ -496,16 +497,6 @@ export type ProductionOutput = {
   }>;
 };
 
-/** Stamp width/height attributes on the root `<svg>` so downstream printer
- *  software (foil RIPs, Illustrator) opens the file at the correct physical
- *  size without being told out of band. Only stamps when the dims are
- *  positive numbers; otherwise leaves the SVG untouched. */
-function stampSvgSize(svg: string, widthMm: number, heightMm: number): string {
-  if (!Number.isFinite(widthMm) || widthMm <= 0 || !Number.isFinite(heightMm) || heightMm <= 0) {
-    return svg;
-  }
-  return svg.replace('<svg ', `<svg width="${widthMm}mm" height="${heightMm}mm" `);
-}
 
 async function renderRendererTemplate(args: {
   product: GiftProduct;

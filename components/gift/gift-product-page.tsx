@@ -684,12 +684,9 @@ export function GiftProductPage({
   useEffect(() => {
     if (selectedTemplateId) setSelectedPromptId(null);
   }, [selectedTemplateId]);
-  const showTextStep =
-    selectedTemplateId
-      ? false
-      : product.show_text_step !== null && product.show_text_step !== undefined
-        ? product.show_text_step
-        : (product.mode === 'laser' || product.mode === 'uv');
+  const showTextStep = selectedTemplateId
+    ? false
+    : (product.show_text_step ?? (product.mode === 'laser' || product.mode === 'uv'));
 
   // Right-column ComposeSection letters, computed once so adding or
   // removing a step (Shape, Style, Size …) doesn't require rethinking

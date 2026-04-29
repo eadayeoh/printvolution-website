@@ -13,6 +13,7 @@ import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildCityMapSvg, fetchCityMapVectors } from '@/lib/gifts/city-map-svg';
 import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
+import { stampSvgSize } from '@/lib/gifts/svg-size';
 
 export async function GET(
   _req: NextRequest,
@@ -77,14 +78,9 @@ export async function GET(
     // the size out-of-band; with them, the SVG is self-describing.
     const sizeWmm = parseFloat(n['size_w_mm'] ?? '');
     const sizeHmm = parseFloat(n['size_h_mm'] ?? '');
-    const sizeAttrs = (Number.isFinite(sizeWmm) && sizeWmm > 0 && Number.isFinite(sizeHmm) && sizeHmm > 0)
-      ? ` width="${sizeWmm}mm" height="${sizeHmm}mm"`
-      : '';
-    const stamped = sizeAttrs
-      ? svgMarkup.replace('<svg ', `<svg${sizeAttrs} `)
-      : svgMarkup;
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${stamped}`;
-    const sizeSuffix = sizeAttrs ? `-${Math.round(sizeWmm)}x${Math.round(sizeHmm)}mm` : '';
+    const hasSize = Number.isFinite(sizeWmm) && sizeWmm > 0 && Number.isFinite(sizeHmm) && sizeHmm > 0;
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${stampSvgSize(svgMarkup, sizeWmm, sizeHmm)}`;
+    const sizeSuffix = hasSize ? `-${Math.round(sizeWmm)}x${Math.round(sizeHmm)}mm` : '';
     const filename = `${row.product_slug}-${row.id.slice(0, 8)}${sizeSuffix}.svg`;
 
     return new NextResponse(xml, {
