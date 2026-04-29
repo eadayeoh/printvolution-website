@@ -491,6 +491,15 @@ export function GiftTemplateEditor({
   const [gridStep, setGridStep] = useState(5);
   const snapV = (v: number) => (snapOn && gridStep > 0 ? Math.round(v / gridStep) * gridStep : v);
 
+  const [collapsedLayerGroups, setCollapsedLayerGroups] = useState<Set<string>>(new Set());
+  function toggleLayerGroup(key: string) {
+    setCollapsedLayerGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
   function pushHistorySnapshot(snapshot: GiftTemplateZone[]) {
     setZonesHistory((h) => {
       const next = [...h, snapshot];
@@ -893,7 +902,7 @@ export function GiftTemplateEditor({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[280px_1fr_280px]">
         {/* LEFT: settings */}
         <div className="space-y-5">
           <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
@@ -1014,168 +1023,6 @@ export function GiftTemplateEditor({
               <div className="mb-1 text-[11px] text-neutral-600">2. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
               <ImageUpload value={foreground} onChange={setForeground} prefix="tpl-fg" aspect={1} size="md" label="Foreground" />
             </div>
-          </div>
-
-          <div className="rounded-lg border border-neutral-200 bg-white p-5">
-            <div className="mb-3 flex items-start justify-between gap-2">
-              <div>
-                <div className="text-xs font-bold text-ink">Template slots</div>
-                <div className="text-[11px] text-neutral-500">
-                  {imageCount} image · {textCount} text{calendarCount > 0 && ` · ${calendarCount} calendar`}{shapeCount > 0 && ` · ${shapeCount} shape`}
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-end gap-1.5">
-                <button type="button" onClick={addImageZone} className="inline-flex items-center gap-1 rounded-full bg-pink px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-pink-dark">
-                  <ImageIcon size={11} /> Image
-                </button>
-                <button type="button" onClick={addTextZone} className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-neutral-700">
-                  <Type size={11} /> Text
-                </button>
-                <button type="button" onClick={addCalendarZone} className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-amber-600">
-                  <CalendarIcon size={11} /> Calendar
-                </button>
-              </div>
-            </div>
-            {/* Decorative-shape primitives — admin clicks one to drop a
-                heart / star / line / etc. on the canvas. Pure SVG, no
-                upload required. The same shape SVG renders in the
-                customer preview AND the production composite. */}
-            <div className="mb-3 -mt-1 flex flex-wrap items-center gap-1.5 rounded border border-dashed border-neutral-200 bg-neutral-50/60 p-2">
-              <span className="inline-flex items-center gap-1 px-1 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                <Shapes size={11} /> Shapes
-              </span>
-              <button type="button" onClick={() => addShapeZone('heart')} className="inline-flex items-center gap-1 rounded-full border-2 border-pink/40 bg-white px-2 py-1 text-[10px] font-bold text-pink hover:border-pink hover:bg-pink/10">
-                <Heart size={11} /> Heart
-              </button>
-              <button type="button" onClick={() => addShapeZone('star')} className="inline-flex items-center gap-1 rounded-full border-2 border-amber-400 bg-white px-2 py-1 text-[10px] font-bold text-amber-600 hover:border-amber-500 hover:bg-amber-50">
-                <Star size={11} /> Star
-              </button>
-              <button type="button" onClick={() => addShapeZone('circle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
-                <Circle size={11} /> Circle
-              </button>
-              <button type="button" onClick={() => addShapeZone('rect')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
-                <Square size={11} /> Rectangle
-              </button>
-              <button type="button" onClick={() => addShapeZone('triangle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
-                <Triangle size={11} /> Triangle
-              </button>
-              <button type="button" onClick={() => addShapeZone('line')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
-                <Minus size={11} /> Line
-              </button>
-            </div>
-            {zones.length === 0 ? (
-              <div className="rounded border border-dashed border-neutral-300 p-4 text-center text-[11px] text-neutral-500">
-                No slots yet. Add image zones for customer photos, text zones for customizable messages.
-              </div>
-            ) : (
-              <div className="flex flex-col-reverse gap-2">
-                {/* flex-col-reverse so the layer list reads
-                    top-of-list = front-of-canvas, matching the
-                    Photoshop/Figma convention. Saved zones[] order
-                    stays the same (zones[0] = back, zones[N-1] =
-                    front), so customer-facing renderers and
-                    composite production still walk the array in
-                    z-order. Only the editor list is visually
-                    flipped. */}
-                {zones.map((z, i) => {
-                  const active = activeZoneIdx === i;
-                  const isText = isTextZone(z);
-                  const isCal = isCalendarZone(z);
-                  const isAnchor = isRenderAnchorZone(z);
-                  const isShape = isShapeZone(z);
-                  const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : isShape ? 'bg-purple-500' : 'bg-pink';
-                  return (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={(e) => {
-                        setDragSrcIdx(i);
-                        e.dataTransfer.effectAllowed = 'move';
-                        // Some browsers need data set or the drop won't fire.
-                        try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
-                      }}
-                      onDragOver={(e) => {
-                        if (dragSrcIdx === null) return;
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        // List is flex-col-reverse so visually-above = closer
-                        // to FRONT in the array (higher idx). Hovering above
-                        // element i visually means dropping at arr idx i+1.
-                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                        const above = e.clientY < r.top + r.height / 2;
-                        setDragOverIdx(above ? i + 1 : i);
-                      }}
-                      onDragLeave={() => setDragOverIdx(null)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (dragSrcIdx !== null && dragOverIdx !== null) {
-                          reorderZone(dragSrcIdx, dragOverIdx);
-                        }
-                        setDragSrcIdx(null);
-                        setDragOverIdx(null);
-                      }}
-                      onDragEnd={() => { setDragSrcIdx(null); setDragOverIdx(null); }}
-                      className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''} ${dragSrcIdx === i ? 'opacity-30' : ''}`}
-                      style={{
-                        cursor: dragSrcIdx !== null ? 'grabbing' : 'grab',
-                        // Reversed list: dragOverIdx i+1 = drop ABOVE element i
-                        // visually = magenta line at element i's top edge.
-                        borderTop: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
-                        borderBottom: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
-                      }}
-                    >
-                      <div className="flex w-full items-center justify-between gap-2 p-3">
-                        <button
-                          type="button"
-                          onClick={() => setActiveZoneIdx(active ? null : i)}
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                        >
-                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-white ${badgeBg}`}>
-                            {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : isShape ? <Shapes size={12} /> : <ImageIcon size={12} />}
-                          </span>
-                          <span className={`text-sm font-bold text-ink truncate ${(z as any).hidden ? 'line-through' : ''}`}>{z.label || 'Untitled'}</span>
-                          {isText && (z as GiftTemplateTextZone).editable === false && (
-                            <Lock size={11} className="shrink-0 text-neutral-400" />
-                          )}
-                        </button>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] text-neutral-500">
-                            {Math.round(z.width_mm)}×{Math.round(z.height_mm)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); updateZone(i, ({ hidden: !((z as any).hidden) } as any)); }}
-                            title={(z as any).hidden ? 'Show — render this layer' : 'Hide — skip this layer (still saved)'}
-                            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
-                              (z as any).hidden
-                                ? 'border-neutral-400 bg-neutral-200 text-neutral-600'
-                                : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
-                            }`}
-                          >
-                            {(z as any).hidden ? <EyeOff size={11} /> : <Eye size={11} />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); updateZone(i, { locked: !z.locked }); }}
-                            title={z.locked ? 'Unlock — allow drag/resize' : 'Lock — prevent drag/resize'}
-                            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
-                              z.locked
-                                ? 'border-pink bg-pink text-white'
-                                : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
-                            }`}
-                          >
-                            {z.locked ? <Lock size={11} /> : <Unlock size={11} />}
-                          </button>
-                        </div>
-                      </div>
-                      {/* Properties panel moved to a fixed sidebar
-                          above the canvas — see ZonePropertiesPanel
-                          render below. */}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
@@ -1488,8 +1335,34 @@ export function GiftTemplateEditor({
           </div>
         </div>
 
-        {/* RIGHT: visual canvas + sticky properties panel */}
-        <div className="space-y-4">
+        {/* CENTRE: visual canvas + drawing tools + properties panel */}
+        <div className="order-last space-y-4 xl:order-none">
+          {/* Drawing tools palette — drop a shape primitive onto the
+              canvas without an upload. Mirrors the Image/Text/Calendar
+              add buttons in the right-hand layer panel. */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/60 p-2">
+            <span className="inline-flex items-center gap-1 px-1 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+              <Shapes size={11} /> Shapes
+            </span>
+            <button type="button" onClick={() => addShapeZone('heart')} className="inline-flex items-center gap-1 rounded-full border-2 border-pink/40 bg-white px-2 py-1 text-[10px] font-bold text-pink hover:border-pink hover:bg-pink/10">
+              <Heart size={11} /> Heart
+            </button>
+            <button type="button" onClick={() => addShapeZone('star')} className="inline-flex items-center gap-1 rounded-full border-2 border-amber-400 bg-white px-2 py-1 text-[10px] font-bold text-amber-600 hover:border-amber-500 hover:bg-amber-50">
+              <Star size={11} /> Star
+            </button>
+            <button type="button" onClick={() => addShapeZone('circle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+              <Circle size={11} /> Circle
+            </button>
+            <button type="button" onClick={() => addShapeZone('rect')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+              <Square size={11} /> Rectangle
+            </button>
+            <button type="button" onClick={() => addShapeZone('triangle')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+              <Triangle size={11} /> Triangle
+            </button>
+            <button type="button" onClick={() => addShapeZone('line')} className="inline-flex items-center gap-1 rounded-full border-2 border-neutral-300 bg-white px-2 py-1 text-[10px] font-bold text-neutral-700 hover:border-pink hover:text-pink">
+              <Minus size={11} /> Line
+            </button>
+          </div>
           {/* Properties panel — always visible at the top of the
               right column. Pulls layer-properties out of the cramped
               layer-list expansion so admin can see X / Y / W / H /
@@ -1500,7 +1373,7 @@ export function GiftTemplateEditor({
             if (i === null || i < 0 || i >= zones.length) {
               return (
                 <div className="rounded-lg border-2 border-dashed border-neutral-200 bg-neutral-50 px-4 py-3 text-[11px] text-neutral-500">
-                  Click a layer in the list on the left to edit its position, font, alignment, and other properties here.
+                  Click a layer in the list on the right to edit its position, font, alignment, and other properties here.
                 </div>
               );
             }
@@ -2048,6 +1921,168 @@ export function GiftTemplateEditor({
             <div className="border-t border-neutral-100 px-4 py-2 text-[10px] text-neutral-500">
               Canvas units are 0–{TEMPLATE_W}. Real-world dimensions come from the product that uses this template.
             </div>
+          </div>
+        </div>
+
+        {/* RIGHT: layer list grouped by role */}
+        <div className="space-y-4">
+          <div className="rounded-lg border border-neutral-200 bg-white p-4">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <div className="text-xs font-bold text-ink">Layers</div>
+                <div className="text-[11px] text-neutral-500">
+                  {imageCount} image · {textCount} text{calendarCount > 0 && ` · ${calendarCount} calendar`}{shapeCount > 0 && ` · ${shapeCount} shape`}
+                </div>
+              </div>
+              <div className="flex flex-wrap justify-end gap-1.5">
+                <button type="button" onClick={addImageZone} title="Add image slot" className="inline-flex items-center gap-1 rounded-full bg-pink px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-pink-dark">
+                  <ImageIcon size={11} />
+                </button>
+                <button type="button" onClick={addTextZone} title="Add text slot" className="inline-flex items-center gap-1 rounded-full bg-ink px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-neutral-700">
+                  <Type size={11} />
+                </button>
+                <button type="button" onClick={addCalendarZone} title="Add calendar slot" className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-amber-600">
+                  <CalendarIcon size={11} />
+                </button>
+              </div>
+            </div>
+            {zones.length === 0 ? (
+              <div className="rounded border border-dashed border-neutral-300 p-4 text-center text-[11px] text-neutral-500">
+                No slots yet. Add image zones for customer photos, text zones for customizable messages.
+              </div>
+            ) : (() => {
+              const groupDefs: Array<{ key: string; label: string; match: (z: GiftTemplateZone) => boolean }> = [
+                { key: 'photos',      label: 'Photos',      match: (z) => z.type === 'image' },
+                { key: 'text',        label: 'Text',        match: (z) => z.type === 'text' },
+                { key: 'calendars',   label: 'Calendars',   match: (z) => z.type === 'calendar' },
+                { key: 'shapes',      label: 'Shapes',      match: (z) => z.type === 'shape' },
+                { key: 'decorations', label: 'Decorations', match: (z) => z.type === 'render_anchor' },
+              ];
+              const buckets = new Map<string, Array<{ z: GiftTemplateZone; i: number }>>();
+              for (const g of groupDefs) buckets.set(g.key, []);
+              buckets.set('other', []);
+              zones.forEach((z, i) => {
+                const hit = groupDefs.find((g) => g.match(z));
+                buckets.get(hit ? hit.key : 'other')!.push({ z, i });
+              });
+              const renderRow = (z: GiftTemplateZone, i: number) => {
+                const active = activeZoneIdx === i;
+                const isText = isTextZone(z);
+                const isCal = isCalendarZone(z);
+                const isAnchor = isRenderAnchorZone(z);
+                const isShape = isShapeZone(z);
+                const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : isShape ? 'bg-purple-500' : 'bg-pink';
+                return (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={(e) => {
+                      setDragSrcIdx(i);
+                      e.dataTransfer.effectAllowed = 'move';
+                      try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
+                    }}
+                    onDragOver={(e) => {
+                      if (dragSrcIdx === null) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      const above = e.clientY < r.top + r.height / 2;
+                      setDragOverIdx(above ? i + 1 : i);
+                    }}
+                    onDragLeave={() => setDragOverIdx(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragSrcIdx !== null && dragOverIdx !== null) {
+                        reorderZone(dragSrcIdx, dragOverIdx);
+                      }
+                      setDragSrcIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => { setDragSrcIdx(null); setDragOverIdx(null); }}
+                    className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''} ${dragSrcIdx === i ? 'opacity-30' : ''}`}
+                    style={{
+                      cursor: dragSrcIdx !== null ? 'grabbing' : 'grab',
+                      borderTop: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                      borderBottom: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                    }}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2 p-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveZoneIdx(active ? null : i)}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-white ${badgeBg}`}>
+                          {isCal ? <CalendarIcon size={12} /> : isText ? <Type size={12} /> : isShape ? <Shapes size={12} /> : <ImageIcon size={12} />}
+                        </span>
+                        <span className={`text-sm font-bold text-ink truncate ${(z as any).hidden ? 'line-through' : ''}`}>{z.label || 'Untitled'}</span>
+                        {isText && (z as GiftTemplateTextZone).editable === false && (
+                          <Lock size={11} className="shrink-0 text-neutral-400" />
+                        )}
+                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); updateZone(i, ({ hidden: !((z as any).hidden) } as any)); }}
+                          title={(z as any).hidden ? 'Show — render this layer' : 'Hide — skip this layer (still saved)'}
+                          className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
+                            (z as any).hidden
+                              ? 'border-neutral-400 bg-neutral-200 text-neutral-600'
+                              : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
+                          }`}
+                        >
+                          {(z as any).hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); updateZone(i, { locked: !z.locked }); }}
+                          title={z.locked ? 'Unlock — allow drag/resize' : 'Lock — prevent drag/resize'}
+                          className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
+                            z.locked
+                              ? 'border-pink bg-pink text-white'
+                              : 'border-neutral-300 bg-white text-neutral-500 hover:border-pink hover:text-pink'
+                          }`}
+                        >
+                          {z.locked ? <Lock size={11} /> : <Unlock size={11} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              };
+              const groupOrder: Array<{ key: string; label: string }> = [
+                ...groupDefs.map((g) => ({ key: g.key, label: g.label })),
+                { key: 'other', label: 'Other' },
+              ];
+              return (
+                <div className="space-y-3">
+                  {groupOrder.map((g) => {
+                    const rows = buckets.get(g.key) ?? [];
+                    if (rows.length === 0) return null;
+                    const collapsed = collapsedLayerGroups.has(g.key);
+                    return (
+                      <div key={g.key}>
+                        <button
+                          type="button"
+                          onClick={() => toggleLayerGroup(g.key)}
+                          className="mb-1.5 flex w-full items-center justify-between gap-2 px-1 text-left"
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                            {g.label.toUpperCase()} <span className="text-neutral-400">· {rows.length}</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-neutral-400">{collapsed ? '+' : '−'}</span>
+                        </button>
+                        {!collapsed && (
+                          <div className="flex flex-col-reverse gap-1.5">
+                            {rows.map(({ z, i }) => renderRow(z, i))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
