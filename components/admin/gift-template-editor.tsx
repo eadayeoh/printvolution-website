@@ -1380,6 +1380,12 @@ export function GiftTemplateEditor({
               {zones.map((z, i) => {
                 if (!isTextZone(z)) return null;
                 if ((z as any).hidden) return null;
+                // Renderer-driven templates that draw their own text in
+                // the SVG (spotify_plaque, song_lyrics) shouldn't get a
+                // second HTML overlay on top — that double-renders the
+                // string. star_map / city_map / zones don't render text
+                // via SVG, so the overlay is the only thing showing it.
+                if (renderer === 'spotify_plaque' || renderer === 'song_lyrics') return null;
                 const pxPerMm = canvasSize.w / TEMPLATE_W;
                 const fontPx = Math.max(6, (z.font_size_mm ?? 14) * pxPerMm);
                 const vAlign = z.vertical_align ?? 'middle';
