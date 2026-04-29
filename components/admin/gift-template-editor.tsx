@@ -471,6 +471,21 @@ export function GiftTemplateEditor({
     setZones([...zones, copy]);
   }
 
+  // HTML5 drag-and-drop reordering for the zone list. Tracks the
+  // index being dragged + the index it's hovering, so we can show a
+  // drop indicator BETWEEN rows. Reorder runs on drop.
+  const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  function reorderZone(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= zones.length || to > zones.length) return;
+    const next = [...zones];
+    const [moved] = next.splice(from, 1);
+    next.splice(to > from ? to - 1 : to, 0, moved);
+    setZones(next);
+    // Active selection should follow the moved row.
+    if (activeZoneIdx === from) setActiveZoneIdx(to > from ? to - 1 : to);
+  }
+
   function removeZone(i: number) {
     setZones(zones.filter((_, j) => j !== i));
     if (activeZoneIdx === i) setActiveZoneIdx(null);
@@ -705,7 +720,41 @@ export function GiftTemplateEditor({
                   const isAnchor = isRenderAnchorZone(z);
                   const badgeBg = isAnchor ? 'bg-pink' : isCal ? 'bg-amber-500' : isText ? 'bg-ink' : 'bg-pink';
                   return (
-                    <div key={i} className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''}`}>
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragSrcIdx(i);
+                        e.dataTransfer.effectAllowed = 'move';
+                        // Some browsers need data set or the drop won't fire.
+                        try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
+                      }}
+                      onDragOver={(e) => {
+                        if (dragSrcIdx === null) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        // Hover above midpoint = insert before; below = insert after.
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const before = e.clientY < r.top + r.height / 2;
+                        setDragOverIdx(before ? i : i + 1);
+                      }}
+                      onDragLeave={() => setDragOverIdx(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragSrcIdx !== null && dragOverIdx !== null) {
+                          reorderZone(dragSrcIdx, dragOverIdx);
+                        }
+                        setDragSrcIdx(null);
+                        setDragOverIdx(null);
+                      }}
+                      onDragEnd={() => { setDragSrcIdx(null); setDragOverIdx(null); }}
+                      className={`rounded-lg border-2 ${active ? 'border-pink bg-pink/5' : 'border-neutral-200'} ${z.locked ? 'opacity-80' : ''} ${(z as any).hidden ? 'opacity-50' : ''} ${dragSrcIdx === i ? 'opacity-30' : ''}`}
+                      style={{
+                        cursor: dragSrcIdx !== null ? 'grabbing' : 'grab',
+                        borderTop: dragOverIdx === i && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                        borderBottom: dragOverIdx === i + 1 && dragSrcIdx !== null && dragSrcIdx !== i ? '3px solid var(--pv-magenta, #E91E8C)' : undefined,
+                      }}
+                    >
                       <div className="flex w-full items-center justify-between gap-2 p-3">
                         <button
                           type="button"
@@ -1370,8 +1419,12 @@ export function GiftTemplateEditor({
                 );
               })}
 
-              {/* Zone handles + outlines — above everything */}
+              {/* Zone handles + outlines — above everything. Hidden
+                  zones drop their handle here too so the visual eye-
+                  toggle is unambiguous. Admin un-hides via the eye
+                  icon in the right-side layer list. */}
               {zones.map((z, i) => {
+                if ((z as any).hidden) return null;
                 const active = activeZoneIdx === i;
                 const left = (z.x_mm / TEMPLATE_W) * 100;
                 const top = (z.y_mm / TEMPLATE_H) * 100;
