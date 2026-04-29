@@ -102,10 +102,13 @@ export function SpotifyPlaqueTemplate({
        *  editor's 0..200 canvas, so percentages map directly. */}
       {(zones ?? []).map((z, i) => {
         if (z?.type !== 'image' || z.hidden) return null;
-        const url = (z as { default_image_url?: string | null }).default_image_url;
+        const zi = z as { default_image_url?: string | null; fit_mode?: 'cover' | 'contain' | string; rotation_deg?: number };
+        const url = zi.default_image_url;
         if (!url) return null;
         const x = z.x_mm, y = z.y_mm, w = z.width_mm, h = z.height_mm;
         if (x == null || y == null || w == null || h == null) return null;
+        const fit: 'cover' | 'contain' = zi.fit_mode === 'contain' ? 'contain' : 'cover';
+        const rot = zi.rotation_deg ?? 0;
         return (
           <img
             key={`img-zone-${i}`}
@@ -117,7 +120,9 @@ export function SpotifyPlaqueTemplate({
               top: `${(y / 200) * 100}%`,
               width: `${(w / 200) * 100}%`,
               height: `${(h / 200) * 100}%`,
-              objectFit: 'contain',
+              objectFit: fit,
+              transform: rot ? `rotate(${rot}deg)` : undefined,
+              transformOrigin: 'center',
               pointerEvents: 'none',
             }}
           />
