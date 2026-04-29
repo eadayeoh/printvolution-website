@@ -208,7 +208,11 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   })();
 
   // Locked aspect ratio comes from the template's reference dimensions.
-  // Falls back to null (no lock) if the template doesn't have both set.
+  // Falls back to null (no lock — admin uploads at whatever aspect they
+  // have) if the template doesn't have both set. Mockups for non-
+  // renderer products (zone templates, photo-resize, etc.) are context
+  // photos overlaid via mockup_area % coordinates, so they shouldn't be
+  // force-cropped to a fixed shape.
   const lockedAspectRatio: number | null = (() => {
     const t = linkedRendererTemplate;
     if (!t) return null;
@@ -863,7 +867,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     value={s.mockup_url}
                                     onChange={(url) => updateSurface(i, sIdx, { mockup_url: url })}
                                     prefix={`surface-${d.slug || 'x'}-${s.id || sIdx}`}
-                                    aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
+                                    aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : undefined}
                                     size="sm"
                                     label="Mockup"
                                   />
@@ -1072,7 +1076,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   value={s.mockup_url}
                                   onChange={(url) => updateSwatch(i, sIdx, { mockup_url: url })}
                                   prefix={`swatch-${d.slug || 'x'}-${sIdx}`}
-                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : undefined}
                                   size="sm"
                                   label="Mockup"
                                 />
@@ -1218,7 +1222,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                         // matches the design rect + SVG aspect — no
                         // letterbox at any layer. Falls back to 1:1 for
                         // variants without a renderer-linked template.
-                        aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
+                        aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : undefined}
                         size="md"
                         label="Mockup"
                       />
@@ -1274,7 +1278,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     updateDraft(i, { mockup_by_shape: next });
                                   }}
                                   prefix={`variant-${d.slug || 'mockup'}-${opt.kind}`}
-                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : undefined}
                                   size="sm"
                                   label={`${opt.kind} mockup`}
                                 />
@@ -1357,7 +1361,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     updateDraft(i, { mockup_by_prompt_id: next });
                                   }}
                                   prefix={`variant-${d.slug || 'mockup'}-prompt-${pr.id.slice(0, 8)}`}
-                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : undefined}
                                   size="sm"
                                   label={`${pr.name} mockup`}
                                 />

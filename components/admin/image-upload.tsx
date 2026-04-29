@@ -12,7 +12,10 @@ type Props = {
   prefix?: string;
   label?: string;
   size?: 'sm' | 'md' | 'lg';
-  /** Aspect ratio for the crop tool. Default 1 (square). Pass 16/9 for wide, etc. */
+  /** Aspect ratio for the crop tool. Pass 1 for square, 16/9 for wide,
+   *  etc. Omit (undefined) for free-form crop — admin keeps the source
+   *  aspect ratio. Useful for context/marketing photos where forcing a
+   *  shape would chop meaningful content. */
   aspect?: number;
   /**
    * Skip the crop modal entirely — upload the image as-is (compressed
@@ -36,7 +39,7 @@ export function ImageUpload({
   prefix = 'product',
   label = 'Image',
   size = 'md',
-  aspect = 1,
+  aspect,
   skipCrop = false,
   onUploadingChange,
 }: Props) {
@@ -67,8 +70,11 @@ export function ImageUpload({
       uploadBlob(file, file.name, file.type);
       return;
     }
-    // Logos / icons skip crop: compress if oversized, upload as-is.
-    if (skipCrop) {
+    // Logos / icons / free-aspect mockups skip crop: compress if
+    // oversized, upload as-is. Triggered by skipCrop OR by an undefined
+    // aspect (caller doesn't want a forced shape — e.g. context photos
+    // for non-renderer products).
+    if (skipCrop || aspect === undefined) {
       try {
         if (file.size > 3 * 1024 * 1024) {
           const compressed = await compressImage(file, 2400, 0.9);
@@ -209,7 +215,7 @@ export function ImageUpload({
               ? 'Uploading…'
               : value
                 ? 'Click to replace · Max 20 MB · Auto-resized to fit'
-                : 'Click to browse · Max 20 MB · JPG / PNG / WebP / HEIC · Cropped to ' + (aspect === 1 ? 'square' : `${aspect.toFixed(2)}:1`)}
+                : 'Click to browse · Max 20 MB · JPG / PNG / WebP / HEIC' + (aspect ? ' · Cropped to ' + (aspect === 1 ? 'square' : `${aspect.toFixed(2)}:1`) : ' · Uploaded as-is')}
           </div>
           {error && (
             <div className="text-[11px] text-red-600 mt-1">

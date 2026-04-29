@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 
 type Props = {
   src: string;                 // data URL or blob URL of the picked file
-  aspect: number;              // 1 for square thumbnail, 16/9, etc
+  aspect?: number;             // 1 for square, 16/9 for wide, undefined = free-form
   filename: string;
   mimeType: string;
   onCancel: () => void;
@@ -52,7 +52,7 @@ export function ImageCropModal({ src, aspect, filename, mimeType, onCancel, onCo
         <div>
           <div style={{ fontSize: 13, fontWeight: 800 }}>Crop image</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-            Drag to reposition · Scroll or use the slider to zoom · Aspect {aspect === 1 ? '1:1 (square)' : aspect.toFixed(2)}
+            Drag to reposition · Scroll or use the slider to zoom · {aspect ? `Aspect ${aspect === 1 ? '1:1 (square)' : aspect.toFixed(2)}` : 'Free crop (drag corners)'}
           </div>
         </div>
         <button
