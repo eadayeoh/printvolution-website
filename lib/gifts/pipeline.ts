@@ -256,8 +256,9 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
   const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(input.sourceBytes);
 
-  // Normalise: auto-orient via EXIF, drop alpha where not needed
-  buf = await sharp(buf).rotate().jpeg({ quality: 80 }).toBuffer();
+  // Normalise: auto-orient via EXIF, drop alpha where not needed.
+  // Flatten over white so transparent PNGs don't drop to black.
+  buf = await sharp(buf).rotate().flatten({ background: '#ffffff' }).jpeg({ quality: 80 }).toBuffer();
 
   switch (kind) {
     case 'photo-resize':
@@ -276,8 +277,10 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
       break;
   }
 
-  // Resize to preview size (max 1200 px long edge)
-  buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).jpeg({ quality: 82 }).toBuffer();
+  // Resize to preview size (max 1200 px long edge). Flatten before
+  // JPEG so a transparent stylised buffer doesn't render with a
+  // black background.
+  buf = await sharp(buf).resize({ width: 1200, height: 1200, fit: 'inside' }).flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
 
   // Cutout shape: bg-remove + SVG silhouette trace. Runs AFTER the mode
   // transform so it cuts the stylised subject, not the raw photo. Stores
@@ -627,7 +630,9 @@ async function rasterizeAndStore(
   if (fmt.primary === 'jpg') {
     primaryKey = makeKey(`prod-${product.slug}`, 'jpg');
     primaryMime = 'image/jpeg';
-    const jpgBuf = await sharp(pngBuf).jpeg({ quality: 92 }).toBuffer();
+    // Flatten before JPEG so transparent areas of the rasterised SVG
+    // don't render as black.
+    const jpgBuf = await sharp(pngBuf).flatten({ background: '#ffffff' }).jpeg({ quality: 92 }).toBuffer();
     await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
   } else {
     primaryKey = makeKey(`prod-${product.slug}`, 'png');
@@ -724,7 +729,8 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       let primaryKey: string;
       if (primaryFormat === 'jpg') {
         primaryKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'jpg');
-        const jpgBuf = await sharp(pngBuf).jpeg({ quality: 92 }).toBuffer();
+        // Flatten before JPEG so transparent composite areas don't go black.
+        const jpgBuf = await sharp(pngBuf).flatten({ background: '#ffffff' }).jpeg({ quality: 92 }).toBuffer();
         await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
       } else {
         primaryKey = makeKey(`prod-${product.slug}-${slugSuffix}`, 'png');
@@ -865,7 +871,8 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   if (fmt.primary === 'jpg') {
     primaryKey = makeKey(`prod-${product.slug}`, 'jpg');
     primaryMime = 'image/jpeg';
-    const jpgBuf = await sharp(buf).jpeg({ quality: 92 }).toBuffer();
+    // Flatten before JPEG so transparent areas of the buffer don't go black.
+    const jpgBuf = await sharp(buf).flatten({ background: '#ffffff' }).jpeg({ quality: 92 }).toBuffer();
     await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
   } else if (fmt.primary === 'svg') {
     // Wrap the bitmap as a base64 <image> in an SVG. Foil cutters
@@ -1075,7 +1082,7 @@ async function applyWatermark(input: Buffer): Promise<Buffer> {
       <rect width="100%" height="100%" fill="url(#wm)"/>
     </svg>`;
   const overlay = Buffer.from(svg);
-  return sharp(input).composite([{ input: overlay, blend: 'over' }]).jpeg({ quality: 82 }).toBuffer();
+  return sharp(input).composite([{ input: overlay, blend: 'over' }]).flatten({ background: '#ffffff' }).jpeg({ quality: 82 }).toBuffer();
 }
 
 // ---------------------------------------------------------------------------

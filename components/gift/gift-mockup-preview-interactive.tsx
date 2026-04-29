@@ -40,6 +40,7 @@ export function GiftMockupPreviewInteractive({
   panOffset,
   onPanOffsetChange,
   figurineLayer,
+  lockedAspectRatio,
 }: {
   mockupUrl: string;
   previewUrl: string;
@@ -64,6 +65,11 @@ export function GiftMockupPreviewInteractive({
     imageUrl: string;
     area: Rect;
   } | null;
+  /** Template-locked stage aspect (W/H) from the linked template's
+   *  reference dims. Wins over the natural mockup aspect so admin's
+   *  saved coordinates render against the same canvas the editor used.
+   *  Also avoids the SSR 1:1 → natural-aspect snap on first paint. */
+  lockedAspectRatio?: number | null;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<
@@ -185,15 +191,24 @@ export function GiftMockupPreviewInteractive({
   const [imgDims, setImgDims] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
     if (!mockupUrl) { setImgDims(null); return; }
+    // Abort flag so a stale onload from a previous variant's mockup
+    // can't clobber dims set by the current one.
+    let cancelled = false;
     const img = new Image();
     img.onload = () => {
+      if (cancelled) return;
       if (img.naturalWidth > 0 && img.naturalHeight > 0) {
         setImgDims({ w: img.naturalWidth, h: img.naturalHeight });
       }
     };
     img.src = mockupUrl;
+    return () => { cancelled = true; };
   }, [mockupUrl]);
-  const stageAspect = imgDims ? `${imgDims.w} / ${imgDims.h}` : '1 / 1';
+  const stageAspect = lockedAspectRatio && lockedAspectRatio > 0
+    ? `${lockedAspectRatio} / 1`
+    : imgDims
+      ? `${imgDims.w} / ${imgDims.h}`
+      : '1 / 1';
 
   return (
     <div

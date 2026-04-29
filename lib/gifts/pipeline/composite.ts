@@ -303,7 +303,12 @@ export async function renderTemplateComposite(
     }
   }
 
-  const finalBuf = await sharp(base).jpeg({ quality: kind === 'preview' ? 82 : 92 }).toBuffer();
+  // Flatten before JPEG so a transparent base renders as white instead
+  // of black (sharp's JPEG encoder fills missing alpha with #000).
+  const finalBuf = await sharp(base)
+    .flatten({ background: '#ffffff' })
+    .jpeg({ quality: kind === 'preview' ? 82 : 92 })
+    .toBuffer();
   const meta = await sharp(finalBuf).metadata();
   return { buffer: finalBuf, widthPx: meta.width ?? outW, heightPx: meta.height ?? outH };
 }

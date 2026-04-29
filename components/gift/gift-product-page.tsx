@@ -672,6 +672,13 @@ export function GiftProductPage({
       setSelectedPromptId(visiblePrompts[0]?.id ?? null);
     }
   }, [visiblePrompts, selectedPromptId]);
+  // When a template gets picked the prompt picker is hidden, but a
+  // previously-selected prompt would otherwise ride through to checkout
+  // via the personalisation notes. Clear it so the cart line never
+  // carries a stale prompt_id alongside a template.
+  useEffect(() => {
+    if (selectedTemplateId) setSelectedPromptId(null);
+  }, [selectedTemplateId]);
   const showTextStep =
     product.show_text_step !== null && product.show_text_step !== undefined
       ? product.show_text_step
@@ -724,18 +731,42 @@ export function GiftProductPage({
   // For non-AI products: keep the auto-fire pipeline (no token cost).
   async function doUpload(file: File, cropRect: GiftCropRect | null) {
     setErr(null);
+    // Reset thumb up-front so a fresh upload can't briefly show the
+    // previous file's preview while the new one is decoding.
+    setPendingSourceThumb(null);
     setUploading(true);
     const isAi = !isNonAiMode;
-    // Read the file into a data URL so the upload card can show a
-    // thumbnail straight away — well before Generate kicks off.
-    try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const r = reader.result;
-        if (typeof r === 'string') setPendingSourceThumb(r);
+    // Generate a small JPEG data URL for the upload card thumbnail.
+    // Skip HEIC/HEIF — Chrome and Firefox can't decode it in CSS
+    // background-image, so leave the thumb null and let the card
+    // render its empty box rather than a broken image.
+    const isHeic =
+      file.type === 'image/heic' ||
+      file.type === 'image/heif' ||
+      /\.heic$|\.heif$/i.test(file.name);
+    if (!isHeic) {
+      const blobUrl = URL.createObjectURL(file);
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || 1;
+          const scale = longEdge > 200 ? 200 / longEdge : 1;
+          const tw = Math.max(1, Math.round(img.naturalWidth * scale));
+          const th = Math.max(1, Math.round(img.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = tw;
+          canvas.height = th;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, tw, th);
+            setPendingSourceThumb(canvas.toDataURL('image/jpeg', 0.7));
+          }
+        } catch { /* fallback: card just shows empty placeholder */ }
+        URL.revokeObjectURL(blobUrl);
       };
-      reader.readAsDataURL(file);
-    } catch { /* fallback: card just shows empty placeholder */ }
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); };
+      img.src = blobUrl;
+    }
     if (isAi) {
       // Source-only path. No template / prompt / shape sent — those
       // are picked AFTER upload and applied at Generate time.
@@ -746,6 +777,7 @@ export function GiftProductPage({
         const r = await uploadGiftSourceOnly(fd);
         if (!r || typeof r !== 'object') {
           setErr('Server returned no response. Please try again in a moment.');
+          setPendingSourceThumb(null);
         } else if (r.ok === true) {
           setPendingSourceAssetId(r.sourceAssetId);
           // Clear any prior preview — the customer's about to pick
@@ -754,9 +786,11 @@ export function GiftProductPage({
           setLastGeneratedPromptId(null);
         } else {
           setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
+          setPendingSourceThumb(null);
         }
       } catch (e: any) {
         setErr(e?.message || e?.toString?.() || 'Upload failed');
+        setPendingSourceThumb(null);
       } finally {
         setUploading(false);
       }
@@ -781,6 +815,7 @@ export function GiftProductPage({
       const r = await uploadAndPreviewGift(fd);
       if (!r || typeof r !== 'object') {
         setErr('Server returned no response. Please try again in a moment.');
+        setPendingSourceThumb(null);
       } else if (r.ok === true) {
         setPreview(r);
         setLastGeneratedPromptId(selectedPromptId);
@@ -798,9 +833,11 @@ export function GiftProductPage({
         }));
       } else {
         setErr(('error' in r && r.error) ? String(r.error) : 'Upload failed');
+        setPendingSourceThumb(null);
       }
     } catch (e: any) {
       setErr(e?.message || e?.toString?.() || 'Upload failed');
+      setPendingSourceThumb(null);
     } finally {
       setUploading(false);
     }
@@ -1200,7 +1237,7 @@ export function GiftProductPage({
     if (selectedTemplateId) {
       notes += `${notes ? ';' : ''}gift_template:${selectedTemplateId}`;
     }
-    if (selectedPromptId) {
+    if (selectedPromptId && !selectedTemplateId) {
       notes += `${notes ? ';' : ''}prompt_id:${selectedPromptId}`;
     }
     if (hasSurfaces && selectedVariant) {
@@ -2050,6 +2087,20 @@ export function GiftProductPage({
                         imageUrl: selectedFigurine.image_url,
                         area: product.figurine_area,
                       } : null}
+                      lockedAspectRatio={(() => {
+                        // Mirror admin's effectiveLockedRatio: prefer the
+                        // customer-picker template's reference dims, else
+                        // the first linked template's. Null = natural
+                        // mockup aspect wins (existing path).
+                        const t =
+                          (customerPickerTemplate as { reference_width_mm?: number | null; reference_height_mm?: number | null } | null)
+                          ?? (templates[0] as { reference_width_mm?: number | null; reference_height_mm?: number | null } | undefined)
+                          ?? null;
+                        const w = t?.reference_width_mm;
+                        const h = t?.reference_height_mm;
+                        if (w && h && w > 0 && h > 0) return w / h;
+                        return null;
+                      })()}
                     />
                   ) : (
                     <img
