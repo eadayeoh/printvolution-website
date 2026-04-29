@@ -322,6 +322,11 @@ export type ProductionInput = {
    *  or 'rectangle' is the standard rectangular print. 'template'
    *  routes through the template composite path above. */
   shapeKind?: 'cutout' | 'rectangle' | 'template' | null;
+  /** Cart-line `personalisation_notes` "k:v;k:v" string. Required for
+   *  renderer-driven templates (spotify_plaque / song_lyrics / city_map
+   *  / star_map) — the renderer dispatch parses customer inputs out of
+   *  this. NULL on legacy lines and standard composite templates. */
+  personalisationNotes?: string | null;
 };
 
 export type ProductionOutput = {
@@ -348,6 +353,256 @@ export type ProductionOutput = {
   }>;
 };
 
+/** Stamp width/height attributes on the root `<svg>` so downstream printer
+ *  software (foil RIPs, Illustrator) opens the file at the correct physical
+ *  size without being told out of band. Only stamps when the dims are
+ *  positive numbers; otherwise leaves the SVG untouched. */
+function stampSvgSize(svg: string, widthMm: number, heightMm: number): string {
+  if (!Number.isFinite(widthMm) || widthMm <= 0 || !Number.isFinite(heightMm) || heightMm <= 0) {
+    return svg;
+  }
+  return svg.replace('<svg ', `<svg width="${widthMm}mm" height="${heightMm}mm" `);
+}
+
+async function renderRendererTemplate(args: {
+  product: GiftProduct;
+  template: GiftTemplate;
+  sourceBytes: Uint8Array;
+  sourceMime: string;
+  personalisationNotes: string | null;
+}): Promise<ProductionOutput> {
+  const { product, template, sourceBytes, sourceMime, personalisationNotes } = args;
+  const { parsePersonalisationNotes } = await import('./personalisation-notes');
+  const n = parsePersonalisationNotes(personalisationNotes);
+
+  // Customer-picked size overrides for renderer products that expose a
+  // size picker on the PDP (city / star map). Falls back to the
+  // product's own width/height when the cart didn't carry the override.
+  const sizeWmm = parseFloat(n['size_w_mm'] ?? '');
+  const sizeHmm = parseFloat(n['size_h_mm'] ?? '');
+  const physicalWmm = Number.isFinite(sizeWmm) && sizeWmm > 0 ? sizeWmm : product.width_mm;
+  const physicalHmm = Number.isFinite(sizeHmm) && sizeHmm > 0 ? sizeHmm : product.height_mm;
+
+  const fmt = productionFormatsForMode(product.mode);
+  const refDims = template.reference_width_mm && template.reference_height_mm
+    ? { width_mm: template.reference_width_mm, height_mm: template.reference_height_mm }
+    : null;
+
+  switch (template.renderer) {
+    case 'spotify_plaque': {
+      const photoMime = sourceMime || 'image/jpeg';
+      const photoDataUri = `data:${photoMime};base64,${Buffer.from(sourceBytes).toString('base64')}`;
+      const { buildSpotifyPlaqueSvg } = await import('./spotify-plaque-svg');
+      const svg = buildSpotifyPlaqueSvg({
+        photoUrl: photoDataUri,
+        songTitle:  n['spotify_title']  ?? '',
+        artistName: n['spotify_artist'] ?? '',
+        spotifyTrackId: n['spotify_track_id'] || null,
+        templateRefDims: refDims,
+        textColor: n['spotify_text_color'] || undefined,
+        zones: (template.zones_json as any) ?? null,
+      });
+      const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
+
+      return rasterizeAndStore(stamped, product, physicalWmm, physicalHmm, fmt);
+    }
+
+    case 'song_lyrics': {
+      const { buildSongLyricsSvg } = await import('./song-lyrics-svg');
+      const layout = (n['song_layout'] as 'song' | 'wedding' | 'foil') || 'song';
+      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
+      const svg = buildSongLyricsSvg({
+        photoUrl: null,
+        lyrics: n['song_lyrics'] ?? '',
+        title:   n['song_title']   ?? '',
+        names:   n['song_names']   ?? '',
+        year:    n['song_year']    ?? '',
+        subtitle: n['song_subtitle'] ?? '',
+        tagline:  n['song_tagline']  ?? '',
+        titleFont: n['song_title_font'],
+        namesFont: n['song_names_font'],
+        yearFont:  n['song_year_font'],
+        lyricsScale: n['song_lyrics_scale'] ? parseFloat(n['song_lyrics_scale']) : 1,
+        layout,
+        materialColor: isFoilMode ? null : undefined,
+      });
+      const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
+      return isFoilMode || fmt.primary === 'svg'
+        ? storeSvgOnly(stamped, product, physicalWmm, physicalHmm)
+        : rasterizeAndStore(stamped, product, physicalWmm, physicalHmm, fmt);
+    }
+
+    case 'city_map': {
+      const { buildCityMapSvg, fetchCityMapVectors } = await import('./city-map-svg');
+      const lat = parseFloat(n['city_lat'] ?? '');
+      const lng = parseFloat(n['city_lng'] ?? '');
+      const radius = parseFloat(n['city_radius'] ?? '5');
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new Error('City Map order has no coordinates');
+      }
+      const vectors = await fetchCityMapVectors(lat, lng, Math.max(1, Math.min(15, radius || 5)));
+      const showCoords = n['city_show_coords'] === '1';
+      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
+      const svg = buildCityMapSvg({
+        vectors,
+        names:     n['city_names']   ?? '',
+        event:     n['city_event']   ?? '',
+        cityLabel: n['city_label']   ?? '',
+        tagline:   n['city_tagline'] ?? '',
+        coordinates: showCoords ? `${lat.toFixed(4)}° N · ${lng.toFixed(4)}° E` : undefined,
+        cityFont:    n['city_font_title']   ?? undefined,
+        namesFont:   n['city_font_names']   ?? undefined,
+        eventFont:   n['city_font_event']   ?? undefined,
+        taglineFont: n['city_font_tagline'] ?? undefined,
+        materialColor: isFoilMode ? null : undefined,
+      });
+      const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
+      return isFoilMode || fmt.primary === 'svg'
+        ? storeSvgOnly(stamped, product, physicalWmm, physicalHmm)
+        : rasterizeAndStore(stamped, product, physicalWmm, physicalHmm, fmt);
+    }
+
+    case 'star_map': {
+      const { buildStarMapSvg, buildStarMapScene } = await import('./star-map-svg');
+      const lat = parseFloat(n['star_lat'] ?? '');
+      const lng = parseFloat(n['star_lng'] ?? '');
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new Error('Star Map order has no coordinates');
+      }
+      let dateUtc: Date | null = null;
+      if (n['star_date_utc']) {
+        const d = new Date(n['star_date_utc']);
+        if (!Number.isNaN(d.getTime())) dateUtc = d;
+      }
+      if (!dateUtc && n['star_local_date'] && n['star_local_time']) {
+        const [yy, mm, dd] = n['star_local_date'].split('-').map((s) => parseInt(s, 10));
+        const [hh, mi]     = n['star_local_time'].split(':').map((s) => parseInt(s, 10));
+        const tzOff = parseInt(n['star_tz_offset'] ?? '0', 10) || 0;
+        if ([yy, mm, dd, hh, mi].every(Number.isFinite)) {
+          dateUtc = new Date(Date.UTC(yy, mm - 1, dd, hh, mi) - tzOff * 60 * 1000);
+        }
+      }
+      if (!dateUtc) throw new Error('Star Map order has no date/time for the sky');
+
+      const scene = buildStarMapScene(lat, lng, dateUtc);
+      const showCoords = n['star_show_coords'] === '1';
+      const showLines  = n['star_show_lines']  === '1';
+      const showLabels = n['star_show_labels'] === '1';
+      const layout: 'foil' | 'poster' =
+        n['star_layout'] === 'poster' ? 'poster' : 'foil';
+
+      const coordinates = showCoords
+        ? (layout === 'poster'
+            ? `${Math.abs(lat).toFixed(3)}°${lat >= 0 ? 'N' : 'S'} / ${Math.abs(lng).toFixed(3)}°${lng >= 0 ? 'E' : 'W'}`
+            : `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'} · ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`)
+        : undefined;
+
+      const isFoilMode = product.mode === 'foil' || product.mode === 'foiling';
+      const svg = buildStarMapSvg({
+        scene,
+        dateUtc,
+        names:         n['star_names']   ?? '',
+        event:         n['star_event']   ?? '',
+        locationLabel: n['star_label']   ?? '',
+        tagline:       n['star_tagline'] ?? '',
+        coordinates,
+        showLines,
+        showLabels,
+        layout,
+        locationFont: n['star_font_loc']     ?? undefined,
+        namesFont:    n['star_font_names']   ?? undefined,
+        eventFont:    n['star_font_event']   ?? undefined,
+        taglineFont:  n['star_font_tagline'] ?? undefined,
+        materialColor: layout === 'foil' ? null : undefined,
+      });
+      const stamped = stampSvgSize(svg, physicalWmm, physicalHmm);
+      return isFoilMode || layout === 'foil' || fmt.primary === 'svg'
+        ? storeSvgOnly(stamped, product, physicalWmm, physicalHmm)
+        : rasterizeAndStore(stamped, product, physicalWmm, physicalHmm, fmt);
+    }
+
+    default:
+      throw new Error(`Unknown renderer: ${template.renderer}`);
+  }
+}
+
+async function storeSvgOnly(
+  svg: string,
+  product: GiftProduct,
+  widthMm: number,
+  heightMm: number,
+): Promise<ProductionOutput> {
+  const key = makeKey(`prod-${product.slug}`, 'svg');
+  await putObject(GIFT_BUCKETS.production, key, Buffer.from(svg, 'utf8'), 'image/svg+xml');
+  // Vector SVGs are resolution-independent; record nominal pixel dims at
+  // 300 DPI so downstream UI has a sensible width/height to display.
+  const widthPx = Math.round((widthMm / 25.4) * 300);
+  const heightPx = Math.round((heightMm / 25.4) * 300);
+  return {
+    productionPath: key,
+    productionMime: 'image/svg+xml',
+    productionPdfPath: '',
+    productionPdfMime: 'application/pdf',
+    widthPx,
+    heightPx,
+    dpi: 300,
+  };
+}
+
+async function rasterizeAndStore(
+  svg: string,
+  product: GiftProduct,
+  widthMm: number,
+  heightMm: number,
+  fmt: { primary: 'png' | 'jpg' | 'svg'; includePdf: boolean },
+): Promise<ProductionOutput> {
+  const sharp = await loadSharp();
+  if (!sharp) throw new Error('Image pipeline unavailable (sharp not installed)');
+  // Rasterize at 300 DPI so foil-tone or UV-print outputs hold sharp
+  // text + scancode bars when sent to the press.
+  const widthPx = Math.round((widthMm / 25.4) * 300);
+  const heightPx = Math.round((heightMm / 25.4) * 300);
+  const pngBuf = await sharp(Buffer.from(svg, 'utf8'))
+    .resize({ width: widthPx, height: heightPx, fit: 'fill' })
+    .png({ compressionLevel: 6 })
+    .toBuffer();
+  const meta = await sharp(pngBuf).metadata();
+
+  let primaryKey: string;
+  let primaryMime: 'image/png' | 'image/jpeg';
+  if (fmt.primary === 'jpg') {
+    primaryKey = makeKey(`prod-${product.slug}`, 'jpg');
+    primaryMime = 'image/jpeg';
+    const jpgBuf = await sharp(pngBuf).jpeg({ quality: 92 }).toBuffer();
+    await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
+  } else {
+    primaryKey = makeKey(`prod-${product.slug}`, 'png');
+    primaryMime = 'image/png';
+    await putObject(GIFT_BUCKETS.production, primaryKey, pngBuf, primaryMime);
+  }
+
+  let pdfKey = '';
+  if (fmt.includePdf) {
+    pdfKey = makeKey(`prod-${product.slug}`, 'pdf');
+    const pdfBuf = await wrapPdf(pngBuf, {
+      trimWidthMm: widthMm,
+      trimHeightMm: heightMm,
+      bleedMm: product.bleed_mm,
+    });
+    await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+  }
+
+  return {
+    productionPath: primaryKey,
+    productionMime: primaryMime,
+    productionPdfPath: pdfKey,
+    productionPdfMime: 'application/pdf',
+    widthPx: meta.width ?? widthPx,
+    heightPx: meta.height ?? heightPx,
+    dpi: 300,
+  };
+}
+
 export async function runProductionPipeline(input: ProductionInput): Promise<ProductionOutput> {
   const { product } = input;
   const sharp = await loadSharp();
@@ -357,6 +612,15 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
 
   // Template composite path — same dispatch rule as preview.
   const template = await loadTemplate(input.templateId ?? null);
+  if (template && template.renderer && template.renderer !== 'zones') {
+    return renderRendererTemplate({
+      product,
+      template,
+      sourceBytes: src,
+      sourceMime: input.sourceMime,
+      personalisationNotes: input.personalisationNotes ?? null,
+    });
+  }
   if (template) {
     // Work out the distinct set of modes the template's zones use.
     // Each zone's effective mode = zone.mode ?? product.mode. If the

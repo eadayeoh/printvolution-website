@@ -1,9 +1,8 @@
 /**
- * Admin-only download: regenerates the foil-printable city-map SVG for an
- * order item. Re-fetches the OSM vectors for the customer's coords +
- * radius, parses the footer text from the line's notes, and streams an
- * `image/svg+xml` file with materialColor=null so only the foil paths
- * ship to the printer.
+ * Admin-only download: regenerates the Spotify Plaque SVG for an order
+ * item. Re-builds the now-playing layout (photo + title/artist + scancode)
+ * from the saved cart-line notes and streams it back as `image/svg+xml`
+ * with a download header.
  *
  * Customers never have a download surface — admin-only.
  */
@@ -11,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
-import { buildCityMapSvg, fetchCityMapVectors } from '@/lib/gifts/city-map-svg';
+import { buildSpotifyPlaqueSvg } from '@/lib/gifts/spotify-plaque-svg';
 import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
@@ -38,36 +37,16 @@ export async function GET(
     }
 
     const n = parsePersonalisationNotes(row.personalisation_notes as string | null);
-    const lat = parseFloat(n['city_lat'] ?? '');
-    const lng = parseFloat(n['city_lng'] ?? '');
-    const radius = parseFloat(n['city_radius'] ?? '5');
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return NextResponse.json({ error: 'Order has no city coordinates' }, { status: 400 });
-    }
-
-    const vectors = await fetchCityMapVectors(lat, lng, Math.max(1, Math.min(15, radius || 5)));
-
-    const showCoords = n['city_show_coords'] === '1';
-    const svgMarkup = buildCityMapSvg({
-      vectors,
-      names:     n['city_names']   ?? '',
-      event:     n['city_event']   ?? '',
-      cityLabel: n['city_label']   ?? '',
-      tagline:   n['city_tagline'] ?? '',
-      coordinates: showCoords ? `${lat.toFixed(4)}° N · ${lng.toFixed(4)}° E` : undefined,
-      cityFont:    n['city_font_title']   ?? undefined,
-      namesFont:   n['city_font_names']   ?? undefined,
-      eventFont:   n['city_font_event']   ?? undefined,
-      taglineFont: n['city_font_tagline'] ?? undefined,
-      // Drop the navy background — foil printer wants only the gold paths.
-      materialColor: null,
+    const svgMarkup = buildSpotifyPlaqueSvg({
+      photoUrl: null,
+      songTitle:  n['spotify_title']  ?? '',
+      artistName: n['spotify_artist'] ?? '',
+      spotifyTrackId: n['spotify_track_id'] || null,
+      textColor: n['spotify_text_color'] || undefined,
+      zones: null,
     });
 
-    // Stamp the physical print size onto the <svg> root from the size
-    // the customer selected at checkout (saved in cart notes by the PDP).
-    // Without width/height, downstream printer software has to be told
-    // the size out-of-band; with them, the SVG is self-describing.
     const sizeWmm = parseFloat(n['size_w_mm'] ?? '');
     const sizeHmm = parseFloat(n['size_h_mm'] ?? '');
     const sizeAttrs = (Number.isFinite(sizeWmm) && sizeWmm > 0 && Number.isFinite(sizeHmm) && sizeHmm > 0)
@@ -89,7 +68,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    reportError(err, { route: 'admin.orders.city_map_svg', order_id: params.id });
+    reportError(err, { route: 'admin.orders.spotify_plaque_svg', order_id: params.id });
     return NextResponse.json({ error: 'Failed to generate SVG' }, { status: 500 });
   }
 }

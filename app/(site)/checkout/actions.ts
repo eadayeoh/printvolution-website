@@ -41,6 +41,7 @@ type ProductionQueueLine = {
   template_id: string | null;
   shape_kind: string | null;
   shape_template_id: string | null;
+  personalisation_notes: string | null;
 };
 
 async function queueGiftProduction(giftLines: ProductionQueueLine[]) {
@@ -89,6 +90,7 @@ async function runOne(line: ProductionQueueLine) {
       sourceMime: source.mime_type ?? 'image/jpeg',
       templateId: effectiveTemplateId ?? null,
       shapeKind: (line.shape_kind as 'cutout' | 'rectangle' | 'template' | null) ?? null,
+      personalisationNotes: line.personalisation_notes,
     } as any);
 
     // Register the primary production asset. The pipeline emits the
@@ -602,6 +604,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
         preview_asset_id: refs.previewId ?? null,
         mode: overrideMode ?? info.mode,
         product_name_snapshot: i.product_name,
+        personalisation_notes: i.personalisation_notes ?? null,
         production_status: 'pending' as const,
         shape_kind: i.shape_kind ?? null,
         shape_template_id: i.shape_kind === 'template' ? (i.shape_template_id ?? null) : null,
@@ -610,7 +613,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     const { data: insertedGifts, error: giErr } = await sb
       .from('gift_order_items')
       .insert(giftRows)
-      .select('id, gift_product_id, source_asset_id, mode, template_id, shape_kind, shape_template_id');
+      .select('id, gift_product_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes');
     if (giErr) {
       await sb.from('order_items').delete().eq('order_id', order.id);
       await sb.from('orders').delete().eq('id', order.id);

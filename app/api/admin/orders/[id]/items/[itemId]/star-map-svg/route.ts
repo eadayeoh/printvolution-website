@@ -12,19 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
-
-function parseNotes(notes: string | null | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!notes) return out;
-  for (const part of notes.split(';')) {
-    const idx = part.indexOf(':');
-    if (idx <= 0) continue;
-    const k = part.slice(0, idx).trim();
-    const v = part.slice(idx + 1);
-    if (k) out[k] = v;
-  }
-  return out;
-}
+import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 
 export async function GET(
   _req: NextRequest,
@@ -49,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: 'Order item not found' }, { status: 404 });
     }
 
-    const n = parseNotes(row.personalisation_notes as string | null);
+    const n = parsePersonalisationNotes(row.personalisation_notes as string | null);
     const lat = parseFloat(n['star_lat'] ?? '');
     const lng = parseFloat(n['star_lng'] ?? '');
 

@@ -700,7 +700,7 @@ export async function testGiftPrompt(formData: FormData): Promise<{ ok: boolean;
 export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean; error?: string }> {
   try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e.message }; }
   const sb = (await import('@/lib/gifts/storage')).serviceClient();
-  const { data: line } = await sb.from('gift_order_items').select('id, gift_product_id, source_asset_id, mode').eq('id', lineId).maybeSingle();
+  const { data: line } = await sb.from('gift_order_items').select('id, gift_product_id, source_asset_id, mode, template_id, shape_kind, shape_template_id, personalisation_notes').eq('id', lineId).maybeSingle();
   if (!line) return { ok: false, error: 'Line not found' };
   if (!line.source_asset_id) return { ok: false, error: 'No source asset on this line' };
 
@@ -713,16 +713,26 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
     if (!product || !source) throw new Error('Product or source missing');
     const { runProductionPipeline } = await import('@/lib/gifts/pipeline');
     const { GIFT_BUCKETS } = await import('@/lib/gifts/storage');
+    const effectiveTemplateId = (line as any).shape_kind === 'template'
+      ? ((line as any).shape_template_id ?? (line as any).template_id)
+      : (line as any).template_id;
     const out = await runProductionPipeline({
-      product: product as any, sourcePath: source.path as string, sourceMime: (source.mime_type as string) ?? 'image/jpeg',
+      product: product as any,
+      sourcePath: source.path as string,
+      sourceMime: (source.mime_type as string) ?? 'image/jpeg',
+      templateId: effectiveTemplateId ?? null,
+      shapeKind: ((line as any).shape_kind as 'cutout' | 'rectangle' | 'template' | null) ?? null,
+      personalisationNotes: (line as any).personalisation_notes ?? null,
     });
     const { data: prodAsset } = await sb.from('gift_assets').insert({
       role: 'production', bucket: GIFT_BUCKETS.production, path: out.productionPath, mime_type: out.productionMime,
       width_px: out.widthPx, height_px: out.heightPx, dpi: out.dpi,
     }).select('id').single();
-    const { data: pdfAsset } = await sb.from('gift_assets').insert({
-      role: 'production-pdf', bucket: GIFT_BUCKETS.production, path: out.productionPdfPath, mime_type: out.productionPdfMime,
-    }).select('id').single();
+    const pdfAsset = out.productionPdfPath
+      ? (await sb.from('gift_assets').insert({
+          role: 'production-pdf', bucket: GIFT_BUCKETS.production, path: out.productionPdfPath, mime_type: out.productionPdfMime,
+        }).select('id').single()).data
+      : null;
     await sb.from('gift_order_items').update({
       production_asset_id: prodAsset?.id ?? null,
       production_pdf_id: pdfAsset?.id ?? null,
