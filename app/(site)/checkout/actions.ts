@@ -91,9 +91,8 @@ async function runOne(line: ProductionQueueLine) {
       shapeKind: (line.shape_kind as 'cutout' | 'rectangle' | 'template' | null) ?? null,
     } as any);
 
-    // Register the primary production assets (always populated —
-    // dual-mode runs still write the primary-mode file here so the
-    // legacy queue row shows something).
+    // Register the primary production asset. The pipeline emits the
+    // right format per mode (PNG / JPG / SVG) — we just record it.
     const { data: prodAsset } = await sb.from('gift_assets').insert({
       role: 'production',
       bucket: GIFT_BUCKETS.production,
@@ -103,12 +102,17 @@ async function runOne(line: ProductionQueueLine) {
       height_px: out.heightPx,
       dpi: out.dpi,
     }).select('id').single();
-    const { data: pdfAsset } = await sb.from('gift_assets').insert({
-      role: 'production-pdf',
-      bucket: GIFT_BUCKETS.production,
-      path: out.productionPdfPath,
-      mime_type: out.productionPdfMime,
-    }).select('id').single();
+    // PDF is only generated for modes that need print-ready vectors
+    // around the bitmap (everything except laser / uv / digital /
+    // embroidery / foil — see productionFormatsForMode).
+    const pdfAsset = out.productionPdfPath
+      ? (await sb.from('gift_assets').insert({
+          role: 'production-pdf',
+          bucket: GIFT_BUCKETS.production,
+          path: out.productionPdfPath,
+          mime_type: out.productionPdfMime,
+        }).select('id').single()).data
+      : null;
 
     // Dual-mode template fan-out: persist the full per-mode set in
     // production_files so the admin order view can surface each file

@@ -1842,21 +1842,24 @@ export function GiftProductPage({
                         return w && h ? { width_mm: w, height_mm: h } : null;
                       })()}
                     />
-                  ) : isSpotifyPlaque ? (
-                    <SpotifyPlaqueTemplate
-                      photoUrl={spotifyPhotoUrl || null}
-                      songTitle={spotifySongTitle}
-                      artistName={spotifyArtistName}
-                      spotifyTrackId={parseSpotifyTrackId(spotifyUrl)}
-                      textColor={spotifyTextColor}
-                      templateRefDims={(() => {
-                        const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
-                        const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
-                        const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
-                        return w && h ? { width_mm: w, height_mm: h } : null;
-                      })()}
-                      zones={(templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque')?.zones_json as any) ?? null}
-                    />
+                  ) : isSpotifyPlaque ? (() => {
+                    const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
+                    const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
+                    const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
+                    return (
+                      <SpotifyPlaqueTemplate
+                        photoUrl={spotifyPhotoUrl || null}
+                        songTitle={spotifySongTitle}
+                        artistName={spotifyArtistName}
+                        spotifyTrackId={parseSpotifyTrackId(spotifyUrl)}
+                        textColor={spotifyTextColor}
+                        templateRefDims={w && h ? { width_mm: w, height_mm: h } : null}
+                        zones={(t?.zones_json as any) ?? null}
+                        backgroundUrl={(t as any)?.background_url ?? null}
+                        foregroundUrl={(t as any)?.foreground_url ?? null}
+                      />
+                    );
+                  })()
                   ) : null;
 
                   // City map "Generating…" overlay — only used in the

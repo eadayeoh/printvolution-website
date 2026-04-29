@@ -1306,6 +1306,8 @@ export function GiftTemplateEditor({
                         spotifyTrackId="6rqhFgbbKwnb9MLmUQDhG6"
                         templateRefDims={dims}
                         zones={zones as any}
+                        backgroundUrl={background || null}
+                        foregroundUrl={foreground || null}
                       />
                     </div>
                   </div>

@@ -20,6 +20,35 @@ import { renderTemplateComposite } from './pipeline/composite';
 import { renderPhotoResize, runAiTransform, transformBytesForMode } from './pipeline/transforms';
 import { createClient } from '@/lib/supabase/server';
 
+/** Per-mode production output format spec. Maps a snapshot mode
+ *  string to (a) the primary file format the production pipeline
+ *  emits, and (b) whether to ALSO wrap the result in a print-ready
+ *  PDF with trim + bleed boxes. Unknown modes get the v1 default
+ *  (PNG + PDF) so this list is purely a per-mode override.
+ *
+ *    laser       → PNG only
+ *    uv          → PNG only
+ *    digital     → PNG only
+ *    embroidery  → JPG only
+ *    foil        → SVG only (bitmap embedded as <image>)
+ *
+ *  See https://github.com/eadayeoh/printvolution-website for the
+ *  conversation thread that fixed the per-mode spec on 2026-04-29. */
+function productionFormatsForMode(mode: string | null | undefined): {
+  primary: 'png' | 'jpg' | 'svg';
+  includePdf: boolean;
+} {
+  switch ((mode ?? '').toLowerCase()) {
+    case 'embroidery':                       return { primary: 'jpg', includePdf: false };
+    case 'foil':
+    case 'foiling':                          return { primary: 'svg', includePdf: false };
+    case 'laser':
+    case 'uv':
+    case 'digital':                          return { primary: 'png', includePdf: false };
+    default:                                 return { primary: 'png', includePdf: true };
+  }
+}
+
 async function loadTemplate(templateId: string | null): Promise<GiftTemplate | null> {
   if (!templateId) return null;
   const sb = createClient();
@@ -480,30 +509,60 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
     }
   }
 
-  // Output PNG (reliable across all modes for v1)
-  const pngKey = makeKey(`prod-${product.slug}`, 'png');
-  const pngBuf = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
-  const pngMeta = await sharp(pngBuf).metadata();
-  await putObject(GIFT_BUCKETS.production, pngKey, pngBuf, 'image/png');
+  // Per-mode output format. Laser/UV/digital → PNG only, embroidery
+  // → JPG only, foil → SVG only, everything else → PNG + PDF (the
+  // legacy default).
+  const fmt = productionFormatsForMode(product.mode);
+  // Always render a high-quality bitmap first; we either ship the PNG
+  // / JPG directly or wrap it inside an SVG.
+  const bitmapBuf = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
+  const bitmapMeta = await sharp(bitmapBuf).metadata();
 
-  // Wrap PNG into a PDF with trim + bleed boxes
-  const pdfKey = makeKey(`prod-${product.slug}`, 'pdf');
-  const pdfBuf = await wrapPdf(pngBuf, {
-    trimWidthMm: product.width_mm,
-    trimHeightMm: product.height_mm,
-    bleedMm: product.bleed_mm,
-  });
-  await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+  let primaryKey: string;
+  let primaryMime: 'image/png' | 'image/jpeg' | 'image/svg+xml';
+  if (fmt.primary === 'jpg') {
+    primaryKey = makeKey(`prod-${product.slug}`, 'jpg');
+    primaryMime = 'image/jpeg';
+    const jpgBuf = await sharp(buf).jpeg({ quality: 92 }).toBuffer();
+    await putObject(GIFT_BUCKETS.production, primaryKey, jpgBuf, primaryMime);
+  } else if (fmt.primary === 'svg') {
+    // Wrap the bitmap as a base64 <image> in an SVG. Foil cutters
+    // typically want vector paths — the bitmap is the v1 fallback;
+    // true vectorisation is future work.
+    primaryKey = makeKey(`prod-${product.slug}`, 'svg');
+    primaryMime = 'image/svg+xml';
+    const totalW = product.width_mm + product.bleed_mm * 2;
+    const totalH = product.height_mm + product.bleed_mm * 2;
+    const dataUri = `data:image/png;base64,${bitmapBuf.toString('base64')}`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}mm" height="${totalH}mm"><image href="${dataUri}" xlink:href="${dataUri}" x="0" y="0" width="${totalW}" height="${totalH}"/></svg>`;
+    await putObject(GIFT_BUCKETS.production, primaryKey, Buffer.from(svg, 'utf8'), primaryMime);
+  } else {
+    primaryKey = makeKey(`prod-${product.slug}`, 'png');
+    primaryMime = 'image/png';
+    await putObject(GIFT_BUCKETS.production, primaryKey, bitmapBuf, primaryMime);
+  }
 
-  const dpi = computeDpiForDimensions(pngMeta.width ?? 0, product.width_mm + product.bleed_mm * 2);
+  // Wrap into a PDF with trim + bleed boxes only when the mode wants it.
+  let pdfKey: string | null = null;
+  if (fmt.includePdf) {
+    pdfKey = makeKey(`prod-${product.slug}`, 'pdf');
+    const pdfBuf = await wrapPdf(bitmapBuf, {
+      trimWidthMm: product.width_mm,
+      trimHeightMm: product.height_mm,
+      bleedMm: product.bleed_mm,
+    });
+    await putObject(GIFT_BUCKETS.production, pdfKey, pdfBuf, 'application/pdf');
+  }
+
+  const dpi = computeDpiForDimensions(bitmapMeta.width ?? 0, product.width_mm + product.bleed_mm * 2);
 
   return {
-    productionPath: pngKey,
-    productionMime: 'image/png',
-    productionPdfPath: pdfKey,
+    productionPath: primaryKey,
+    productionMime: primaryMime as any,
+    productionPdfPath: pdfKey ?? '',
     productionPdfMime: 'application/pdf',
-    widthPx: pngMeta.width ?? 0,
-    heightPx: pngMeta.height ?? 0,
+    widthPx: bitmapMeta.width ?? 0,
+    heightPx: bitmapMeta.height ?? 0,
     dpi,
   };
 }

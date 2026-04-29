@@ -33,6 +33,12 @@ type Props = {
   /** Admin-editable layout zones from the template's zones_json.
    *  Recognised IDs: photo, song_title, artist_name, heart. */
   zones?: Array<{ id?: string; type?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; font_family?: string; font_size_mm?: number; font_weight?: string; color?: string }> | null;
+  /** Optional template background — renders behind the SVG (admin-
+   *  uploaded acrylic-plaque texture, finish render, etc.). */
+  backgroundUrl?: string | null;
+  /** Optional template foreground — renders above the SVG (overlay
+   *  graphics like emboss highlights). Should have transparency. */
+  foregroundUrl?: string | null;
 };
 
 export function SpotifyPlaqueTemplate({
@@ -43,6 +49,8 @@ export function SpotifyPlaqueTemplate({
   templateRefDims,
   textColor,
   zones,
+  backgroundUrl,
+  foregroundUrl,
 }: Props) {
   const svgMarkup = useMemo(
     () => buildSpotifyPlaqueSvg({
@@ -68,10 +76,24 @@ export function SpotifyPlaqueTemplate({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {backgroundUrl && (
+        <img
+          src={backgroundUrl}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+        />
+      )}
       <div
-        style={{ width: '100%', height: '100%', display: 'block' }}
+        style={{ position: 'relative', width: '100%', height: '100%', display: 'block' }}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
+      {foregroundUrl && (
+        <img
+          src={foregroundUrl}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+        />
+      )}
       {!scanRect.hidden && (
       <div
         style={{
