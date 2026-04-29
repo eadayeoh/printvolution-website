@@ -119,6 +119,21 @@ async function runOne(line: ProductionQueueLine) {
       production_error: e?.message ?? 'unknown production failure',
     }).eq('id', line.id);
     reportError(e, { route: 'checkout', action: 'gift_production', extras: { line_id: line.id } });
+    // Admin alert — without this, orders silently sit in
+    // production_status='failed' forever; nobody knows to retry.
+    try {
+      const { sendEmail, adminEmail } = await import('@/lib/email');
+      const to = adminEmail();
+      if (to) {
+        await sendEmail({
+          to,
+          subject: `[PrintVolution] Gift production FAILED — line ${line.id.slice(0, 8)}`,
+          html: `<p>Gift order line <code>${line.id}</code> failed during production.</p>
+                 <p><b>Error:</b> ${(e?.message ?? 'unknown').toString().slice(0, 500)}</p>
+                 <p>Re-trigger from /admin/orders.</p>`,
+        });
+      }
+    } catch { /* non-fatal */ }
   }
 }
 

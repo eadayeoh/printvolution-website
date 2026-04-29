@@ -30,18 +30,34 @@ async function getCurrentUserId(): Promise<string | null> {
 
 /** Admin / staff users bypass all gift quota + rate limits — they need
  *  unlimited generations to test products + handle support cases.
- *  Returns true when profiles.role is 'admin' or 'staff'. */
-async function isPrivilegedUser(): Promise<boolean> {
+ *  Returns true when profiles.role is 'admin' or 'staff'.
+ *
+ *  Cached per server-action invocation via React's `cache()` so the
+ *  same request doesn't hit the auth + profiles lookup multiple times
+ *  — restylePreviewFromSource calls this once at the rate-limit gate
+ *  and again inside the quota-check branch. Without caching a
+ *  transient DB blip on the second call could flip a real admin to
+ *  non-admin mid-request and silently lock them out of the bypass. */
+import { cache } from 'react';
+const isPrivilegedUser = cache(async (): Promise<boolean> => {
   try {
     const sb = createUserClient();
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return false;
-    const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    const { data: profile, error } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (error) {
+      // DB blip — log it but DON'T silently downgrade an admin to
+      // anon. The caller continues and the quota gate fires; for an
+      // admin that would be wrong. Better to surface the failure so
+      // the request retries cleanly than to deny bypass mid-request.
+      console.warn('[gift] profiles role lookup failed; treating as non-admin', error.message);
+    }
     return profile?.role === 'admin' || profile?.role === 'staff';
-  } catch {
+  } catch (e) {
+    console.warn('[gift] isPrivilegedUser threw, treating as non-admin', e);
     return false;
   }
-}
+});
 
 /**
  * Upload ONE photo for ONE surface during Add-to-Cart (surfaces-driven

@@ -434,7 +434,15 @@ export async function createTemplate(input: z.input<typeof TemplateSchema>) {
 
 export async function updateTemplate(id: string, input: Partial<z.input<typeof TemplateSchema>>) {
   const sb = await requireAdmin();
-  const { error } = await sb.from('gift_templates').update(input as any).eq('id', id);
+  // Parse against the partial schema so an admin can't smuggle in
+  // unknown fields or types Zod would reject on create. createTemplate
+  // already does TemplateSchema.parse(input); this matches.
+  const parseResult = TemplateSchema.partial().safeParse(input);
+  if (!parseResult.success) {
+    return { ok: false as const, error: friendlyZodError(parseResult.error) };
+  }
+  const parsed = parseResult.data;
+  const { error } = await sb.from('gift_templates').update(parsed as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts/templates');
   revalidatePath(`/admin/gifts/templates/${id}`);

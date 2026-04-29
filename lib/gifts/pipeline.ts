@@ -441,6 +441,45 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
       break;
   }
 
+  // Cutout shape: regenerate the silhouette + cut SVG at production
+  // resolution. Without this, the laser cutter would receive the
+  // preview-time 1200px cut SVG (low-res silhouette) for a 300 DPI
+  // print, producing jaggy edges. Mirror the preview cutout step,
+  // but at the production buffer's full dimensions.
+  if (input.shapeKind === 'cutout') {
+    try {
+      const styledMeta = await sharp(buf).metadata();
+      const { renderCutoutPreview } = await import('./pipeline/cutout');
+      const cutout = await renderCutoutPreview({
+        styledBytes: buf,
+        styledMime: 'image/png',
+        canvasWidthPx:  styledMeta.width  ?? 0,
+        canvasHeightPx: styledMeta.height ?? 0,
+      });
+      buf = cutout.previewBuffer;
+
+      // Persist a fresh cut SVG asset at production resolution. The
+      // earlier preview's cut_file row stays in storage but is no
+      // longer the authoritative cut path for fulfilment.
+      try {
+        const cutKey = makeKey(`prod-cut-${product.slug}`, 'svg');
+        await putObject(
+          GIFT_BUCKETS.production,
+          cutKey,
+          Buffer.from(cutout.cutSvg, 'utf8'),
+          'image/svg+xml',
+        );
+      } catch (e) {
+        console.error('[gift cutout production] cut_file persist failed', e);
+      }
+    } catch (e: any) {
+      // Don't ship a watermark-free rectangle pretending to be a
+      // cutout. If the bg-remove step fails at production time, fail
+      // the line so admin sees it and can retry.
+      throw new Error(`Cutout production failed: ${e?.message || 'bg-remove upstream error'}`);
+    }
+  }
+
   // Output PNG (reliable across all modes for v1)
   const pngKey = makeKey(`prod-${product.slug}`, 'png');
   const pngBuf = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();

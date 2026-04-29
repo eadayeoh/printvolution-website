@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
 function parseParams(raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== 'string' || raw.trim() === '') return {};
@@ -40,6 +41,7 @@ function validatePipelineForm(form: FormData): string | null {
 }
 
 export async function createPipeline(form: FormData) {
+  await requireAdmin();
   const validationError = validatePipelineForm(form);
   if (validationError) throw new Error(validationError);
   const sb = createClient();
@@ -61,6 +63,7 @@ export async function createPipeline(form: FormData) {
 }
 
 export async function updatePipeline(id: string, form: FormData) {
+  await requireAdmin();
   const validationError = validatePipelineForm(form);
   if (validationError) throw new Error(validationError);
   const sb = createClient();
@@ -81,6 +84,7 @@ export async function updatePipeline(id: string, form: FormData) {
 }
 
 export async function deletePipeline(id: string) {
+  await requireAdmin();
   const sb = createClient();
   const { error } = await sb.from('gift_pipelines').delete().eq('id', id);
   if (error) throw new Error(`deletePipeline: ${error.message}`);
