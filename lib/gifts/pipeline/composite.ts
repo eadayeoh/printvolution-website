@@ -187,9 +187,12 @@ export async function renderTemplateComposite(
       const resvgBuf = await renderSvgWithFonts(svg);
       const svgBuf: Buffer = resvgBuf
         ?? await sharp(Buffer.from(svg)).resize(zw, zh).png().toBuffer();
-      // resvg may produce at the SVG's native size, so resize to zone
-      // px dimensions before composite.
-      const sized = await sharp(svgBuf).resize(zw, zh, { fit: 'fill' }).png().toBuffer();
+      // Trust resvg's output dims; only resize if the cached/rendered
+      // buffer drifted from the zone target.
+      const meta = await sharp(svgBuf).metadata();
+      const sized = (meta.width === zw && meta.height === zh)
+        ? svgBuf
+        : await sharp(svgBuf).resize(zw, zh, { fit: 'fill' }).png().toBuffer();
       overlays.push({ input: sized, top: zy, left: zx });
     } else if (isCalendar(zone)) {
       // Calendar zones use the same SVG generator the live preview
@@ -341,7 +344,10 @@ async function prepImageZone(
   try {
     let img = sharp(Buffer.from(bytes))
       .rotate() // auto-orient via EXIF
-      .resize(zw, zh, { fit: zone.fit_mode === 'contain' ? 'contain' : 'cover' });
+      .resize(zw, zh, {
+        fit: zone.fit_mode === 'contain' ? 'contain' : 'cover',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      });
 
     // Mask preset (circle/heart/star) wins over border-radius — the
     // shape silhouette already encloses any rounded corners.

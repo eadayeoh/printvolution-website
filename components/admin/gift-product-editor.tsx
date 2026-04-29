@@ -84,11 +84,11 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
   // lets us reach into the panel without lifting all its state.
   const variantsRef = useRef<GiftVariantsPanelHandle | null>(null);
 
-  const [widthMm, setWidthMm] = useState(product?.width_mm.toString() ?? '100');
-  const [heightMm, setHeightMm] = useState(product?.height_mm.toString() ?? '100');
-  const [bleedMm, setBleedMm] = useState(product?.bleed_mm.toString() ?? '2');
-  const [safeZoneMm, setSafeZoneMm] = useState(product?.safe_zone_mm.toString() ?? '3');
-  const [minSourcePx, setMinSourcePx] = useState(product?.min_source_px.toString() ?? '1200');
+  const [widthMm, setWidthMm] = useState(String(product?.width_mm ?? 100));
+  const [heightMm, setHeightMm] = useState(String(product?.height_mm ?? 100));
+  const [bleedMm, setBleedMm] = useState(String(product?.bleed_mm ?? 2));
+  const [safeZoneMm, setSafeZoneMm] = useState(String(product?.safe_zone_mm ?? 3));
+  const [minSourcePx, setMinSourcePx] = useState(String(product?.min_source_px ?? 1200));
   const [previewMaxWidthPx, setPreviewMaxWidthPx] = useState(
     product?.preview_max_width_px ? String(product.preview_max_width_px) : '',
   );
@@ -447,7 +447,16 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                       setMode(m.slug);
                       // If the user flips primary to the current secondary,
                       // clear secondary to keep the two distinct.
-                      if (m.slug === secondaryMode) setSecondaryMode(null);
+                      if (m.slug === secondaryMode) {
+                        setSecondaryMode(null);
+                        setSecondaryPipelineId('');
+                      }
+                      // Drop a stale pipelineId whose kind no longer matches
+                      // the new mode — otherwise Save persists a mismatched
+                      // pipeline + production routes to the wrong renderer.
+                      if (pipelineId && pipelines.find((p) => p.id === pipelineId)?.kind !== m.slug) {
+                        setPipelineId('');
+                      }
                     }}
                     className={`rounded-lg border-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
@@ -472,7 +481,10 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
               {secondaryMode && (
                 <button
                   type="button"
-                  onClick={() => setSecondaryMode(null)}
+                  onClick={() => {
+                    setSecondaryMode(null);
+                    setSecondaryPipelineId('');
+                  }}
                   className="text-[11px] font-bold text-neutral-500 underline hover:text-ink"
                 >
                   Clear secondary
@@ -488,7 +500,18 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                     key={m.slug}
                     type="button"
                     disabled={isPrimary}
-                    onClick={() => setSecondaryMode(active ? null : m.slug)}
+                    onClick={() => {
+                      const next = active ? null : m.slug;
+                      setSecondaryMode(next);
+                      // Same kind-match guard as primary — keep the persisted
+                      // secondary pipeline aligned with the chosen mode.
+                      if (
+                        secondaryPipelineId &&
+                        (next == null || pipelines.find((p) => p.id === secondaryPipelineId)?.kind !== next)
+                      ) {
+                        setSecondaryPipelineId('');
+                      }
+                    }}
                     className={`rounded-lg border-2 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                       active ? 'border-pink bg-pink/5' : 'border-neutral-200 hover:border-neutral-400'
                     }`}

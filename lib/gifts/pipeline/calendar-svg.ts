@@ -145,7 +145,11 @@ export function renderCalendarSvg(input: RenderCalendarSvgInput): string {
   // canvas units, server composite = mm). Default to a fraction of
   // cell height so the calendar always fits.
   const gridFontSize = zone.grid_font_size_mm ?? Math.min(cellH * 0.5, cellW * 0.5);
-  const headerFontSize = zone.header_font_size_mm ?? Math.min(headerH * 0.7, 8);
+  const headerFontSize = zone.header_font_size_mm ?? (
+    headerLayout === 'left'
+      ? Math.min(headerW * 0.18, H * 0.05, 8)
+      : Math.min(headerH * 0.7, 8)
+  );
 
   // Build cells.
   const month = Math.min(12, Math.max(1, resolved.month));

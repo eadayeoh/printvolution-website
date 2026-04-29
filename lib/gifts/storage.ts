@@ -1,4 +1,5 @@
 import 'server-only';
+import { randomUUID } from 'crypto';
 import { createClient as admClient } from '@supabase/supabase-js';
 
 export const GIFT_BUCKETS = {
@@ -62,7 +63,7 @@ export async function signUrl(bucket: string, path: string, expiresInSec = 300):
 export function makeKey(prefix: string, ext: string): string {
   const safePrefix = prefix.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'gift';
   const safeExt = /^[a-z0-9]+$/i.test(ext) ? ext : 'bin';
-  return `${safePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
+  return `${safePrefix}-${Date.now()}-${randomUUID().replace(/-/g, '').slice(0, 12)}.${safeExt}`;
 }
 
 /** Parse a file extension from a filename or MIME type */

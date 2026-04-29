@@ -40,12 +40,15 @@ export async function updateOrderStatus(
     patch.tracking_url    = url || null;
     patch.shipped_at      = new Date().toISOString();
   }
+  let refundIntent: 'tbd' | 'none' | 'partial' | 'full' = 'tbd';
   if (status === 'cancelled') {
-    const cents = Number.isFinite(extras.refund_cents) ? Math.max(0, Math.floor(extras.refund_cents!)) : 0;
+    const supplied = Number.isFinite(extras.refund_cents);
+    const cents = supplied ? Math.max(0, Math.floor(extras.refund_cents!)) : 0;
     const orderTotal = Number((before as any)?.total_cents ?? 0);
     if (cents > orderTotal) {
       return { ok: false, error: `Refund cannot exceed order total ($${(orderTotal / 100).toFixed(2)}).` };
     }
+    refundIntent = !supplied ? 'tbd' : cents === 0 ? 'none' : cents >= orderTotal ? 'full' : 'partial';
     patch.refund_cents = cents;
     patch.refunded_at  = cents > 0 ? new Date().toISOString() : null;
     patch.refund_note  = (extras.refund_note ?? '').trim().slice(0, 500) || null;
@@ -69,7 +72,19 @@ export async function updateOrderStatus(
     action: 'order.status_update',
     targetType: 'order',
     targetId: orderId,
-    metadata: { from: before?.status, to: status },
+    metadata: {
+      from: before?.status,
+      to: status,
+      ...(status === 'cancelled' ? {
+        refund_intent: refundIntent,
+        refund_cents: patch.refund_cents,
+        refund_note:
+          refundIntent === 'tbd'  ? 'cancelled, refund TBD' :
+          refundIntent === 'none' ? 'cancelled with no refund issued' :
+          refundIntent === 'full' ? 'cancelled with full refund' :
+                                    'cancelled with partial refund',
+      } : {}),
+    },
   });
 
   if (before && before.status !== status) {
