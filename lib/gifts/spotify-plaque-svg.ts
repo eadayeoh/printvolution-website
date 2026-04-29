@@ -95,14 +95,39 @@ function zoneToViewbox(
 
 /** Layout constants exported so React previews can position an HTML
  *  <img> overlay that lines up with what the SVG renderer would produce
- *  if it were embedding the image itself. */
+ *  if it were embedding the image itself.
+ *
+ *  When a `scancode` zone is present in the template's zones array,
+ *  the rect comes from there (admin's drag positions). Otherwise we
+ *  fall back to the canonical bottom strip. */
 export function spotifyPlaqueScanRect(
   templateRefDims?: { width_mm: number; height_mm: number } | null,
-): { xPct: number; yPct: number; widthPct: number; heightPct: number } {
+  zones?: Array<{ id?: string; x_mm?: number; y_mm?: number; width_mm?: number; height_mm?: number; hidden?: boolean }> | null,
+): { xPct: number; yPct: number; widthPct: number; heightPct: number; hidden?: boolean } {
   const W = 100;
   const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
     ? (templateRefDims.height_mm / templateRefDims.width_mm) * W
     : 141.4;
+
+  // Zone-driven layout — admin's drag positions in the editor's
+  // 0..200 canvas units. Mapping mirrors zoneToViewbox below: divide
+  // by CANVAS=200 to get a 0..1 ratio.
+  const zone = zones?.find((z) => z?.id === 'scancode');
+  if (zone && zone.x_mm != null && zone.y_mm != null && zone.width_mm != null && zone.height_mm != null) {
+    if (zone.hidden) {
+      // Caller can use the rect for layout but the React overlay /
+      // SVG image suppression should respect this flag.
+      return { xPct: 0, yPct: 0, widthPct: 0, heightPct: 0, hidden: true };
+    }
+    return {
+      xPct: (zone.x_mm / 200) * 100,
+      yPct: (zone.y_mm / 200) * 100,
+      widthPct: (zone.width_mm / 200) * 100,
+      heightPct: (zone.height_mm / 200) * 100,
+    };
+  }
+
+  // Legacy fallback — pinned to the bottom strip.
   const margin = 8;
   const scanW = W - margin * 2;
   const scanH = scanW / 4;
@@ -326,13 +351,22 @@ export function buildSpotifyPlaqueSvg({
   // section and overlay a plain HTML <img> instead, because SVG <image>
   // with a cross-origin URL does not render reliably when injected via
   // dangerouslySetInnerHTML.
-  if (!omitScanCode) {
+  //
+  // Position + size now come from the 'scancode' zone if admin set
+  // one; falls back to the canonical bottom strip computed earlier.
+  const zScan = findZone('scancode');
+  const scanZoneVb = zoneToViewbox(zScan, templateRefDims, W, H);
+  const sX = scanZoneVb ? scanZoneVb.x : scanX;
+  const sY = scanZoneVb ? scanZoneVb.y : scanY;
+  const sW = scanZoneVb ? scanZoneVb.w : scanW;
+  const sH = scanZoneVb ? scanZoneVb.h : scanH;
+  if (!omitScanCode && shouldRender('scancode')) {
     if (spotifyTrackId) {
       const scanUrl = spotifyScannableUrl(spotifyTrackId);
-      body += `<image href="${esc(scanUrl)}" xlink:href="${esc(scanUrl)}" x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" preserveAspectRatio="xMidYMid meet"/>`;
+      body += `<image href="${esc(scanUrl)}" xlink:href="${esc(scanUrl)}" x="${sX}" y="${sY}" width="${sW}" height="${sH}" preserveAspectRatio="xMidYMid meet"/>`;
     } else {
-      body += `<rect x="${scanX}" y="${scanY}" width="${scanW}" height="${scanH}" fill="${trackGrey}"/>`;
-      body += `<text x="${scanX + scanW / 2}" y="${scanY + scanH / 2 + 1}" text-anchor="middle" font-size="3.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
+      body += `<rect x="${sX}" y="${sY}" width="${sW}" height="${sH}" fill="${trackGrey}"/>`;
+      body += `<text x="${sX + sW / 2}" y="${sY + sH / 2 + 1}" text-anchor="middle" font-size="3.2" font-family="Archivo, sans-serif" fill="${subtleGrey}" font-style="italic">Paste a Spotify URL</text>`;
     }
   }
 

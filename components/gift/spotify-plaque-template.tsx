@@ -58,7 +58,7 @@ export function SpotifyPlaqueTemplate({
     [photoUrl, songTitle, artistName, spotifyTrackId, templateRefDims, textColor, zones],
   );
 
-  const scanRect = spotifyPlaqueScanRect(templateRefDims);
+  const scanRect = spotifyPlaqueScanRect(templateRefDims, zones ?? null);
   const fillColor = textColor && textColor.trim() ? textColor : '#0a0a0a';
   // The scannable URL we mask off — request black-on-white so the
   // luminance mask makes the bars opaque and the background drop out.
@@ -72,6 +72,7 @@ export function SpotifyPlaqueTemplate({
         style={{ width: '100%', height: '100%', display: 'block' }}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
+      {!scanRect.hidden && (
       <div
         style={{
           position: 'absolute',
@@ -122,6 +123,7 @@ export function SpotifyPlaqueTemplate({
           </span>
         )}
       </div>
+      )}
     </div>
   );
 }

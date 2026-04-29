@@ -156,6 +156,11 @@ function defaultZonesForRenderer(renderer: string): GiftTemplateZone[] {
         id: 'controls', label: 'Transport controls (play / skip)',
         x_mm: 60, y_mm: 162, width_mm: 80, height_mm: 10,
       } as any,
+      {
+        type: 'render_anchor', anchor_kind: 'spotify_scancode' as any,
+        id: 'scancode', label: 'Spotify scancode · drag / resize · content stays dynamic',
+        x_mm: 16, y_mm: 173, width_mm: 168, height_mm: 21,
+      } as any,
     ];
   }
   return [];
