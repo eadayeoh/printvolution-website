@@ -489,7 +489,7 @@ export function TemplateMultiSlotForm({
                     >
                       {z.label}
                     </span>
-                    {template.customer_can_recolor && isOverridden && (
+                    {(template.customer_can_recolor_text ?? template.customer_can_recolor) && isOverridden && (
                       <button
                         type="button"
                         onClick={() => setTextColors((prev) => {
@@ -528,7 +528,7 @@ export function TemplateMultiSlotForm({
                         outline: 'none',
                       }}
                     />
-                    {template.customer_can_recolor && (
+                    {(template.customer_can_recolor_text ?? template.customer_can_recolor) && (
                       <label
                         title="Pick text colour"
                         style={{
@@ -642,7 +642,7 @@ export function TemplateMultiSlotForm({
                     setCalendars((prev) => ({ ...prev, [z.id]: next }))
                   }
                 />
-                {template.customer_can_recolor && (() => {
+                {(template.customer_can_recolor_calendar ?? template.customer_can_recolor) && (() => {
                   const fallback = z.grid_color ?? '#0a0a0a';
                   const currentColor = calendarColors[z.id] ?? fallback;
                   const isOverridden = Boolean(calendarColors[z.id]) && calendarColors[z.id] !== fallback;
@@ -713,9 +713,10 @@ export function TemplateMultiSlotForm({
       )}
 
       {/* Background colour — solid fill that sits behind the photos
-          and replaces the template's background_url. Only shown when
-          admin has opted in via customer_can_recolor. */}
-      {template.customer_can_recolor && (
+          and replaces the template's background_url. Gated by the
+          per-region background flag (legacy customer_can_recolor as
+          fallback for templates that haven't been resaved). */}
+      {(template.customer_can_recolor_background ?? template.customer_can_recolor) && (
         <div>
           <div
             style={{
@@ -797,10 +798,10 @@ export function TemplateMultiSlotForm({
       )}
 
       {/* Theme colour — single colour applied to the template's
-          foreground PNG (icons + heart + progress bar). Only shown
-          when the template actually has a foreground asset to recolour
-          AND admin has opted in via customer_can_recolor. */}
-      {template.foreground_url && template.customer_can_recolor && (
+          foreground PNG. Gated on the background flag since this is
+          a global tint over the template artwork (legacy fallback
+          to customer_can_recolor for un-resaved templates). */}
+      {template.foreground_url && (template.customer_can_recolor_background ?? template.customer_can_recolor) && (
         <div>
           <div
             style={{

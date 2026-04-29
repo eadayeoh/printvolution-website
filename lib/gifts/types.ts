@@ -315,6 +315,12 @@ export type GiftTemplate = {
    *  template" form (Theme color + per-text-zone + per-calendar-zone).
    *  Default false — admin opts in per template. */
   customer_can_recolor?: boolean;
+  /** Split-out per-region recolour flags. When the legacy single flag
+   *  is true, all three default to true (backfilled by migration);
+   *  admin can turn any of them off independently from the editor. */
+  customer_can_recolor_background?: boolean;
+  customer_can_recolor_text?: boolean;
+  customer_can_recolor_calendar?: boolean;
   /** When true, customer sees a font-family dropdown next to each
    *  text zone. Default false — admin opts in per template. */
   customer_can_change_font?: boolean;

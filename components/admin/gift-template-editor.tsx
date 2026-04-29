@@ -264,6 +264,15 @@ export function GiftTemplateEditor({
   const [displayOrder, setDisplayOrder] = useState(template?.display_order?.toString() ?? '0');
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
   const [customerCanRecolor, setCustomerCanRecolor] = useState(template?.customer_can_recolor ?? false);
+  const [customerCanRecolorBackground, setCustomerCanRecolorBackground] = useState(
+    (template?.customer_can_recolor_background ?? template?.customer_can_recolor) ?? false,
+  );
+  const [customerCanRecolorText, setCustomerCanRecolorText] = useState(
+    (template?.customer_can_recolor_text ?? template?.customer_can_recolor) ?? false,
+  );
+  const [customerCanRecolorCalendar, setCustomerCanRecolorCalendar] = useState(
+    (template?.customer_can_recolor_calendar ?? template?.customer_can_recolor) ?? false,
+  );
   const [customerCanChangeFont, setCustomerCanChangeFont] = useState(template?.customer_can_change_font ?? false);
   // Customer colour picker (migration 0079). Per-template — different
   // templates on the same product can carry different swatch sets.
@@ -724,7 +733,10 @@ export function GiftTemplateEditor({
       is_active: isActive,
       reference_width_mm:  Number.isFinite(refWParsed) && refWParsed > 0 ? refWParsed : null,
       reference_height_mm: Number.isFinite(refHParsed) && refHParsed > 0 ? refHParsed : null,
-      customer_can_recolor: customerCanRecolor,
+      customer_can_recolor: customerCanRecolorBackground || customerCanRecolorText || customerCanRecolorCalendar,
+      customer_can_recolor_background: customerCanRecolorBackground,
+      customer_can_recolor_text: customerCanRecolorText,
+      customer_can_recolor_calendar: customerCanRecolorCalendar,
       customer_can_change_font: customerCanChangeFont,
       customer_picker_role: customerPickerRole === 'none' ? null : customerPickerRole,
       // Strip empty rows so admins clicking the quick-add chips +
@@ -1026,22 +1038,56 @@ export function GiftTemplateEditor({
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               <span className="font-semibold text-ink">Active (customers can pick this template)</span>
             </label>
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={customerCanRecolor}
-                onChange={(e) => setCustomerCanRecolor(e.target.checked)}
-              />
-              <span>
-                <span className="font-semibold text-ink">Allow customer to recolor</span>
-                <span className="block text-[11px] text-neutral-500">
-                  Adds a Theme color picker + per-text-zone + per-calendar-zone color
-                  pickers in the customer&apos;s &ldquo;Fill the template&rdquo; form. When off, the
-                  template renders entirely in the colors set here.
-                </span>
-              </span>
-            </label>
+            <div className="rounded-lg border-2 border-neutral-200 p-3">
+              <div className="mb-2 text-xs font-bold text-ink">Customer recolour permissions</div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Pick which colour pickers the customer sees on the PDP. Each region is independent — you can let them change text colours without exposing the background picker, etc.
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={customerCanRecolorBackground}
+                    onChange={(e) => setCustomerCanRecolorBackground(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold text-ink">Background colour</span>
+                    <span className="block text-[11px] text-neutral-500">
+                      Theme / background fill picker. Also drives the foreground tint on templates that have a foreground PNG.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={customerCanRecolorText}
+                    onChange={(e) => setCustomerCanRecolorText(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold text-ink">Text colours</span>
+                    <span className="block text-[11px] text-neutral-500">
+                      A colour picker next to each text zone so the customer can change individual text colours.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={customerCanRecolorCalendar}
+                    onChange={(e) => setCustomerCanRecolorCalendar(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold text-ink">Calendar colours</span>
+                    <span className="block text-[11px] text-neutral-500">
+                      A colour picker next to each calendar zone (only relevant if the template has calendar zones).
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"

@@ -415,6 +415,9 @@ const TemplateSchema = z.object({
   reference_width_mm:  z.number().positive().nullable().optional(),
   reference_height_mm: z.number().positive().nullable().optional(),
   customer_can_recolor: z.boolean().default(false),
+  customer_can_recolor_background: z.boolean().optional(),
+  customer_can_recolor_text: z.boolean().optional(),
+  customer_can_recolor_calendar: z.boolean().optional(),
   customer_can_change_font: z.boolean().default(false),
   // Per-template customer colour picker (migration 0079).
   customer_picker_role: z.enum(['none', 'mockup_swap', 'foil_overlay']).nullable().optional(),
