@@ -863,7 +863,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     value={s.mockup_url}
                                     onChange={(url) => updateSurface(i, sIdx, { mockup_url: url })}
                                     prefix={`surface-${d.slug || 'x'}-${s.id || sIdx}`}
-                                    aspect={1}
+                                    aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
                                     size="sm"
                                     label="Mockup"
                                   />
@@ -1072,7 +1072,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                   value={s.mockup_url}
                                   onChange={(url) => updateSwatch(i, sIdx, { mockup_url: url })}
                                   prefix={`swatch-${d.slug || 'x'}-${sIdx}`}
-                                  aspect={1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
                                   size="sm"
                                   label="Mockup"
                                 />
@@ -1274,7 +1274,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     updateDraft(i, { mockup_by_shape: next });
                                   }}
                                   prefix={`variant-${d.slug || 'mockup'}-${opt.kind}`}
-                                  aspect={1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
                                   size="sm"
                                   label={`${opt.kind} mockup`}
                                 />
@@ -1357,7 +1357,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                     updateDraft(i, { mockup_by_prompt_id: next });
                                   }}
                                   prefix={`variant-${d.slug || 'mockup'}-prompt-${pr.id.slice(0, 8)}`}
-                                  aspect={1}
+                                  aspect={lockedAspectRatio && lockedAspectRatio > 0 ? lockedAspectRatio : 1}
                                   size="sm"
                                   label={`${pr.name} mockup`}
                                 />
