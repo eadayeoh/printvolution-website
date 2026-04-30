@@ -330,7 +330,7 @@ export function ProductMatcher({
           ))}
         </div>
       </div>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .pv-matcher-row:hover { background: #fff; }
         .pv-matcher-goto:hover {
           background: var(--pv-magenta) !important;
@@ -343,7 +343,7 @@ export function ProductMatcher({
           .pv-matcher-row { grid-template-columns: 1fr !important; gap: 10px !important; padding: 24px 0 !important; }
           .pv-matcher-row > *:nth-child(2) { display: none !important; }
         }
-      `}</style>
+      ` }} />
     </section>
   );
 }

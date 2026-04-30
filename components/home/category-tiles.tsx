@@ -226,7 +226,7 @@ export function CategoryTiles({ tabs, header }: { tabs: CategoryTab[]; header?: 
                       From
                     </div>
                     <div style={{ fontFamily: 'var(--pv-f-display)', fontSize: 22, color: 'var(--pv-magenta)' }}>
-                      {t.min_price_cents != null ? formatSGD(t.min_price_cents) : 'Quote'}
+                      {t.min_price_cents != null && t.min_price_cents > 0 ? formatSGD(t.min_price_cents) : 'Quote'}
                     </div>
                   </div>
                   <div
