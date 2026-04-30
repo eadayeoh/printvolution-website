@@ -223,6 +223,57 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
                               </a>
                             </div>
                           )}
+                          {/* Production-file downloads. Shown only when
+                              the item's product is one of the code-driven
+                              templates that re-renders into a foil SVG.
+                              Each link hits the existing per-item endpoint
+                              (now allowed for staff) which streams an SVG
+                              with a download header. */}
+                          {(item.product_slug === 'song-lyrics-photo-frame'
+                            || item.product_slug === 'city-map-photo-frame'
+                            || item.product_slug === 'star-map-photo-frame'
+                            || item.product_slug === 'star-map-poster'
+                            || item.product_slug === 'spotify-music-plaque'
+                            || item.product_slug === 'bluetooth-spotify-magnet') && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {item.product_slug === 'song-lyrics-photo-frame' && (
+                                <a
+                                  href={`/api/admin/orders/${o.id}/items/${item.id}/foil-svg`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                                  download
+                                >
+                                  ↓ Foil SVG
+                                </a>
+                              )}
+                              {item.product_slug === 'city-map-photo-frame' && (
+                                <a
+                                  href={`/api/admin/orders/${o.id}/items/${item.id}/city-map-svg`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                                  download
+                                >
+                                  ↓ City-map SVG
+                                </a>
+                              )}
+                              {(item.product_slug === 'star-map-photo-frame' || item.product_slug === 'star-map-poster') && (
+                                <a
+                                  href={`/api/admin/orders/${o.id}/items/${item.id}/star-map-svg`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                                  download
+                                >
+                                  ↓ Star-map SVG
+                                </a>
+                              )}
+                              {(item.product_slug === 'spotify-music-plaque' || item.product_slug === 'bluetooth-spotify-magnet') && (
+                                <a
+                                  href={`/api/admin/orders/${o.id}/items/${item.id}/spotify-plaque-svg`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-ink bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-ink hover:bg-ink hover:text-white"
+                                  download
+                                >
+                                  ↓ Plaque SVG
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={() => completeItem(item.id)}
@@ -255,6 +306,13 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
                           Mark as {NEXT_STATUS[o.status]} <ArrowRight size={12} />
                         </button>
                       )}
+                      <a
+                        href={`/api/admin/orders/${o.id}/packet`}
+                        className="rounded-full border border-ink bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-ink hover:text-white"
+                        title="Production packet PDF — order details + per-item config + customer photo"
+                      >
+                        ⤓ Print packet
+                      </a>
                       <a
                         href={`https://wa.me/${o.phone.replace(/\D/g, '')}`}
                         target="_blank"
