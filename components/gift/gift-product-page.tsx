@@ -1517,7 +1517,15 @@ export function GiftProductPage({
         if (s.mode) notes += `${notes ? ';' : ''}mode_${s.id}:${s.mode}`;
       }
     }
-    if (selectedColour) notes += `${notes ? ';' : ''}colour:${encodeNoteValue(selectedColour.name)}`;
+    if (selectedColour) {
+      notes += `${notes ? ';' : ''}colour:${encodeNoteValue(selectedColour.name)}`;
+      // Auto-tint surfaces the customer's exact hex prominently in the
+      // preview; ship it to production too so the team isn't guessing
+      // a Pantone/DMC match from "Forest Green".
+      if (selectedColour.hex) {
+        notes += `;colour_hex:${encodeNoteValue(selectedColour.hex)}`;
+      }
+    }
     // Extra text zones (admin-configured, no template). Each non-empty
     // field becomes one text_<id>:<value> entry — same shape as
     // surfaces-driven text fields, so admin order detail + production
