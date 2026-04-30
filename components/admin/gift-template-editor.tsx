@@ -700,30 +700,30 @@ export function GiftTemplateEditor({
         next.push({
           id: `caption-${i + 1}`, type: 'text', label: `Caption ${i + 1}`,
           x_mm: x, y_mm: 95, width_mm: 60, height_mm: 8, rotation_deg: 0,
-          text: captions[i] ?? '', font_size: 5, font_family: 'cormorant', align: 'center',
-          color: '#d4af37', italic: true, weight: '500',
+          default_text: captions[i] ?? '', font_size_mm: 5, font_family: 'cormorant', align: 'center',
+          color: '#d4af37', font_style: 'italic', font_weight: '600',
         } as GiftTemplateTextZone);
       });
       // Names header above the three discs.
       next.push({
         id: 'names', type: 'text', label: 'Couple names',
         x_mm: 30, y_mm: 8, width_mm: 140, height_mm: 12, rotation_deg: 0,
-        text: 'Couple names', font_size: 8, font_family: 'cormorant', align: 'center',
-        color: '#d4af37', italic: false, weight: '500',
+        default_text: 'Couple names', font_size_mm: 8, font_family: 'cormorant', align: 'center',
+        color: '#d4af37', font_style: 'normal', font_weight: '600',
       } as GiftTemplateTextZone);
       // Per-disc location + date text zones.
       [10, 70, 130].forEach((x, i) => {
         next.push({
           id: `loc-${i + 1}`, type: 'text', label: `Location ${i + 1}`,
           x_mm: x, y_mm: 110, width_mm: 60, height_mm: 6, rotation_deg: 0,
-          text: '', font_size: 3.6, font_family: 'inter', align: 'center',
-          color: '#d4af37', weight: '600',
+          default_text: '', font_size_mm: 3.6, font_family: 'inter', align: 'center',
+          color: '#d4af37', font_weight: '600',
         } as GiftTemplateTextZone);
         next.push({
           id: `date-${i + 1}`, type: 'text', label: `Date ${i + 1}`,
           x_mm: x, y_mm: 118, width_mm: 60, height_mm: 6, rotation_deg: 0,
-          text: '', font_size: 3.2, font_family: 'inter', align: 'center',
-          color: '#d4af37', weight: '400',
+          default_text: '', font_size_mm: 3.2, font_family: 'inter', align: 'center',
+          color: '#d4af37', font_weight: '400',
         } as GiftTemplateTextZone);
       });
     } else if (presetKey === 'heart-pair' && anchorKind === 'city_disk') {
@@ -743,26 +743,26 @@ export function GiftTemplateEditor({
       next.push({
         id: 'title', type: 'text', label: 'Title',
         x_mm: 20, y_mm: 8, width_mm: 160, height_mm: 8, rotation_deg: 0,
-        text: 'WHERE IT ALL BEGAN', font_size: 6, font_family: 'inter', align: 'center',
-        color: '#0a0a0a', weight: '700', letter_spacing: 1,
+        default_text: 'WHERE IT ALL BEGAN', font_size_mm: 6, font_family: 'inter', align: 'center',
+        color: '#0a0a0a', font_weight: '700', letter_spacing_em: 1,
       } as GiftTemplateTextZone);
       next.push({
         id: 'names', type: 'text', label: 'Names',
         x_mm: 20, y_mm: 130, width_mm: 160, height_mm: 10, rotation_deg: 0,
-        text: 'william & wendy', font_size: 7, font_family: 'caveat', align: 'center',
-        color: '#0a0a0a', weight: '500',
+        default_text: 'william & wendy', font_size_mm: 7, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', font_weight: '600',
       } as GiftTemplateTextZone);
       next.push({
         id: 'coords', type: 'text', label: 'Coordinates',
         x_mm: 20, y_mm: 150, width_mm: 160, height_mm: 6, rotation_deg: 0,
-        text: '', font_size: 3.4, font_family: 'inter', align: 'center',
-        color: '#666', weight: '400', letter_spacing: 0.5,
+        default_text: '', font_size_mm: 3.4, font_family: 'inter', align: 'center',
+        color: '#666', font_weight: '400', letter_spacing_em: 0.5,
       } as GiftTemplateTextZone);
       next.push({
         id: 'date', type: 'text', label: 'Date',
         x_mm: 20, y_mm: 162, width_mm: 160, height_mm: 6, rotation_deg: 0,
-        text: '', font_size: 3.4, font_family: 'inter', align: 'center',
-        color: '#666', weight: '400',
+        default_text: '', font_size_mm: 3.4, font_family: 'inter', align: 'center',
+        color: '#666', font_weight: '400',
       } as GiftTemplateTextZone);
     } else if (presetKey === 'circle-with-photos' && anchorKind === 'city_disk') {
       // One large circle map up top, three polaroid-style image zones
@@ -781,19 +781,19 @@ export function GiftTemplateEditor({
       next.push({
         id: 'title', type: 'text', label: 'Title',
         x_mm: 20, y_mm: 6, width_mm: 160, height_mm: 10, rotation_deg: 0,
-        text: 'Where it all Started', font_size: 8, font_family: 'caveat', align: 'center',
-        color: '#0a0a0a', italic: true, weight: '500',
+        default_text: 'Where it all Started', font_size_mm: 8, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', font_style: 'italic', font_weight: '600',
       } as GiftTemplateTextZone);
       next.push({
         id: 'names', type: 'text', label: 'Names',
         x_mm: 20, y_mm: 178, width_mm: 160, height_mm: 8, rotation_deg: 0,
-        text: 'Names', font_size: 6, font_family: 'caveat', align: 'center',
-        color: '#0a0a0a', italic: true, weight: '500',
+        default_text: 'Names', font_size_mm: 6, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', font_style: 'italic', font_weight: '600',
       } as GiftTemplateTextZone);
       next.push({
         id: 'meta', type: 'text', label: 'Location + date',
         x_mm: 20, y_mm: 188, width_mm: 160, height_mm: 6, rotation_deg: 0,
-        text: '', font_size: 3, font_family: 'inter', align: 'center',
+        default_text: '', font_size_mm: 3, font_family: 'inter', align: 'center',
         color: '#666',
       } as GiftTemplateTextZone);
     } else if (presetKey === 'pair' && anchorKind === 'star_disk') {
@@ -810,13 +810,13 @@ export function GiftTemplateEditor({
       next.push({
         id: 'tagline', type: 'text', label: 'Tagline',
         x_mm: 20, y_mm: 130, width_mm: 160, height_mm: 8, rotation_deg: 0,
-        text: 'Love as deep as the stars',
-        font_size: 5, font_family: 'inter', align: 'center', color: '#fff', weight: '500', letter_spacing: 0.4,
+        default_text: 'Love as deep as the stars',
+        font_size_mm: 5, font_family: 'inter', align: 'center', color: '#fff', font_weight: '600', letter_spacing_em: 0.4,
       } as GiftTemplateTextZone);
       next.push({
         id: 'meta', type: 'text', label: 'Date · coordinates',
         x_mm: 20, y_mm: 145, width_mm: 160, height_mm: 6, rotation_deg: 0,
-        text: '', font_size: 3.2, font_family: 'inter', align: 'center', color: '#fff',
+        default_text: '', font_size_mm: 3.2, font_family: 'inter', align: 'center', color: '#fff',
       } as GiftTemplateTextZone);
     } else {
       return;

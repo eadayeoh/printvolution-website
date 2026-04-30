@@ -413,21 +413,98 @@ export function buildCityMapSvg({
     body += emitDisk(vectors, { x: MAP_X, y: MAP_Y, w: MAP_W, h: MAP_H }, 'cityMapClip', foilColor, cityFont);
   }
 
-  // Footer block — names / event / city / tagline
+  // Footer block — names / event / city / tagline. When the template
+  // carries text zones with the canonical ids ('city_names',
+  // 'city_event', 'city_label', 'city_tagline', 'city_coords'), the
+  // zone overrides position + font + size + alignment. Otherwise we
+  // fall back to the renderer's hardcoded layout so legacy templates
+  // render identically.
   const cx = W / 2;
-  const namesY = 105;
-  const eventY = 110;
-  const cityY  = 119;
-  const taglineY = 125;
+  const zoneNames    = findCityTextZone(zones, 'city_names');
+  const zoneEvent    = findCityTextZone(zones, 'city_event');
+  const zoneCity     = findCityTextZone(zones, 'city_label');
+  const zoneTagline  = findCityTextZone(zones, 'city_tagline');
+  const zoneCoords   = findCityTextZone(zones, 'city_coords');
 
-  body += `<text x="${cx}" y="${namesY}" text-anchor="middle" font-size="3.6" font-family="${namesFont}, sans-serif" letter-spacing="0.4" fill="${foilColor}" font-weight="600">${esc(names.trim() || 'EVA & JOHN')}</text>`;
-  body += `<text x="${cx}" y="${eventY}" text-anchor="middle" font-size="3.2" font-family="${eventFont}, sans-serif" letter-spacing="0.4" fill="${foilColor}">${esc(event.trim() || 'OUR FIRST DATE')}</text>`;
-  body += `<text x="${cx}" y="${cityY}" text-anchor="middle" font-size="6.5" font-family="${cityFont}, Georgia, serif" font-weight="700" letter-spacing="0.6" fill="${foilColor}">${esc((cityLabel.trim() || 'LONDON').toUpperCase())}</text>`;
-  body += `<text x="${cx}" y="${taglineY}" text-anchor="middle" font-size="3.4" font-style="italic" font-family="${taglineFont}, Georgia, serif" fill="${foilColor}">${esc(tagline.trim() || 'Love now and always')}</text>`;
+  body += emitCityZoneText(zoneNames,   W, H, names.trim() || 'EVA & JOHN', { cx, y: 105, size: 3.6, font: namesFont, fill: foilColor, weight: '600', letterSpacing: 0.4 });
+  body += emitCityZoneText(zoneEvent,   W, H, event.trim() || 'OUR FIRST DATE', { cx, y: 110, size: 3.2, font: eventFont, fill: foilColor, letterSpacing: 0.4 });
+  body += emitCityZoneText(zoneCity,    W, H, (cityLabel.trim() || 'LONDON').toUpperCase(), { cx, y: 119, size: 6.5, font: cityFont, fill: foilColor, weight: '700', letterSpacing: 0.6 });
+  body += emitCityZoneText(zoneTagline, W, H, tagline.trim() || 'Love now and always', { cx, y: 125, size: 3.4, font: taglineFont, fill: foilColor, italic: true });
 
   if (coordinates && coordinates.trim()) {
-    body += `<text x="${cx}" y="${MAP_Y + MAP_H + 1.8}" text-anchor="middle" font-size="1.6" font-family="Archivo, sans-serif" letter-spacing="0.3" fill="${foilColor}" opacity="0.7">${esc(coordinates.trim())}</text>`;
+    const coordsRect = diskAnchors[0] ?? null;
+    const fallbackY = coordsRect
+      ? coordsRect.y_mm * (H / 200) + coordsRect.height_mm * (H / 200) + 1.8
+      : MAP_Y + MAP_H + 1.8;
+    body += emitCityZoneText(zoneCoords, W, H, coordinates.trim(), { cx, y: fallbackY, size: 1.6, font: 'Archivo', fill: foilColor, opacity: 0.7, letterSpacing: 0.3 });
+  }
+
+  // Render any other text zones admin placed on the canvas (e.g., the
+  // per-disc captions stamped by the "Three circles" preset). These
+  // skip the named-id lookup because they're free-form admin text.
+  for (const z of zones ?? []) {
+    if (z.type !== 'text') continue;
+    const known = ['city_names', 'city_event', 'city_label', 'city_tagline', 'city_coords'].includes(z.id);
+    if (known) continue;
+    const tz = z as import('./types').GiftTemplateTextZone;
+    body += emitCityZoneText(tz, W, H, tz.default_text ?? '', {
+      cx, y: 0,
+      size: tz.font_size_mm ?? 4,
+      font: tz.font_family ?? 'inter',
+      fill: tz.color ?? foilColor,
+      italic: tz.font_style === 'italic',
+      weight: tz.font_weight ?? '400',
+      letterSpacing: tz.letter_spacing_em ?? 0,
+    });
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">${body}</svg>`;
+}
+
+function findCityTextZone(zones: import('./types').GiftTemplateZone[] | null | undefined, id: string): import('./types').GiftTemplateTextZone | null {
+  if (!zones) return null;
+  for (const z of zones) {
+    if (z.type === 'text' && z.id === id) return z as import('./types').GiftTemplateTextZone;
+  }
+  return null;
+}
+
+/** Render a footer text line — uses zone position when present, else
+ *  the defaults. Mirrors the helper in star-map-svg.ts but local to
+ *  this file so changes to one renderer don't ripple to the other. */
+function emitCityZoneText(
+  zone: import('./types').GiftTemplateTextZone | null,
+  W: number, H: number,
+  text: string,
+  d: {
+    cx: number; y: number;
+    size: number; font: string; fill: string;
+    italic?: boolean; weight?: string;
+    letterSpacing?: number; opacity?: number;
+  },
+): string {
+  if (!text) return '';
+  let x: number, y: number, anchor: 'start' | 'middle' | 'end';
+  if (zone) {
+    const align = zone.align ?? 'center';
+    anchor = align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle';
+    x = (zone.x_mm + (anchor === 'middle' ? zone.width_mm / 2 : anchor === 'end' ? zone.width_mm : 0)) * (W / 200);
+    y = (zone.y_mm + zone.height_mm / 2) * (H / 200);
+  } else {
+    x = d.cx;
+    y = d.y;
+    anchor = 'middle';
+  }
+  const fill = zone?.color ?? d.fill;
+  const size = zone?.font_size_mm ?? d.size;
+  const fontFamily = zone?.font_family ?? d.font;
+  const italic = zone ? zone.font_style === 'italic' : d.italic;
+  const weight = zone?.font_weight ?? d.weight;
+  const letterSpacing = zone?.letter_spacing_em ?? d.letterSpacing ?? 0;
+  const opacity = d.opacity ?? 1;
+  const fontStyle = italic ? ' font-style="italic"' : '';
+  const fontWeight = weight ? ` font-weight="${weight}"` : '';
+  const ls = letterSpacing ? ` letter-spacing="${letterSpacing}"` : '';
+  const op = opacity < 1 ? ` opacity="${opacity}"` : '';
+  return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="${anchor}" font-size="${size}" font-family="${fontFamily}, sans-serif" fill="${fill}"${fontStyle}${fontWeight}${ls}${op}>${esc(text)}</text>`;
 }
