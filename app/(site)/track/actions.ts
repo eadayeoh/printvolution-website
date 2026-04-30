@@ -28,8 +28,12 @@ export type TrackResult =
 /** Look up an order by order_number + email. Both must match — email is
  *  the soft authentication. Rate-limited per IP to deter scraping. */
 export async function trackOrder(orderNumber: string, email: string): Promise<TrackResult> {
+  // Tightened brute-force protection: a customer realistically types
+  // their order number wrong 1-3 times. 6/IP/10min still feels lax to
+  // a real user but kills credential-stuffing volume — a botnet would
+  // need 10× as many proxies to brute-force a target order.
   const ip = getClientIp();
-  const rl = await checkRateLimit(`track:${ip}`, { max: 15, windowSeconds: 600 });
+  const rl = await checkRateLimit(`track:${ip}`, { max: 6, windowSeconds: 600 });
   if (!rl.allowed) return { ok: false, error: `Too many tries — wait ${rl.retryAfterSeconds}s.` };
 
   const num = orderNumber.trim();
@@ -41,11 +45,16 @@ export async function trackOrder(orderNumber: string, email: string): Promise<Tr
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || em.length > 254) return { ok: false, error: 'Enter a valid email.' };
 
   // Second rate limit keyed on the order_number itself so a botnet
-  // hitting many IPs against one target order can't bypass the
-  // per-IP cap. This also covers the case where getClientIp()
-  // falls back to "unknown" and many requesters share that bucket.
-  const numRl = await checkRateLimit(`track-num:${num}`, { max: 30, windowSeconds: 600 });
+  // hitting many IPs against one target order can't bypass the per-IP
+  // cap. Tightened from 30 → 10: a real owner never needs more than a
+  // few tries with their own email; 10 covers shared-household typos.
+  const numRl = await checkRateLimit(`track-num:${num}`, { max: 10, windowSeconds: 600 });
   if (!numRl.allowed) return { ok: false, error: `Too many tries — wait ${numRl.retryAfterSeconds}s.` };
+
+  // Third rate limit keyed on (IP × email) so an attacker bouncing
+  // through proxies can't sweep an email's order numbers efficiently.
+  const ipEmailRl = await checkRateLimit(`track-ipemail:${ip}:${em}`, { max: 4, windowSeconds: 600 });
+  if (!ipEmailRl.allowed) return { ok: false, error: `Too many tries — wait ${ipEmailRl.retryAfterSeconds}s.` };
 
   const sb = createServiceClient();
   const { data, error } = await sb

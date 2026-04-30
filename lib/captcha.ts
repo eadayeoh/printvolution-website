@@ -37,12 +37,16 @@ export async function verifyTurnstile(
 ): Promise<TurnstileVerifyResult> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    // No secret configured — skip verification. Dev environments or
-    // first-deploy scenarios. Log once per process so it's visible
-    // but not noisy.
+    // Dev / preview only — let forms through so admins can test. In
+    // production a missing secret would silently disable captcha
+    // checks site-wide, so refuse instead of pretending verification
+    // succeeded.
+    if (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production') {
+      return { ok: false, error: 'Captcha is not configured on the server' };
+    }
     const g = globalThis as { __pvTurnstileWarned?: boolean };
     if (!g.__pvTurnstileWarned) {
-      console.warn('[captcha] TURNSTILE_SECRET_KEY not set — skipping verification');
+      console.warn('[captcha] TURNSTILE_SECRET_KEY not set — skipping verification (non-production env only)');
       g.__pvTurnstileWarned = true;
     }
     return { ok: true, skipped: true };

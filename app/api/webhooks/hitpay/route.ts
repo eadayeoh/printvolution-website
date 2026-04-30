@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getHitPayConfig, verifyHitPaySignature } from '@/lib/payments/hitpay';
 import { createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * HitPay webhook receiver. Dormant until HITPAY_ENABLED=true.
@@ -41,24 +42,45 @@ export async function POST(req: NextRequest) {
     const hmac = params.hmac ?? '';
     const signatureValid = verifyHitPaySignature(params, hmac, cfg.salt);
 
+    // Verify the signature BEFORE writing to payment_events. The earlier
+    // code logged unsigned requests too "for audit visibility", but that
+    // gave an attacker a way to flood the table with junk rows. Bad
+    // signatures still get logged, but only at rate-limited volume.
+    if (!signatureValid) {
+      const ip = getClientIp();
+      const rl = await checkRateLimit(`hitpay-bad-sig:${ip}`, { max: 5, windowSeconds: 60 });
+      if (rl.allowed) {
+        // Best-effort audit row — first 5/min/IP only.
+        try {
+          const sbAudit = createServiceClient();
+          const auditOrderId = params.reference_number?.startsWith('order:')
+            ? params.reference_number.slice('order:'.length)
+            : null;
+          await sbAudit.from('payment_events').insert({
+            order_id: auditOrderId,
+            gateway: 'hitpay',
+            event_type: params.status ? `charge.${params.status}` : 'unknown',
+            payload_json: params,
+            signature_valid: false,
+          });
+        } catch { /* swallow — already going to 401 */ }
+      }
+      return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
+    }
+
     const sb = createServiceClient();
     const orderId = params.reference_number?.startsWith('order:')
       ? params.reference_number.slice('order:'.length)
       : null;
 
-    // Always log the event first — audit trail is more important than
-    // short-circuiting.
+    // Verified events: always log.
     await sb.from('payment_events').insert({
       order_id: orderId,
       gateway: 'hitpay',
       event_type: params.status ? `charge.${params.status}` : 'unknown',
       payload_json: params,
-      signature_valid: signatureValid,
+      signature_valid: true,
     });
-
-    if (!signatureValid) {
-      return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
-    }
 
     // Map HitPay statuses onto our payment_status enum.
     // Known statuses: 'completed', 'failed', 'pending', 'refunded'.

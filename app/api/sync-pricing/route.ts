@@ -32,6 +32,7 @@ import {
   fetchPvpricelistRates,
   buildAllProductPricingFromPvpricelist,
 } from '@/lib/pricing/pvpricelist-sync';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /** Constant-time secret comparison. `===` short-circuits at the first
  *  mismatching byte, leaking position via timing — bad for header-borne
@@ -50,6 +51,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  // Per-IP rate-limit before checking the secret so an attacker can't
+  // brute-force PVPRICELIST_WEBHOOK_SECRET by hammering this endpoint.
+  // pvpricelist's real webhook fires far below this cap.
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`sync-pricing:${ip}`, { max: 10, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 });
+  }
   const secret = process.env.PVPRICELIST_WEBHOOK_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -106,6 +115,11 @@ export async function POST(req: Request) {
 // writing to the DB. Useful to confirm the secret + fetch work before
 // wiring up the Supabase webhook.
 export async function GET(req: Request) {
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`sync-pricing-get:${ip}`, { max: 10, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 });
+  }
   const secret = process.env.PVPRICELIST_WEBHOOK_SECRET;
   if (!secret || !secretsMatch(req.headers.get('x-sync-secret'), secret)) {
     return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });

@@ -311,7 +311,11 @@ export async function restylePreviewFromSource(input: {
     // user_id (with anon usage backfilled on login so they don't get
     // the full 8 if they already burned anon credits). Admin/staff
     // skip this entirely.
-    const isAiMode = AI_MODES.has(product.mode);
+    // Cutout shape is independent of product.mode but ALSO calls a paid
+    // OpenAI image edit (gpt-image-2 background-remove). Without rolling
+    // it under the AI quota an attacker on a photo-resize product can
+    // burn credits via shape_kind='cutout' regen-spam.
+    const isAiMode = AI_MODES.has(product.mode) || input.shape_kind === 'cutout';
     const userId = await getCurrentUserId();
     const anonSessionId = getOrSetAnonSessionId();
     if (isAiMode && !isAdmin) {
