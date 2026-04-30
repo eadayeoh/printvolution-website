@@ -12,6 +12,9 @@
     }
   ],
   "crons": [
-    { "path": "/api/cron/gift-purge", "schedule": "0 19 * * *" }
+    { "path": "/api/cron/gift-purge", "schedule": "0 19 * * *" },
+    { "path": "/api/cron/reorder-reminders", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/pickup-reminders", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/nps-survey", "schedule": "0 3 * * *" }
   ]
 }

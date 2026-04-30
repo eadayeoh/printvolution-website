@@ -372,6 +372,115 @@ export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; 
   return { subject, html: shell(subject, body) };
 }
 
+export type ReorderReminderPayload = {
+  order_number: string;
+  customer_name: string;
+  daysAgo: number;
+  reorderUrl: string;
+};
+
+export function reorderReminderEmail(p: ReorderReminderPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `Time to reorder? ${p.order_number}`;
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — running low?
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      You ordered <strong>${escapeHtml(p.order_number)}</strong> ${p.daysAgo} days ago. If you'd like to run that job again, we can rebuild it in two clicks.
+    </p>
+    <a href="${escapeHtml(p.reorderUrl)}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin:8px 0 16px;">
+      Reorder in 2 clicks →
+    </a>
+    <p style="font-size:12px;color:#888;margin:18px 0 0;line-height:1.6;">
+      Don't want these reminders? Just reply with "stop" and we'll switch them off.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
+
+export type PickupReadyReminderPayload = {
+  order_number: string;
+  customer_name: string;
+};
+
+export function pickupReadyReminderEmail(p: PickupReadyReminderPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `Friendly reminder: ${p.order_number} is ready for pickup`;
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — your order's still waiting.
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      Order <strong>${escapeHtml(p.order_number)}</strong> has been ready for pickup at our Paya Lebar Square workshop for a couple of days now.
+    </p>
+    <div style="background:#fafaf7;border-radius:10px;padding:14px;margin:16px 0;font-size:13px;color:#444;line-height:1.7;">
+      📍 <strong>60 Paya Lebar Road #B1-35</strong><br>
+      Mon–Fri 10am–7pm · Sat 11am–5pm
+    </div>
+    <p style="font-size:13px;color:#444;margin:0 0 12px;">
+      Can't make it in? Reply to this email and we'll switch it to delivery — usually 1–2 working days.
+    </p>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;line-height:1.6;">
+      Or WhatsApp ${escapeHtml(SITE.whatsappDisplay)} for anything else.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
+
+export type ProofApprovalPayload = {
+  order_number: string;
+  customer_name: string;
+  product_name: string;
+  approveUrl: string;
+};
+
+export function proofApprovalEmail(p: ProofApprovalPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `Proof ready for approval — ${p.order_number}`;
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — your proof is ready.
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      We've prepared the artwork for <strong>${escapeHtml(p.product_name)}</strong> on order <strong>${escapeHtml(p.order_number)}</strong>. Have a look and approve before we kick off production.
+    </p>
+    <a href="${escapeHtml(p.approveUrl)}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin:8px 0 16px;">
+      Review &amp; approve →
+    </a>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;line-height:1.6;">
+      We'll wait for your approval before sending it to print. Reply if anything looks off.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
+
+export type NpsSurveyPayload = {
+  order_number: string;
+  customer_name: string;
+  surveyUrl: string;
+};
+
+export function npsSurveyEmail(p: NpsSurveyPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `How was ${p.order_number}?`;
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — how did it go?
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      Order <strong>${escapeHtml(p.order_number)}</strong> shipped a week ago. We'd love a quick gut-check — one click, no form.
+    </p>
+    <a href="${escapeHtml(p.surveyUrl)}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin:8px 0 16px;">
+      Rate your order →
+    </a>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;line-height:1.6;">
+      30 seconds. Helps us a lot.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
+
 /**
  * Branded HTML for Supabase Auth → Email Templates → "Reset Password".
  *

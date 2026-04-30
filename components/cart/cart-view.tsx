@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Trash2 } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD, isImageUrl } from '@/lib/utils';
+import { FREE_DELIVERY_THRESHOLD_CENTS } from '@/lib/checkout-rates';
 import { useEffect, useState } from 'react';
 
 export function CartView() {
@@ -192,6 +193,32 @@ export function CartView() {
               <span>At checkout</span>
             </div>
           </div>
+
+          {subtotal > 0 && (
+            subtotal >= FREE_DELIVERY_THRESHOLD_CENTS ? (
+              <div style={{
+                marginBottom: 14, padding: '10px 12px', borderRadius: 8,
+                background: '#dcfce7', color: '#166534',
+                fontSize: 12, fontWeight: 700, textAlign: 'center',
+              }}>
+                🎉 Free local delivery unlocked
+              </div>
+            ) : (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 6, textAlign: 'center' }}>
+                  Add <strong style={{ color: '#E91E8C' }}>{formatSGD(FREE_DELIVERY_THRESHOLD_CENTS - subtotal)}</strong> for free delivery
+                </div>
+                <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.round((subtotal / FREE_DELIVERY_THRESHOLD_CENTS) * 100)}%`,
+                    background: '#E91E8C',
+                    transition: 'width 240ms ease-out',
+                  }} />
+                </div>
+              </div>
+            )
+          )}
 
           <div style={{ borderTop: '2px solid #0a0a0a', paddingTop: 14, marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>

@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useCart } from '@/lib/cart-store';
 import { formatSGD } from '@/lib/utils';
 import { submitOrder, validateCouponForCheckout } from '@/app/(site)/checkout/actions';
-import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
+import { DELIVERY_FLAT_CENTS, FREE_DELIVERY_THRESHOLD_CENTS, GIFT_WRAP_FLAT_CENTS, deliveryCentsFor } from '@/lib/checkout-rates';
 import { ProductIcon } from '@/components/product/product-icon';
 
 const FormSchema = z
@@ -24,6 +24,11 @@ const FormSchema = z
     notes: z.string().optional(),
     gift_wrap: z.boolean().optional(),
     gift_message: z.string().max(280).optional(),
+    // Customer can opt in to a one-shot reorder reminder. Stored as
+    // a string from the radio group; '0' means off. Mapped to a
+    // number (or null) before being passed to the server action so
+    // the server schema can stay strict on 30/60/90.
+    reorder_remind_days: z.enum(['0', '30', '60', '90']).optional(),
   })
   .superRefine((d, ctx) => {
     if (d.delivery_method === 'delivery' && !d.delivery_address?.trim()) {
@@ -62,13 +67,16 @@ export function CheckoutForm() {
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { delivery_method: 'pickup', gift_wrap: false, gift_message: '' },
+    defaultValues: { delivery_method: 'pickup', gift_wrap: false, gift_message: '', reorder_remind_days: '0' },
   });
 
   const deliveryMethod = watch('delivery_method');
   const giftWrap = watch('gift_wrap');
   const giftMessage = watch('gift_message') ?? '';
-  const deliveryCost = deliveryMethod === 'delivery' ? DELIVERY_FLAT_CENTS : 0;
+  const deliveryCost = deliveryCentsFor(deliveryMethod, subtotal);
+  const freeDeliveryGap = Math.max(0, FREE_DELIVERY_THRESHOLD_CENTS - subtotal);
+  const freeDeliveryReached = subtotal >= FREE_DELIVERY_THRESHOLD_CENTS;
+  const reorderCadence = watch('reorder_remind_days') ?? '0';
   const giftWrapCost = giftWrap ? GIFT_WRAP_FLAT_CENTS : 0;
 
   const [couponInput, setCouponInput] = useState('');
@@ -121,6 +129,9 @@ export function CheckoutForm() {
         gift_wrap: !!values.gift_wrap,
         gift_message: values.gift_wrap ? (values.gift_message?.trim() || null) : null,
         idempotency_key: idempotencyKeyRef.current ?? undefined,
+        reorder_remind_days: values.reorder_remind_days && values.reorder_remind_days !== '0'
+          ? (Number(values.reorder_remind_days) as 30 | 60 | 90)
+          : null,
         items: items.map((i) => ({
           product_slug: i.product_slug,
           product_name: i.product_name,
@@ -222,15 +233,20 @@ export function CheckoutForm() {
               }}>
                 <input type="radio" value="delivery" {...register('delivery_method')} style={{ display: 'none' }} />
                 <div style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>Delivery</div>
-                <div style={{ fontSize: 11, color: '#888' }}>Singapore-wide · {formatSGD(DELIVERY_FLAT_CENTS)}</div>
+                <div style={{ fontSize: 11, color: '#888' }}>
+                  Singapore-wide · {freeDeliveryReached ? <strong style={{ color: '#16a34a' }}>Free</strong> : formatSGD(DELIVERY_FLAT_CENTS)}
+                </div>
               </label>
             </div>
             {deliveryMethod === 'delivery' && (
-              <div style={{ marginTop: 16 }}>
-                <Field label="Delivery address" error={errors.delivery_address?.message}>
-                  <textarea {...register('delivery_address')} rows={2} className={inputCls} placeholder="Postal code, unit number, street..." />
-                </Field>
-              </div>
+              <>
+                <FreeDeliveryUpsell gapCents={freeDeliveryGap} reached={freeDeliveryReached} />
+                <div style={{ marginTop: 16 }}>
+                  <Field label="Delivery address" error={errors.delivery_address?.message}>
+                    <textarea {...register('delivery_address')} rows={2} className={inputCls} placeholder="Postal code, unit number, street..." />
+                  </Field>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -278,6 +294,48 @@ export function CheckoutForm() {
         <div className="co-card">
           <div className="co-card-head">
             <span className="co-card-num">04</span>
+            <h2 className="co-card-title">Reorder reminder <span style={{ fontSize: 11, fontWeight: 400, color: '#aaa', marginLeft: 8 }}>optional</span></h2>
+          </div>
+          <div className="co-card-body">
+            <p style={{ fontSize: 12, color: '#666', margin: '0 0 10px', lineHeight: 1.5 }}>
+              Run this job again on a schedule? We&rsquo;ll email you a one-click reorder link.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                { v: '0',  l: 'No thanks' },
+                { v: '30', l: 'In 30 days' },
+                { v: '60', l: 'In 60 days' },
+                { v: '90', l: 'In 90 days' },
+              ].map((opt) => {
+                const selected = reorderCadence === opt.v;
+                return (
+                  <label key={opt.v} style={{
+                    display: 'block', textAlign: 'center', padding: '10px 8px',
+                    borderRadius: 8,
+                    border: `2px solid ${selected ? '#E91E8C' : '#e5e5e5'}`,
+                    background: selected ? 'rgba(233,30,140,.05)' : '#fff',
+                    cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700,
+                    color: selected ? '#E91E8C' : '#0a0a0a',
+                    transition: 'all 120ms ease-out',
+                  }}>
+                    <input
+                      type="radio"
+                      value={opt.v}
+                      {...register('reorder_remind_days')}
+                      style={{ display: 'none' }}
+                    />
+                    {opt.l}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="co-card">
+          <div className="co-card-head">
+            <span className="co-card-num">05</span>
             <h2 className="co-card-title">Notes <span style={{ fontSize: 11, fontWeight: 400, color: '#aaa', marginLeft: 8 }}>optional</span></h2>
           </div>
           <div className="co-card-body">
@@ -412,6 +470,42 @@ function Field({ label, children, error }: { label: string; children: React.Reac
       {children}
       {error && <span style={{ display: 'block', fontSize: 11, color: '#dc2626', marginTop: 4 }}>{error}</span>}
     </label>
+  );
+}
+
+function FreeDeliveryUpsell({ gapCents, reached }: { gapCents: number; reached: boolean }) {
+  if (reached) {
+    return (
+      <div style={{
+        marginTop: 14, padding: '10px 14px', borderRadius: 8,
+        background: '#dcfce7', border: '1px solid #86efac', color: '#166534',
+        fontSize: 12, fontWeight: 700,
+      }}>
+        🎉 Free delivery unlocked.
+      </div>
+    );
+  }
+  // Once they're past 75% of the bar the message lands stronger as
+  // "almost there" rather than "you're far away" — different copy.
+  const threshold = FREE_DELIVERY_THRESHOLD_CENTS;
+  const filled = Math.min(1, Math.max(0, (threshold - gapCents) / threshold));
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#444', marginBottom: 6 }}>
+        <span>
+          Add <strong style={{ color: '#E91E8C' }}>{formatSGD(gapCents)}</strong> for free delivery
+        </span>
+        <span style={{ color: '#888' }}>{formatSGD(threshold)}</span>
+      </div>
+      <div style={{ height: 6, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${Math.round(filled * 100)}%`,
+          background: '#E91E8C',
+          transition: 'width 240ms ease-out',
+        }} />
+      </div>
+    </div>
   );
 }
 

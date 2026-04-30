@@ -6,11 +6,16 @@ export function AnalyticsPanel({ a }: { a: AnalyticsBundle }) {
   return (
     <div className="space-y-6">
       {/* Top-line numbers */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Metric label="Today" value={formatSGD(a.revenueToday)} hint="revenue, completed" />
         <Metric label="Last 7 days" value={formatSGD(a.revenue7d)} hint={`${a.orders7d} order${a.orders7d === 1 ? '' : 's'}`} />
         <Metric label="Last 30 days" value={formatSGD(a.revenue30d)} hint={`${a.orders30d} order${a.orders30d === 1 ? '' : 's'}`} />
         <Metric label="Avg order" value={formatSGD(a.avgOrderCents)} hint="last 30 days" />
+        <Metric
+          label="NPS · 90d"
+          value={a.nps90d === null ? '—' : String(a.nps90d)}
+          hint={a.npsResponseCount90d === 0 ? 'No survey responses yet' : `${a.npsResponseCount90d} response${a.npsResponseCount90d === 1 ? '' : 's'}`}
+        />
       </div>
 
       {/* Daily revenue chart */}

@@ -7,7 +7,7 @@ import { GIFT_BUCKETS, serviceClient } from '@/lib/gifts/storage';
 import type { GiftProduct } from '@/lib/gifts/types';
 import { giftUnitPrice } from '@/lib/gifts/types';
 import { evaluateCouponForOrder } from '@/lib/coupons';
-import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
+import { GIFT_WRAP_FLAT_CENTS, deliveryCentsFor } from '@/lib/checkout-rates';
 import { reportError } from '@/lib/observability';
 import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 import { parseShapeOptions, shapeOptionsPriceDelta } from '@/lib/gifts/shape-options';
@@ -310,6 +310,12 @@ const OrderSchema = z.object({
   // the insert; the partial unique index on the column is what
   // actually enforces dedup at the DB level.
   idempotency_key: z.string().min(8).max(80).optional().nullable(),
+  // Optional "remind me to reorder" cadence in days (30/60/90).
+  // Drives the reorder reminder cron — null/undefined → no reminder.
+  reorder_remind_days: z.number().int().refine(
+    (n) => n === 30 || n === 60 || n === 90,
+    { message: 'Cadence must be 30, 60, or 90 days' },
+  ).nullable().optional(),
   items: z.array(
     z.object({
       product_slug: z.string(),
@@ -393,7 +399,7 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
 
   // Calculate totals
   const subtotal = data.items.reduce((s, i) => s + i.line_total_cents, 0);
-  const delivery = data.delivery_method === 'delivery' ? DELIVERY_FLAT_CENTS : 0;
+  const delivery = deliveryCentsFor(data.delivery_method, subtotal);
 
   // Server-side coupon re-validation. Trust nothing from the client —
   // re-evaluate against the freshly-computed subtotal.
@@ -761,6 +767,10 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       points_earned: pointsEarned,
       status: 'pending',
       idempotency_key: data.idempotency_key ?? null,
+      reorder_remind_days: data.reorder_remind_days ?? null,
+      next_reorder_remind_at: data.reorder_remind_days
+        ? new Date(Date.now() + data.reorder_remind_days * 24 * 60 * 60 * 1000).toISOString()
+        : null,
     })
     .select('id, order_number, total_cents')
     .single();

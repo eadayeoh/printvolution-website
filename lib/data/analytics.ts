@@ -12,6 +12,10 @@ export type AnalyticsBundle = {
   avgOrderCents: number;             // across last 30 days
   topProducts: Array<{ slug: string; name: string; orders: number; revenue_cents: number }>;
   ordersByStatus: Record<string, number>;
+  /** Net Promoter Score across the last 90 days of survey responses.
+   *  null when no responses are in. Range -100 to 100. */
+  nps90d: number | null;
+  npsResponseCount90d: number;
 };
 
 function dayKey(iso: string): string {
@@ -24,9 +28,11 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
   const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
 
-  const [ordersRes, itemsRes] = await Promise.all([
+  const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const [ordersRes, itemsRes, npsRes] = await Promise.all([
     sb.from('orders').select('id, status, total_cents, created_at').gte('created_at', since30),
     sb.from('order_items').select('product_slug, product_name, qty, line_total_cents, order:orders!inner(created_at, status)').gte('order.created_at', since30),
+    sb.from('nps_responses').select('score').gte('responded_at', since90).not('responded_at', 'is', null),
   ]);
 
   const orders = (ordersRes.data ?? []) as Array<{ id: string; status: string; total_cents: number; created_at: string }>;
@@ -90,6 +96,19 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
   const daily: DailyRevenuePoint[] = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, ...v }));
   const avgOrderCents = completedOrders30d > 0 ? Math.round(revenue30d / completedOrders30d) : 0;
 
+  // NPS = % promoters (9–10) − % detractors (0–6). Passives (7–8)
+  // are excluded by definition, not netted.
+  const npsScores = ((npsRes.data ?? []) as Array<{ score: number | null }>)
+    .map((r) => r.score)
+    .filter((s): s is number => typeof s === 'number');
+  const npsResponseCount90d = npsScores.length;
+  let nps90d: number | null = null;
+  if (npsResponseCount90d > 0) {
+    const promoters = npsScores.filter((s) => s >= 9).length;
+    const detractors = npsScores.filter((s) => s <= 6).length;
+    nps90d = Math.round(((promoters - detractors) / npsResponseCount90d) * 100);
+  }
+
   return {
     daily,
     revenue7d, revenue30d, revenueToday,
@@ -97,5 +116,7 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
     avgOrderCents,
     topProducts,
     ordersByStatus,
+    nps90d,
+    npsResponseCount90d,
   };
 }
