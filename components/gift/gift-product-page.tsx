@@ -2830,7 +2830,7 @@ export function GiftProductPage({
                                 {t.name}
                                 {t.price_delta_cents && t.price_delta_cents > 0 ? (
                                   <span style={{ display: 'block', marginTop: 2, color: 'var(--pv-magenta)', fontWeight: 800, fontSize: 10 }}>
-                                    +{formatSGD(t.price_delta_cents / 100)}
+                                    +{formatSGD(t.price_delta_cents)}
                                   </span>
                                 ) : null}
                               </div>
@@ -3127,7 +3127,7 @@ export function GiftProductPage({
                             {t.name}
                             {t.price_delta_cents && t.price_delta_cents > 0 ? (
                               <span style={{ display: 'block', marginTop: 2, color: 'var(--pv-magenta)', fontWeight: 800, fontSize: 10 }}>
-                                +{formatSGD(t.price_delta_cents / 100)}
+                                +{formatSGD(t.price_delta_cents)}
                               </span>
                             ) : null}
                           </div>
