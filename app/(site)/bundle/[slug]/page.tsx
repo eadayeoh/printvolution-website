@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getBundleBySlug } from '@/lib/data/bundles';
 import { getProductRoutes, productHref } from '@/lib/data/navigation';
-import { formatSGD } from '@/lib/utils';
+import { formatSGD, isImageUrl } from '@/lib/utils';
 import { BundleFAQ } from '@/components/product/bundle-faq';
 import { BundleGiftConfig } from '@/components/bundle/bundle-gift-config';
 import { ProductSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
@@ -129,8 +129,13 @@ export default async function BundlePage({ params }: { params: { slug: string } 
                 {/* Icon + index */}
                 <div className="flex items-center gap-4 md:flex-col md:items-start">
                   <div className="text-xs font-black text-pink">{String(i + 1).padStart(2, '0')}</div>
-                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-50 text-5xl md:h-28 md:w-28 md:text-6xl">
-                    {p.icon ?? '📦'}
+                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-neutral-50 text-5xl md:h-28 md:w-28 md:text-6xl">
+                    {isImageUrl(p.icon) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.icon} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      p.icon ?? '📦'
+                    )}
                   </div>
                 </div>
 
