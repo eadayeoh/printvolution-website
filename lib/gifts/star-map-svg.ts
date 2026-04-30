@@ -284,6 +284,13 @@ function findRenderAnchor(zones: GiftTemplateZone[] | null | undefined, kind: st
   return null;
 }
 
+function findAllRenderAnchors(zones: GiftTemplateZone[] | null | undefined, kind: string): GiftTemplateRenderAnchorZone[] {
+  if (!zones) return [];
+  return zones.filter(
+    (z) => z.type === 'render_anchor' && (z as GiftTemplateRenderAnchorZone).anchor_kind === kind,
+  ) as GiftTemplateRenderAnchorZone[];
+}
+
 function emitZoneText(
   zone: GiftTemplateTextZone | null,
   W: number, H: number, scale: number,
@@ -386,22 +393,28 @@ export function buildStarMapSvg({
   const H = templateRefDims && templateRefDims.width_mm > 0 && templateRefDims.height_mm > 0
     ? (templateRefDims.height_mm / templateRefDims.width_mm) * W
     : (isPoster ? 140 : SM_GEOM.H);
-  // Default disk position. If the template carries a render_anchor with
-  // anchor_kind='star_disk', we let the admin override the disk's
-  // centre + radius — the editor in 0..200 canvas units, scaled into
-  // the renderer viewBox (100 × 130/140) here.
-  const diskAnchor = findRenderAnchor(zones, 'star_disk');
-  const CX = diskAnchor
-    ? (diskAnchor.x_mm + diskAnchor.width_mm / 2) * (W / 200)
-    : W / 2;
-  const CY = diskAnchor
-    ? (diskAnchor.y_mm + diskAnchor.height_mm / 2) * (H / 200)
-    : (isPoster ? 53 : SM_GEOM.CY);
-  const R = diskAnchor
-    // Use the smaller of the two half-extents so the disk always fits
-    // inside the rectangle the admin drew.
-    ? Math.min(diskAnchor.width_mm * (W / 200), diskAnchor.height_mm * (H / 200)) / 2
-    : (isPoster ? 38 : SM_GEOM.R);
+  // Disk positions. Each render_anchor zone with anchor_kind='star_disk'
+  // becomes one disk; admin drags / resizes them in the editor in
+  // 0..200 canvas units. When zero anchors exist, fall back to the
+  // legacy single-disk layout so old templates render identically.
+  const diskAnchors = findAllRenderAnchors(zones, 'star_disk');
+  type DiskGeom = { CX: number; CY: number; R: number };
+  const disks: DiskGeom[] = diskAnchors.length > 0
+    ? diskAnchors.map((a) => ({
+        CX: (a.x_mm + a.width_mm / 2) * (W / 200),
+        CY: (a.y_mm + a.height_mm / 2) * (H / 200),
+        // Use the smaller half-extent so the disk always fits inside
+        // the rectangle the admin drew.
+        R: Math.min(a.width_mm * (W / 200), a.height_mm * (H / 200)) / 2,
+      }))
+    : [{
+        CX: W / 2,
+        CY: isPoster ? 53 : SM_GEOM.CY,
+        R: isPoster ? 38 : SM_GEOM.R,
+      }];
+  // Footer + cardinal marks anchor on the FIRST disk so old footer
+  // text positions still make sense.
+  const { CX, CY, R } = disks[0];
 
   const inkColor    = foilColor    ?? (isPoster ? '#1a1a1a' : '#d4af37');
   const bgColor     = materialColor !== undefined ? materialColor : (isPoster ? '#ffffff' : '#1a2740');
@@ -427,75 +440,77 @@ export function buildStarMapSvg({
     body += `<rect x="${m2}" y="${m2}" width="${W - 2 * m2}" height="${H - 2 * m2}" fill="none" stroke="${inkColor}" stroke-width="0.15"/>`;
   }
 
-  // Disk clip. Stars and constellation lines are clipped here so a star
-  // whose projected r is just inside R doesn't accidentally render outside.
-  body += `<defs><clipPath id="starMapClip"><circle cx="${CX}" cy="${CY}" r="${R}"/></clipPath></defs>`;
-  body += `<g clip-path="url(#starMapClip)">`;
+  // Render each disk. The first disk gets cardinal marks (N/S/E/W);
+  // additional disks (multi-disk "Met / Engaged / Married" layouts)
+  // skip the cardinals to keep them readable at smaller sizes. All
+  // disks use the same scene for now — Phase 4 (pipeline fan-out)
+  // will give each disk its own date/location-specific scene.
+  disks.forEach((d, diskIdx) => {
+    const isPrimary = diskIdx === 0;
+    const dCX = d.CX;
+    const dCY = d.CY;
+    const dR = d.R;
+    const clipId = `starMapClip${diskIdx}`;
 
-  if (scene) {
-    // Re-project the bundled scene at the layout-specific (CX, CY, R).
-    // The stored coords are in the SM_GEOM canvas; we map them to the
-    // current canvas with a similarity transform around the disk centre.
-    const sx = R / SM_GEOM.R;
-    const projX = (x: number) => CX + (x - SM_GEOM.CX) * sx;
-    const projY = (y: number) => CY + (y - SM_GEOM.CY) * sx;
+    body += `<defs><clipPath id="${clipId}"><circle cx="${dCX}" cy="${dCY}" r="${dR}"/></clipPath></defs>`;
+    body += `<g clip-path="url(#${clipId})">`;
 
-    // Constellation lines first so stars sit on top.
-    if (showLines && scene.constellations.length) {
-      body += `<g fill="none" stroke="${inkColor}" stroke-width="${(isPoster ? 0.16 : 0.10).toFixed(2)}" stroke-linecap="round" stroke-opacity="${lineOpacity}">`;
-      for (const c of scene.constellations) {
-        for (const [x1, y1, x2, y2] of c.segments) {
-          body += `<line x1="${projX(x1).toFixed(2)}" y1="${projY(y1).toFixed(2)}" x2="${projX(x2).toFixed(2)}" y2="${projY(y2).toFixed(2)}"/>`;
+    if (scene) {
+      const sx = dR / SM_GEOM.R;
+      const projX = (x: number) => dCX + (x - SM_GEOM.CX) * sx;
+      const projY = (y: number) => dCY + (y - SM_GEOM.CY) * sx;
+
+      if (showLines && scene.constellations.length) {
+        body += `<g fill="none" stroke="${inkColor}" stroke-width="${(isPoster ? 0.16 : 0.10).toFixed(2)}" stroke-linecap="round" stroke-opacity="${lineOpacity}">`;
+        for (const c of scene.constellations) {
+          for (const [x1, y1, x2, y2] of c.segments) {
+            body += `<line x1="${projX(x1).toFixed(2)}" y1="${projY(y1).toFixed(2)}" x2="${projX(x2).toFixed(2)}" y2="${projY(y2).toFixed(2)}"/>`;
+          }
         }
+        body += `</g>`;
+      }
+
+      const sorted = [...scene.stars].sort((a, b) => b.mag - a.mag);
+      body += `<g fill="${inkColor}" stroke="none">`;
+      for (const s of sorted) {
+        const r = magToRadius(s.mag) * sx;
+        body += `<circle cx="${projX(s.x).toFixed(2)}" cy="${projY(s.y).toFixed(2)}" r="${r.toFixed(3)}"/>`;
+      }
+      body += `</g>`;
+
+      if (showLabels && isPrimary) {
+        body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="1.4" letter-spacing="0.1" opacity="0.7">`;
+        for (const s of scene.stars) {
+          if (!s.name || s.mag > 1.7) continue;
+          body += `<text x="${(projX(s.x) + 1.1).toFixed(2)}" y="${(projY(s.y) - 0.6).toFixed(2)}">${esc(s.name)}</text>`;
+        }
+        body += `</g>`;
+      }
+    } else if (isPrimary) {
+      body += `<text x="${dCX}" y="${dCY}" text-anchor="middle" font-size="3.5" font-family="${fontLoc}, Georgia, serif" fill="${inkColor}" opacity="0.55" font-style="italic">Pick a date to render the sky</text>`;
+    }
+
+    body += `</g>`;
+
+    // Disk frame.
+    body += `<circle cx="${dCX}" cy="${dCY}" r="${dR}" fill="none" stroke="${inkColor}" stroke-width="${isPoster ? 0.20 : 0.30}" stroke-opacity="${isPoster ? 1 : 0.95}"/>`;
+    if (!isPoster && isPrimary) {
+      body += `<circle cx="${dCX}" cy="${dCY}" r="${dR - 1}" fill="none" stroke="${inkColor}" stroke-width="0.10" stroke-opacity="0.55"/>`;
+      const cardR = dR + 1.6;
+      const cardSize = 2.2;
+      const cardOpts = [
+        { dx:  0, dy: -cardR, label: 'N' },
+        { dx:  0, dy:  cardR, label: 'S' },
+        { dx: -cardR, dy:  0, label: 'E' },
+        { dx:  cardR, dy:  0, label: 'W' },
+      ];
+      body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="${cardSize}" font-weight="600" letter-spacing="0.2">`;
+      for (const o of cardOpts) {
+        body += `<text x="${(dCX + o.dx).toFixed(2)}" y="${(dCY + o.dy + 0.8).toFixed(2)}" text-anchor="middle">${o.label}</text>`;
       }
       body += `</g>`;
     }
-
-    // Stars — bigger ones drawn last so they sit on top of overlaps.
-    const sorted = [...scene.stars].sort((a, b) => b.mag - a.mag);
-    body += `<g fill="${inkColor}" stroke="none">`;
-    for (const s of sorted) {
-      const r = magToRadius(s.mag) * sx;
-      body += `<circle cx="${projX(s.x).toFixed(2)}" cy="${projY(s.y).toFixed(2)}" r="${r.toFixed(3)}"/>`;
-    }
-    body += `</g>`;
-
-    // Optional labels for named bright stars.
-    if (showLabels) {
-      body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="1.4" letter-spacing="0.1" opacity="0.7">`;
-      for (const s of scene.stars) {
-        if (!s.name || s.mag > 1.7) continue;
-        body += `<text x="${(projX(s.x) + 1.1).toFixed(2)}" y="${(projY(s.y) - 0.6).toFixed(2)}">${esc(s.name)}</text>`;
-      }
-      body += `</g>`;
-    }
-  } else {
-    body += `<text x="${CX}" y="${CY}" text-anchor="middle" font-size="3.5" font-family="${fontLoc}, Georgia, serif" fill="${inkColor}" opacity="0.55" font-style="italic">Pick a date to render the sky</text>`;
-  }
-
-  body += `</g>`;
-
-  // Disk frame.
-  body += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${inkColor}" stroke-width="${isPoster ? 0.20 : 0.30}" stroke-opacity="${isPoster ? 1 : 0.95}"/>`;
-  if (!isPoster) {
-    // Foil layout has an inner circle echo + cardinal marks. The poster
-    // layout drops both for a cleaner print aesthetic (matches modern
-    // sky-poster reference designs).
-    body += `<circle cx="${CX}" cy="${CY}" r="${R - 1}" fill="none" stroke="${inkColor}" stroke-width="0.10" stroke-opacity="0.55"/>`;
-    const cardR = R + 1.6;
-    const cardSize = 2.2;
-    const cardOpts = [
-      { dx:  0, dy: -cardR, label: 'N' },
-      { dx:  0, dy:  cardR, label: 'S' },
-      { dx: -cardR, dy:  0, label: 'E' },
-      { dx:  cardR, dy:  0, label: 'W' },
-    ];
-    body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="${cardSize}" font-weight="600" letter-spacing="0.2">`;
-    for (const o of cardOpts) {
-      body += `<text x="${(CX + o.dx).toFixed(2)}" y="${(CY + o.dy + 0.8).toFixed(2)}" text-anchor="middle">${o.label}</text>`;
-    }
-    body += `</g>`;
-  }
+  });
 
   // ── Footer ────────────────────────────────────────────────────────────────
   //
