@@ -277,18 +277,38 @@ export async function updateGiftProduct(id: string, input: Partial<z.input<typeo
     ...(effectiveBase !== undefined ? { base_price_cents: effectiveBase } : {}),
     thumbnail_url: effectiveThumb ?? null,
   };
+  // Need the slug to revalidate the customer PDP cache.
+  const { data: slugRow } = await sb.from('gift_products').select('slug').eq('id', id).maybeSingle();
   const { error } = await sb.from('gift_products').update(patch as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
   revalidatePath(`/admin/gifts/${id}`);
+  const slug = (slugRow as { slug: string } | null)?.slug;
+  if (slug) revalidatePath(`/gift/${slug}`);
+  revalidatePath('/gifts');
   return { ok: true as const };
 }
 
 export async function deleteGiftProduct(id: string) {
   const sb = await requireAdmin();
+  // Refuse hard-delete if any gift_order_items still reference this
+  // product. The FK is set null on delete, which would silently break
+  // every order's render. Admin should soft-delete (is_active=false)
+  // for retired products instead.
+  const { count } = await sb
+    .from('gift_order_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('gift_product_id', id);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false as const,
+      error: `Cannot delete — ${count} order line(s) still reference this gift. Set the product to inactive instead.`,
+    };
+  }
   const { error } = await sb.from('gift_products').delete().eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts');
+  revalidatePath('/gifts');
   return { ok: true as const };
 }
 
@@ -508,6 +528,19 @@ export async function updateTemplate(id: string, input: Partial<z.input<typeof T
 
 export async function deleteTemplate(id: string) {
   const sb = await requireAdmin();
+  // Refuse if any gift_order_items still reference this template.
+  // FK is non-cascading so order pages would break trying to render
+  // the saved template snapshot.
+  const { count } = await sb
+    .from('gift_order_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('template_id', id);
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false as const,
+      error: `Cannot delete — ${count} order line(s) still reference this template.`,
+    };
+  }
   const { error } = await sb.from('gift_templates').delete().eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/gifts/templates');

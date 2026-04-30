@@ -40,6 +40,11 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
 
   let revenue7d = 0, revenue30d = 0, revenueToday = 0;
   let orders7d = 0, orders30d = 0;
+  // AOV historically used orders30d (all statuses) as denominator,
+  // which understates AOV by ~20–40% when there are pending or
+  // cancelled rows in the window. Track completed-only counts
+  // separately for the AOV calculation below.
+  let completedOrders30d = 0;
   const ordersByStatus: Record<string, number> = {};
   const todayKey = startOfToday.toISOString().slice(0, 10);
   const since7date = new Date(since7);
@@ -53,7 +58,10 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
       if (isCompleted) entry.cents += o.total_cents ?? 0;
     }
     orders30d++;
-    if (isCompleted) revenue30d += o.total_cents ?? 0;
+    if (isCompleted) {
+      revenue30d += o.total_cents ?? 0;
+      completedOrders30d++;
+    }
     if (new Date(o.created_at) >= since7date) {
       orders7d++;
       if (isCompleted) revenue7d += o.total_cents ?? 0;
@@ -80,7 +88,7 @@ export async function getAnalytics(): Promise<AnalyticsBundle> {
     .slice(0, 5);
 
   const daily: DailyRevenuePoint[] = Array.from(dailyMap.entries()).map(([date, v]) => ({ date, ...v }));
-  const avgOrderCents = orders30d > 0 ? Math.round(revenue30d / orders30d) : 0;
+  const avgOrderCents = completedOrders30d > 0 ? Math.round(revenue30d / completedOrders30d) : 0;
 
   return {
     daily,

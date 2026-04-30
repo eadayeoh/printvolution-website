@@ -165,7 +165,11 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             <div className="space-y-1.5 text-sm">
               <div><span className="text-neutral-500">Name:</span> <strong className="text-ink">{order.customer_name}</strong></div>
               <div><span className="text-neutral-500">Email:</span> <a href={`mailto:${order.email}`} className="text-pink hover:underline">{order.email}</a></div>
-              <div><span className="text-neutral-500">Phone:</span> <a href={`https://wa.me/${order.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-pink hover:underline">{order.phone}</a></div>
+              {order.phone ? (
+                <div><span className="text-neutral-500">Phone:</span> <a href={`https://wa.me/${order.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-pink hover:underline">{order.phone}</a></div>
+              ) : (
+                <div><span className="text-neutral-500">Phone:</span> <span className="text-neutral-400">—</span></div>
+              )}
               {order.company && <div><span className="text-neutral-500">Company:</span> <strong className="text-ink">{order.company}</strong></div>}
               {order.position && <div><span className="text-neutral-500">Position:</span> <strong className="text-ink">{order.position}</strong></div>}
             </div>

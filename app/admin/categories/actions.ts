@@ -20,9 +20,42 @@ const Schema = z.object({
   display_order: z.number().int().default(0),
 });
 
+// Walk the parent chain and reject if it returns to `selfId`. Used
+// on both create and update — without it, admin can set A.parent=B
+// and B.parent=A and the recursive shop breadcrumb spins forever.
+// `selfId` is null on create (no row to point back to yet); we still
+// run the walk to surface a pre-existing cycle in the proposed
+// ancestor chain rather than silently inheriting it.
+async function checkParentChain(
+  sb: Awaited<ReturnType<typeof requireAdmin>>,
+  parentId: string,
+  selfId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (selfId && parentId === selfId) {
+    return { ok: false, error: 'A category cannot be its own parent.' };
+  }
+  let cursor: string | null = parentId;
+  const visited = new Set<string>();
+  for (let i = 0; i < 100 && cursor; i++) {
+    if (selfId && cursor === selfId) {
+      return { ok: false, error: 'That parent would create a category cycle.' };
+    }
+    if (visited.has(cursor)) break;
+    visited.add(cursor);
+    const res = await sb.from('categories').select('parent_id').eq('id', cursor).maybeSingle();
+    const row = res.data as { parent_id: string | null } | null;
+    cursor = row?.parent_id ?? null;
+  }
+  return { ok: true };
+}
+
 export async function createCategory(input: z.input<typeof Schema>) {
   const sb = await requireAdmin();
   const parsed = Schema.parse(input);
+  if (parsed.parent_id) {
+    const chain = await checkParentChain(sb, parsed.parent_id, null);
+    if (!chain.ok) return { ok: false as const, error: chain.error };
+  }
   const { data, error } = await sb.from('categories').insert(parsed as any).select('id').single();
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/categories');
@@ -31,30 +64,9 @@ export async function createCategory(input: z.input<typeof Schema>) {
 
 export async function updateCategory(id: string, input: Partial<z.input<typeof Schema>>) {
   const sb = await requireAdmin();
-  // Cycle guard: walk the parent chain from the proposed parent_id
-  // and refuse if the chain returns to this category. Without this,
-  // admin can set A.parent=B and B.parent=A and the recursive shop
-  // breadcrumb / category tree spins forever.
   if (input.parent_id) {
-    if (input.parent_id === id) {
-      return { ok: false as const, error: 'A category cannot be its own parent.' };
-    }
-    let cursor: string | null = input.parent_id;
-    const visited = new Set<string>();
-    for (let i = 0; i < 100 && cursor; i++) {
-      if (cursor === id) {
-        return { ok: false as const, error: 'That parent would create a category cycle.' };
-      }
-      if (visited.has(cursor)) break; // pre-existing cycle elsewhere — leave it alone
-      visited.add(cursor);
-      const res = await sb
-        .from('categories')
-        .select('parent_id')
-        .eq('id', cursor)
-        .maybeSingle();
-      const row = res.data as { parent_id: string | null } | null;
-      cursor = row?.parent_id ?? null;
-    }
+    const chain = await checkParentChain(sb, input.parent_id, id);
+    if (!chain.ok) return { ok: false as const, error: chain.error };
   }
   const { error } = await sb.from('categories').update(input as any).eq('id', id);
   if (error) return { ok: false as const, error: error.message };

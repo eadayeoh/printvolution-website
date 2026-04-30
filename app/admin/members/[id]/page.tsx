@@ -26,14 +26,14 @@ export default async function AdminMemberDetail({ params }: { params: { id: stri
       .order('created_at', { ascending: false })
       .limit(50),
     sb.from('points_transactions')
-      .select('id, points, reason, created_at, order_id')
+      .select('id, delta, type, note, created_at, order_id')
       .eq('member_id', member.id)
       .order('created_at', { ascending: false })
       .limit(50),
   ]);
 
   const orders = (ordersRes.data ?? []) as Array<{ id: string; order_number: string; status: string; created_at: string; total_cents: number; delivery_method: string }>;
-  const txns = (txRes.data ?? []) as Array<{ id: string; points: number; reason: string | null; created_at: string; order_id: string | null }>;
+  const txns = (txRes.data ?? []) as Array<{ id: string; delta: number; type: string; note: string | null; created_at: string; order_id: string | null }>;
 
   // Linked auth profile lookup. auth.users isn't exposed over PostgREST,
   // so we walk the Supabase admin listUsers API. Small shops will rarely
@@ -184,9 +184,12 @@ export default async function AdminMemberDetail({ params }: { params: { id: stri
                   <td className="px-4 py-3 text-xs text-neutral-600">
                     {new Date(t.created_at).toLocaleString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3 text-xs text-neutral-700">{t.reason ?? '—'}</td>
-                  <td className={`px-4 py-3 text-right font-bold tabular-nums ${t.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {t.points >= 0 ? '+' : ''}{t.points}
+                  <td className="px-4 py-3 text-xs text-neutral-700">
+                    <span className="capitalize text-neutral-500">{t.type}</span>
+                    {t.note ? <span className="ml-1">· {t.note}</span> : null}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-bold tabular-nums ${t.delta >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {t.delta >= 0 ? '+' : ''}{t.delta}
                   </td>
                 </tr>
               ))}

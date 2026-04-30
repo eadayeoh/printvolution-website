@@ -9,7 +9,7 @@ import {
   Sparkles, Image as ImageIcon, Settings, UserCircle2, Library, Menu, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Props = {
   userEmail: string;
@@ -71,9 +71,31 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Mobile drawer ergonomics: ESC closes it, and we lock body scroll
+  // while the scrim is up so the page underneath doesn't pan around
+  // when the user swipes. Both are no-ops on desktop where the
+  // sidebar is statically positioned (lg:static).
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [sidebarOpen]);
+
   async function handleSignOut() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      // Surface auth failure rather than redirecting to /login while
+      // still authenticated — middleware would just bounce them back.
+      window.alert(`Sign out failed: ${error.message}`);
+      return;
+    }
     router.push('/login');
     router.refresh();
   }
@@ -114,8 +136,10 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
                         'flex items-center gap-3 rounded px-3 py-2 text-sm font-semibold transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink focus-visible:ring-offset-2 focus-visible:ring-offset-ink',
                         active
                           ? 'bg-pink text-white'
                           : 'text-white/70 hover:bg-white/5 hover:text-white'

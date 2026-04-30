@@ -286,8 +286,15 @@ export async function createPost(input: {
   published_at?: string | null;
 }) {
   const sb = await requireAdmin();
+  // Lowercase slug + reject case-insensitive collisions so "My-Post"
+  // and "my-post" can't land as separate rows with the same URL.
+  const slug = input.slug.toLowerCase().trim();
+  const { data: dup } = await sb.from('blog_posts').select('id').ilike('slug', slug).maybeSingle();
+  if (dup) return { ok: false as const, error: 'A post with that slug already exists.' };
   const { data, error } = await sb.from('blog_posts').insert({
     ...input,
+    slug,
+    content_html: sanitizeHtml(input.content_html),
     tags: input.tags ?? [],
   }).select('id').single();
   if (error) return { ok: false as const, error: error.message };
@@ -304,11 +311,33 @@ export async function updatePost(id: string, input: {
   published_at?: string | null;
 }) {
   const sb = await requireAdmin();
-  const { error } = await sb.from('blog_posts').update(input).eq('id', id);
+
+  // Pull the current row so we can detect slug renames + sanitize
+  // body in place. Without the prior slug, a rename leaves
+  // /blog/<old> cached forever.
+  const { data: prev } = await sb.from('blog_posts').select('slug').eq('id', id).maybeSingle();
+  const prevSlug = (prev as { slug: string } | null)?.slug ?? null;
+
+  const patch: Record<string, unknown> = { ...input };
+  if (typeof patch.slug === 'string') {
+    patch.slug = (patch.slug as string).toLowerCase().trim();
+    if (prevSlug && patch.slug !== prevSlug) {
+      const { data: dup } = await sb.from('blog_posts').select('id').ilike('slug', patch.slug as string).neq('id', id).maybeSingle();
+      if (dup) return { ok: false as const, error: 'A post with that slug already exists.' };
+    }
+  }
+  if (typeof patch.content_html === 'string') {
+    patch.content_html = sanitizeHtml(patch.content_html as string);
+  }
+
+  const { error } = await sb.from('blog_posts').update(patch).eq('id', id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath('/admin/blog');
   revalidatePath('/blog');
-  revalidatePath(`/blog/${input.slug}`);
+  if (prevSlug) revalidatePath(`/blog/${prevSlug}`);
+  if (typeof patch.slug === 'string' && patch.slug !== prevSlug) {
+    revalidatePath(`/blog/${patch.slug}`);
+  }
   return { ok: true as const };
 }
 
@@ -407,16 +436,18 @@ export async function importFromWxr(
         if (existing) { skipped++; continue; }
       }
 
-      // Ensure slug unique
+      // Ensure slug unique. ilike (case-insensitive) so "My-Post" and
+      // "my-post" can't both land — admin would see two posts with the
+      // same canonical URL otherwise.
       let finalSlug = slug;
-      const { data: slugExists } = await sb.from('blog_posts').select('id').eq('slug', finalSlug).maybeSingle();
+      const { data: slugExists } = await sb.from('blog_posts').select('id').ilike('slug', finalSlug).maybeSingle();
       if (slugExists) finalSlug = `${slug}-${wpId ?? Date.now()}`;
 
       const { error: insErr } = await sb.from('blog_posts').insert({
         slug: finalSlug,
         title,
         excerpt: excerpt || null,
-        content_html: contentHtml,
+        content_html: sanitizeHtml(contentHtml),
         featured_image_url: featuredUrl,
         author,
         tags,
