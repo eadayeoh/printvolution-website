@@ -3,7 +3,6 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
-import { formatSGD } from '@/lib/utils';
 import { setOrderStatus } from '@/app/staff/actions';
 
 /**
@@ -17,7 +16,6 @@ type Order = {
   order_number: string;
   customer_name: string;
   status: string;
-  total_cents: number;
   delivery_method: string;
   created_at: string;
   order_items?: Array<{ id: string }>;
@@ -95,7 +93,7 @@ export function StaffBoard({ orders }: { orders: Order[] }) {
                   <div key={o.id} className="rounded-md border border-neutral-200 bg-white p-3 text-xs shadow-sm">
                     <div className="mb-1 flex items-center justify-between">
                       <span className="font-black text-ink">{o.order_number}</span>
-                      <span className="font-bold text-pink">{formatSGD(o.total_cents)}</span>
+                      {/* Revenue intentionally hidden on /staff. */}
                     </div>
                     <div className="truncate font-semibold text-ink">{o.customer_name}</div>
                     <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-500">

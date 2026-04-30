@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { StaffQueue } from '@/components/staff/staff-queue';
 
+// Staff dashboard scope: order queue + customer fulfillment data only.
+// Revenue (subtotal_cents / total_cents) is intentionally NOT selected
+// so a compromised staff session can't pull a sales report by replaying
+// this page's RSC fetch. Admin sees revenue at /admin/orders.
+
 export const metadata = { title: 'Order Queue' };
 
 export default async function StaffDashboard({
@@ -13,7 +18,7 @@ export default async function StaffDashboard({
     .from('orders')
     .select(`
       id, order_number, customer_name, email, phone, delivery_method,
-      subtotal_cents, total_cents, status, notes, created_at,
+      status, notes, created_at,
       order_items(id, product_name, product_slug, icon, config, qty, personalisation_notes, production_method, production_status, gift_image_url)
     `)
     .order('created_at', { ascending: false });

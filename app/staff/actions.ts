@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { requireAdminOrStaff, createServiceClient } from '@/lib/auth/require-admin';
 
 // Allow-list of values these actions can write. Without this, an attacker
 // who got past requireAdmin (e.g. via a compromised staff session) could
@@ -19,7 +19,7 @@ export async function setOrderStatus(orderId: string, status: string) {
   // server actions can be replayed directly with valid cookies (or even
   // without, if the action identifier leaks) so every mutation needs
   // its own check before touching the service-role client.
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  try { await requireAdminOrStaff(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   if (!ORDER_STATUSES.has(status)) return { ok: false, error: 'Invalid status' };
   const sb = createServiceClient();
   const { error } = await sb.from('orders').update({ status }).eq('id', orderId);
@@ -30,7 +30,7 @@ export async function setOrderStatus(orderId: string, status: string) {
 }
 
 export async function setItemProductionStatus(itemId: string, status: string) {
-  try { await requireAdmin(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  try { await requireAdminOrStaff(); } catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
   if (!ITEM_PRODUCTION_STATUSES.has(status)) return { ok: false, error: 'Invalid production status' };
   const sb = createServiceClient();
   const { error } = await sb.from('order_items').update({ production_status: status }).eq('id', itemId);

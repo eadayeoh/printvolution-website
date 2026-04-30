@@ -9,7 +9,7 @@ async function requireAdmin() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not signed in');
   const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) throw new Error('Admin only');
+  if (!profile || profile.role !== 'admin') throw new Error('Admin only');
   return sb;
 }
 

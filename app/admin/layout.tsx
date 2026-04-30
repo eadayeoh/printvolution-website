@@ -10,16 +10,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect('/login?redirectTo=/admin');
 
-  // Check admin role
+  // Strict admin-only gate. Staff users are sent to /staff (their
+  // legitimate workspace) instead of looping back to /login — that
+  // would just re-authenticate them and loop. Admin gets full access;
+  // anyone else is dropped to login.
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, name')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
-    redirect('/login?redirectTo=/admin');
-  }
+  if (!profile) redirect('/login?redirectTo=/admin');
+  if (profile.role === 'staff') redirect('/staff');
+  if (profile.role !== 'admin') redirect('/login?redirectTo=/admin');
 
   return (
     <AdminShell userEmail={user.email ?? ''} userName={(profile.name as string) ?? ''} role={profile.role as string}>

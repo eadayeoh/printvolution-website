@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ArrowRight, Check, LayoutList, Columns } from 'lucide-react';
-import { formatSGD } from '@/lib/utils';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { setOrderStatus, setItemProductionStatus } from '@/app/staff/actions';
 import { createClient } from '@/lib/supabase/client';
@@ -178,7 +177,9 @@ export function StaffQueue({ orders: initialOrders, counts, initialStatus, initi
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-black text-pink">{formatSGD(o.total_cents)}</div>
+                  {/* Revenue lives in /admin only. Staff dashboard
+                      is scoped to fulfillment — order number, customer,
+                      items, status — not money. */}
                   <div className="text-[10px] text-neutral-400">
                     {new Date(o.created_at).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
