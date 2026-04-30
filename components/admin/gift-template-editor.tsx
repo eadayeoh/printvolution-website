@@ -638,6 +638,34 @@ export function GiftTemplateEditor({
     setActiveZoneIdx(zones.length);
   }
 
+  /** Drop a render_anchor zone matching the current renderer.
+   *  Renderer-driven templates (city_map / star_map) loop over these
+   *  to draw N maps / sky charts. anchor_kind is the renderer-specific
+   *  contract; current renderers recognise 'city_disk' and 'star_disk'. */
+  function addRenderAnchorZone(anchorKind: string, label: string) {
+    const existing = zones.filter(
+      (z) => z.type === 'render_anchor' && (z as GiftTemplateRenderAnchorZone).anchor_kind === anchorKind,
+    ).length;
+    const n = existing + 1;
+    // 70mm × 70mm circle-ish square dropped near the centre of the
+    // canvas; admin drags+resizes from there. Stagger second/third
+    // copies so they don't pile on top of the first.
+    const offset = existing * 8;
+    const zone: GiftTemplateRenderAnchorZone = {
+      id: `${anchorKind}-${n}`,
+      type: 'render_anchor',
+      anchor_kind: anchorKind,
+      label: existing === 0 ? label : `${label} ${n}`,
+      x_mm: 65 + offset,
+      y_mm: 30 + offset,
+      width_mm: 70,
+      height_mm: 70,
+      rotation_deg: 0,
+    };
+    commitZones([...zones, zone]);
+    setActiveZoneIdx(zones.length);
+  }
+
   function duplicateZone(i: number) {
     const z = zones[i];
     const copy: GiftTemplateZone = {
@@ -2176,6 +2204,26 @@ export function GiftTemplateEditor({
                 <button type="button" onClick={addCalendarZone} title="Add calendar slot" className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-amber-600">
                   <CalendarIcon size={11} />
                 </button>
+                {renderer === 'city_map' && (
+                  <button
+                    type="button"
+                    onClick={() => addRenderAnchorZone('city_disk', 'Map')}
+                    title="Add a city-map disk. Drag to reposition, resize from corners. Add multiple for layouts like 'Met / Engaged / Married'."
+                    className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
+                  >
+                    + Map
+                  </button>
+                )}
+                {renderer === 'star_map' && (
+                  <button
+                    type="button"
+                    onClick={() => addRenderAnchorZone('star_disk', 'Sky')}
+                    title="Add a star-map sky disk. Drag to reposition, resize from corners. Add multiple for triple-event layouts."
+                    className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
+                  >
+                    + Sky
+                  </button>
+                )}
               </div>
             </div>
             {zones.length === 0 ? (
