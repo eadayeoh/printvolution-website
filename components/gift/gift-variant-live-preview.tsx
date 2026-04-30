@@ -43,6 +43,11 @@ type Props = {
    *  swatch row entirely. Null/undefined falls back to per-variant
    *  swatches (legacy / non-renderer products). */
   swatchOverride?: GiftVariantColourSwatch[] | null;
+  /** True for mockup-driven products where a hex-only swatch should
+   *  recolour the variant's neutral base mockup via multiply blend.
+   *  False for renderer-driven products (foil overlay): the hex flows
+   *  to the SVG renderer, not the mockup. */
+  autoTintEligible?: boolean;
 };
 
 export function GiftVariantLivePreview({
@@ -53,6 +58,7 @@ export function GiftVariantLivePreview({
   title,
   onColourChange,
   swatchOverride,
+  autoTintEligible,
 }: Props) {
   // Per-variant selected swatch index. Keyed by variant id so switching
   // the selected tile doesn't reset sibling tiles' swatch choices.
@@ -115,7 +121,15 @@ export function GiftVariantLivePreview({
           const swatchIdx = swatchIdxByVariant[v.id];
           const variantSwatches = swatchesFor(v);
           const chosenSwatch = variantSwatches[swatchIdx];
+          // Auto-tint: when the picked swatch has only a hex (no
+          // per-colour upload) AND the product is eligible for body
+          // tinting (not a foil-overlay renderer), reuse the variant's
+          // neutral base mockup and recolour it via a multiply overlay
+          // in <VariantTile>.
           const displayedMockup = chosenSwatch?.mockup_url || v.mockup_url;
+          const tintHex = autoTintEligible && chosenSwatch && !chosenSwatch.mockup_url
+            ? validateHexColor(chosenSwatch.hex)
+            : null;
           return (
             <div
               key={v.id}
@@ -147,6 +161,7 @@ export function GiftVariantLivePreview({
                   mockupUrl={displayedMockup}
                   mockupArea={v.mockup_area}
                   previewUrl={previewUrl ?? null}
+                  tintHex={tintHex}
                 />
                 <div style={{ padding: '8px 10px', borderTop: '1px solid var(--pv-rule)' }}>
                   <div
@@ -268,11 +283,13 @@ function VariantTile({
   mockupUrl,
   mockupArea,
   previewUrl,
+  tintHex,
 }: {
   variantName: string;
   mockupUrl: string;
   mockupArea: GiftProductVariant['mockup_area'];
   previewUrl: string | null;
+  tintHex: string | null;
 }) {
   const hasComposite = previewUrl && mockupUrl && mockupArea;
   return (
@@ -317,6 +334,18 @@ function VariantTile({
           {variantName}
         </div>
       )}
+      {tintHex ? (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: tintHex,
+            mixBlendMode: 'multiply',
+            pointerEvents: 'none',
+          }}
+        />
+      ) : null}
       {hasComposite && (
         <img
           src={previewUrl!}

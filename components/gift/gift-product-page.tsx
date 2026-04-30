@@ -317,6 +317,16 @@ export function GiftProductPage({
   // customer picks a swatch, its mockup_url replaces the visible image.
   const [selectedColour, setSelectedColour] = useState<GiftVariantColourSwatch | null>(null);
 
+  // Auto-tint applies only to mockup-driven products (embroidery / laser
+  // / uv / photo-resize). Renderer-driven products (mode='digital' /
+  // 'foiling' — star map, city map, song lyrics, spotify plaque) treat
+  // the swatch hex as a foil overlay that retints the SVG output, NOT
+  // the mockup body. Multiplying their decorative mockup (e.g. a wooden
+  // frame photo) by gold would tint the wood gold.
+  const autoTintEligible = product.mode === 'embroidery'
+    || product.mode === 'laser'
+    || product.mode === 'uv'
+    || product.mode === 'photo-resize';
   const shapeMockup = resolveMockup({
     product,
     variant: selectedVariant,
@@ -325,6 +335,7 @@ export function GiftProductPage({
     shapePickerActive,
     selectedShapeKind,
     selectedColourMockupUrl: selectedColour?.mockup_url ?? null,
+    selectedColourHex: autoTintEligible ? (selectedColour?.hex ?? null) : null,
   });
 
   // Reset variant-only state when the variant flips.
@@ -2449,6 +2460,7 @@ export function GiftProductPage({
                   (selectedVariant?.mockup_url || product.mockup_url) && customerArea ? (
                     <GiftMockupPreviewInteractive
                       mockupUrl={shapeMockup.url}
+                      tintHex={shapeMockup.tintHex}
                       previewUrl={hasSurfaces ? (surfaceFills[activeSurfaceId]?.photoThumb ?? '') : (preview?.previewUrl ?? '')}
                       area={customerArea}
                       bounds={shapeMockup.area ?? null}
@@ -3188,6 +3200,7 @@ export function GiftProductPage({
                         previewUrl={null}
                         onColourChange={setSelectedColour}
                         swatchOverride={swatchOverride}
+                        autoTintEligible={autoTintEligible}
                       />
                     </ComposeSection>
                   );
@@ -3528,6 +3541,7 @@ export function GiftProductPage({
                       previewUrl={preview?.previewUrl ?? null}
                       onColourChange={setSelectedColour}
                       swatchOverride={swatchOverride}
+                      autoTintEligible={autoTintEligible}
                     />
                   </ComposeSection>
                 );

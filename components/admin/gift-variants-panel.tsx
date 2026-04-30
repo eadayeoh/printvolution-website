@@ -1084,6 +1084,8 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                 <div className="mt-1 text-[10px] leading-snug text-neutral-500">
                                   {s.mockup_url ? (
                                     <span><strong>Mockup swatch</strong> — picking this swaps the displayed photo.</span>
+                                  ) : d.mockup_url ? (
+                                    <span><strong>Auto-tint</strong> — leaves your base mockup, recolours the body to this hex via multiply blend. One upload covers every colour.</span>
                                   ) : (
                                     <span><strong>Colour overlay</strong> — no photo swap; only retints the renderer output (foil colour).</span>
                                   )}

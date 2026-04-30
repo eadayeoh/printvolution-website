@@ -4,6 +4,12 @@ import type { ShapeKind } from './shape-options';
 export type ResolvedMockup = {
   url: string;
   area: MockupArea | null;
+  /** When the picked colour swatch has only a hex (admin didn't upload
+   *  a per-colour mockup), the renderer paints this hex as a multiply
+   *  overlay onto the variant's neutral base mockup so one upload covers
+   *  every colour. Null when admin uploaded an explicit per-colour
+   *  mockup or no swatch is picked. */
+  tintHex?: string | null;
 };
 
 /**
@@ -29,6 +35,10 @@ export function resolveMockup(input: {
   selectedShapeKind?: ShapeKind | null;
   /** mockup_url of the currently-picked colour swatch on the variant tile. */
   selectedColourMockupUrl?: string | null;
+  /** Hex of the currently-picked colour swatch — used as a multiply
+   *  overlay when the swatch has no dedicated mockup_url (one base
+   *  shirt + N hex codes = N tinted previews). */
+  selectedColourHex?: string | null;
 }): ResolvedMockup {
   const {
     product,
@@ -38,6 +48,7 @@ export function resolveMockup(input: {
     shapePickerActive,
     selectedShapeKind,
     selectedColourMockupUrl,
+    selectedColourHex,
   } = input;
 
   const surfaces = Array.isArray(variant?.surfaces) ? variant!.surfaces : [];
@@ -90,5 +101,11 @@ export function resolveMockup(input: {
     area = variant?.mockup_area ?? product.mockup_area ?? null;
   }
 
-  return { url, area };
+  // Tint applies only when the customer picked a swatch but admin
+  // didn't upload a per-colour mockup for it — that's the auto-tint
+  // path. If admin uploaded a colour-specific image, skip tint so we
+  // don't double-multiply.
+  const tintHex = selectedColourHex && !selectedColourMockupUrl ? selectedColourHex : null;
+
+  return { url, area, tintHex };
 }

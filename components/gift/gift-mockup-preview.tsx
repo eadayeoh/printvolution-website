@@ -15,10 +15,15 @@ export function GiftMockupPreview({
   mockupUrl,
   previewUrl,
   area,
+  tintHex,
 }: {
   mockupUrl: string;
   previewUrl: string;
   area: Area;
+  /** Hex tint applied to the entire mockup with `multiply` blend before
+   *  the design composites. Used by auto-tint swatches so admin can
+   *  upload one neutral base mockup and let N hex codes recolour it. */
+  tintHex?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -51,6 +56,17 @@ export function GiftMockupPreview({
 
         // Background: draw mockup
         ctx.drawImage(mockupImg, 0, 0, targetW, targetH);
+
+        // Auto-tint: paint the customer-picked colour over the mockup
+        // with multiply, so the neutral shirt body picks up the hex
+        // before the design lands on top.
+        if (tintHex) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.fillStyle = tintHex;
+          ctx.fillRect(0, 0, targetW, targetH);
+          ctx.restore();
+        }
 
         // Composite the design inside the admin-defined area.
         const ax = (area.x / 100) * targetW;
@@ -93,7 +109,7 @@ export function GiftMockupPreview({
     })();
 
     return () => { cancelled = true; };
-  }, [mockupUrl, previewUrl, area]);
+  }, [mockupUrl, previewUrl, area, tintHex]);
 
   return (
     <div style={{ position: 'relative', background: '#fafaf7', borderRadius: 12, overflow: 'hidden', border: '2px solid #0a0a0a' }}>

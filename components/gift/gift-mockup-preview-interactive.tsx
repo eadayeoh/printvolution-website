@@ -41,12 +41,17 @@ export function GiftMockupPreviewInteractive({
   onPanOffsetChange,
   figurineLayer,
   lockedAspectRatio,
+  tintHex,
 }: {
   mockupUrl: string;
   previewUrl: string;
   area: Rect;
   bounds: Rect | null;
   onAreaChange: (next: Rect) => void;
+  /** Hex tint applied to the mockup with `multiply` blend so one neutral
+   *  base shirt + N admin-listed hex codes = N tinted previews without
+   *  N uploads. */
+  tintHex?: string | null;
   /** Optional draggable text overlay. Null = no text. */
   textLayer?: TextLayer | null;
   onTextChange?: (next: TextLayer) => void;
@@ -235,6 +240,21 @@ export function GiftMockupPreviewInteractive({
         // height, breaking the area placement.
         style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
       />
+      {/* Auto-tint overlay — sits between the neutral mockup and the
+          design layer so the customer-picked hex recolours the shirt
+          body without touching the design's own colours. */}
+      {tintHex ? (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: tintHex,
+            mixBlendMode: 'multiply',
+            pointerEvents: 'none',
+          }}
+        />
+      ) : null}
       {/* Bounds guide + label — explains what the dashed box is */}
       {bounds && !captureMode && !panMode && (
         <>
