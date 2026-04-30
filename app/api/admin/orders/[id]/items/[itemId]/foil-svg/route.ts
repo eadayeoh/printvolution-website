@@ -1,15 +1,17 @@
 /**
- * Admin-only download: regenerates the foil SVG for a song-lyrics order item
+ * Production download: regenerates the foil SVG for a song-lyrics order item
  * by re-rendering the SongLyricsTemplate React component with the customer's
  * inputs (parsed out of the line's `personalisation_notes` string) and
  * streaming it back as `image/svg+xml` with a download header.
  *
  * Customers never have a download surface — this is the production team's
- * file for foil printing.
+ * file for foil printing. Both admin AND staff need it (staff actually
+ * runs the press), so this uses the looser admin-or-staff guard rather
+ * than the strict admin-only one.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { requireAdminOrStaff, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildSongLyricsSvg } from '@/lib/gifts/song-lyrics-svg';
 import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
@@ -20,7 +22,7 @@ export async function GET(
   { params }: { params: { id: string; itemId: string } },
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrStaff();
   } catch (e: any) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

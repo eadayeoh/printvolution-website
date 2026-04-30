@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { requireAdminOrStaff, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildSpotifyPlaqueSvg, validateSpotifyTrackId } from '@/lib/gifts/spotify-plaque-svg';
 import { parsePersonalisationNotes, validateHexColor } from '@/lib/gifts/personalisation-notes';
@@ -19,7 +19,7 @@ export async function GET(
   { params }: { params: { id: string; itemId: string } },
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrStaff();
   } catch (e: any) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

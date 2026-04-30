@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
+import { requireAdminOrStaff, createServiceClient } from '@/lib/auth/require-admin';
 import { reportError } from '@/lib/observability';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: { id: string; itemId: string } },
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrStaff();
   } catch (e: any) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
