@@ -1320,19 +1320,29 @@ export function GiftTemplateEditor({
           <AccordionSection
             id="assets"
             title="Assets"
-            hint="Background · Foreground · Description"
+            hint="Picker thumbnail · Background · Foreground · Description"
             openId={openSection}
             onOpen={setOpenSection}
           >
-            {/* Thumbnail is auto-derived from the Background image on
-                save. Admins upload Background once; the template picker
-                card reuses that same shot. */}
+            {/* Picker thumbnail wins over the auto-derived background
+                fallback — useful for zone-only templates (LED bases,
+                photo grids) that have no background image, where the
+                picker would otherwise fall back to the auto-generated
+                wireframe SVG. Leave empty to keep the legacy behaviour
+                (thumbnail = background, falls back to wireframe). */}
             <div>
-              <div className="mb-1 text-[11px] text-neutral-600">1. Background <span className="text-neutral-400">(behind customer photo + text · doubles as the picker thumbnail)</span></div>
+              <div className="mb-1 text-[11px] text-neutral-600">1. Picker thumbnail <span className="text-neutral-400">(optional · shown in the customer template picker · overrides the background fallback)</span></div>
+              <ImageUpload value={thumbnail} onChange={setThumbnail} prefix="tpl-thumb" aspect={1} size="md" label="Picker thumbnail" />
+              <div className="mt-1 text-[10px] text-neutral-500">
+                Upload a real photo of the finished product for templates without a background image (e.g. LED bases, photo grids). Leave blank and the picker uses the background image, or — if there is none — the auto-generated wireframe.
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] text-neutral-600">2. Background <span className="text-neutral-400">(behind customer photo + text · doubles as the picker thumbnail when no thumbnail is uploaded above)</span></div>
               <ImageUpload value={background} onChange={setBackground} prefix="tpl-bg" aspect={1} size="md" label="Background" />
             </div>
             <div>
-              <div className="mb-1 text-[11px] text-neutral-600">2. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
+              <div className="mb-1 text-[11px] text-neutral-600">3. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
               <ImageUpload value={foreground} onChange={setForeground} prefix="tpl-fg" aspect={1} size="md" label="Foreground" />
             </div>
             <label className="block">
