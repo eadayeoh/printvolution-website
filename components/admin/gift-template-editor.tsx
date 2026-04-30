@@ -668,6 +668,169 @@ export function GiftTemplateEditor({
     setActiveZoneIdx(zones.length);
   }
 
+  /** Stamp a layout preset onto the canvas — replaces existing zones
+   *  (admin can undo via the toolbar's undo). Each preset is a
+   *  starting point; admin tweaks position / size from there.
+   *  Coordinates are in canvas mm, 0..200. */
+  function applyLayoutPreset(presetKey: string) {
+    const anchorKind = renderer === 'city_map' ? 'city_disk'
+      : renderer === 'star_map' ? 'star_disk'
+      : null;
+    if (!anchorKind) return;
+    const label = anchorKind === 'city_disk' ? 'Map' : 'Sky';
+    const captions = ['Met', 'Engaged', 'Married'];
+    let next: GiftTemplateZone[] = [];
+
+    if (presetKey === 'single-circle') {
+      next.push({
+        id: `${anchorKind}-1`, type: 'render_anchor', anchor_kind: anchorKind,
+        label, x_mm: 30, y_mm: 30, width_mm: 140, height_mm: 140, rotation_deg: 0,
+      } as GiftTemplateRenderAnchorZone);
+    } else if (presetKey === 'three-circles') {
+      // Three discs in a row across the top 60% of the canvas, with
+      // caption text zones sitting in the lower band.
+      [10, 70, 130].forEach((x, i) => {
+        next.push({
+          id: `${anchorKind}-${i + 1}`, type: 'render_anchor', anchor_kind: anchorKind,
+          label: `${label} ${i + 1}`, x_mm: x, y_mm: 25, width_mm: 60, height_mm: 60, rotation_deg: 0,
+        } as GiftTemplateRenderAnchorZone);
+      });
+      // Caption text zones under each disk.
+      [10, 70, 130].forEach((x, i) => {
+        next.push({
+          id: `caption-${i + 1}`, type: 'text', label: `Caption ${i + 1}`,
+          x_mm: x, y_mm: 95, width_mm: 60, height_mm: 8, rotation_deg: 0,
+          text: captions[i] ?? '', font_size: 5, font_family: 'cormorant', align: 'center',
+          color: '#d4af37', italic: true, weight: '500',
+        } as GiftTemplateTextZone);
+      });
+      // Names header above the three discs.
+      next.push({
+        id: 'names', type: 'text', label: 'Couple names',
+        x_mm: 30, y_mm: 8, width_mm: 140, height_mm: 12, rotation_deg: 0,
+        text: 'Couple names', font_size: 8, font_family: 'cormorant', align: 'center',
+        color: '#d4af37', italic: false, weight: '500',
+      } as GiftTemplateTextZone);
+      // Per-disc location + date text zones.
+      [10, 70, 130].forEach((x, i) => {
+        next.push({
+          id: `loc-${i + 1}`, type: 'text', label: `Location ${i + 1}`,
+          x_mm: x, y_mm: 110, width_mm: 60, height_mm: 6, rotation_deg: 0,
+          text: '', font_size: 3.6, font_family: 'inter', align: 'center',
+          color: '#d4af37', weight: '600',
+        } as GiftTemplateTextZone);
+        next.push({
+          id: `date-${i + 1}`, type: 'text', label: `Date ${i + 1}`,
+          x_mm: x, y_mm: 118, width_mm: 60, height_mm: 6, rotation_deg: 0,
+          text: '', font_size: 3.2, font_family: 'inter', align: 'center',
+          color: '#d4af37', weight: '400',
+        } as GiftTemplateTextZone);
+      });
+    } else if (presetKey === 'heart-pair' && anchorKind === 'city_disk') {
+      // Two heart-shaped panels: one map (left), one photo (right).
+      // The map disc is square; admin can re-clip with a heart shape
+      // zone overlay if they want a true heart-cut. For now we use
+      // square disks + a heart-shape decoration on top.
+      next.push({
+        id: `${anchorKind}-1`, type: 'render_anchor', anchor_kind: anchorKind,
+        label: 'Map', x_mm: 12, y_mm: 18, width_mm: 80, height_mm: 80, rotation_deg: 0,
+      } as GiftTemplateRenderAnchorZone);
+      next.push({
+        id: 'photo-1', type: 'image', label: 'Photo',
+        x_mm: 108, y_mm: 38, width_mm: 80, height_mm: 80, rotation_deg: 0,
+        mask_preset: 'heart', visible: true,
+      } as any);
+      next.push({
+        id: 'title', type: 'text', label: 'Title',
+        x_mm: 20, y_mm: 8, width_mm: 160, height_mm: 8, rotation_deg: 0,
+        text: 'WHERE IT ALL BEGAN', font_size: 6, font_family: 'inter', align: 'center',
+        color: '#0a0a0a', weight: '700', letter_spacing: 1,
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'names', type: 'text', label: 'Names',
+        x_mm: 20, y_mm: 130, width_mm: 160, height_mm: 10, rotation_deg: 0,
+        text: 'william & wendy', font_size: 7, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', weight: '500',
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'coords', type: 'text', label: 'Coordinates',
+        x_mm: 20, y_mm: 150, width_mm: 160, height_mm: 6, rotation_deg: 0,
+        text: '', font_size: 3.4, font_family: 'inter', align: 'center',
+        color: '#666', weight: '400', letter_spacing: 0.5,
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'date', type: 'text', label: 'Date',
+        x_mm: 20, y_mm: 162, width_mm: 160, height_mm: 6, rotation_deg: 0,
+        text: '', font_size: 3.4, font_family: 'inter', align: 'center',
+        color: '#666', weight: '400',
+      } as GiftTemplateTextZone);
+    } else if (presetKey === 'circle-with-photos' && anchorKind === 'city_disk') {
+      // One large circle map up top, three polaroid-style image zones
+      // along the bottom edge. Customer fills 3 photos.
+      next.push({
+        id: `${anchorKind}-1`, type: 'render_anchor', anchor_kind: anchorKind,
+        label: 'Map', x_mm: 50, y_mm: 18, width_mm: 100, height_mm: 100, rotation_deg: 0,
+      } as GiftTemplateRenderAnchorZone);
+      [20, 80, 140].forEach((x, i) => {
+        next.push({
+          id: `photo-${i + 1}`, type: 'image', label: `Photo ${i + 1}`,
+          x_mm: x, y_mm: 130, width_mm: 40, height_mm: 40, rotation_deg: i === 0 ? -4 : i === 2 ? 4 : 0,
+          mask_preset: 'rectangle', visible: true,
+        } as any);
+      });
+      next.push({
+        id: 'title', type: 'text', label: 'Title',
+        x_mm: 20, y_mm: 6, width_mm: 160, height_mm: 10, rotation_deg: 0,
+        text: 'Where it all Started', font_size: 8, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', italic: true, weight: '500',
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'names', type: 'text', label: 'Names',
+        x_mm: 20, y_mm: 178, width_mm: 160, height_mm: 8, rotation_deg: 0,
+        text: 'Names', font_size: 6, font_family: 'caveat', align: 'center',
+        color: '#0a0a0a', italic: true, weight: '500',
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'meta', type: 'text', label: 'Location + date',
+        x_mm: 20, y_mm: 188, width_mm: 160, height_mm: 6, rotation_deg: 0,
+        text: '', font_size: 3, font_family: 'inter', align: 'center',
+        color: '#666',
+      } as GiftTemplateTextZone);
+    } else if (presetKey === 'pair' && anchorKind === 'star_disk') {
+      // Star + photo pair (side-by-side circles).
+      next.push({
+        id: `${anchorKind}-1`, type: 'render_anchor', anchor_kind: anchorKind,
+        label: 'Sky', x_mm: 12, y_mm: 18, width_mm: 80, height_mm: 80, rotation_deg: 0,
+      } as GiftTemplateRenderAnchorZone);
+      next.push({
+        id: 'photo-1', type: 'image', label: 'Photo',
+        x_mm: 108, y_mm: 18, width_mm: 80, height_mm: 80, rotation_deg: 0,
+        mask_preset: 'circle', visible: true,
+      } as any);
+      next.push({
+        id: 'tagline', type: 'text', label: 'Tagline',
+        x_mm: 20, y_mm: 130, width_mm: 160, height_mm: 8, rotation_deg: 0,
+        text: 'Love as deep as the stars',
+        font_size: 5, font_family: 'inter', align: 'center', color: '#fff', weight: '500', letter_spacing: 0.4,
+      } as GiftTemplateTextZone);
+      next.push({
+        id: 'meta', type: 'text', label: 'Date · coordinates',
+        x_mm: 20, y_mm: 145, width_mm: 160, height_mm: 6, rotation_deg: 0,
+        text: '', font_size: 3.2, font_family: 'inter', align: 'center', color: '#fff',
+      } as GiftTemplateTextZone);
+    } else {
+      return;
+    }
+
+    // Confirm replacement when current zones aren't empty.
+    if (zones.length > 0) {
+      const ok = window.confirm('Apply preset and replace current zones? (Drag/resize after to fine-tune.)');
+      if (!ok) return;
+    }
+    commitZones(next);
+    setActiveZoneIdx(0);
+  }
+
   function duplicateZone(i: number) {
     const z = zones[i];
     const copy: GiftTemplateZone = {
@@ -2207,24 +2370,59 @@ export function GiftTemplateEditor({
                   <CalendarIcon size={11} />
                 </button>
                 {renderer === 'city_map' && (
-                  <button
-                    type="button"
-                    onClick={() => addRenderAnchorZone('city_disk', 'Map')}
-                    title="Add a city-map disk. Drag to reposition, resize from corners. Add multiple for layouts like 'Met / Engaged / Married'."
-                    className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
-                  >
-                    + Map
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => addRenderAnchorZone('city_disk', 'Map')}
+                      title="Add a city-map disk. Drag to reposition, resize from corners."
+                      className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
+                    >
+                      + Map
+                    </button>
+                    <select
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        applyLayoutPreset(e.target.value);
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      title="Apply a starting layout — drag/resize to taste afterwards"
+                      className="rounded-full border-2 border-neutral-300 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-700 hover:border-pink"
+                    >
+                      <option value="">Apply layout…</option>
+                      <option value="single-circle">Single circle</option>
+                      <option value="three-circles">Three circles (Met/Engaged/Married)</option>
+                      <option value="heart-pair">Heart pair (map + photo)</option>
+                      <option value="circle-with-photos">Circle + photo strip</option>
+                    </select>
+                  </>
                 )}
                 {renderer === 'star_map' && (
-                  <button
-                    type="button"
-                    onClick={() => addRenderAnchorZone('star_disk', 'Sky')}
-                    title="Add a star-map sky disk. Drag to reposition, resize from corners. Add multiple for triple-event layouts."
-                    className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
-                  >
-                    + Sky
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => addRenderAnchorZone('star_disk', 'Sky')}
+                      title="Add a star-map sky disk. Drag to reposition, resize from corners."
+                      className="inline-flex items-center gap-1 rounded-full border-2 border-pink bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-pink hover:bg-pink hover:text-white"
+                    >
+                      + Sky
+                    </button>
+                    <select
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        applyLayoutPreset(e.target.value);
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      title="Apply a starting layout — drag/resize to taste afterwards"
+                      className="rounded-full border-2 border-neutral-300 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-neutral-700 hover:border-pink"
+                    >
+                      <option value="">Apply layout…</option>
+                      <option value="single-circle">Single circle</option>
+                      <option value="three-circles">Three circles (Met/Engaged/Married)</option>
+                      <option value="pair">Sky + photo pair</option>
+                    </select>
+                  </>
                 )}
               </div>
             </div>
