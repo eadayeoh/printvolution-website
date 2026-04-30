@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { randomBytes } from 'crypto';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/auth/admin-audit';
 import { reportError } from '@/lib/observability';
+import { sendEmail, orderEditLinkEmail } from '@/lib/email';
 
 const ALLOWED_STATUSES = ['pending', 'processing', 'ready', 'shipped', 'completed', 'cancelled'] as const;
 
@@ -126,6 +128,89 @@ export async function updateOrderStatus(
   revalidatePath('/admin/orders');
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath('/admin');
+  return { ok: true };
+}
+
+function siteOrigin(): string {
+  const url = process.env.NEXT_PUBLIC_SITE_URL;
+  if (url && url.length > 0) return url.replace(/\/$/, '');
+  return 'https://printvolution.sg';
+}
+
+/** Send a customer-edit link for the given order. Mints a fresh
+ *  token on every call so an old link in an old email goes dead;
+ *  if the order is locked we refuse to mint at all. The customer
+ *  page at /order/[token] reads + writes against the token. */
+export async function sendCustomerEditLink(
+  orderId: string,
+  staffNote: string | null,
+): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  let actor;
+  try { actor = (await requireAdmin()).actor; }
+  catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+
+  const supabase = createServiceClient();
+  const { data: before } = await supabase
+    .from('orders')
+    .select('order_number, customer_name, email, customer_edit_locked')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!before) return { ok: false, error: 'Order not found.' };
+  if ((before as any).customer_edit_locked) {
+    return { ok: false, error: 'This order is locked from customer edits.' };
+  }
+
+  const token = randomBytes(24).toString('base64url');
+  const { error } = await supabase
+    .from('orders')
+    .update({ customer_edit_token: token, customer_edit_locked: false })
+    .eq('id', orderId);
+  if (error) return { ok: false, error: error.message };
+
+  const note = (staffNote ?? '').trim().slice(0, 500) || null;
+  const { subject, html } = orderEditLinkEmail({
+    order_number: (before as any).order_number,
+    customer_name: (before as any).customer_name ?? 'there',
+    editUrl: `${siteOrigin()}/order/${token}`,
+    staffNote: note,
+  });
+  // Side-effect failure (Resend down etc) shouldn't roll back the
+  // token — admin can resend or copy the link out of the audit log.
+  void sendEmail({ to: (before as any).email, subject, html });
+
+  await logAdminAction(actor, {
+    action: 'order.send_customer_edit_link',
+    targetType: 'order',
+    targetId: orderId,
+    metadata: { has_note: !!note },
+  });
+
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true, token };
+}
+
+/** Toggle whether the customer can still edit. Admin uses this once
+ *  the order is committed to production so further edits don't
+ *  silently land in a row that's already on press. */
+export async function setCustomerEditLocked(
+  orderId: string,
+  locked: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let actor;
+  try { actor = (await requireAdmin()).actor; }
+  catch (e: any) { return { ok: false, error: e?.message ?? 'Forbidden' }; }
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('orders')
+    .update({ customer_edit_locked: locked })
+    .eq('id', orderId);
+  if (error) return { ok: false, error: error.message };
+  await logAdminAction(actor, {
+    action: locked ? 'order.lock_customer_edit' : 'order.unlock_customer_edit',
+    targetType: 'order',
+    targetId: orderId,
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
   return { ok: true };
 }
 

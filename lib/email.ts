@@ -372,6 +372,39 @@ export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; 
   return { subject, html: shell(subject, body) };
 }
 
+export type OrderEditLinkPayload = {
+  order_number: string;
+  customer_name: string;
+  editUrl: string;
+  staffNote: string | null;
+};
+
+export function orderEditLinkEmail(p: OrderEditLinkPayload): { subject: string; html: string } {
+  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const subject = `Review your order — ${p.order_number}`;
+  const noteBlock = p.staffNote
+    ? `<div style="background:#fafaf7;border-left:3px solid ${BRAND_PINK};padding:12px 14px;margin:14px 0;font-size:13px;color:#444;line-height:1.6;">
+         <strong style="color:${BRAND_INK};">Note from us:</strong><br>${escapeHtml(p.staffNote)}
+       </div>`
+    : '';
+  const body = `
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
+      Hi ${escapeHtml(first)} — please review your order.
+    </h1>
+    <p style="font-size:14px;color:#555;margin:0 0 12px;">
+      We've drafted order <strong>${escapeHtml(p.order_number)}</strong> for you. Take a look and adjust anything before we kick off production.
+    </p>
+    ${noteBlock}
+    <a href="${escapeHtml(p.editUrl)}" style="display:inline-block;background:${BRAND_PINK};color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:0.3px;margin:8px 0 16px;">
+      Review &amp; edit order →
+    </a>
+    <p style="font-size:12px;color:#888;margin:14px 0 0;line-height:1.6;">
+      You can change quantities, delivery method, address, and notes from this link. Reply if you need anything else.
+    </p>
+  `;
+  return { subject, html: shell(subject, body) };
+}
+
 export type ReorderReminderPayload = {
   order_number: string;
   customer_name: string;

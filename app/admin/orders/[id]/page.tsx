@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getOrderById } from '@/lib/data/admin';
 import { formatSGD, isImageUrl } from '@/lib/utils';
 import { OrderStatusUpdater } from '@/components/admin/order-status-updater';
+import { CustomerEditLink } from '@/components/admin/customer-edit-link';
 import { GiftOrderLine } from '@/components/admin/gift-order-line';
 import { parsePersonalisationNotes } from '@/lib/gifts/personalisation-notes';
 
@@ -182,6 +183,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               {order.delivery_address && <div className="whitespace-pre-wrap text-xs text-neutral-700">{order.delivery_address}</div>}
             </div>
           </div>
+
+          <CustomerEditLink
+            orderId={order.id}
+            hasToken={!!order.customer_edit_token}
+            locked={!!order.customer_edit_locked}
+            lastEditAt={order.customer_edit_last_at ?? null}
+          />
+
 
           <div className="rounded-lg border-2 border-ink bg-white p-4 shadow-brand">
             <h2 className="mb-3 font-bold text-ink">Totals</h2>
