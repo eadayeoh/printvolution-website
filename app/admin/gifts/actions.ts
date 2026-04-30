@@ -315,32 +315,12 @@ export async function deleteGiftProduct(id: string) {
 export async function setProductTemplates(productId: string, templateIds: string[]) {
   const sb = await requireAdmin();
 
-  if (templateIds.length > 0) {
-    // Validate: every zone in every assigned template must use a mode
-    // the product actually supports (primary or secondary). Catches
-    // "assigned a UV-template to a laser-only product" mistakes at
-    // assignment time instead of at order-fan-out time.
-    const [{ data: product }, { data: templates }] = await Promise.all([
-      sb.from('gift_products').select('mode, secondary_mode').eq('id', productId).maybeSingle(),
-      sb.from('gift_templates').select('id, name, zones_json').in('id', templateIds),
-    ]);
-    if (product) {
-      const allowed = new Set<string>([product.mode, ...(product.secondary_mode ? [product.secondary_mode] : [])]);
-      for (const t of (templates ?? [])) {
-        const zones = Array.isArray(t.zones_json) ? t.zones_json : [];
-        for (const z of zones as any[]) {
-          // Zones with no explicit mode inherit the product's primary —
-          // always allowed. Explicit modes must be in the allowed set.
-          if (z.mode && !allowed.has(z.mode)) {
-            return {
-              ok: false as const,
-              error: `Template "${t.name}" has a zone "${z.label ?? z.id}" set to ${z.mode}, but this product only supports ${[...allowed].join(' / ')}. Edit the template or change the product's modes.`,
-            };
-          }
-        }
-      }
-    }
-  }
+  // Mode-vs-zone validation used to live here ("UV-template on a
+  // laser product"); admins explicitly want the freedom to attach
+  // any template regardless of its zone modes. The production
+  // pipeline already dispatches per-zone mode at fan-out time, so
+  // off-mode zones still produce correctly — they just route through
+  // their own pipeline rather than the product's primary.
 
   // Clear existing then re-insert
   await sb.from('gift_product_templates').delete().eq('gift_product_id', productId);

@@ -30,10 +30,10 @@ type Props = {
   /** Active prompts from the modes this product supports. Fed into the
    *  variants panel so each variant can upload per-prompt mockups. */
   parentPrompts?: Array<{ id: string; name: string; mode: string }>;
-  /** EVERY active prompt matching the product's mode(s) — the full
-   *  candidate set the admin can choose from for the per-product art-
-   *  style allowlist. Independent of the existing prompt_ids
-   *  selection. */
+  /** Every active prompt across every mode. The full candidate set
+   *  the admin can choose from for the per-product art-style
+   *  allowlist — admin can mix-and-match across modes regardless of
+   *  the product's primary/secondary set. */
   allCandidatePrompts?: Array<{ id: string; name: string; mode: string; thumbnail_url: string | null }>;
 };
 
@@ -670,8 +670,9 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                   <div className="mt-4 border-t border-neutral-100 pt-3">
                     <span className="mb-1 block text-xs font-bold text-ink">Art-style allowlist</span>
                     <p className="mb-2 text-[11px] text-neutral-500">
-                      Tick the prompts the customer can pick on this product. Leave all unticked to
-                      offer every prompt that matches the product&apos;s mode (the default).
+                      Tick the prompts the customer can pick on this product. Prompts from any
+                      processing mode are fair game — pick freely. Leave all unticked to fall
+                      back to every prompt matching the product&apos;s own mode.
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {allCandidatePrompts.map((p) => {
