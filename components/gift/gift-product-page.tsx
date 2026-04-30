@@ -65,6 +65,7 @@ import { CityMapTemplate } from '@/components/gift/city-map-template';
 import { CityMapInputs } from '@/components/gift/city-map-inputs';
 import { ExtraCityLocationsInputs } from '@/components/gift/extra-city-locations-inputs';
 import { ExtraStarEventsInputs } from '@/components/gift/extra-star-events-inputs';
+import { ImageZoneUploads } from '@/components/gift/image-zone-uploads';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
@@ -581,6 +582,17 @@ export function GiftProductPage({
     caption: string;
   };
   const [extraStarEvents, setExtraStarEvents] = useState<ExtraStarEvent[]>([]);
+  /** Per-image-zone uploads — maps zone id → File + preview blob URL +
+   *  uploaded asset id. Templates with multiple `image` zones (heart-pair
+   *  photo, polaroid strip, sky-photo pair) read this state to render
+   *  the right photo per zone. Asset id is null until the customer
+   *  submits + the file uploads through uploadGiftSourceOnly. */
+  type ImageZoneFill = {
+    file: File | null;
+    previewUrl: string | null;
+    assetId: string | null;
+  };
+  const [imageZoneFills, setImageZoneFills] = useState<Record<string, ImageZoneFill>>({});
   useEffect(() => {
     const tpl = templates.find((t) => t.id === selectedTemplateId);
     const zones = (tpl as any)?.zones_json ?? [];
@@ -1227,6 +1239,31 @@ export function GiftProductPage({
     }
     setAddingToCart(true);
     try {
+    // Multi-image-zone uploads: each pending File goes to gift-sources
+    // before we touch the cart, so the cart line carries asset IDs
+    // ready for the production pipeline. Skips already-uploaded zones
+    // (assetId already set from a prior submit attempt).
+    const imageZoneAssets: Record<string, string> = {};
+    {
+      const pending = Object.entries(imageZoneFills).filter(([, f]) => f.file && !f.assetId);
+      for (const [zoneId, fill] of pending) {
+        if (!fill.file) continue;
+        const fd = new FormData();
+        fd.append('file', fill.file);
+        fd.append('product_slug', product.slug);
+        const r = await uploadGiftSourceOnly(fd);
+        if (r.ok) {
+          imageZoneAssets[zoneId] = r.sourceAssetId;
+        }
+      }
+      // Mix in any zones that already had asset ids from a previous
+      // attempt so we don't lose them on a retry.
+      for (const [zoneId, fill] of Object.entries(imageZoneFills)) {
+        if (fill.assetId && !imageZoneAssets[zoneId]) {
+          imageZoneAssets[zoneId] = fill.assetId;
+        }
+      }
+    }
     // Surfaces flow: before adding to cart, upload each photo-surface
     // to storage so the cart line carries asset IDs. Text surfaces
     // just pass their string through — no upload.
@@ -1514,6 +1551,13 @@ export function GiftProductPage({
       if (slottedExtras.some((s) => s != null)) {
         notes += `${notes ? ';' : ''}city_extras:${encodeNoteValue(JSON.stringify(slottedExtras))}`;
       }
+    }
+    // Multi-image-zone asset ids — applies to any renderer-driven
+    // template that has image zones (heart-pair photo, polaroid strip,
+    // sky+photo pair). Stored as JSON so the admin foil-svg / production
+    // pipeline can fetch each zone's photo by id.
+    if (Object.keys(imageZoneAssets).length > 0) {
+      notes += `${notes ? ';' : ''}image_assets:${encodeNoteValue(JSON.stringify(imageZoneAssets))}`;
     }
     // Star Map Photo Frame: serialise the coords + UTC moment + footer text
     // so the admin can regenerate the foil-printable SVG from the order. We
@@ -3261,6 +3305,13 @@ export function GiftProductPage({
                 <ExtraStarEventsInputs
                   extras={extraStarEvents}
                   onChange={setExtraStarEvents}
+                />
+              )}
+              {(isCityMap || isStarMap || activeRenderer === 'spotify_plaque') && (
+                <ImageZoneUploads
+                  zones={(templates.find((t) => t.id === selectedTemplateId)?.zones_json ?? null) as any}
+                  fills={imageZoneFills}
+                  onChange={setImageZoneFills}
                 />
               )}
               {!(isSongLyrics || isCityMap || isStarMap || isSpotifyPlaque) && (
