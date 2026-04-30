@@ -880,11 +880,25 @@ export function GiftProductPage({
   // generate silently instead of asking the customer to click a button.
   // AI modes (laser / uv / embroidery) keep the explicit button because
   // their stylised output differs from the raw upload.
+  // "Non-AI" here means: the server composite is mechanical (photo +
+  // template overlay) rather than a stylised AI generation, so we can
+  // hide the "Generate preview" button and fire the composite silently
+  // as the customer fills zones — the live preview already shows their
+  // photos via the thumbs cascade.
+  // LED frames (mode='uv') and LED bases (mode='laser') use zone-based
+  // photo collage templates that don't pass through AI either, so they
+  // belong in the silent-fire bucket whenever a zones template is
+  // active. Without this, customers had to click "Generate preview"
+  // before the cart-add button enabled, which felt like a dead-end.
+  const activeTemplateRenderer = (selectedTemplateId
+    ? (templates.find((t) => t.id === selectedTemplateId) as { renderer?: string } | undefined)?.renderer
+    : null) ?? null;
   const isNonAiMode =
     product.mode === 'photo-resize' ||
     product.mode === 'digital' ||
     product.mode === 'eco-solvent' ||
-    product.mode === 'uv-dtf';
+    product.mode === 'uv-dtf' ||
+    ((product.mode === 'uv' || product.mode === 'laser') && activeTemplateRenderer === 'zones');
 
   async function onFile(file: File) {
     setErr(null);
