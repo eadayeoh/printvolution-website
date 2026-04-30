@@ -86,8 +86,17 @@ export function Turnstile({
 
   useEffect(() => {
     let cancelled = false;
-    const siteKey =
-      process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TEST_SITE_KEY;
+    // Cloudflare site keys are domain-bound. The configured site key
+    // is only valid on printvolution.sg, so previews / vercel.app
+    // hosts / localhost would fail to render with "invalid sitekey".
+    // Detect at runtime and fall back to the always-passing test key
+    // on non-production hostnames — server-side `verifyTurnstile`
+    // still hard-fails on missing TURNSTILE_SECRET_KEY in real prod,
+    // so we're not weakening the canonical domain.
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isCanonical = host === 'printvolution.sg' || host === 'www.printvolution.sg';
+    const configured = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    const siteKey = isCanonical && configured ? configured : TEST_SITE_KEY;
 
     loadScript()
       .then(() => {
