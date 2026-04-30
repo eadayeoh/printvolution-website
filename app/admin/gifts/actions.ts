@@ -792,9 +792,11 @@ export async function rerunGiftProduction(lineId: string): Promise<{ ok: boolean
   // Idempotency gate: only re-run if the line is currently failed,
   // pending, or already ready (admin-initiated retry can re-run a
   // successful one). Bail when another worker is mid-run.
+  // Also clear design_dirty here — running production means admin
+  // has acknowledged whatever the customer changed.
   const { data: claimed } = await sb
     .from('gift_order_items')
-    .update({ production_status: 'processing', production_error: null })
+    .update({ production_status: 'processing', production_error: null, design_dirty: false })
     .eq('id', lineId)
     .in('production_status', ['failed', 'pending', 'ready'])
     .select('id');

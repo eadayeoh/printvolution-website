@@ -149,6 +149,7 @@ export async function getOrderById(id: string) {
       gift_order_items(
         id, qty, unit_price_cents, line_total_cents, mode, product_name_snapshot,
         production_status, production_error, admin_notes,
+        design_dirty, design_last_edited_at, personalisation_notes,
         gift_product:gift_products(id, slug, name, thumbnail_url, mode),
         source:gift_assets!gift_order_items_source_asset_id_fkey(id, bucket, path, mime_type),
         preview:gift_assets!gift_order_items_preview_asset_id_fkey(id, bucket, path, mime_type),

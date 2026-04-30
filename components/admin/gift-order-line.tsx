@@ -19,6 +19,9 @@ type Props = {
     production_status: 'pending' | 'processing' | 'ready' | 'failed';
     production_error: string | null;
     admin_notes: string | null;
+    design_dirty?: boolean;
+    design_last_edited_at?: string | null;
+    personalisation_notes?: string | null;
     gift_product: { id: string; slug: string; name: string; thumbnail_url: string | null } | null;
     source: Asset;
     preview: Asset;
@@ -77,7 +80,7 @@ export function GiftOrderLine({ line }: Props) {
               <div className="font-bold text-ink">
                 {giftItemDisplayName(line)}
               </div>
-              <div className="mt-0.5 flex items-center gap-2">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <span className="inline-flex rounded-full bg-pink/10 px-2 py-0.5 text-[10px] font-bold text-pink">
                   GIFT · {GIFT_MODE_LABEL[line.mode as keyof typeof GIFT_MODE_LABEL]}
                 </span>
@@ -87,6 +90,18 @@ export function GiftOrderLine({ line }: Props) {
                   {line.production_status === 'ready' && <><CheckCircle2 size={10} className="mr-1 inline" />Ready</>}
                   {line.production_status === 'failed' && <><AlertCircle size={10} className="mr-1 inline" />Failed</>}
                 </span>
+                {line.design_dirty && (
+                  <span
+                    className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800"
+                    title={
+                      line.design_last_edited_at
+                        ? `Customer edited ${new Date(line.design_last_edited_at).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })}`
+                        : 'Customer edited this gift line — re-check before printing.'
+                    }
+                  >
+                    🟠 Customer edited
+                  </span>
+                )}
               </div>
             </div>
             <div className="text-right">

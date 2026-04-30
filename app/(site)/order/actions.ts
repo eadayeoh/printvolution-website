@@ -2,8 +2,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import sharp from 'sharp';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { deliveryCentsFor } from '@/lib/checkout-rates';
+import { GIFT_BUCKETS, putObject, makeKey, extFromMime } from '@/lib/gifts/storage';
+
+/** Pipeline providers that DON'T touch OpenAI. Customer is allowed
+ *  to replace the source photo for these — re-runs only Sharp +
+ *  storage, both already paid for. Anything outside this set forces
+ *  the customer back through /gift/[slug] to set up a new design. */
+const COST_FREE_PROVIDERS = new Set(['passthrough', 'local_edge', 'local_bw']);
 
 function service() {
   return createClient(
@@ -130,6 +138,245 @@ export async function saveCustomerOrderEdit(
     .eq('id', o.id)
     .eq('customer_edit_locked', false);
   if (orderErr) return { ok: false, error: 'Failed to save order: ' + orderErr.message };
+
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Gift design edits (text / qty / notes / customer photo upload)
+// ---------------------------------------------------------------------------
+
+const GiftLineEditSchema = z.object({
+  id: z.string().uuid(),
+  qty: z.number().int().min(1).max(999).optional(),
+  personalisation_notes: z.string().max(1000).nullable().optional(),
+});
+
+const GiftEditsSchema = z.object({
+  lines: z.array(GiftLineEditSchema).min(1),
+});
+
+/** Apply text/qty/notes edits to gift order lines. Free — touches no
+ *  external API. Sets design_dirty so the admin sees the line as
+ *  "customer edited, re-check before printing". */
+export async function saveGiftDesignEdits(
+  token: string,
+  input: z.input<typeof GiftEditsSchema>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`gift-edit:${ip}`, { max: 30, windowSeconds: 60 });
+  if (!rl.allowed) return { ok: false, error: 'Too many submissions. Try again in a minute.' };
+
+  const parse = GiftEditsSchema.safeParse(input);
+  if (!parse.success) return { ok: false, error: 'Invalid edit payload.' };
+
+  const sb = service();
+  const { data: order } = await sb
+    .from('orders')
+    .select('id, customer_edit_locked')
+    .eq('customer_edit_token', token)
+    .maybeSingle();
+  if (!order) return { ok: false, error: 'Edit link not found or expired.' };
+  if ((order as any).customer_edit_locked) {
+    return { ok: false, error: 'This order is locked from customer edits.' };
+  }
+
+  // Authorise every line id against this order so an attacker with a
+  // token can't edit gift items on a different order by smuggling
+  // the wrong id.
+  const { data: existing } = await sb
+    .from('gift_order_items')
+    .select('id')
+    .eq('order_id', (order as any).id);
+  const allowed = new Set(((existing ?? []) as Array<{ id: string }>).map((r) => r.id));
+
+  for (const line of parse.data.lines) {
+    if (!allowed.has(line.id)) return { ok: false, error: 'Unknown gift item.' };
+    const patch: Record<string, unknown> = {
+      design_dirty: true,
+      design_last_edited_at: new Date().toISOString(),
+    };
+    if (typeof line.qty === 'number') patch.qty = line.qty;
+    if (line.personalisation_notes !== undefined) {
+      patch.personalisation_notes = line.personalisation_notes ?? null;
+    }
+    const { error } = await sb.from('gift_order_items').update(patch).eq('id', line.id);
+    if (error) return { ok: false, error: 'Failed to save gift line: ' + error.message };
+  }
+
+  return { ok: true };
+}
+
+/** Replace the source photo on a gift line with a customer-uploaded
+ *  image. Allowed only when the line's pipeline.provider is in the
+ *  cost-free set — otherwise we'd silently re-charge OpenAI. The
+ *  pre-replacement source is snapshotted into original_source_asset_id
+ *  the first time so "Revert" can restore it. */
+export async function replaceCustomerPhoto(
+  token: string,
+  giftItemId: string,
+  formData: FormData,
+): Promise<{ ok: true; assetId: string } | { ok: false; error: string }> {
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`gift-photo:${ip}`, { max: 6, windowSeconds: 300 });
+  if (!rl.allowed) return { ok: false, error: 'Too many uploads. Try again in a few minutes.' };
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(giftItemId)) {
+    return { ok: false, error: 'Invalid gift item id.' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File)) return { ok: false, error: 'No file uploaded.' };
+  if (file.size === 0) return { ok: false, error: 'Empty file.' };
+  if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'Image too large (max 20MB).' };
+
+  const sb = service();
+
+  // Look up the gift line + its pipeline provider in one round-trip.
+  // Token + locked check is on the parent order; provider check
+  // gates the cost-free path.
+  const { data: line } = await sb
+    .from('gift_order_items')
+    .select(`
+      id, source_asset_id, original_source_asset_id,
+      order:orders!inner(id, customer_edit_token, customer_edit_locked),
+      pipeline:gift_pipelines(provider)
+    `)
+    .eq('id', giftItemId)
+    .maybeSingle();
+  if (!line) return { ok: false, error: 'Gift item not found.' };
+  const lineRow = line as any;
+  const orderRow = Array.isArray(lineRow.order) ? lineRow.order[0] : lineRow.order;
+  if (!orderRow || orderRow.customer_edit_token !== token) {
+    return { ok: false, error: 'Edit link does not match this order.' };
+  }
+  if (orderRow.customer_edit_locked) {
+    return { ok: false, error: 'This order is locked from customer edits.' };
+  }
+  const pipeline = Array.isArray(lineRow.pipeline) ? lineRow.pipeline[0] : lineRow.pipeline;
+  const provider = (pipeline?.provider ?? 'passthrough') as string;
+  if (!COST_FREE_PROVIDERS.has(provider)) {
+    return {
+      ok: false,
+      error: 'This gift uses an AI-generated design, so the photo can\'t be swapped here. To use a different photo, set up a new design from the gift page.',
+    };
+  }
+
+  // Validate by attempting a sharp metadata read — also normalises
+  // arbitrary heic/heif/etc input down to jpeg/png/webp via the
+  // pipeline's existing renderer. If sharp can't parse it, the file
+  // isn't a real image regardless of its declared content-type.
+  let buffer: Buffer;
+  let mime: string;
+  let detectedExt: string;
+  try {
+    const inputBuf = Buffer.from(await file.arrayBuffer());
+    const meta = await sharp(inputBuf, { limitInputPixels: 41_000_000, failOn: 'warning' })
+      .metadata();
+    if (!meta.width || !meta.height) throw new Error('Image has no dimensions');
+    if (meta.width < 200 || meta.height < 200) {
+      return { ok: false, error: 'Image too small — please upload at least 200×200 pixels.' };
+    }
+    // Re-encode to a known format so we don't store exotic inputs.
+    if (meta.format === 'png') {
+      buffer = await sharp(inputBuf).png({ compressionLevel: 8 }).toBuffer();
+      mime = 'image/png';
+      detectedExt = 'png';
+    } else {
+      buffer = await sharp(inputBuf).jpeg({ quality: 92 }).toBuffer();
+      mime = 'image/jpeg';
+      detectedExt = 'jpg';
+    }
+  } catch (e: any) {
+    return { ok: false, error: 'Could not read image: ' + (e?.message ?? 'invalid file') };
+  }
+
+  // Persist to gift-sources bucket + register a gift_assets row.
+  const key = makeKey(`customer-${giftItemId.slice(0, 8)}`, detectedExt);
+  try {
+    await putObject(GIFT_BUCKETS.sources, key, buffer, mime);
+  } catch (e: any) {
+    return { ok: false, error: 'Upload failed: ' + (e?.message ?? 'storage error') };
+  }
+  const { data: asset, error: assetErr } = await sb
+    .from('gift_assets')
+    .insert({
+      role: 'source',
+      bucket: GIFT_BUCKETS.sources,
+      path: key,
+      mime_type: mime,
+    })
+    .select('id')
+    .single();
+  if (assetErr || !asset) {
+    return { ok: false, error: 'Asset registration failed: ' + (assetErr?.message ?? 'unknown') };
+  }
+
+  // First customer upload? Snapshot the staff-configured original
+  // before we overwrite source_asset_id. On subsequent uploads we
+  // leave original_source_asset_id alone so the original is always
+  // recoverable via Revert.
+  const patch: Record<string, unknown> = {
+    source_asset_id: asset.id,
+    design_dirty: true,
+    design_last_edited_at: new Date().toISOString(),
+  };
+  if (!lineRow.original_source_asset_id) {
+    patch.original_source_asset_id = lineRow.source_asset_id;
+  }
+  const { error: updErr } = await sb
+    .from('gift_order_items')
+    .update(patch)
+    .eq('id', giftItemId);
+  if (updErr) return { ok: false, error: 'Update failed: ' + updErr.message };
+
+  return { ok: true, assetId: asset.id };
+}
+
+/** Restore source_asset_id from the snapshot taken on first customer
+ *  upload. Free — no pipeline call, just a column flip. */
+export async function revertCustomerPhoto(
+  token: string,
+  giftItemId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ip = getClientIp();
+  const rl = await checkRateLimit(`gift-revert:${ip}`, { max: 10, windowSeconds: 60 });
+  if (!rl.allowed) return { ok: false, error: 'Too many requests. Try again in a minute.' };
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(giftItemId)) {
+    return { ok: false, error: 'Invalid gift item id.' };
+  }
+  const sb = service();
+  const { data: line } = await sb
+    .from('gift_order_items')
+    .select(`
+      id, original_source_asset_id,
+      order:orders!inner(customer_edit_token, customer_edit_locked)
+    `)
+    .eq('id', giftItemId)
+    .maybeSingle();
+  if (!line) return { ok: false, error: 'Gift item not found.' };
+  const lineRow = line as any;
+  const orderRow = Array.isArray(lineRow.order) ? lineRow.order[0] : lineRow.order;
+  if (!orderRow || orderRow.customer_edit_token !== token) {
+    return { ok: false, error: 'Edit link does not match this order.' };
+  }
+  if (orderRow.customer_edit_locked) {
+    return { ok: false, error: 'This order is locked from customer edits.' };
+  }
+  if (!lineRow.original_source_asset_id) {
+    return { ok: false, error: 'No original on file to revert to.' };
+  }
+
+  const { error } = await sb
+    .from('gift_order_items')
+    .update({
+      source_asset_id: lineRow.original_source_asset_id,
+      design_dirty: true,
+      design_last_edited_at: new Date().toISOString(),
+    })
+    .eq('id', giftItemId);
+  if (error) return { ok: false, error: 'Revert failed: ' + error.message };
 
   return { ok: true };
 }
