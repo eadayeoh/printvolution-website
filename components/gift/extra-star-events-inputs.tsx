@@ -9,7 +9,7 @@
  * client-free from the bundled star catalogue, so there's no fetch.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { geocodeAddress } from '@/app/(site)/gift/actions';
 
 export type ExtraStarEvent = {
@@ -73,18 +73,22 @@ function ExtraRow({
   const [query, setQuery] = useState(row.label);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Same race-protection as the city extras row.
+  const seqRef = useRef(0);
 
   async function resolve() {
     const q = query.trim();
     if (!q) { setErr('Type a city or address'); return; }
     setErr(null);
     setBusy(true);
+    const mySeq = ++seqRef.current;
     try {
       const geo = await geocodeAddress(q);
+      if (mySeq !== seqRef.current) return;
       if (!geo.ok) { setErr(geo.error ?? 'Could not find that place'); return; }
       onChange({ lat: geo.lat, lng: geo.lng, label: geo.label.split(',')[0] });
     } finally {
-      setBusy(false);
+      if (mySeq === seqRef.current) setBusy(false);
     }
   }
 

@@ -9,7 +9,7 @@
  * disc immediately, same flow as the primary location.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { geocodeAddress, fetchCityMapPaths } from '@/app/(site)/gift/actions';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 
@@ -73,23 +73,31 @@ function ExtraRow({
   const [query, setQuery] = useState(row.label);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Monotonic sequence id so a slow earlier resolve can't clobber the
+  // result of a later one (customer types City A, hits Resolve,
+  // changes mind, types City B, hits Resolve — A's stale vectors
+  // mustn't land in state on top of B).
+  const seqRef = useRef(0);
 
   async function resolve() {
     const q = query.trim();
     if (!q) { setErr('Type a city or address'); return; }
     setErr(null);
     setBusy(true);
+    const mySeq = ++seqRef.current;
     try {
       const geo = await geocodeAddress(q);
+      if (mySeq !== seqRef.current) return; // a later resolve raced us
       if (!geo.ok) { setErr(geo.error ?? 'Could not find that place'); return; }
       const lat = geo.lat;
       const lng = geo.lng;
       const label = geo.label.split(',')[0];
       const vec = await fetchCityMapPaths(lat, lng, 3);
+      if (mySeq !== seqRef.current) return;
       if (!vec.ok) { setErr(vec.error ?? 'Map fetch failed'); return; }
       onChange({ lat, lng, label, vectors: vec.vectors });
     } finally {
-      setBusy(false);
+      if (mySeq === seqRef.current) setBusy(false);
     }
   }
 
