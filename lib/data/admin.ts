@@ -6,7 +6,13 @@ export type AdminStats = {
   pending_count: number;
   processing_count: number;
   ready_count: number;
+  shipped_count: number;
   completed_count: number;
+  /** pending or processing orders older than 24h — drives the
+   *  "Needs attention" panel on the admin dashboard. */
+  stale_count: number;
+  /** ready orders sitting > 48h waiting for pickup / dispatch. */
+  ready_stale_count: number;
   total_members: number;
   total_products: number;
 };
@@ -14,24 +20,38 @@ export type AdminStats = {
 export async function getAdminStats(): Promise<AdminStats> {
   const supabase = createClient();
   const [orders, members, products] = await Promise.all([
-    supabase.from('orders').select('status, total_cents'),
+    supabase.from('orders').select('status, total_cents, created_at'),
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
   ]);
 
   const stats: AdminStats = {
     total_orders: 0, revenue_cents: 0, pending_count: 0,
-    processing_count: 0, ready_count: 0, completed_count: 0,
+    processing_count: 0, ready_count: 0, shipped_count: 0, completed_count: 0,
+    stale_count: 0, ready_stale_count: 0,
     total_members: members.count ?? 0,
     total_products: products.count ?? 0,
   };
 
+  const now = Date.now();
+  const STALE_PENDING_MS = 24 * 60 * 60 * 1000;
+  const STALE_READY_MS = 48 * 60 * 60 * 1000;
+
   for (const o of (orders.data ?? []) as any[]) {
     stats.total_orders++;
-    if (o.status === 'pending') stats.pending_count++;
-    else if (o.status === 'processing') stats.processing_count++;
-    else if (o.status === 'ready') stats.ready_count++;
-    else if (o.status === 'completed') {
+    const ageMs = o.created_at ? now - new Date(o.created_at).getTime() : 0;
+    if (o.status === 'pending') {
+      stats.pending_count++;
+      if (ageMs > STALE_PENDING_MS) stats.stale_count++;
+    } else if (o.status === 'processing') {
+      stats.processing_count++;
+      if (ageMs > STALE_PENDING_MS) stats.stale_count++;
+    } else if (o.status === 'ready') {
+      stats.ready_count++;
+      if (ageMs > STALE_READY_MS) stats.ready_stale_count++;
+    } else if (o.status === 'shipped') {
+      stats.shipped_count++;
+    } else if (o.status === 'completed') {
       stats.completed_count++;
       stats.revenue_cents += o.total_cents ?? 0;
     }

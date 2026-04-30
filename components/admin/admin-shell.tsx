@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Ticket,
   FileText, LogOut, Layers, ExternalLink, Newspaper, Gift, FolderTree,
-  Sparkles, Image as ImageIcon, Settings, UserCircle2, Library,
+  Sparkles, Image as ImageIcon, Settings, UserCircle2, Library, Menu, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -18,22 +18,52 @@ type Props = {
   children: React.ReactNode;
 };
 
-const NAV = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { href: '/admin/products', label: 'Services', icon: Package },
-  { href: '/admin/gifts', label: 'Gifts', icon: Gift },
-  { href: '/admin/gifts/prompts', label: 'AI Prompts', icon: Sparkles },
-  { href: '/admin/gifts/templates', label: 'Gift Templates', icon: ImageIcon },
-  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { href: '/admin/bundles', label: 'Bundles', icon: Layers },
-  { href: '/admin/blog', label: 'Blog', icon: Newspaper },
-  { href: '/admin/pages', label: 'Pages', icon: FileText },
-  { href: '/admin/media', label: 'Media library', icon: Library },
-  { href: '/admin/promos', label: 'Promos', icon: Ticket },
-  { href: '/admin/members', label: 'Members', icon: Users },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/account', label: 'My account', icon: UserCircle2 },
+// Grouped navigation. Flat list of 15 items was the main "eye is all
+// over the place" complaint; sections give the admin a mental model
+// for where things live. Order inside each group = frequency-of-use,
+// most-used at the top.
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+const NAV_GROUPS: Array<{ heading: string | null; items: NavItem[] }> = [
+  {
+    heading: null,
+    items: [
+      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    heading: 'Operations',
+    items: [
+      { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+      { href: '/admin/promos', label: 'Promos', icon: Ticket },
+      { href: '/admin/members', label: 'Members', icon: Users },
+    ],
+  },
+  {
+    heading: 'Catalog',
+    items: [
+      { href: '/admin/products', label: 'Services', icon: Package },
+      { href: '/admin/gifts', label: 'Gifts', icon: Gift },
+      { href: '/admin/gifts/templates', label: 'Gift templates', icon: ImageIcon },
+      { href: '/admin/gifts/prompts', label: 'AI prompts', icon: Sparkles },
+      { href: '/admin/categories', label: 'Categories', icon: FolderTree },
+      { href: '/admin/bundles', label: 'Bundles', icon: Layers },
+    ],
+  },
+  {
+    heading: 'Content',
+    items: [
+      { href: '/admin/blog', label: 'Blog', icon: Newspaper },
+      { href: '/admin/pages', label: 'Pages', icon: FileText },
+      { href: '/admin/media', label: 'Media library', icon: Library },
+    ],
+  },
+  {
+    heading: 'System',
+    items: [
+      { href: '/admin/settings', label: 'Settings', icon: Settings },
+      { href: '/admin/account', label: 'My account', icon: UserCircle2 },
+    ],
+  },
 ];
 
 export function AdminShell({ userEmail, userName, role, children }: Props) {
@@ -52,6 +82,7 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
     <div className="flex min-h-screen bg-neutral-100">
       {/* Sidebar */}
       <aside
+        id="admin-sidebar"
         className={cn(
           'fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-neutral-200 bg-ink text-white transition-transform lg:static lg:flex lg:translate-x-0',
           sidebarOpen ? 'flex translate-x-0' : 'hidden -translate-x-full lg:flex'
@@ -66,33 +97,45 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {NAV.map((item) => {
-            const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 rounded px-3 py-2 text-sm font-semibold transition-colors',
-                  active
-                    ? 'bg-pink text-white'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                )}
-              >
-                <Icon size={16} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi} className={cn(gi > 0 && 'mt-5')}>
+              {group.heading && (
+                <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  {group.heading}
+                </div>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 rounded px-3 py-2 text-sm font-semibold transition-colors',
+                        active
+                          ? 'bg-pink text-white'
+                          : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      )}
+                    >
+                      <Icon size={16} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
           {/* Back to site */}
           <div className="mt-6 border-t border-white/10 pt-4">
             <Link
               href="/"
               target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-3 rounded px-3 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/5 hover:text-pink"
               title="Opens site in a new tab"
             >
@@ -114,6 +157,17 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
         </div>
       </aside>
 
+      {/* Click-anywhere-to-close scrim, mobile only when sidebar is open. */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-hidden
+          tabIndex={-1}
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-ink/40 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
       {/* Main content */}
       <div className="flex flex-1 flex-col">
         {/* Topbar for mobile */}
@@ -122,13 +176,14 @@ export function AdminShell({ userEmail, userName, role, children }: Props) {
             Print<span className="text-pink">volution</span>
           </Link>
           <button
-            className="rounded border border-neutral-200 p-2"
+            type="button"
+            className="rounded border border-neutral-200 p-2 text-ink hover:border-pink hover:text-pink"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Menu"
+            aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
           >
-            <span className="block h-0.5 w-5 bg-ink" />
-            <span className="mt-1 block h-0.5 w-5 bg-ink" />
-            <span className="mt-1 block h-0.5 w-5 bg-ink" />
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </header>
 

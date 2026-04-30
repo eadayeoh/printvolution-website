@@ -71,44 +71,59 @@ export default async function AdminDashboard() {
 
         {/* Quick stats */}
         <div className="space-y-4">
+          {/* Needs attention: only renders when there's something to do.
+              Hides itself on a clean queue so the dashboard doesn't
+              shout at the admin when nothing is wrong. */}
+          {(stats.stale_count > 0 || stats.ready_stale_count > 0) && (
+            <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 shadow-brand">
+              <h2 className="mb-2 flex items-center gap-2 font-bold text-amber-900">
+                <span aria-hidden>⚠</span> Needs attention
+              </h2>
+              <div className="space-y-2 text-sm">
+                {stats.stale_count > 0 && (
+                  <Link
+                    href="/admin/orders?status=pending"
+                    className="block rounded border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:border-amber-500"
+                  >
+                    {stats.stale_count} order{stats.stale_count === 1 ? '' : 's'} pending / processing &gt; 24h →
+                  </Link>
+                )}
+                {stats.ready_stale_count > 0 && (
+                  <Link
+                    href="/admin/orders?status=ready"
+                    className="block rounded border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:border-amber-500"
+                  >
+                    {stats.ready_stale_count} ready order{stats.ready_stale_count === 1 ? '' : 's'} &gt; 48h →
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-lg border border-neutral-200 bg-white p-4">
             <h2 className="mb-3 font-bold text-ink">Order pipeline</h2>
-            <div className="space-y-2">
-              <PipelineRow label="Pending" value={stats.pending_count} color="bg-amber-500" />
-              <PipelineRow label="Processing" value={stats.processing_count} color="bg-cyan-brand" />
-              <PipelineRow label="Ready" value={stats.ready_count} color="bg-green-500" />
-              <PipelineRow label="Completed" value={stats.completed_count} color="bg-neutral-400" />
+            <div className="space-y-1">
+              {/* Each row links to /admin/orders pre-filtered by that
+                  status — saves a click. The previous design rendered
+                  these as inert text. */}
+              <PipelineRow href="/admin/orders?status=pending"    label="Pending"    value={stats.pending_count}    color="bg-amber-500" />
+              <PipelineRow href="/admin/orders?status=processing" label="Processing" value={stats.processing_count} color="bg-cyan-brand" />
+              <PipelineRow href="/admin/orders?status=ready"      label="Ready"      value={stats.ready_count}      color="bg-green-500" />
+              <PipelineRow href="/admin/orders?status=shipped"    label="Shipped"    value={stats.shipped_count}    color="bg-blue-500" />
+              <PipelineRow href="/admin/orders?status=completed"  label="Completed"  value={stats.completed_count}  color="bg-neutral-400" />
             </div>
           </div>
 
           <div className="rounded-lg border border-neutral-200 bg-white p-4">
             <h2 className="mb-3 font-bold text-ink">Catalog</h2>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <Link href="/admin/products" className="flex items-center justify-between hover:text-pink">
                 <span className="text-neutral-600">Active products</span>
                 <span className="font-bold text-ink">{stats.total_products}</span>
-              </div>
-              <div className="flex justify-between">
+              </Link>
+              <Link href="/admin/members" className="flex items-center justify-between hover:text-pink">
                 <span className="text-neutral-600">Registered members</span>
                 <span className="font-bold text-ink">{stats.total_members}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border-2 border-ink bg-white p-4 shadow-brand">
-            <h2 className="mb-2 font-bold text-ink">Quick actions</h2>
-            <div className="space-y-2">
-              <Link href="/admin/orders" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
-                📋 View all orders
-              </Link>
-              <Link href="/admin/products" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
-                ✏️ Edit a product
-              </Link>
-              <Link href="/admin/promos" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
-                🎟️ Manage promos
-              </Link>
-              <Link href="/admin/media" className="block rounded border border-neutral-200 px-3 py-2 text-xs font-semibold text-ink hover:border-ink">
-                🖼️ Media library
               </Link>
             </div>
           </div>
@@ -118,12 +133,16 @@ export default async function AdminDashboard() {
   );
 }
 
-function PipelineRow({ label, value, color }: { label: string; value: number; color: string }) {
+function PipelineRow({ href, label, value, color }: { href: string; label: string; value: number; color: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <Link
+      href={href}
+      className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-neutral-50"
+      title={`Filter orders by ${label.toLowerCase()}`}
+    >
       <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="flex-1 text-neutral-600">{label}</span>
+      <span className="flex-1 text-neutral-600 group-hover:text-ink">{label}</span>
       <span className="font-bold text-ink">{value}</span>
-    </div>
+    </Link>
   );
 }
