@@ -68,6 +68,35 @@ export async function GET(
 
     const scene = buildStarMapScene(lat, lng, dateUtc);
 
+    // Multi-anchor extras: each entry has its own (lat, lng, dateUtc)
+    // → its own scene. Parse + project at the same time as the primary.
+    type StarExtra = {
+      lat: number; lng: number;
+      label?: string | null; caption?: string | null;
+      date_utc?: string | null;
+      local_date?: string | null;
+      local_time?: string | null;
+    };
+    let starExtras: StarExtra[] = [];
+    try {
+      const raw = n['star_extras'];
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          starExtras = (parsed as any[]).filter(
+            (e) => e && Number.isFinite(e.lat) && Number.isFinite(e.lng),
+          );
+        }
+      }
+    } catch {
+      // Malformed JSON — fall back to single-anchor render.
+    }
+    const extraScenes = starExtras.map((e) => {
+      const ed = e.date_utc ? new Date(e.date_utc) : null;
+      const valid = ed && !Number.isNaN(ed.getTime());
+      return valid ? buildStarMapScene(e.lat, e.lng, ed!) : null;
+    });
+
     const showCoords = n['star_show_coords'] === '1';
     const showLines  = n['star_show_lines']  === '1';
     const showLabels = n['star_show_labels'] === '1';
@@ -95,6 +124,29 @@ export async function GET(
     const safeNamesFont  = validateFontKey(n['star_font_names'])   ?? undefined;
     const safeEventFont  = validateFontKey(n['star_font_event'])   ?? undefined;
     const safeTaglineFnt = validateFontKey(n['star_font_tagline']) ?? undefined;
+
+    // Look up the template's zones so the renderer iterates anchors
+    // at admin-positioned rectangles. Same lookup pattern as the
+    // city-map foil-svg route.
+    let templateZones: import('@/lib/gifts/types').GiftTemplateZone[] | null = null;
+    {
+      const { data: giftLine } = await sb
+        .from('gift_order_items')
+        .select('template_id')
+        .eq('id', params.itemId)
+        .maybeSingle();
+      const tplId = (giftLine as { template_id?: string } | null)?.template_id ?? null;
+      if (tplId) {
+        const { data: tpl } = await sb
+          .from('gift_templates')
+          .select('zones_json')
+          .eq('id', tplId)
+          .maybeSingle();
+        const zj = (tpl as { zones_json?: unknown } | null)?.zones_json;
+        if (Array.isArray(zj)) templateZones = zj as any;
+      }
+    }
+
     const svgMarkup = buildStarMapSvg({
       scene,
       dateUtc,
@@ -114,6 +166,16 @@ export async function GET(
       // the foil printer. Poster: keep the white background — paper
       // prints need the full artwork.
       materialColor: layout === 'foil' ? null : undefined,
+      zones: templateZones,
+      spots: starExtras.length > 0
+        ? [
+            { scene, caption: null },
+            ...starExtras.map((e, i) => ({
+              scene: extraScenes[i],
+              caption: e.caption ?? null,
+            })),
+          ]
+        : undefined,
     });
 
     // Stamp the physical print size onto the <svg> root from the size

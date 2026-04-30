@@ -49,6 +49,15 @@ type Props = {
    *  aspect to these so the rendered output matches the admin's
    *  variant-editor preview without letterboxing. */
   templateRefDims?: { width_mm: number; height_mm: number } | null;
+  /** Multi-anchor templates: per-disk (lat, lng, date, caption). The
+   *  template renders one disk per render_anchor; spots[i] feeds the
+   *  i-th disk. Index 0 typically equals the primary lat/lng/date. */
+  extras?: Array<{
+    lat: number | null;
+    lng: number | null;
+    dateUtc: Date | null;
+    caption?: string | null;
+  }>;
 };
 
 export function StarMapTemplate({
@@ -71,6 +80,7 @@ export function StarMapTemplate({
   materialColor,
   zones,
   templateRefDims,
+  extras,
 }: Props) {
   // Scene is the only expensive bit (190 stars × atan2/sin/cos + constellation
   // segments). Recompute only when the inputs that affect it change.
@@ -79,6 +89,27 @@ export function StarMapTemplate({
       ? buildStarMapScene(lat, lng, dateUtc)
       : null),
     [lat, lng, dateUtc],
+  );
+  // Per-extra-disk scenes — built only when both lat/lng/dateUtc are
+  // present. Memo guards against rebuilding on unrelated state changes
+  // (e.g., font picks).
+  const extraSpots = useMemo(
+    () => (extras ?? []).map((e) => ({
+      scene: e.lat != null && e.lng != null && e.dateUtc != null
+        ? buildStarMapScene(e.lat, e.lng, e.dateUtc)
+        : null,
+      caption: e.caption ?? null,
+    })),
+    [extras],
+  );
+  // Compose spots[]: index 0 is the primary, then each extra. The
+  // renderer's disks loop (via zones' star_disk anchors) picks up
+  // spots[i] for the i-th anchor.
+  const spots = useMemo(
+    () => (extraSpots.length === 0
+      ? undefined
+      : [{ scene, caption: null as string | null }, ...extraSpots]),
+    [scene, extraSpots],
   );
 
   const svgMarkup = useMemo(
@@ -101,8 +132,9 @@ export function StarMapTemplate({
       materialColor,
       zones,
       templateRefDims,
+      spots,
     }),
-    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones, templateRefDims],
+    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones, templateRefDims, spots],
   );
 
   return (

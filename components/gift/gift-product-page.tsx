@@ -64,6 +64,7 @@ import { SongLyricsInputs } from '@/components/gift/song-lyrics-inputs';
 import { CityMapTemplate } from '@/components/gift/city-map-template';
 import { CityMapInputs } from '@/components/gift/city-map-inputs';
 import { ExtraCityLocationsInputs } from '@/components/gift/extra-city-locations-inputs';
+import { ExtraStarEventsInputs } from '@/components/gift/extra-star-events-inputs';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
@@ -563,6 +564,37 @@ export function GiftProductPage({
   const [starFontNames, setStarFontNames]       = useState<string>('');
   const [starFontEvent, setStarFontEvent]       = useState<string>('');
   const [starFontTagline, setStarFontTagline]   = useState<string>('');
+  /** Additional star-map events for multi-anchor templates. Each
+   *  entry is its own (date, lat, lng, location label, caption).
+   *  Length syncs to the template's star_disk anchor count - 1
+   *  whenever the template changes. */
+  type ExtraStarEvent = {
+    lat: number | null;
+    lng: number | null;
+    label: string;
+    dateIso: string;
+    timeHm: string;
+    caption: string;
+  };
+  const [extraStarEvents, setExtraStarEvents] = useState<ExtraStarEvent[]>([]);
+  useEffect(() => {
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    const zones = (tpl as any)?.zones_json ?? [];
+    const skyAnchors = (zones as Array<{ type: string; anchor_kind?: string }>)
+      .filter((z) => z.type === 'render_anchor' && z.anchor_kind === 'star_disk').length;
+    const need = Math.max(0, skyAnchors - 1);
+    setExtraStarEvents((prev) => {
+      if (prev.length === need) return prev;
+      const next = prev.slice(0, need);
+      while (next.length < need) {
+        next.push({ lat: null, lng: null, label: '', dateIso: todayIso, timeHm: '21:00', caption: '' });
+      }
+      return next;
+    });
+    // todayIso is recomputed every render but only used as initial seed
+    // for new rows; existing rows keep whatever the customer typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateId, templates]);
 
   // Combine the customer-local date/time/offset into the absolute UTC
   // Date the projection should run against. Memoised so the live preview
@@ -1457,6 +1489,33 @@ export function GiftProductPage({
       if (starFontNames)       notes += `${notes ? ';' : ''}star_font_names:${starFontNames}`;
       if (starFontEvent)       notes += `${notes ? ';' : ''}star_font_event:${starFontEvent}`;
       if (starFontTagline)     notes += `${notes ? ';' : ''}star_font_tagline:${starFontTagline}`;
+      // Multi-anchor extras: each row's date+location stored as a JSON
+      // array. The pipeline rebuilds N scenes from each (lat, lng, date)
+      // at order time. UTC ISO is computed here so the rebuild doesn't
+      // depend on the customer's local timezone.
+      const filledStarExtras = extraStarEvents
+        .filter((e) => e.lat != null && e.lng != null)
+        .map((e) => {
+          const [yy, mm, dd] = e.dateIso.split('-').map((s) => parseInt(s, 10));
+          const [hh, mi] = e.timeHm.split(':').map((s) => parseInt(s, 10));
+          let dateUtc: string | null = null;
+          if (Number.isFinite(yy) && Number.isFinite(mm) && Number.isFinite(dd) && Number.isFinite(hh) && Number.isFinite(mi)) {
+            const d = new Date(Date.UTC(yy, (mm - 1), dd, hh, mi));
+            d.setUTCMinutes(d.getUTCMinutes() - starTzOffsetMin);
+            dateUtc = d.toISOString();
+          }
+          return {
+            lat: e.lat, lng: e.lng,
+            label: e.label.trim() || null,
+            caption: e.caption.trim() || null,
+            date_utc: dateUtc,
+            local_date: e.dateIso,
+            local_time: e.timeHm,
+          };
+        });
+      if (filledStarExtras.length > 0) {
+        notes += `${notes ? ';' : ''}star_extras:${encodeNoteValue(JSON.stringify(filledStarExtras))}`;
+      }
     }
     // Record the customer's adjusted area so production knows where
     // to place the design on the 300 DPI file (if they dragged/resized).
@@ -2034,6 +2093,20 @@ export function GiftProductPage({
                         const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;
                         return w && h ? { width_mm: w, height_mm: h } : null;
                       })()}
+                      // Multi-anchor extras: each extra event becomes a
+                      // separate disk in the live preview. Empty array
+                      // for single-anchor templates.
+                      extras={extraStarEvents.length === 0 ? undefined : extraStarEvents.map((e) => {
+                        const [yy, mm, dd] = e.dateIso.split('-').map((s) => parseInt(s, 10));
+                        const [hh, mi] = e.timeHm.split(':').map((s) => parseInt(s, 10));
+                        let dUtc: Date | null = null;
+                        if (Number.isFinite(yy) && Number.isFinite(mm) && Number.isFinite(dd) && Number.isFinite(hh) && Number.isFinite(mi)) {
+                          const d = new Date(Date.UTC(yy, mm - 1, dd, hh, mi));
+                          d.setUTCMinutes(d.getUTCMinutes() - starTzOffsetMin);
+                          dUtc = d;
+                        }
+                        return { lat: e.lat, lng: e.lng, dateUtc: dUtc, caption: e.caption };
+                      })}
                     />
                   ) : isSpotifyPlaque ? (() => {
                     const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
@@ -3108,6 +3181,12 @@ export function GiftProductPage({
                 <ExtraCityLocationsInputs
                   extras={extraCityLocations}
                   onChange={setExtraCityLocations}
+                />
+              )}
+              {isStarMap && extraStarEvents.length > 0 && (
+                <ExtraStarEventsInputs
+                  extras={extraStarEvents}
+                  onChange={setExtraStarEvents}
                 />
               )}
               {!(isSongLyrics || isCityMap || isStarMap || isSpotifyPlaque) && (

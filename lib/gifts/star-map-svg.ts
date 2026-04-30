@@ -258,6 +258,11 @@ export type BuildStarMapSvgInput = {
    *  footer text positions stay zone-driven so they keep their relative
    *  layout regardless of canvas height. */
   templateRefDims?: { width_mm: number; height_mm: number } | null;
+  /** Per-disk scene + caption for multi-anchor templates (Three Skies,
+   *  Star + photo pair). Index i feeds the i-th star_disk anchor;
+   *  missing entries fall back to the top-level scene. Captions render
+   *  under each disk. */
+  spots?: Array<{ scene: StarMapScene | null; caption?: string | null }>;
 };
 
 // ── Zone helpers ────────────────────────────────────────────────────────────
@@ -381,6 +386,7 @@ export function buildStarMapSvg({
   materialColor,
   zones,
   templateRefDims,
+  spots,
 }: BuildStarMapSvgInput): string {
   const isPoster = layout === 'poster';
 
@@ -442,27 +448,30 @@ export function buildStarMapSvg({
 
   // Render each disk. The first disk gets cardinal marks (N/S/E/W);
   // additional disks (multi-disk "Met / Engaged / Married" layouts)
-  // skip the cardinals to keep them readable at smaller sizes. All
-  // disks use the same scene for now — Phase 4 (pipeline fan-out)
-  // will give each disk its own date/location-specific scene.
+  // skip the cardinals to keep them readable at smaller sizes. Each
+  // disk uses its own scene from spots[i] when available, falling
+  // back to the top-level `scene` so single-anchor templates and
+  // existing callers aren't disturbed.
   disks.forEach((d, diskIdx) => {
     const isPrimary = diskIdx === 0;
     const dCX = d.CX;
     const dCY = d.CY;
     const dR = d.R;
     const clipId = `starMapClip${diskIdx}`;
+    const spot = spots?.[diskIdx];
+    const diskScene = spot?.scene ?? (isPrimary ? scene : null);
 
     body += `<defs><clipPath id="${clipId}"><circle cx="${dCX}" cy="${dCY}" r="${dR}"/></clipPath></defs>`;
     body += `<g clip-path="url(#${clipId})">`;
 
-    if (scene) {
+    if (diskScene) {
       const sx = dR / SM_GEOM.R;
       const projX = (x: number) => dCX + (x - SM_GEOM.CX) * sx;
       const projY = (y: number) => dCY + (y - SM_GEOM.CY) * sx;
 
-      if (showLines && scene.constellations.length) {
+      if (showLines && diskScene.constellations.length) {
         body += `<g fill="none" stroke="${inkColor}" stroke-width="${(isPoster ? 0.16 : 0.10).toFixed(2)}" stroke-linecap="round" stroke-opacity="${lineOpacity}">`;
-        for (const c of scene.constellations) {
+        for (const c of diskScene.constellations) {
           for (const [x1, y1, x2, y2] of c.segments) {
             body += `<line x1="${projX(x1).toFixed(2)}" y1="${projY(y1).toFixed(2)}" x2="${projX(x2).toFixed(2)}" y2="${projY(y2).toFixed(2)}"/>`;
           }
@@ -470,7 +479,7 @@ export function buildStarMapSvg({
         body += `</g>`;
       }
 
-      const sorted = [...scene.stars].sort((a, b) => b.mag - a.mag);
+      const sorted = [...diskScene.stars].sort((a, b) => b.mag - a.mag);
       body += `<g fill="${inkColor}" stroke="none">`;
       for (const s of sorted) {
         const r = magToRadius(s.mag) * sx;
@@ -480,7 +489,7 @@ export function buildStarMapSvg({
 
       if (showLabels && isPrimary) {
         body += `<g fill="${inkColor}" font-family="Archivo, sans-serif" font-size="1.4" letter-spacing="0.1" opacity="0.7">`;
-        for (const s of scene.stars) {
+        for (const s of diskScene.stars) {
           if (!s.name || s.mag > 1.7) continue;
           body += `<text x="${(projX(s.x) + 1.1).toFixed(2)}" y="${(projY(s.y) - 0.6).toFixed(2)}">${esc(s.name)}</text>`;
         }
@@ -509,6 +518,13 @@ export function buildStarMapSvg({
         body += `<text x="${(dCX + o.dx).toFixed(2)}" y="${(dCY + o.dy + 0.8).toFixed(2)}" text-anchor="middle">${o.label}</text>`;
       }
       body += `</g>`;
+    }
+    // Per-disk caption (e.g. "Met"/"Engaged"/"Married") under each
+    // disk for multi-anchor templates. Primary disk's caption is
+    // rendered by the existing footer block, so we only emit for
+    // non-primary disks here.
+    if (!isPrimary && spot?.caption) {
+      body += `<text x="${dCX.toFixed(2)}" y="${(dCY + dR + 4).toFixed(2)}" text-anchor="middle" font-size="2.6" font-family="${fontLoc}, Georgia, serif" font-style="italic" fill="${inkColor}">${esc(spot.caption)}</text>`;
     }
   });
 
