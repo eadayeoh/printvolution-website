@@ -3,14 +3,16 @@ import Link from 'next/link';
 export const metadata = { title: 'Order Confirmed' };
 
 export default function ConfirmPage({ searchParams }: { searchParams: { order?: string } }) {
-  const orderNumber = searchParams.order ?? 'Unknown';
+  const orderNumber = searchParams.order;
   return (
     <div className="mx-auto max-w-2xl px-6 py-24 text-center lg:px-10">
       <div className="mb-6 text-6xl">✅</div>
       <h1 className="mb-4 text-4xl font-black text-ink lg:text-5xl">Order received!</h1>
-      <p className="mb-2 text-lg text-neutral-600">
-        Your order number is <strong className="text-pink">{orderNumber}</strong>
-      </p>
+      {orderNumber && (
+        <p className="mb-2 text-lg text-neutral-600">
+          Your order number is <strong className="text-pink">{orderNumber}</strong>
+        </p>
+      )}
       <p className="mb-10 text-sm text-neutral-500">
         We&apos;ll WhatsApp you shortly to confirm payment and handle file artwork.
       </p>
@@ -42,12 +44,14 @@ export default function ConfirmPage({ searchParams }: { searchParams: { order?: 
         >
           💬 WhatsApp us now
         </a>
-        <Link
-          href={`/track?order=${encodeURIComponent(orderNumber)}`}
-          className="inline-flex items-center gap-2 rounded-full bg-pink px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark"
-        >
-          📦 Track this order
-        </Link>
+        {orderNumber && (
+          <Link
+            href={`/track?order=${encodeURIComponent(orderNumber)}`}
+            className="inline-flex items-center gap-2 rounded-full bg-pink px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark"
+          >
+            📦 Track this order
+          </Link>
+        )}
         <Link
           href="/shop"
           className="inline-flex items-center rounded-full border-2 border-ink px-6 py-3 text-sm font-bold text-ink transition-colors hover:bg-ink hover:text-white"

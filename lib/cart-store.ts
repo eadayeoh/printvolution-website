@@ -125,7 +125,11 @@ export const useCart = create<CartState>()(
         })),
       clear: () => set({ items: [], lastUpdated: Date.now() }),
       subtotalCents: () => get().items.reduce((sum, i) => sum + i.line_total_cents, 0),
-      count: () => get().items.reduce((sum, i) => sum + i.qty, 0),
+      // Header badge: count distinct line items, NOT summed unit qty.
+      // For products like Letterheads where qty represents sheets (300+),
+      // summing produces nonsense badges like "CART 301" when only two
+      // products are in the cart.
+      count: () => get().items.length,
     }),
     {
       name: 'pv-cart-v1',
