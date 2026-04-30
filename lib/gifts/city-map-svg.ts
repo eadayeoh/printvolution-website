@@ -275,6 +275,20 @@ function esc(s: string): string {
 
 export type CityMapLayout = 'foil';
 
+/** Per-disk content for multi-anchor templates. Each entry pairs with a
+ *  render_anchor zone (anchor_kind='city_disk') in zones order. The
+ *  renderer consumes spots[i] for the i-th anchor; index 0 falls back
+ *  to the top-level vectors/cityLabel/coordinates so single-anchor
+ *  callers don't change their payload. */
+export type CityMapSpot = {
+  vectors: CityMapVectors | null;
+  cityLabel?: string;
+  coordinates?: string;
+  /** Per-anchor caption shown directly under that disk
+   *  (e.g. "Met", "Engaged", "Married"). */
+  caption?: string;
+};
+
 export type BuildCityMapSvgInput = {
   vectors: CityMapVectors | null;
   /** Top names line, e.g. "EVA & JOHN". */
@@ -296,7 +310,59 @@ export type BuildCityMapSvgInput = {
   /** Material colour behind the foil. null drops the background <rect> for
    *  the foil printer (only the gold paths ship). */
   materialColor?: string | null;
+  /** Optional admin-authored layout. When the template has one or
+   *  more render_anchor zones with anchor_kind='city_disk', the
+   *  renderer draws a map at each one (positions in canvas mm,
+   *  0..200). Without anchors, falls back to the legacy hardcoded
+   *  MAP_X/Y/W/H rectangle. */
+  zones?: import('./types').GiftTemplateZone[] | null;
+  /** Per-anchor map data. spots[i] feeds the i-th city_disk anchor.
+   *  Missing entries fall back to the top-level vectors. */
+  spots?: CityMapSpot[];
 };
+
+/** Render a single map rect — used by both the legacy single-disk
+ *  layout and the multi-anchor (zones-driven) layout. */
+function emitDisk(
+  vectors: CityMapVectors | null,
+  rect: { x: number; y: number; w: number; h: number },
+  clipId: string,
+  foilColor: string,
+  cityFont: string,
+  caption?: string,
+): string {
+  let body = '';
+  body += `<defs><clipPath id="${clipId}"><rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" rx="0.5" ry="0.5"/></clipPath></defs>`;
+  body += `<g clip-path="url(#${clipId})">`;
+
+  if (vectors) {
+    if (vectors.waterLines.length) {
+      body += `<g fill="none" stroke="${foilColor}" stroke-width="${WATER_WIDTH}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85">`;
+      for (const d of vectors.waterLines) body += `<path d="${d}"/>`;
+      body += `</g>`;
+    }
+    const drawOrder = [
+      'unclassified', 'residential',
+      'tertiary', 'secondary', 'primary', 'trunk', 'motorway',
+    ];
+    for (const cls of drawOrder) {
+      const ways = vectors.roads[cls];
+      if (!ways?.length) continue;
+      const w = ROAD_WIDTH[cls];
+      body += `<g fill="none" stroke="${foilColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">`;
+      for (const d of ways) body += `<path d="${d}"/>`;
+      body += `</g>`;
+    }
+  } else {
+    body += `<text x="${rect.x + rect.w / 2}" y="${rect.y + rect.h / 2}" text-anchor="middle" font-size="${Math.max(2, rect.w * 0.04)}" font-family="${cityFont}, Georgia, serif" fill="${foilColor}" opacity="0.55" font-style="italic">Enter a city</text>`;
+  }
+  body += `</g>`;
+  body += `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="none" stroke="${foilColor}" stroke-width="0.25" stroke-opacity="0.9"/>`;
+  if (caption) {
+    body += `<text x="${rect.x + rect.w / 2}" y="${rect.y + rect.h + 4}" text-anchor="middle" font-size="2.6" font-family="${cityFont}, Georgia, serif" font-style="italic" fill="${foilColor}">${esc(caption)}</text>`;
+  }
+  return body;
+}
 
 export function buildCityMapSvg({
   vectors,
@@ -311,6 +377,8 @@ export function buildCityMapSvg({
   taglineFont = 'Playfair Display',
   foilColor = '#d4af37',
   materialColor = '#1a2740',
+  zones,
+  spots,
 }: BuildCityMapSvgInput): string {
   const { W, H, MAP_X, MAP_Y, MAP_W, MAP_H } = CM_GEOM;
   let body = '';
@@ -319,53 +387,31 @@ export function buildCityMapSvg({
     body += `<rect x="0" y="0" width="${W}" height="${H}" fill="${materialColor}"/>`;
   }
 
-  // Map clip — round corners help frame the artwork.
-  body += `<defs><clipPath id="cityMapClip"><rect x="${MAP_X}" y="${MAP_Y}" width="${MAP_W}" height="${MAP_H}" rx="0.5" ry="0.5"/></clipPath></defs>`;
+  // Multi-anchor path: when the template carries render_anchor zones
+  // with anchor_kind='city_disk', render one map per anchor (the
+  // canvas mm grid is 0..200, so scale to the SVG's W/H). Falls back
+  // to the legacy single-rect when no anchors are present so existing
+  // single-map templates keep rendering identically.
+  const diskAnchors = (zones ?? [])
+    .filter((z) => z.type === 'render_anchor' && (z as any).anchor_kind === 'city_disk') as Array<{
+      x_mm: number; y_mm: number; width_mm: number; height_mm: number;
+    }>;
 
-  // Map content
-  body += `<g clip-path="url(#cityMapClip)">`;
-
-  if (vectors) {
-    // Water polygons are intentionally NOT filled — Singapore-style island
-    // coastlines produce huge OSM polygons that extend far past the bbox
-    // and create wedge-shaped fill artifacts under SVG clipping. Rivers
-    // and waterway lines below carry the water signal, which matches the
-    // single-stroke aesthetic we want for foil printing anyway.
-
-    // Waterway lines (rivers) — heavier stroke than residential roads.
-    if (vectors.waterLines.length) {
-      body += `<g fill="none" stroke="${foilColor}" stroke-width="${WATER_WIDTH}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85">`;
-      for (const d of vectors.waterLines) {
-        body += `<path d="${d}"/>`;
-      }
-      body += `</g>`;
-    }
-
-    // Roads — back-to-front so motorways sit on top of residentials.
-    // Iterate from thin to thick.
-    const drawOrder = [
-      'unclassified', 'residential',
-      'tertiary', 'secondary', 'primary', 'trunk', 'motorway',
-    ];
-    for (const cls of drawOrder) {
-      const ways = vectors.roads[cls];
-      if (!ways?.length) continue;
-      const w = ROAD_WIDTH[cls];
-      body += `<g fill="none" stroke="${foilColor}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">`;
-      for (const d of ways) {
-        body += `<path d="${d}"/>`;
-      }
-      body += `</g>`;
-    }
+  if (diskAnchors.length > 0) {
+    diskAnchors.forEach((z, i) => {
+      const spot = spots?.[i];
+      const v = spot?.vectors ?? (i === 0 ? vectors : null);
+      const rect = {
+        x: (z.x_mm / 200) * W,
+        y: (z.y_mm / 200) * H,
+        w: (z.width_mm / 200) * W,
+        h: (z.height_mm / 200) * H,
+      };
+      body += emitDisk(v, rect, `cityMapClip${i}`, foilColor, cityFont, spot?.caption);
+    });
   } else {
-    // Empty-state placeholder — visible before geocoding completes.
-    body += `<text x="${MAP_X + MAP_W / 2}" y="${MAP_Y + MAP_H / 2}" text-anchor="middle" font-size="3.5" font-family="${cityFont}, Georgia, serif" fill="${foilColor}" opacity="0.55" font-style="italic">Enter a city to render the map</text>`;
+    body += emitDisk(vectors, { x: MAP_X, y: MAP_Y, w: MAP_W, h: MAP_H }, 'cityMapClip', foilColor, cityFont);
   }
-
-  body += `</g>`;
-
-  // Frame around the map
-  body += `<rect x="${MAP_X}" y="${MAP_Y}" width="${MAP_W}" height="${MAP_H}" fill="none" stroke="${foilColor}" stroke-width="0.25" stroke-opacity="0.9"/>`;
 
   // Footer block — names / event / city / tagline
   const cx = W / 2;

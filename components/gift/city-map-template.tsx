@@ -13,8 +13,9 @@
  */
 
 import { useMemo } from 'react';
-import { buildCityMapSvg, type CityMapLayout } from '@/lib/gifts/city-map-svg';
+import { buildCityMapSvg, type CityMapLayout, type CityMapSpot } from '@/lib/gifts/city-map-svg';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
+import type { GiftTemplateZone } from '@/lib/gifts/types';
 
 type Props = {
   vectors: CityMapVectors | null;
@@ -30,6 +31,10 @@ type Props = {
   layout?: CityMapLayout;
   foilColor?: string;
   materialColor?: string | null;
+  /** Optional template zones for multi-anchor layouts. */
+  zones?: GiftTemplateZone[] | null;
+  /** Per-anchor map data for multi-anchor layouts. */
+  spots?: CityMapSpot[];
 };
 
 export function CityMapTemplate({
@@ -45,6 +50,8 @@ export function CityMapTemplate({
   taglineFont,
   foilColor,
   materialColor,
+  zones,
+  spots,
 }: Props) {
   // Memoise the SVG string — buildCityMapSvg can be heavy when there are
   // thousands of road paths, and the customer types into footer text often.
@@ -63,8 +70,10 @@ export function CityMapTemplate({
       taglineFont,
       foilColor,
       materialColor,
+      zones,
+      spots,
     }),
-    [vectors, names, event, cityLabel, tagline, coordinates, namesFont, eventFont, cityFont, taglineFont, foilColor, materialColor],
+    [vectors, names, event, cityLabel, tagline, coordinates, namesFont, eventFont, cityFont, taglineFont, foilColor, materialColor, zones, spots],
   );
 
   return (

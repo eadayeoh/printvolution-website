@@ -518,13 +518,15 @@ export function GiftTemplateEditor({
     if (renderer === 'city_map') {
       // Empty-state preview — vectors=null gives the "Enter a city to
       // render the map" placeholder. We don't fire an Overpass fetch
-      // from the admin editor.
+      // from the admin editor. Pass zones so the preview reflects
+      // whatever city_disk anchors admin has dragged onto the canvas.
       return buildCityMapSvg({
         vectors: null,
         names: 'EVA & JOHN',
         event: 'OUR FIRST DATE',
         cityLabel: 'LONDON',
         tagline: 'Love now and always',
+        zones,
       });
     }
     if (renderer === 'star_map') {

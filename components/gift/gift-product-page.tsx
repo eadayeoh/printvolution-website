@@ -1922,6 +1922,12 @@ export function GiftProductPage({
                       eventFont={cityFontEvent || 'Archivo'}
                       taglineFont={cityFontTagline || engravedFont}
                       foilColor={selectedColour?.hex ?? undefined}
+                      // Pass the selected template's zones so multi-anchor
+                      // layouts (3 city circles, heart pair, etc.) render
+                      // at the admin-dragged positions. Single-anchor
+                      // templates with no city_disk anchors fall back to
+                      // the legacy MAP_X/Y/W/H rect.
+                      zones={(templates.find((t) => t.id === selectedTemplateId)?.zones_json ?? null) as any}
                       // materialColor intentionally NOT passed — colour
                       // overlays only retint the foil (text/lines), not
                       // the background. Renderer falls back to its
