@@ -69,22 +69,25 @@ export async function GET(
     const scene = buildStarMapScene(lat, lng, dateUtc);
 
     // Multi-anchor extras: each entry has its own (lat, lng, dateUtc)
-    // → its own scene. Parse + project at the same time as the primary.
+    // → its own scene. The cart-line PRESERVES empty slots so anchor[i]
+    // alignment stays correct — null entries render as the placeholder.
     type StarExtra = {
       lat: number; lng: number;
       label?: string | null; caption?: string | null;
       date_utc?: string | null;
       local_date?: string | null;
       local_time?: string | null;
-    };
+    } | null;
     let starExtras: StarExtra[] = [];
     try {
       const raw = n['star_extras'];
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          starExtras = (parsed as any[]).filter(
-            (e) => e && Number.isFinite(e.lat) && Number.isFinite(e.lng),
+          starExtras = (parsed as any[]).map(
+            (e) => (e && Number.isFinite(e?.lat) && Number.isFinite(e?.lng)
+              ? (e as StarExtra)
+              : null),
           );
         }
       }
@@ -92,6 +95,7 @@ export async function GET(
       // Malformed JSON — fall back to single-anchor render.
     }
     const extraScenes = starExtras.map((e) => {
+      if (!e) return null;
       const ed = e.date_utc ? new Date(e.date_utc) : null;
       const valid = ed && !Number.isNaN(ed.getTime());
       return valid ? buildStarMapScene(e.lat, e.lng, ed!) : null;
@@ -170,10 +174,10 @@ export async function GET(
       spots: starExtras.length > 0
         ? [
             { scene, caption: null },
-            ...starExtras.map((e, i) => ({
-              scene: extraScenes[i],
-              caption: e.caption ?? null,
-            })),
+            ...starExtras.map((e, i) => (e
+              ? { scene: extraScenes[i], caption: e.caption ?? null }
+              : { scene: null, caption: null }
+            )),
           ]
         : undefined,
     });

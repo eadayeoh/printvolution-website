@@ -75,9 +75,9 @@ begin
       'City Map — Map + Photo Strip', 'City Map layouts', 'city_map',
       jsonb_build_array(
         jsonb_build_object('id','city_disk-1','type','render_anchor','anchor_kind','city_disk','label','Map','x_mm',50,'y_mm',18,'width_mm',100,'height_mm',100,'rotation_deg',0),
-        jsonb_build_object('id','photo-1','type','image','label','Photo 1','x_mm',20,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',-4,'mask_preset','rectangle','visible',true),
-        jsonb_build_object('id','photo-2','type','image','label','Photo 2','x_mm',80,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',0,'mask_preset','rectangle','visible',true),
-        jsonb_build_object('id','photo-3','type','image','label','Photo 3','x_mm',140,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',4,'mask_preset','rectangle','visible',true),
+        jsonb_build_object('id','photo-1','type','image','label','Photo 1','x_mm',20,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',-4,'visible',true),
+        jsonb_build_object('id','photo-2','type','image','label','Photo 2','x_mm',80,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',0,'visible',true),
+        jsonb_build_object('id','photo-3','type','image','label','Photo 3','x_mm',140,'y_mm',130,'width_mm',40,'height_mm',40,'rotation_deg',4,'visible',true),
         jsonb_build_object('id','title','type','text','label','Title','x_mm',20,'y_mm',6,'width_mm',160,'height_mm',10,'rotation_deg',0,'default_text','Where it all Started','font_size_mm',8,'font_family','caveat','align','center','color','#0a0a0a','font_style','italic','font_weight','600'),
         jsonb_build_object('id','names','type','text','label','Names','x_mm',20,'y_mm',178,'width_mm',160,'height_mm',8,'rotation_deg',0,'default_text','Names','font_size_mm',6,'font_family','caveat','align','center','color','#0a0a0a','font_style','italic','font_weight','600'),
         jsonb_build_object('id','meta','type','text','label','Location + date','x_mm',20,'y_mm',188,'width_mm',160,'height_mm',6,'rotation_deg',0,'default_text','','font_size_mm',3,'font_family','inter','align','center','color','#666')

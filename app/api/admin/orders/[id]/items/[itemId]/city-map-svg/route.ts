@@ -47,19 +47,21 @@ export async function GET(
       return NextResponse.json({ error: 'Order has no city coordinates' }, { status: 400 });
     }
 
-    // Multi-anchor extras: customer entered N additional cities (one
-    // per city_disk anchor beyond the primary) at PDP time. Parse the
-    // JSON, fan out OSM fetches concurrently with the primary so a
-    // 3-city template doesn't pay 3× sequential latency.
-    type Extra = { lat: number; lng: number; label?: string | null; caption?: string | null };
+    // Multi-anchor extras: customer entered up to N additional cities
+    // (one per city_disk anchor beyond the primary). The cart-line
+    // PRESERVES empty slots so anchor[i] alignment is stable — an
+    // unfilled extra renders as the placeholder, not a shifted map.
+    type Extra = { lat: number; lng: number; label?: string | null; caption?: string | null } | null;
     let extras: Extra[] = [];
     try {
       const raw = n['city_extras'];
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          extras = (parsed as any[]).filter(
-            (e) => e && Number.isFinite(e.lat) && Number.isFinite(e.lng),
+          extras = (parsed as any[]).map(
+            (e) => (e && Number.isFinite(e?.lat) && Number.isFinite(e?.lng)
+              ? (e as Extra)
+              : null),
           );
         }
       }
@@ -71,7 +73,7 @@ export async function GET(
     const safeRadius = Math.max(1, Math.min(15, radius || 5));
     const [primaryVectors, ...extraVectors] = await Promise.all([
       fetchCityMapVectors(lat, lng, safeRadius),
-      ...extras.map((e) => fetchCityMapVectors(e.lat, e.lng, safeRadius)),
+      ...extras.map((e) => (e ? fetchCityMapVectors(e.lat, e.lng, safeRadius) : Promise.resolve(null))),
     ]);
 
     // Look up the template's zones so the renderer iterates anchors at
@@ -122,11 +124,14 @@ export async function GET(
       spots: extras.length > 0
         ? [
             { vectors: primaryVectors, cityLabel: n['city_label'] ?? '' },
-            ...extras.map((e, i) => ({
-              vectors: extraVectors[i] ?? null,
-              cityLabel: e.label ?? '',
-              caption: e.caption ?? undefined,
-            })),
+            ...extras.map((e, i) => (e
+              ? {
+                  vectors: extraVectors[i] ?? null,
+                  cityLabel: e.label ?? '',
+                  caption: e.caption ?? undefined,
+                }
+              : { vectors: null, cityLabel: '' }
+            )),
           ]
         : undefined,
     });

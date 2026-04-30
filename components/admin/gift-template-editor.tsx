@@ -651,17 +651,23 @@ export function GiftTemplateEditor({
     const n = existing + 1;
     // 70mm × 70mm circle-ish square dropped near the centre of the
     // canvas; admin drags+resizes from there. Stagger second/third
-    // copies so they don't pile on top of the first.
+    // copies so they don't pile on top of the first — but clamp to
+    // the canvas (0..200mm) so admins clicking + many times don't
+    // produce zones at x=300mm that nobody can see + drag back.
+    const W = 70, H = 70;
+    const baseX = 65, baseY = 30;
     const offset = existing * 8;
+    const x_mm = Math.max(0, Math.min(200 - W, baseX + offset));
+    const y_mm = Math.max(0, Math.min(200 - H, baseY + offset));
     const zone: GiftTemplateRenderAnchorZone = {
       id: `${anchorKind}-${n}`,
       type: 'render_anchor',
       anchor_kind: anchorKind,
       label: existing === 0 ? label : `${label} ${n}`,
-      x_mm: 65 + offset,
-      y_mm: 30 + offset,
-      width_mm: 70,
-      height_mm: 70,
+      x_mm,
+      y_mm,
+      width_mm: W,
+      height_mm: H,
       rotation_deg: 0,
     };
     commitZones([...zones, zone]);
@@ -775,7 +781,7 @@ export function GiftTemplateEditor({
         next.push({
           id: `photo-${i + 1}`, type: 'image', label: `Photo ${i + 1}`,
           x_mm: x, y_mm: 130, width_mm: 40, height_mm: 40, rotation_deg: i === 0 ? -4 : i === 2 ? 4 : 0,
-          mask_preset: 'rectangle', visible: true,
+          visible: true,
         } as any);
       });
       next.push({

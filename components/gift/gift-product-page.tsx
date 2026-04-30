@@ -1191,6 +1191,36 @@ export function GiftProductPage({
     // Re-entrancy gate: a fast double-click would otherwise fire two
     // upload+add cycles, producing duplicate cart lines.
     if (addingToCart) return;
+    // Multi-anchor templates: warn the customer if any extra
+    // location/event row is unresolved before they commit. Without
+    // this, geocode failures (typo / network) silently drop the row
+    // and the customer doesn't realise their second/third map is
+    // missing until production. Soft-confirm so admin can still
+    // proceed and ship a single-map line if they want.
+    if (isCityMap && extraCityLocations.length > 0) {
+      const unresolved = extraCityLocations
+        .map((e, i) => (e.lat == null || e.lng == null ? i + 2 : null))
+        .filter((n): n is number => n != null);
+      if (unresolved.length > 0) {
+        const list = unresolved.join(', ');
+        const ok = window.confirm(
+          `Map ${list} ${unresolved.length === 1 ? "doesn't have" : "don't have"} a city set. Add to cart anyway? Those map slots will print empty.`,
+        );
+        if (!ok) return;
+      }
+    }
+    if (isStarMap && extraStarEvents.length > 0) {
+      const unresolved = extraStarEvents
+        .map((e, i) => (e.lat == null || e.lng == null ? i + 2 : null))
+        .filter((n): n is number => n != null);
+      if (unresolved.length > 0) {
+        const list = unresolved.join(', ');
+        const ok = window.confirm(
+          `Sky chart ${list} ${unresolved.length === 1 ? "doesn't have" : "don't have"} a place set. Add to cart anyway? Those slots will print empty.`,
+        );
+        if (!ok) return;
+      }
+    }
     setAddingToCart(true);
     try {
     // Surfaces flow: before adding to cart, upload each photo-surface
@@ -1443,17 +1473,24 @@ export function GiftProductPage({
       if (cityFontEvent)      notes += `${notes ? ';' : ''}city_font_event:${cityFontEvent}`;
       if (cityFontTagline)    notes += `${notes ? ';' : ''}city_font_tagline:${cityFontTagline}`;
       // Multi-anchor extras: each row's lat/lng/label/caption stored
-      // as a JSON array. Vectors are NOT included — the production
-      // pipeline re-fetches OSM at order time, same as the primary.
-      const filledExtras = extraCityLocations
-        .filter((e) => e.lat != null && e.lng != null)
-        .map((e) => ({
-          lat: e.lat, lng: e.lng,
-          label: e.label.trim() || null,
-          caption: e.caption.trim() || null,
-        }));
-      if (filledExtras.length > 0) {
-        notes += `${notes ? ';' : ''}city_extras:${encodeNoteValue(JSON.stringify(filledExtras))}`;
+      // as a JSON array INCLUDING null slots so anchor[i] alignment is
+      // preserved end-to-end. Vectors are NOT included — the production
+      // pipeline re-fetches OSM at order time, same as the primary. The
+      // admin foil-SVG route handles null entries as "skip this anchor"
+      // (renders the disc placeholder) rather than collapsing the array.
+      const slottedExtras = extraCityLocations.map((e) => (
+        e.lat != null && e.lng != null
+          ? {
+              lat: e.lat, lng: e.lng,
+              label: e.label.trim() || null,
+              caption: e.caption.trim() || null,
+            }
+          : null
+      ));
+      // Only emit the field if AT LEAST one extra is filled — saves
+      // bytes on the row + keeps the legacy single-anchor case clean.
+      if (slottedExtras.some((s) => s != null)) {
+        notes += `${notes ? ';' : ''}city_extras:${encodeNoteValue(JSON.stringify(slottedExtras))}`;
       }
     }
     // Star Map Photo Frame: serialise the coords + UTC moment + footer text
@@ -1490,31 +1527,34 @@ export function GiftProductPage({
       if (starFontEvent)       notes += `${notes ? ';' : ''}star_font_event:${starFontEvent}`;
       if (starFontTagline)     notes += `${notes ? ';' : ''}star_font_tagline:${starFontTagline}`;
       // Multi-anchor extras: each row's date+location stored as a JSON
-      // array. The pipeline rebuilds N scenes from each (lat, lng, date)
-      // at order time. UTC ISO is computed here so the rebuild doesn't
-      // depend on the customer's local timezone.
-      const filledStarExtras = extraStarEvents
-        .filter((e) => e.lat != null && e.lng != null)
-        .map((e) => {
-          const [yy, mm, dd] = e.dateIso.split('-').map((s) => parseInt(s, 10));
-          const [hh, mi] = e.timeHm.split(':').map((s) => parseInt(s, 10));
-          let dateUtc: string | null = null;
-          if (Number.isFinite(yy) && Number.isFinite(mm) && Number.isFinite(dd) && Number.isFinite(hh) && Number.isFinite(mi)) {
-            const d = new Date(Date.UTC(yy, (mm - 1), dd, hh, mi));
-            d.setUTCMinutes(d.getUTCMinutes() - starTzOffsetMin);
-            dateUtc = d.toISOString();
-          }
-          return {
-            lat: e.lat, lng: e.lng,
-            label: e.label.trim() || null,
-            caption: e.caption.trim() || null,
-            date_utc: dateUtc,
-            local_date: e.dateIso,
-            local_time: e.timeHm,
-          };
-        });
-      if (filledStarExtras.length > 0) {
-        notes += `${notes ? ';' : ''}star_extras:${encodeNoteValue(JSON.stringify(filledStarExtras))}`;
+      // array INCLUDING null slots so anchor[i] alignment is preserved
+      // end-to-end. UTC ISO is computed at submit time so the rebuild
+      // doesn't depend on the customer's local timezone. Recapture the
+      // current tz offset here (instead of using the stale
+      // starTzOffsetMin from mount) so DST transitions during the
+      // edit session don't drift the saved UTC.
+      const submitTzOffsetMin = -new Date().getTimezoneOffset();
+      const slottedStarExtras = extraStarEvents.map((e) => {
+        if (e.lat == null || e.lng == null) return null;
+        const [yy, mm, dd] = e.dateIso.split('-').map((s) => parseInt(s, 10));
+        const [hh, mi] = e.timeHm.split(':').map((s) => parseInt(s, 10));
+        let dateUtc: string | null = null;
+        if (Number.isFinite(yy) && Number.isFinite(mm) && Number.isFinite(dd) && Number.isFinite(hh) && Number.isFinite(mi)) {
+          const d = new Date(Date.UTC(yy, (mm - 1), dd, hh, mi));
+          d.setUTCMinutes(d.getUTCMinutes() - submitTzOffsetMin);
+          dateUtc = d.toISOString();
+        }
+        return {
+          lat: e.lat, lng: e.lng,
+          label: e.label.trim() || null,
+          caption: e.caption.trim() || null,
+          date_utc: dateUtc,
+          local_date: e.dateIso,
+          local_time: e.timeHm,
+        };
+      });
+      if (slottedStarExtras.some((s) => s != null)) {
+        notes += `${notes ? ';' : ''}star_extras:${encodeNoteValue(JSON.stringify(slottedStarExtras))}`;
       }
     }
     // Record the customer's adjusted area so production knows where
