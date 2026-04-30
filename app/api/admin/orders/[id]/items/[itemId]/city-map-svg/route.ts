@@ -47,7 +47,55 @@ export async function GET(
       return NextResponse.json({ error: 'Order has no city coordinates' }, { status: 400 });
     }
 
-    const vectors = await fetchCityMapVectors(lat, lng, Math.max(1, Math.min(15, radius || 5)));
+    // Multi-anchor extras: customer entered N additional cities (one
+    // per city_disk anchor beyond the primary) at PDP time. Parse the
+    // JSON, fan out OSM fetches concurrently with the primary so a
+    // 3-city template doesn't pay 3× sequential latency.
+    type Extra = { lat: number; lng: number; label?: string | null; caption?: string | null };
+    let extras: Extra[] = [];
+    try {
+      const raw = n['city_extras'];
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          extras = (parsed as any[]).filter(
+            (e) => e && Number.isFinite(e.lat) && Number.isFinite(e.lng),
+          );
+        }
+      }
+    } catch {
+      // Malformed JSON — fall back to single-anchor render. Don't 500
+      // because the customer's primary city is still good.
+    }
+
+    const safeRadius = Math.max(1, Math.min(15, radius || 5));
+    const [primaryVectors, ...extraVectors] = await Promise.all([
+      fetchCityMapVectors(lat, lng, safeRadius),
+      ...extras.map((e) => fetchCityMapVectors(e.lat, e.lng, safeRadius)),
+    ]);
+
+    // Look up the template's zones so the renderer iterates anchors at
+    // the admin-positioned rectangles. Try gift_order_items first
+    // (city-map-photo-frame is a gift_product); fall back to whatever
+    // the order_items row carries via its config jsonb.
+    let templateZones: import('@/lib/gifts/types').GiftTemplateZone[] | null = null;
+    {
+      const { data: giftLine } = await sb
+        .from('gift_order_items')
+        .select('template_id')
+        .eq('id', params.itemId)
+        .maybeSingle();
+      const tplId = (giftLine as { template_id?: string } | null)?.template_id ?? null;
+      if (tplId) {
+        const { data: tpl } = await sb
+          .from('gift_templates')
+          .select('zones_json')
+          .eq('id', tplId)
+          .maybeSingle();
+        const zj = (tpl as { zones_json?: unknown } | null)?.zones_json;
+        if (Array.isArray(zj)) templateZones = zj as any;
+      }
+    }
 
     const showCoords = n['city_show_coords'] === '1';
     // Whitelist customer-supplied font keys; anything outside the
@@ -58,7 +106,7 @@ export async function GET(
     const safeEventFont   = validateFontKey(n['city_font_event'])   ?? undefined;
     const safeTaglineFnt  = validateFontKey(n['city_font_tagline']) ?? undefined;
     const svgMarkup = buildCityMapSvg({
-      vectors,
+      vectors: primaryVectors,
       names:     n['city_names']   ?? '',
       event:     n['city_event']   ?? '',
       cityLabel: n['city_label']   ?? '',
@@ -70,6 +118,17 @@ export async function GET(
       taglineFont: safeTaglineFnt,
       // Drop the navy background — foil printer wants only the gold paths.
       materialColor: null,
+      zones: templateZones,
+      spots: extras.length > 0
+        ? [
+            { vectors: primaryVectors, cityLabel: n['city_label'] ?? '' },
+            ...extras.map((e, i) => ({
+              vectors: extraVectors[i] ?? null,
+              cityLabel: e.label ?? '',
+              caption: e.caption ?? undefined,
+            })),
+          ]
+        : undefined,
     });
 
     // Stamp the physical print size onto the <svg> root from the size

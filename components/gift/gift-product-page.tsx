@@ -63,6 +63,7 @@ import { TextStyleControls } from '@/components/gift/text-style-controls';
 import { SongLyricsInputs } from '@/components/gift/song-lyrics-inputs';
 import { CityMapTemplate } from '@/components/gift/city-map-template';
 import { CityMapInputs } from '@/components/gift/city-map-inputs';
+import { ExtraCityLocationsInputs } from '@/components/gift/extra-city-locations-inputs';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
@@ -500,6 +501,37 @@ export function GiftProductPage({
   const [cityFontNames, setCityFontNames] = useState<string>('');
   const [cityFontEvent, setCityFontEvent] = useState<string>('');
   const [cityFontTagline, setCityFontTagline] = useState<string>('');
+  /** Additional city locations for multi-anchor templates (Three Circles
+   *  / Heart Pair / Circle + photos). Length matches the number of
+   *  city_disk anchors beyond the primary. Each slot has its own
+   *  geocoded coords + OSM vectors, and an optional caption that
+   *  shows under that disc. Empty array for single-anchor templates. */
+  type ExtraCityLocation = {
+    lat: number | null;
+    lng: number | null;
+    label: string;
+    vectors: CityMapVectors | null;
+    caption: string;
+  };
+  const [extraCityLocations, setExtraCityLocations] = useState<ExtraCityLocation[]>([]);
+  // Resize the extras array to match the template's city_disk count - 1
+  // (the primary anchor is covered by cityLat/cityLng/cityVectors).
+  // Resets when the customer switches between templates.
+  useEffect(() => {
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    const zones = (tpl as any)?.zones_json ?? [];
+    const cityAnchors = (zones as Array<{ type: string; anchor_kind?: string }>)
+      .filter((z) => z.type === 'render_anchor' && z.anchor_kind === 'city_disk').length;
+    const need = Math.max(0, cityAnchors - 1);
+    setExtraCityLocations((prev) => {
+      if (prev.length === need) return prev;
+      const next = prev.slice(0, need);
+      while (next.length < need) {
+        next.push({ lat: null, lng: null, label: '', vectors: null, caption: '' });
+      }
+      return next;
+    });
+  }, [selectedTemplateId, templates]);
 
   // ── Star Map Photo Frame (special-cased product) ──────────────────────────
   // Detect by renderer='star_map'. The sky for a given (lat, lng, date_UTC)
@@ -1378,6 +1410,19 @@ export function GiftProductPage({
       if (cityFontNames)      notes += `${notes ? ';' : ''}city_font_names:${cityFontNames}`;
       if (cityFontEvent)      notes += `${notes ? ';' : ''}city_font_event:${cityFontEvent}`;
       if (cityFontTagline)    notes += `${notes ? ';' : ''}city_font_tagline:${cityFontTagline}`;
+      // Multi-anchor extras: each row's lat/lng/label/caption stored
+      // as a JSON array. Vectors are NOT included — the production
+      // pipeline re-fetches OSM at order time, same as the primary.
+      const filledExtras = extraCityLocations
+        .filter((e) => e.lat != null && e.lng != null)
+        .map((e) => ({
+          lat: e.lat, lng: e.lng,
+          label: e.label.trim() || null,
+          caption: e.caption.trim() || null,
+        }));
+      if (filledExtras.length > 0) {
+        notes += `${notes ? ';' : ''}city_extras:${encodeNoteValue(JSON.stringify(filledExtras))}`;
+      }
     }
     // Star Map Photo Frame: serialise the coords + UTC moment + footer text
     // so the admin can regenerate the foil-printable SVG from the order. We
@@ -1928,6 +1973,16 @@ export function GiftProductPage({
                       // templates with no city_disk anchors fall back to
                       // the legacy MAP_X/Y/W/H rect.
                       zones={(templates.find((t) => t.id === selectedTemplateId)?.zones_json ?? null) as any}
+                      // Multi-anchor: spots[0] is the primary, spots[1..N]
+                      // are the additional cities the customer entered.
+                      spots={extraCityLocations.length === 0 ? undefined : [
+                        { vectors: cityVectors, cityLabel },
+                        ...extraCityLocations.map((e) => ({
+                          vectors: e.vectors,
+                          cityLabel: e.label,
+                          caption: e.caption,
+                        })),
+                      ]}
                       // materialColor intentionally NOT passed — colour
                       // overlays only retint the foil (text/lines), not
                       // the background. Renderer falls back to its
@@ -3045,7 +3100,17 @@ export function GiftProductPage({
                   productSlug={product.slug}
                   textColor={spotifyTextColor} onTextColor={setSpotifyTextColor}
                 />
-              ) : (
+              ) : null}
+              {/* Multi-anchor templates ask for additional cities below
+                  the primary location. Only renders for templates with
+                  >1 city_disk anchor; otherwise the array is empty. */}
+              {isCityMap && extraCityLocations.length > 0 && (
+                <ExtraCityLocationsInputs
+                  extras={extraCityLocations}
+                  onChange={setExtraCityLocations}
+                />
+              )}
+              {!(isSongLyrics || isCityMap || isStarMap || isSpotifyPlaque) && (
               <>
               {/* Step A: Template picker — picked first so the Fill /
                   Upload section below knows whether to render the
