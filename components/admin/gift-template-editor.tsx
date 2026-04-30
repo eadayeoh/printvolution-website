@@ -259,6 +259,48 @@ function makeShapeZone(kind: GiftShapeKind, n: number): GiftTemplateShapeZone {
   };
 }
 
+/** Single-open accordion section IDs. 'none' lets the user collapse all
+ *  of them. The `default` is canvas-layout because zone editing is the
+ *  ~80% workflow on this page. */
+type SectionId = 'assets' | 'canvas-layout' | 'customer-controls' | 'catalog-display' | 'production' | 'none';
+
+const DEFAULT_SECTION: SectionId = 'canvas-layout';
+
+function AccordionSection({
+  id,
+  title,
+  hint,
+  openId,
+  onOpen,
+  children,
+}: {
+  id: Exclude<SectionId, 'none'>;
+  title: string;
+  hint?: string;
+  openId: SectionId;
+  onOpen: (id: SectionId) => void;
+  children: React.ReactNode;
+}) {
+  const open = openId === id;
+  return (
+    <div className={`rounded-lg border bg-white ${open ? 'border-pink shadow-sm' : 'border-neutral-200'}`}>
+      <button
+        type="button"
+        onClick={() => onOpen(open ? 'none' : id)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <span className="flex flex-col gap-0.5">
+          <span className="text-xs font-bold text-ink">{title}</span>
+          {hint && <span className="text-[10px] text-neutral-500">{hint}</span>}
+        </span>
+        <span aria-hidden className="text-neutral-400 text-base font-light">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="space-y-3 px-4 pb-4">{children}</div>}
+    </div>
+  );
+}
+
 export function GiftTemplateEditor({
   template,
   existingGroups,
@@ -283,6 +325,43 @@ export function GiftTemplateEditor({
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
+  // Cleared on unmount and on every re-trigger of setFlash so the timer
+  // doesn't fire against an unmounted component (or stomp the next save's
+  // flash window).
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Single-open accordion state. Lazy-init from localStorage so reopening
+  // the same template restores the section the admin was last working in.
+  const templateStorageKey = template?.id ?? 'new';
+  const [openSection, setOpenSection] = useState<SectionId>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SECTION;
+    const stored = window.localStorage.getItem(`pv-template-editor-section:${templateStorageKey}`);
+    if (stored === 'assets' || stored === 'canvas-layout' || stored === 'customer-controls' || stored === 'catalog-display' || stored === 'production' || stored === 'none') return stored;
+    return DEFAULT_SECTION;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(`pv-template-editor-section:${templateStorageKey}`, openSection);
+  }, [openSection, templateStorageKey]);
+
+  useEffect(() => () => {
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = null;
+    }
+  }, []);
+
+  // Inline confirm states — replace native window.confirm/prompt so the
+  // editor doesn't fire blocking browser dialogs (broken on mobile).
+  const [groupRenaming, setGroupRenaming] = useState<string | null>(null);
+  const [confirmGroupDelete, setConfirmGroupDelete] = useState(false);
+  const [confirmTemplateDelete, setConfirmTemplateDelete] = useState(false);
+  const [newGroupDraft, setNewGroupDraft] = useState<string | null>(null);
+
+  // Arrow-key streak tracker — coalesces consecutive nudge keystrokes
+  // on the same zone into a single undo-history entry. First key in the
+  // streak pushes a snapshot; the rest setZones directly.
+  const arrowStreakRef = useRef<{ zoneIdx: number; lastTime: number } | null>(null);
 
   const [name, setName] = useState(template?.name ?? '');
   const [groupName, setGroupName] = useState(template?.group_name ?? '');
@@ -719,7 +798,21 @@ export function GiftTemplateEditor({
         if (e.key === 'ArrowRight') nx = clamp(z.x_mm + step, 0, TEMPLATE_W - z.width_mm);
         if (e.key === 'ArrowUp') ny = clamp(z.y_mm - step, 0, TEMPLATE_H - z.height_mm);
         if (e.key === 'ArrowDown') ny = clamp(z.y_mm + step, 0, TEMPLATE_H - z.height_mm);
-        commitZones(zones.map((zz, j) => (j === activeZoneIdx ? { ...zz, x_mm: nx, y_mm: ny } : zz)));
+        // Coalesce consecutive nudges on the same zone into one undo
+        // entry. First key in a streak commits + pushes history; the
+        // rest write zones directly. Streak resets when the active
+        // zone changes or 500ms pass without a keypress.
+        const STREAK_MS = 500;
+        const now = Date.now();
+        const streak = arrowStreakRef.current;
+        const sameStreak = !!streak && streak.zoneIdx === activeZoneIdx && (now - streak.lastTime) < STREAK_MS;
+        arrowStreakRef.current = { zoneIdx: activeZoneIdx, lastTime: now };
+        const next = zones.map((zz, j) => (j === activeZoneIdx ? { ...zz, x_mm: nx, y_mm: ny } : zz));
+        if (sameStreak) {
+          setZones(next);
+        } else {
+          commitZones(next);
+        }
       }
     }
     function onKeyUp(e: KeyboardEvent) {
@@ -817,7 +910,11 @@ export function GiftTemplateEditor({
         const r = await updateTemplate(template.id, payload);
         if (!r.ok) { setErr(r.error); return; }
         setFlash(true);
-        setTimeout(() => setFlash(false), 1600);
+        if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+        flashTimerRef.current = setTimeout(() => {
+          setFlash(false);
+          flashTimerRef.current = null;
+        }, 1600);
         // Re-fetch the page server-side so the loader picks up the
         // freshly written group_name (and any newly-coined group label
         // makes the existingGroups list for the dropdown).
@@ -831,8 +928,14 @@ export function GiftTemplateEditor({
   }
 
   function remove() {
+    // Two-step inline confirm — first click sets the flag, second click
+    // (the now-red "Confirm delete" button in the top bar) actually fires.
     if (!template) return;
-    if (!confirm('Delete this template? Existing orders stay intact.')) return;
+    if (!confirmTemplateDelete) {
+      setConfirmTemplateDelete(true);
+      return;
+    }
+    setConfirmTemplateDelete(false);
     startTransition(async () => {
       const r = await deleteTemplate(template.id);
       if (!r.ok) setErr(r.error);
@@ -845,11 +948,17 @@ export function GiftTemplateEditor({
   // every keystroke.
   saveRef.current = save;
 
-  function renameCurrentGroup() {
+  function startGroupRename() {
     const current = groupName.trim();
     if (!current) return;
-    const next = (window.prompt(`Rename group "${current}" to:`, current) ?? '').trim();
-    if (!next || next === current) return;
+    setGroupRenaming(current);
+  }
+  function commitGroupRename() {
+    if (groupRenaming === null) return;
+    const current = groupName.trim();
+    const next = groupRenaming.trim();
+    setGroupRenaming(null);
+    if (!current || !next || next === current) return;
     startTransition(async () => {
       const r = await renameTemplateGroup(current, next);
       if (!r.ok) { setErr(r.error); return; }
@@ -858,15 +967,27 @@ export function GiftTemplateEditor({
     });
   }
   function deleteCurrentGroup() {
+    // Two-step: first click flips confirmGroupDelete, the visible red
+    // "Confirm" button fires the actual server call.
     const current = groupName.trim();
     if (!current) return;
-    if (!confirm(`Remove the "${current}" group from every template that uses it? Templates stay; they just become Ungrouped.`)) return;
+    if (!confirmGroupDelete) {
+      setConfirmGroupDelete(true);
+      return;
+    }
+    setConfirmGroupDelete(false);
     startTransition(async () => {
       const r = await clearTemplateGroup(current);
       if (!r.ok) { setErr(r.error); return; }
       setGroupName('');
       router.refresh();
     });
+  }
+  function commitNewGroup() {
+    if (newGroupDraft === null) return;
+    const fresh = newGroupDraft.trim();
+    setNewGroupDraft(null);
+    if (fresh) setGroupName(fresh);
   }
 
   const inputCls = 'w-full rounded border-2 border-neutral-200 bg-white px-3 py-2 text-sm focus:border-pink focus:outline-none';
@@ -878,82 +999,136 @@ export function GiftTemplateEditor({
 
   return (
     <div className="p-6">
-      {/* Sticky header — Save stays glued to the viewport top so admins
-          never have to scroll back up (or down to the old bottom bar)
-          to commit edits. Cmd+S works from any focus context too. */}
-      <div className="sticky top-0 z-30 -mx-6 -mt-6 mb-4 flex items-center justify-between gap-4 border-b-2 border-ink bg-white/95 px-6 py-3 backdrop-blur">
-        <Link href="/admin/gifts/templates" className="text-sm font-bold text-neutral-500 hover:text-ink">← Back to templates</Link>
-        <div className="flex items-center gap-3">
-          {err && <span className="text-xs font-bold text-red-600">{err}</span>}
-          {flash && <span className="text-xs font-bold text-green-600">✓ Saved</span>}
-          <span className="hidden text-sm font-bold text-ink sm:inline">{template ? 'Edit template' : 'New template'}</span>
-          {template && (
-            <button onClick={remove} disabled={isPending} className="text-[11px] font-bold text-red-600 hover:underline">Delete</button>
-          )}
+      {/* Sticky top bar — the always-visible essentials. Name +
+          active toggle + group selector live here so the eye doesn't
+          have to hunt for them on every save. Save stays pinned;
+          Cmd/Ctrl+S works from any focus context. */}
+      <div className="sticky top-0 z-30 -mx-6 -mt-6 mb-4 border-b-2 border-ink bg-white/95 backdrop-blur">
+        <div className="flex flex-wrap items-center gap-2 px-6 py-3">
+          <Link href="/admin/gifts/templates" className="text-sm font-bold text-neutral-500 hover:text-ink shrink-0">← Back</Link>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Template name"
+            aria-label="Template name"
+            className="min-w-[180px] flex-1 rounded border border-neutral-200 bg-white px-3 py-1.5 text-sm font-bold text-ink focus:border-pink focus:outline-none"
+          />
           <button
-            onClick={save}
-            disabled={isPending}
-            title="Cmd/Ctrl + S"
-            className="rounded-full bg-pink px-5 py-2 text-xs font-bold text-white shadow-brand hover:bg-pink-dark disabled:opacity-50"
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            title={isActive ? 'Active — customers can pick this template. Click to set inactive.' : 'Inactive. Click to publish.'}
+            aria-pressed={isActive}
+            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${
+              isActive
+                ? 'border-green-600 bg-green-50 text-green-700'
+                : 'border-neutral-300 bg-neutral-50 text-neutral-500'
+            }`}
           >
-            {isPending ? 'Saving…' : template ? 'Save' : 'Create'}
+            <span aria-hidden className={`block h-2 w-2 rounded-full ${isActive ? 'bg-green-600' : 'bg-neutral-400'}`} />
+            {isActive ? 'Active' : 'Inactive'}
           </button>
+          <select
+            value={groupName || ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '__custom__') {
+                setNewGroupDraft('');
+                return;
+              }
+              setGroupName(v);
+            }}
+            className="shrink-0 max-w-[180px] rounded border border-neutral-200 bg-white px-2 py-1.5 text-xs font-semibold text-ink focus:border-pink focus:outline-none"
+            title="Template group"
+          >
+            <option value="">Ungrouped</option>
+            {(existingGroups ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
+            {groupName && !(existingGroups ?? []).includes(groupName) && (
+              <option value={groupName}>{groupName} (current)</option>
+            )}
+            <option value="__custom__">+ New group…</option>
+          </select>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {err && <span className="text-xs font-bold text-red-600">{err}</span>}
+            {flash && <span className="text-xs font-bold text-green-600">✓ Saved</span>}
+            {template && (
+              confirmTemplateDelete ? (
+                <span className="inline-flex items-center gap-1 text-[11px]">
+                  <span className="text-neutral-500">Delete?</span>
+                  <button onClick={remove} disabled={isPending} className="rounded bg-red-600 px-2 py-1 font-bold uppercase text-white hover:bg-red-700 disabled:opacity-50">Confirm</button>
+                  <button onClick={() => setConfirmTemplateDelete(false)} disabled={isPending} className="rounded border border-neutral-300 bg-white px-2 py-1 font-semibold text-neutral-600 hover:border-ink disabled:opacity-50">Cancel</button>
+                </span>
+              ) : (
+                <button onClick={remove} disabled={isPending} className="text-[11px] font-bold text-red-600 hover:underline" title="Delete template (existing orders stay intact)">Delete</button>
+              )
+            )}
+            <button
+              onClick={save}
+              disabled={isPending}
+              title="Cmd/Ctrl + S"
+              className="rounded-full bg-pink px-5 py-2 text-xs font-bold text-white shadow-brand hover:bg-pink-dark disabled:opacity-50"
+            >
+              {isPending ? 'Saving…' : template ? 'Save' : 'Create'}
+            </button>
+          </div>
         </div>
+        {newGroupDraft !== null && (
+          <div className="border-t border-neutral-200 bg-pink/5 px-6 py-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-bold text-ink">New group:</span>
+            <input
+              autoFocus
+              value={newGroupDraft}
+              onChange={(e) => setNewGroupDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitNewGroup(); }
+                if (e.key === 'Escape') { e.preventDefault(); setNewGroupDraft(null); }
+              }}
+              placeholder="e.g. Romantic"
+              className="rounded border border-neutral-200 bg-white px-2 py-1 focus:border-pink focus:outline-none"
+            />
+            <button type="button" onClick={commitNewGroup} className="rounded bg-pink px-3 py-1 font-bold text-white hover:bg-pink-dark">Add</button>
+            <button type="button" onClick={() => setNewGroupDraft(null)} className="rounded border border-neutral-300 bg-white px-3 py-1 font-semibold text-neutral-600 hover:border-ink">Cancel</button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[280px_1fr_280px]">
-        {/* LEFT: settings */}
-        <div className="space-y-5">
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Hearts Frame" />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold text-ink">Group</span>
-              <select
-                value={groupName || ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '__custom__') {
-                    const fresh = (window.prompt('New group name:') ?? '').trim();
-                    if (fresh) setGroupName(fresh);
-                    return;
-                  }
-                  setGroupName(v);
-                }}
-                className={inputCls}
-              >
-                <option value="">Ungrouped</option>
-                {(existingGroups ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
-                {groupName && !(existingGroups ?? []).includes(groupName) && (
-                  <option value={groupName}>{groupName} (current)</option>
-                )}
-                <option value="__custom__">+ Add new group…</option>
-              </select>
-              <span className="mt-1 block text-[11px] text-neutral-500">
-                Pick an existing group or add a new one. Templates in the admin list are bucketed by this label. The same group can hold templates that span multiple products.
-              </span>
-              {groupName && (existingGroups ?? []).includes(groupName) && (
-                <div className="mt-1 flex items-center gap-2 text-[11px]">
-                  <button type="button" onClick={renameCurrentGroup} disabled={isPending} className="font-semibold text-pink hover:underline disabled:opacity-50">
-                    Rename group…
-                  </button>
-                  <span className="text-neutral-300">·</span>
-                  <button type="button" onClick={deleteCurrentGroup} disabled={isPending} className="font-semibold text-red-600 hover:underline disabled:opacity-50">
-                    Delete group
-                  </button>
-                  <span className="text-neutral-400">(applies to every template in this group)</span>
-                </div>
-              )}
-            </label>
+        {/* LEFT: settings — single-open accordion. One section open at
+            a time so the eye stays calm. Defaults to "Canvas & Layout"
+            because zone editing is the ~80% workflow. State persists
+            per template via localStorage. */}
+        <div className="space-y-3">
+
+          <AccordionSection
+            id="assets"
+            title="Assets"
+            hint="Background · Foreground · Description"
+            openId={openSection}
+            onOpen={setOpenSection}
+          >
+            {/* Thumbnail is auto-derived from the Background image on
+                save. Admins upload Background once; the template picker
+                card reuses that same shot. */}
+            <div>
+              <div className="mb-1 text-[11px] text-neutral-600">1. Background <span className="text-neutral-400">(behind customer photo + text · doubles as the picker thumbnail)</span></div>
+              <ImageUpload value={background} onChange={setBackground} prefix="tpl-bg" aspect={1} size="md" label="Background" />
+            </div>
+            <div>
+              <div className="mb-1 text-[11px] text-neutral-600">2. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
+              <ImageUpload value={foreground} onChange={setForeground} prefix="tpl-fg" aspect={1} size="md" label="Foreground" />
+            </div>
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-ink">Description</span>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} placeholder="Shown to customers under the thumbnail" />
             </label>
-          </div>
+          </AccordionSection>
 
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
+          <AccordionSection
+            id="canvas-layout"
+            title="Canvas & Layout"
+            hint="Reference dimensions · Allowed shape kinds"
+            openId={openSection}
+            onOpen={setOpenSection}
+          >
             <div>
               <div className="text-xs font-bold text-ink">Canvas aspect (reference dimensions)</div>
               <div className="text-[11px] text-neutral-500">
@@ -1007,48 +1182,49 @@ export function GiftTemplateEditor({
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-4">
-            <div className="text-xs font-bold text-ink">Template assets</div>
-            {/* Thumbnail is auto-derived from the Background image on
-                save. Admins upload Background once; the template picker
-                card reuses that same shot. */}
-            <div>
-              <div className="mb-1 text-[11px] text-neutral-600">1. Background <span className="text-neutral-400">(behind customer photo + text · doubles as the picker thumbnail)</span></div>
-              <ImageUpload value={background} onChange={setBackground} prefix="tpl-bg" aspect={1} size="md" label="Background" />
+            {/* ── Pick-your-shape filter (per-template) ─────────────── */}
+            <div className="rounded-lg border border-neutral-200 p-3">
+              <div className="mb-2 text-xs font-bold text-ink">Allowed shape options</div>
+              <div className="mb-3 text-[11px] text-neutral-500">
+                Which entries from the product&rsquo;s &ldquo;Pick your shape&rdquo; picker can the
+                customer use when they&rsquo;ve picked this template? Tick none to
+                inherit all shape options from the product (the default).
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { kind: 'cutout',    label: 'Cutout' },
+                  { kind: 'rectangle', label: 'Rectangle' },
+                  { kind: 'template',  label: 'Template-shape' },
+                ] satisfies Array<{ kind: ShapeKind; label: string }>).map((row) => (
+                  <label key={row.kind} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-xs hover:border-pink">
+                    <input
+                      type="checkbox"
+                      checked={allowedShapeKinds.has(row.kind)}
+                      onChange={() => toggleAllowedShapeKind(row.kind)}
+                    />
+                    <span className="font-bold text-ink">{row.label}</span>
+                  </label>
+                ))}
+              </div>
+              {allowedShapeKinds.size === 0 ? (
+                <div className="mt-2 text-[11px] text-neutral-500">All shape options visible (inheriting from product).</div>
+              ) : null}
             </div>
-            <div>
-              <div className="mb-1 text-[11px] text-neutral-600">2. Foreground <span className="text-neutral-400">(overlays — needs transparency)</span></div>
-              <ImageUpload value={foreground} onChange={setForeground} prefix="tpl-fg" aspect={1} size="md" label="Foreground" />
-            </div>
-          </div>
+            <p className="text-[11px] text-neutral-500">
+              Add or rearrange zones with the layer list on the right and the
+              shape palette above the canvas. Arrow keys nudge the selected zone
+              (Shift = 10mm); Cmd+Z / Cmd+Shift+Z undo / redo.
+            </p>
+          </AccordionSection>
 
-          <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
-            <label className="block">
-              <span className="mb-1 block text-[11px] text-neutral-600">Display order</span>
-              <input type="number" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} className={inputCls} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] text-neutral-600">Price add-on (S$)</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={priceDeltaDollars}
-                onChange={(e) => setPriceDeltaDollars(e.target.value)}
-                className={inputCls}
-                placeholder="0.00"
-              />
-              <span className="mt-1 block text-[10px] text-neutral-500">
-                Charged on top of the variant base when the customer picks this template. Leave at 0 for no upcharge.
-              </span>
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-              <span className="font-semibold text-ink">Active (customers can pick this template)</span>
-            </label>
-            <div className="rounded-lg border-2 border-neutral-200 p-3">
+          <AccordionSection
+            id="customer-controls"
+            title="Customer controls"
+            hint="Recolour · Font · Picker swatches"
+            openId={openSection}
+            onOpen={setOpenSection}
+          >
+            <div className="rounded-lg border border-neutral-200 p-3">
               <div className="mb-2 text-xs font-bold text-ink">Customer recolour permissions</div>
               <div className="mb-3 text-[11px] text-neutral-500">
                 Pick which colour pickers the customer sees on the PDP. Each region is independent — you can let them change text colours without exposing the background picker, etc.
@@ -1233,11 +1409,83 @@ export function GiftTemplateEditor({
                 </>
               )}
             </div>
+          </AccordionSection>
 
+          <AccordionSection
+            id="catalog-display"
+            title="Catalog & display"
+            hint="Group · Display order · Occasion · Price add-on"
+            openId={openSection}
+            onOpen={setOpenSection}
+          >
+            {/* Group rename / delete — only show actions when the
+                template is actually in a saved group, since "Ungrouped"
+                has nothing to rename. Rename uses an inline input
+                instead of window.prompt; delete is a two-step
+                confirm. */}
+            {groupName && (existingGroups ?? []).includes(groupName) && (
+              <div className="rounded-lg border border-neutral-200 p-3">
+                <div className="mb-2 text-xs font-bold text-ink">Group: {groupName}</div>
+                {groupRenaming !== null ? (
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <input
+                      autoFocus
+                      value={groupRenaming}
+                      onChange={(e) => setGroupRenaming(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitGroupRename(); }
+                        if (e.key === 'Escape') { e.preventDefault(); setGroupRenaming(null); }
+                      }}
+                      className="flex-1 rounded border border-neutral-200 bg-white px-2 py-1 focus:border-pink focus:outline-none"
+                    />
+                    <button type="button" onClick={commitGroupRename} disabled={isPending} className="rounded bg-pink px-3 py-1 font-bold text-white hover:bg-pink-dark disabled:opacity-50">Rename</button>
+                    <button type="button" onClick={() => setGroupRenaming(null)} className="rounded border border-neutral-300 bg-white px-3 py-1 font-semibold text-neutral-600 hover:border-ink">Cancel</button>
+                  </div>
+                ) : confirmGroupDelete ? (
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className="text-neutral-600">Remove the &ldquo;{groupName}&rdquo; group from every template that uses it? Templates stay; they just become Ungrouped.</span>
+                    <button type="button" onClick={deleteCurrentGroup} disabled={isPending} className="rounded bg-red-600 px-3 py-1 font-bold uppercase text-white hover:bg-red-700 disabled:opacity-50">Confirm delete</button>
+                    <button type="button" onClick={() => setConfirmGroupDelete(false)} className="rounded border border-neutral-300 bg-white px-3 py-1 font-semibold text-neutral-600 hover:border-ink">Cancel</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-[11px]">
+                    <button type="button" onClick={startGroupRename} disabled={isPending} className="font-semibold text-pink hover:underline disabled:opacity-50">
+                      Rename group…
+                    </button>
+                    <span className="text-neutral-300">·</span>
+                    <button type="button" onClick={deleteCurrentGroup} disabled={isPending} className="font-semibold text-red-600 hover:underline disabled:opacity-50">
+                      Delete group…
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-neutral-600">Display order</span>
+              <input type="number" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} className={inputCls} />
+              <span className="mt-1 block text-[10px] text-neutral-500">
+                Lower numbers appear first in the customer template picker.
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-neutral-600">Price add-on (S$)</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceDeltaDollars}
+                onChange={(e) => setPriceDeltaDollars(e.target.value)}
+                className={inputCls}
+                placeholder="0.00"
+              />
+              <span className="mt-1 block text-[10px] text-neutral-500">
+                Charged on top of the variant base when the customer picks this template. Leave at 0 for no upcharge.
+              </span>
+            </label>
             {/* ── Occasion windowing (per-template) ─────────────────── */}
-            <div className="rounded-lg border-2 border-neutral-200 p-4">
+            <div className="rounded-lg border border-neutral-200 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <div className="text-sm font-bold text-ink">Occasion window</div>
+                <div className="text-xs font-bold text-ink">Occasion window</div>
                 <Link
                   href="/admin/gifts/occasions"
                   className="text-[10px] font-bold text-neutral-500 underline hover:text-ink"
@@ -1267,71 +1515,47 @@ export function GiftTemplateEditor({
                 })}
               </select>
             </div>
+          </AccordionSection>
 
-            {/* ── Pick-your-shape filter (per-template) ─────────────── */}
-            <div className="rounded-lg border-2 border-neutral-200 p-4">
-              <div className="mb-2 text-sm font-bold text-ink">Allowed shape options</div>
-              <div className="mb-3 text-[11px] text-neutral-500">
-                Which entries from the product&rsquo;s &ldquo;Pick your shape&rdquo; picker can the
-                customer use when they&rsquo;ve picked this template? Tick none to
-                inherit all shape options from the product (the default).
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {([
-                  { kind: 'cutout',    label: 'Cutout' },
-                  { kind: 'rectangle', label: 'Rectangle' },
-                  { kind: 'template',  label: 'Template-shape' },
-                ] satisfies Array<{ kind: ShapeKind; label: string }>).map((row) => (
-                  <label key={row.kind} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-xs hover:border-pink">
+          <AccordionSection
+            id="production"
+            title="Production"
+            hint="Output file types"
+            openId={openSection}
+            onOpen={setOpenSection}
+          >
+            <p className="text-[11px] text-neutral-500">
+              Override the product&apos;s setting. Empty = inherit from the product (which may itself fall back to the mode default).
+            </p>
+            <div className="space-y-2">
+              {([
+                { key: 'png', label: 'PNG', note: 'bitmap, default for laser/UV/digital' },
+                { key: 'jpg', label: 'JPG', note: 'bitmap, smaller; default for embroidery' },
+                { key: 'svg', label: 'SVG', note: 'vector, default for foil' },
+                { key: 'pdf', label: 'PDF', note: 'wrap the primary file in a print-ready PDF (with bleed)' },
+              ] as const).map((f) => {
+                const checked = productionFiles.includes(f.key);
+                return (
+                  <label key={f.key} className="flex items-start gap-2 rounded border border-neutral-200 p-2 hover:border-neutral-400">
                     <input
                       type="checkbox"
-                      checked={allowedShapeKinds.has(row.kind)}
-                      onChange={() => toggleAllowedShapeKind(row.kind)}
+                      checked={checked}
+                      onChange={(e) => {
+                        setProductionFiles((prev) =>
+                          e.target.checked ? [...prev, f.key] : prev.filter((k) => k !== f.key),
+                        );
+                      }}
+                      className="mt-0.5 h-3.5 w-3.5"
                     />
-                    <span className="font-bold text-ink">{row.label}</span>
+                    <span className="block">
+                      <span className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700">{f.label}</span>
+                      <span className="mt-0.5 block text-[10px] text-neutral-500">{f.note}</span>
+                    </span>
                   </label>
-                ))}
-              </div>
-              {allowedShapeKinds.size === 0 ? (
-                <div className="mt-2 text-[11px] text-neutral-500">All shape options visible (inheriting from product).</div>
-              ) : null}
+                );
+              })}
             </div>
-
-            <div className="rounded-lg border-2 border-neutral-200 p-4">
-              <div className="mb-1 text-sm font-bold text-ink">Production output</div>
-              <p className="mb-3 text-[10px] text-neutral-500">
-                Override the product&apos;s setting. Empty = inherit from the product (which may itself fall back to the mode default).
-              </p>
-              <div className="space-y-2">
-                {([
-                  { key: 'png', label: 'PNG', note: 'bitmap, default for laser/UV/digital' },
-                  { key: 'jpg', label: 'JPG', note: 'bitmap, smaller; default for embroidery' },
-                  { key: 'svg', label: 'SVG', note: 'vector, default for foil' },
-                  { key: 'pdf', label: 'PDF', note: 'wrap the primary file in a print-ready PDF (with bleed)' },
-                ] as const).map((f) => {
-                  const checked = productionFiles.includes(f.key);
-                  return (
-                    <label key={f.key} className="flex items-start gap-2 rounded border-2 border-neutral-200 p-2 hover:border-neutral-400">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          setProductionFiles((prev) =>
-                            e.target.checked ? [...prev, f.key] : prev.filter((k) => k !== f.key),
-                          );
-                        }}
-                        className="mt-0.5 h-3.5 w-3.5"
-                      />
-                      <span className="block">
-                        <span className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700">{f.label}</span>
-                        <span className="mt-0.5 block text-[10px] text-neutral-500">{f.note}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          </AccordionSection>
         </div>
 
         {/* CENTRE: visual canvas + drawing tools + properties panel */}
@@ -1382,7 +1606,7 @@ export function GiftTemplateEditor({
             const isAnchor = isRenderAnchorZone(z);
             const isShape = isShapeZone(z);
             return (
-              <div className="rounded-lg border-2 border-pink bg-white shadow-sm">
+              <div className="rounded-lg border border-neutral-200 bg-white">
                 <div className="flex items-center justify-between gap-2 border-b border-neutral-200 px-3 py-2">
                   <div className="text-[11px] font-bold uppercase tracking-wide text-pink">
                     Editing: <span className="text-ink">{z.label || 'Untitled'}</span>
@@ -1391,7 +1615,7 @@ export function GiftTemplateEditor({
                     <button type="button" onClick={() => moveZone(i, -1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move back"><ArrowDown size={12} /></button>
                     <button type="button" onClick={() => moveZone(i, 1)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Move forward"><ArrowUp size={12} /></button>
                     <button type="button" onClick={() => duplicateZone(i)} className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100" title="Duplicate"><Copy size={12} /></button>
-                    <button type="button" onClick={() => { if (confirm(`Remove zone ${i + 1}? Reload before save to undo.`)) removeZone(i); }} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove"><Trash2 size={12} /></button>
+                    <button type="button" onClick={() => removeZone(i)} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Remove (Cmd+Z to undo)"><Trash2 size={12} /></button>
                   </div>
                 </div>
                 <div className="space-y-3 p-3">
