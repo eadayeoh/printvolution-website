@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // Business-day math for the "ready by" calendar card. Weekends are
 // skipped; SG public holidays are not (the lead time is a quote, and
@@ -130,6 +130,11 @@ export function ProductPage({ product, productRoutes, features }: Props) {
     return initial;
   });
   const [addedFlash, setAddedFlash] = useState(false);
+  // Synchronous guard for rapid Add-to-Cart double-clicks. setAddedFlash is
+  // async, so three clicks fired in the same tick all see addedFlash=false
+  // and produce three duplicate cart rows; a ref blocks re-entry inside the
+  // same render frame.
+  const addInProgress = useRef(false);
 
   useEffect(() => {
     function onScroll() {
@@ -764,13 +769,19 @@ export function ProductPage({ product, productRoutes, features }: Props) {
       } else configLabels[step.label] = val;
     }
     if (designFilesUrl.trim()) configLabels['Design files'] = designFilesUrl.trim();
+    // Guard against rapid double-clicks creating duplicate cart rows.
+    if (addInProgress.current) return;
+    addInProgress.current = true;
     addToCart({
       product_slug: product.slug, product_name: product.name,
       icon: product.extras?.image_url || product.icon,
       config: configLabels, qty, unit_price_cents: unitPrice, line_total_cents: lineTotal,
     });
     setAddedFlash(true);
-    setTimeout(() => setAddedFlash(false), 2000);
+    setTimeout(() => {
+      setAddedFlash(false);
+      addInProgress.current = false;
+    }, 2000);
   }
 
   const displayPrice = lineTotal > 0 ? lineTotal : (fromPrice ?? 0);

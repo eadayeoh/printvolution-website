@@ -12,18 +12,28 @@ import { submitOrder, validateCouponForCheckout } from '@/app/(site)/checkout/ac
 import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
 import { ProductIcon } from '@/components/product/product-icon';
 
-const FormSchema = z.object({
-  customer_name: z.string().min(2, 'Name too short'),
-  email: z.string().email('Enter a valid email'),
-  phone: z.string().min(6, 'Enter a valid phone number'),
-  company: z.string().optional(),
-  position: z.string().optional(),
-  delivery_method: z.enum(['pickup', 'delivery']),
-  delivery_address: z.string().optional(),
-  notes: z.string().optional(),
-  gift_wrap: z.boolean().optional(),
-  gift_message: z.string().max(280).optional(),
-});
+const FormSchema = z
+  .object({
+    customer_name: z.string().min(2, 'Name too short'),
+    email: z.string().email('Enter a valid email'),
+    phone: z.string().min(6, 'Enter a valid phone number'),
+    company: z.string().optional(),
+    position: z.string().optional(),
+    delivery_method: z.enum(['pickup', 'delivery']),
+    delivery_address: z.string().optional(),
+    notes: z.string().optional(),
+    gift_wrap: z.boolean().optional(),
+    gift_message: z.string().max(280).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.delivery_method === 'delivery' && !d.delivery_address?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['delivery_address'],
+        message: 'Delivery address is required',
+      });
+    }
+  });
 type FormValues = z.infer<typeof FormSchema>;
 
 export function CheckoutForm() {
@@ -203,7 +213,7 @@ export function CheckoutForm() {
             </div>
             {deliveryMethod === 'delivery' && (
               <div style={{ marginTop: 16 }}>
-                <Field label="Delivery address">
+                <Field label="Delivery address" error={errors.delivery_address?.message}>
                   <textarea {...register('delivery_address')} rows={2} className={inputCls} placeholder="Postal code, unit number, street..." />
                 </Field>
               </div>
