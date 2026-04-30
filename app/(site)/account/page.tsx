@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatSGD } from '@/lib/utils';
 import { SignOutButton } from '@/components/account/sign-out-button';
 import { ReorderButton } from '@/components/account/reorder-button';
+import { TierProgress } from '@/components/account/tier-progress';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My account' };
@@ -60,19 +61,13 @@ export default async function AccountPage() {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 32 }}>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginBottom: 32 }}>
         <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 14, background: '#fff' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Points</div>
           <div style={{ fontSize: 30, fontWeight: 900, color: '#0a0a0a', marginTop: 4 }}>{member?.points_balance ?? 0}</div>
           <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{member?.total_earned ?? 0} earned all-time</div>
         </div>
-        <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 14, background: '#fff' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Tier</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: '#E91E8C', marginTop: 4, textTransform: 'capitalize' }}>
-            {member?.tier ?? 'New'}
-          </div>
-          <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>Earn points on every order</div>
-        </div>
+        <TierProgress totalEarned={member?.total_earned ?? 0} />
         <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 14, background: '#fff' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Orders</div>
           <div style={{ fontSize: 30, fontWeight: 900, color: '#0a0a0a', marginTop: 4 }}>{orders?.length ?? 0}</div>

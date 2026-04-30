@@ -1,4 +1,5 @@
 import { CartView } from '@/components/cart/cart-view';
+import { BundleSuggestions } from '@/components/cart/bundle-suggestions';
 
 export const metadata = { title: 'Cart', alternates: { canonical: 'https://printvolution.sg/cart' } };
 
@@ -12,6 +13,7 @@ export default function CartPage() {
       </div>
       <div className="home-sec-inner" style={{ paddingBottom: 80 }}>
         <CartView />
+        <BundleSuggestions />
       </div>
     </div>
   );

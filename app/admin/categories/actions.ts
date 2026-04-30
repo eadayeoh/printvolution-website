@@ -47,12 +47,13 @@ export async function updateCategory(id: string, input: Partial<z.input<typeof S
       }
       if (visited.has(cursor)) break; // pre-existing cycle elsewhere — leave it alone
       visited.add(cursor);
-      const { data: row } = await sb
+      const res = await sb
         .from('categories')
         .select('parent_id')
         .eq('id', cursor)
         .maybeSingle();
-      cursor = (row?.parent_id as string | null) ?? null;
+      const row = res.data as { parent_id: string | null } | null;
+      cursor = row?.parent_id ?? null;
     }
   }
   const { error } = await sb.from('categories').update(input as any).eq('id', id);
