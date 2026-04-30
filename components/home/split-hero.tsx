@@ -88,25 +88,30 @@ export function SplitHero({ items }: { items: SplitHeroItem[] }) {
                     {item.kicker}
                   </div>
                 )}
-                <h1
-                  style={{
-                    fontFamily: 'var(--pv-f-display)',
-                    fontSize: 'clamp(40px, 5.5vw, 72px)',
-                    lineHeight: 0.9,
-                    letterSpacing: '-0.04em',
-                    margin: 0,
-                    marginBottom: 14,
-                    color: 'var(--pv-ink)',
-                  }}
-                >
-                  {item.headline}
-                  {item.headline_accent && (
-                    <>
-                      <br />
-                      <span style={{ color: accent }}>{item.headline_accent}</span>
-                    </>
-                  )}
-                </h1>
+                {(() => {
+                  const Heading = i === 0 ? 'h1' : 'h2';
+                  return (
+                    <Heading
+                      style={{
+                        fontFamily: 'var(--pv-f-display)',
+                        fontSize: 'clamp(40px, 5.5vw, 72px)',
+                        lineHeight: 0.9,
+                        letterSpacing: '-0.04em',
+                        margin: 0,
+                        marginBottom: 14,
+                        color: 'var(--pv-ink)',
+                      }}
+                    >
+                      {item.headline}
+                      {item.headline_accent && (
+                        <>
+                          <br />
+                          <span style={{ color: accent }}>{item.headline_accent}</span>
+                        </>
+                      )}
+                    </Heading>
+                  );
+                })()}
                 {item.body && (
                   <p
                     style={{

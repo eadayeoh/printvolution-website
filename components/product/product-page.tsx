@@ -776,31 +776,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
   const displayPrice = lineTotal > 0 ? lineTotal : (fromPrice ?? 0);
   const isBase = lineTotal <= 0 || lineTotal === fromPrice;
 
-  const jsonLdProduct = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name,
-    description: intro || product.description || '',
-    brand: { '@type': 'Brand', name: 'Printvolution' },
-    category: product.category?.name,
-    ...(heroImg ? { image: heroImg } : {}),
-    offers: {
-      '@type': 'Offer',
-      availability: 'https://schema.org/InStock',
-      priceCurrency: 'SGD',
-      price: ((fromPrice ?? 0) / 100).toFixed(2),
-    },
-  };
-  const jsonLdBreadcrumb = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://printvolution.sg/' },
-      { '@type': 'ListItem', position: 2, name: 'Shop', item: 'https://printvolution.sg/shop' },
-      product.category && { '@type': 'ListItem', position: 3, name: product.category.name, item: `https://printvolution.sg/shop?category=${product.category.slug}` },
-      { '@type': 'ListItem', position: 4, name: product.name },
-    ].filter(Boolean),
-  };
   const jsonLdFaq = product.faqs.length > 0 ? {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -813,8 +788,6 @@ export function ProductPage({ product, productRoutes, features }: Props) {
 
   return (
     <article>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProduct) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }} />
       {jsonLdFaq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />}
 
       {/* STICKY PRICE BAR */}

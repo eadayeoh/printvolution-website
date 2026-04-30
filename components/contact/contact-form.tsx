@@ -446,8 +446,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', ...(full ? { marginBottom: 14 } : {}) }}>
-      <label
+    <label style={{ display: 'flex', flexDirection: 'column', ...(full ? { marginBottom: 14 } : {}) }}>
+      <span
         style={{
           fontFamily: 'var(--pv-f-mono)',
           fontSize: 11,
@@ -465,8 +465,8 @@ function Field({
             (optional)
           </span>
         )}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
