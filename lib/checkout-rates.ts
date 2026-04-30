@@ -1,9 +1,9 @@
-export const DELIVERY_FLAT_CENTS = 800;
+export const DELIVERY_FLAT_CENTS = 4000;
 export const GIFT_WRAP_FLAT_CENTS = 300;
 /** Subtotal at which local delivery becomes free. Drives both the
  *  cart/checkout upsell ("S$X more for free delivery") and the
  *  server-side waiver in checkout/actions.ts. */
-export const FREE_DELIVERY_THRESHOLD_CENTS = 8000;
+export const FREE_DELIVERY_THRESHOLD_CENTS = 15000;
 
 /** Returns the delivery cents to charge given a subtotal + method.
  *  Single source of truth so client and server agree. */
