@@ -406,7 +406,11 @@ export function GiftProductPage({
     return () => clearTimeout(t);
   }, [occasionFallbackNotice]);
   const [err, setErr] = useState<string | null>(null);
-  const [qty, setQty] = useState(1);
+  // Embroidery has a per-design digitisation/setup cost the customer
+  // doesn't pay for — that cost is amortised over the line's qty. One
+  // shirt isn't economical, so the floor is 2 pieces per design.
+  const minQty = product.mode === 'embroidery' ? 2 : 1;
+  const [qty, setQty] = useState(minQty);
   const [addedFlash, setAddedFlash] = useState(false);
   const [cropPending, setCropPending] = useState<null | { file: File; src: string }>(null);
   const [engravedText, setEngravedText] = useState('');
@@ -1261,6 +1265,13 @@ export function GiftProductPage({
     // Re-entrancy gate: a fast double-click would otherwise fire two
     // upload+add cycles, producing duplicate cart lines.
     if (addingToCart) return;
+    // Embroidery floor — guard in case the qty selector was bypassed
+    // (devtools, prefilled draft from before the floor was introduced).
+    if (qty < minQty) {
+      setQty(minQty);
+      setErr(`Minimum ${minQty} pieces per design for ${product.mode}.`);
+      return;
+    }
     // Multi-anchor templates: warn the customer if any extra
     // location/event row is unresolved before they commit. Without
     // this, geocode failures (typo / network) silently drop the row
@@ -4077,7 +4088,7 @@ export function GiftProductPage({
               >
                 <button
                   type="button"
-                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  onClick={() => setQty(Math.max(minQty, qty - 1))}
                   style={{
                     background: '#fff',
                     border: 'none',
@@ -4119,6 +4130,17 @@ export function GiftProductPage({
                   +
                 </button>
               </div>
+              {minQty > 1 ? (
+                <div style={{
+                  marginTop: 10,
+                  fontFamily: 'var(--pv-f-mono)',
+                  fontSize: 11,
+                  color: 'var(--pv-muted)',
+                  letterSpacing: 0.2,
+                }}>
+                  Minimum order: {minQty} pieces per design — embroidery setup is per design, not per piece.
+                </div>
+              ) : null}
             </div>
 
             {/* Bulk pricing ladder — surfaces the volume tiers admin
