@@ -7,9 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useCart } from '@/lib/cart-store';
-import { formatSGD, isImageUrl } from '@/lib/utils';
+import { formatSGD } from '@/lib/utils';
 import { submitOrder, validateCouponForCheckout } from '@/app/(site)/checkout/actions';
 import { DELIVERY_FLAT_CENTS, GIFT_WRAP_FLAT_CENTS } from '@/lib/checkout-rates';
+import { ProductIcon } from '@/components/product/product-icon';
 
 const FormSchema = z.object({
   customer_name: z.string().min(2, 'Name too short'),
@@ -279,15 +280,11 @@ export function CheckoutForm() {
           <div className="co-sum-items">
             {items.map((i) => (
               <div key={i.id} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
-                {i.gift_image_url || isImageUrl(i.icon) ? (
-                  <img
-                    src={(i.gift_image_url ?? i.icon) as string}
-                    alt={i.product_name}
-                    style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, flexShrink: 0, background: '#f5f2ea' }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 18 }}>{i.icon ?? '📦'}</span>
-                )}
+                <ProductIcon
+                  src={i.gift_image_url ?? i.icon}
+                  size={40}
+                  style={{ borderRadius: 4, background: '#f5f2ea', flexShrink: 0 }}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, color: '#0a0a0a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.product_name}</div>
                   <div style={{ fontSize: 11, color: '#888' }}>Qty {i.qty} · {formatSGD(i.line_total_cents)}</div>
