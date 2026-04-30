@@ -44,7 +44,31 @@ async function saveBundle(id: string, d: BundleUpdateInput) {
   }).eq('id', id);
   if (uErr) return { ok: false, error: 'Update failed: ' + uErr.message };
 
-  // Products — wipe + reinsert
+  // Products — wipe + reinsert. Validate every referenced product
+  // exists AND is active before touching the table; without this, a
+  // bundle can quietly carry references to deleted / paused products
+  // and break the bundle PDP at customer time.
+  if (d.products.length) {
+    const ids = d.products.map((p) => p.product_id);
+    const { data: validRows } = await sb
+      .from('products')
+      .select('id, name, is_active')
+      .in('id', ids);
+    const validById = new Map((validRows ?? []).map((r: any) => [r.id, r]));
+    const missing: string[] = [];
+    const inactive: string[] = [];
+    for (const id of ids) {
+      const row = validById.get(id);
+      if (!row) missing.push(id);
+      else if (!row.is_active) inactive.push(row.name ?? id);
+    }
+    if (missing.length || inactive.length) {
+      const parts: string[] = [];
+      if (missing.length) parts.push(`unknown product(s): ${missing.join(', ')}`);
+      if (inactive.length) parts.push(`inactive product(s): ${inactive.join(', ')}`);
+      return { ok: false, error: `Bundle contains ${parts.join('; ')}. Reactivate or remove them first.` };
+    }
+  }
   await sb.from('bundle_products').delete().eq('bundle_id', id);
   if (d.products.length) {
     const rows = d.products.map((p, i) => ({

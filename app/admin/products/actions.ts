@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { slugify } from '@/lib/utils';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/auth/admin-audit';
+import { compile as compileFormula } from '@/lib/pricing';
 
 // Backwards-compat alias so existing call sites inside this file keep
 // working without a mass rename. Every exported action below calls
@@ -33,7 +34,18 @@ const ConfiguratorStepSchema = z.object({
     // unset — accept null AND undefined so round-tripping a loaded
     // option through the editor doesn't break validation.
     note: z.string().nullable().optional(),
-    price_formula: z.string().nullable().optional(),
+    // Validate the formula at save time. Without this, a typo like
+    // `qty*(24-Math.min(10,qty-1)` (missing closing paren) silently
+    // returns 0 at customer time via evaluateFormula's catch-all,
+    // accidentally making the product free. Empty / null still allowed
+    // — that just means "no upcharge for this option".
+    price_formula: z.string().nullable().optional().refine(
+      (f) => {
+        if (f == null || f === '') return true;
+        try { compileFormula(f); return true; } catch { return false; }
+      },
+      { message: 'price_formula does not parse (check brackets, allowed variables: qty, base, width, height, +/-/*/% and Math helpers)' },
+    ),
     image_url: z.string().nullable().optional(),
     swatch: z.string().nullable().optional(),
     // Per-option production overrides — lets a Print Method step carry

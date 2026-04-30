@@ -35,6 +35,26 @@ export async function saveCoupon(input: z.infer<typeof CouponSchema>) {
     is_active: d.is_active,
   };
 
+  // Guard: if admin lowers max_uses below the current uses_count
+  // the coupon flips inactive (validateCoupon's max_uses check
+  // returns "Not a valid code"). Customers see a generic failure
+  // and the admin doesn't know they nuked an in-flight coupon.
+  // Reject the change with a clear message instead.
+  if (d.id && row.max_uses !== null) {
+    const { data: existing } = await sb
+      .from('coupons')
+      .select('uses_count')
+      .eq('id', d.id)
+      .maybeSingle();
+    const used = (existing?.uses_count as number | null) ?? 0;
+    if (typeof row.max_uses === 'number' && row.max_uses < used) {
+      return {
+        ok: false,
+        error: `Cannot lower Max uses below the current redemption count (${used}). Disable the coupon instead, or set Max uses ≥ ${used}.`,
+      };
+    }
+  }
+
   const { error } = d.id
     ? await sb.from('coupons').update(row).eq('id', d.id)
     : await sb.from('coupons').insert({ ...row, uses_count: 0 });

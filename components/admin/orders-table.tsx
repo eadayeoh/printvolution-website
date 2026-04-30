@@ -14,7 +14,10 @@ type Props = {
   initialSearch: string;
 };
 
-const STATUSES = ['all', 'pending', 'processing', 'ready', 'completed', 'cancelled'];
+// Keep this in sync with `app/staff/actions.ts:ORDER_STATUSES`. Without
+// 'shipped' here, an order moved to that status by /staff disappears
+// from every filter except "all" and the admin loses visibility.
+const STATUSES = ['all', 'pending', 'processing', 'ready', 'shipped', 'completed', 'cancelled'];
 
 export function OrdersTable({ orders, initialStatus, initialSearch }: Props) {
   const router = useRouter();
@@ -47,7 +50,7 @@ export function OrdersTable({ orders, initialStatus, initialSearch }: Props) {
       o.order_number, o.customer_name, o.email, o.phone, o.delivery_method,
       String(o.item_count), (o.subtotal_cents / 100).toFixed(2),
       (o.total_cents / 100).toFixed(2), o.status,
-      new Date(o.created_at).toLocaleString('en-SG'),
+      new Date(o.created_at).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }),
     ]);
     const csv = [headers, ...rows]
       .map((r) => r.map(escapeCell).join(','))
@@ -137,7 +140,7 @@ export function OrdersTable({ orders, initialStatus, initialSearch }: Props) {
                   <td className="px-4 py-3 text-xs capitalize text-neutral-600">{o.delivery_method}</td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                   <td className="px-4 py-3 text-xs text-neutral-500">
-                    {new Date(o.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: '2-digit' })}
+                    {new Date(o.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Singapore' })}
                   </td>
                 </tr>
               ))

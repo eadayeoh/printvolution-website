@@ -27,7 +27,9 @@ export default async function StaffDashboard({
     query = query.eq('status', searchParams.status);
   }
   if (searchParams.q) {
-    const s = searchParams.q.trim();
+    // Escape PostgREST ILIKE wildcards + .or() delimiter so a search
+    // for "John_Smith" doesn't match every 3-char-and-up name.
+    const s = searchParams.q.trim().replace(/[\\%_,]/g, (c) => `\\${c}`);
     query = query.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`);
   }
   const { data } = await query.limit(200);

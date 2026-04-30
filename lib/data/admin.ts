@@ -93,7 +93,12 @@ export async function listOrders(filters?: {
     query = query.eq('status', filters.status);
   }
   if (filters?.search) {
-    const s = filters.search.trim();
+    // Escape PostgREST ILIKE wildcards before splicing into the
+    // pattern so a customer named "John_Smith" or "AB%CD" doesn't
+    // turn into a free-form match against unrelated rows. Comma is
+    // also escaped so an attacker can't break out of the .or()
+    // delimiter by typing one in the search box.
+    const s = filters.search.trim().replace(/[\\%_,]/g, (c) => `\\${c}`);
     query = query.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%`);
   }
 
