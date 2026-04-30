@@ -924,6 +924,7 @@ export function GiftProductEditor({ product, categories, allTemplates, assignedT
                 giftProductId={product.id}
                 initialVariants={variants}
                 allowedModes={secondaryMode ? [mode, secondaryMode] : [mode]}
+                productMode={mode}
                 productWidthMm={parseFloat(widthMm) || product.width_mm}
                 productHeightMm={parseFloat(heightMm) || product.height_mm}
                 parentShapeOptions={shapePickerEnabled && shapeOptions.length > 0 ? shapeOptions : null}

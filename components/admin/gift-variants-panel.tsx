@@ -130,6 +130,11 @@ type GiftVariantsPanelProps = {
    *  these (parent product's {mode, secondary_mode}). When undefined or
    *  empty, every mode is available (back-compat). */
   allowedModes?: string[];
+  /** Parent product's primary mode. Drives the auto-tint hint shown
+   *  under hex-only swatches — only mockup-driven modes (embroidery /
+   *  laser / uv / photo-resize) auto-tint at customer time, so the
+   *  hint must not promise auto-tint on renderer products. */
+  productMode?: string;
   /** Parent product dimensions used as the mockup canvas when a variant
    *  doesn't override width_mm/height_mm. */
   productWidthMm: number;
@@ -162,6 +167,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   giftProductId,
   initialVariants,
   allowedModes,
+  productMode,
   productWidthMm,
   productHeightMm,
   parentShapeOptions,
@@ -169,6 +175,12 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
   productSizes,
   linkedRendererTemplate,
 }, ref) {
+  // Same eligibility rule the customer-side resolveMockup uses, kept
+  // in sync so the admin hint reflects what'll actually fire.
+  const autoTintEligible = productMode === 'embroidery'
+    || productMode === 'laser'
+    || productMode === 'uv'
+    || productMode === 'photo-resize';
   // ── Renderer preview wiring ──────────────────────────────────────────
   // Build the full SVG markup once per template change — we render the
   // SAME markup inside every variant's pink rectangle (admins see the
@@ -1084,7 +1096,7 @@ export const GiftVariantsPanel = forwardRef<GiftVariantsPanelHandle, GiftVariant
                                 <div className="mt-1 text-[10px] leading-snug text-neutral-500">
                                   {s.mockup_url ? (
                                     <span><strong>Mockup swatch</strong> — picking this swaps the displayed photo.</span>
-                                  ) : d.mockup_url ? (
+                                  ) : d.mockup_url && autoTintEligible ? (
                                     <span><strong>Auto-tint</strong> — leaves your base mockup, recolours the body to this hex via multiply blend. One upload covers every colour.</span>
                                   ) : (
                                     <span><strong>Colour overlay</strong> — no photo swap; only retints the renderer output (foil colour).</span>

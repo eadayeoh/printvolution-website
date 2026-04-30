@@ -1,5 +1,6 @@
 import type { GiftProduct, GiftProductVariant, MockupArea, MockupOverride } from './types';
 import type { ShapeKind } from './shape-options';
+import { validateHexColor } from './personalisation-notes';
 
 export type ResolvedMockup = {
   url: string;
@@ -104,8 +105,13 @@ export function resolveMockup(input: {
   // Tint applies only when the customer picked a swatch but admin
   // didn't upload a per-colour mockup for it — that's the auto-tint
   // path. If admin uploaded a colour-specific image, skip tint so we
-  // don't double-multiply.
-  const tintHex = selectedColourHex && !selectedColourMockupUrl ? selectedColourHex : null;
+  // don't double-multiply. Validate the hex before returning so an
+  // invalid value (admin typo "red" or "#zzz") can't reach
+  // `ctx.fillStyle` on the canvas — Canvas silently keeps the previous
+  // fill, which defaults to black, painting the whole shirt black.
+  const tintHex = selectedColourHex && !selectedColourMockupUrl
+    ? validateHexColor(selectedColourHex)
+    : null;
 
   return { url, area, tintHex };
 }
