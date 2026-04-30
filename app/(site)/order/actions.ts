@@ -1,25 +1,12 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import sharp from 'sharp';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { deliveryCentsFor } from '@/lib/checkout-rates';
-import { GIFT_BUCKETS, putObject, makeKey, extFromMime } from '@/lib/gifts/storage';
-
-/** Pipeline providers that DON'T touch OpenAI. Customer is allowed
- *  to replace the source photo for these — re-runs only Sharp +
- *  storage, both already paid for. Anything outside this set forces
- *  the customer back through /gift/[slug] to set up a new design. */
-const COST_FREE_PROVIDERS = new Set(['passthrough', 'local_edge', 'local_bw']);
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
+import { GIFT_BUCKETS, putObject, makeKey, serviceClient } from '@/lib/gifts/storage';
+import { isCostFreeProvider } from '@/lib/gifts/pipeline-providers';
+import { UNTRUSTED_SHARP_OPTS } from '@/lib/gifts/sharp-config';
 
 const EditSchema = z.object({
   lines: z.array(z.object({
@@ -51,7 +38,7 @@ export async function saveCustomerOrderEdit(
     return { ok: false, error: 'Delivery address is required.' };
   }
 
-  const sb = service();
+  const sb = serviceClient();
 
   // Find the order by token, with all current line items so we can
   // sanity-check the customer's edits against what was actually
@@ -170,7 +157,7 @@ export async function saveGiftDesignEdits(
   const parse = GiftEditsSchema.safeParse(input);
   if (!parse.success) return { ok: false, error: 'Invalid edit payload.' };
 
-  const sb = service();
+  const sb = serviceClient();
   const { data: order } = await sb
     .from('orders')
     .select('id, customer_edit_locked')
@@ -221,7 +208,7 @@ export async function replaceCustomerPhoto(
   const rl = await checkRateLimit(`gift-photo:${ip}`, { max: 6, windowSeconds: 300 });
   if (!rl.allowed) return { ok: false, error: 'Too many uploads. Try again in a few minutes.' };
 
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(giftItemId)) {
+  if (!z.string().uuid().safeParse(giftItemId).success) {
     return { ok: false, error: 'Invalid gift item id.' };
   }
 
@@ -230,7 +217,7 @@ export async function replaceCustomerPhoto(
   if (file.size === 0) return { ok: false, error: 'Empty file.' };
   if (file.size > 20 * 1024 * 1024) return { ok: false, error: 'Image too large (max 20MB).' };
 
-  const sb = service();
+  const sb = serviceClient();
 
   // Look up the gift line + its pipeline provider in one round-trip.
   // Token + locked check is on the parent order; provider check
@@ -255,24 +242,21 @@ export async function replaceCustomerPhoto(
   }
   const pipeline = Array.isArray(lineRow.pipeline) ? lineRow.pipeline[0] : lineRow.pipeline;
   const provider = (pipeline?.provider ?? 'passthrough') as string;
-  if (!COST_FREE_PROVIDERS.has(provider)) {
+  if (!isCostFreeProvider(provider)) {
     return {
       ok: false,
       error: 'This gift uses an AI-generated design, so the photo can\'t be swapped here. To use a different photo, set up a new design from the gift page.',
     };
   }
 
-  // Validate by attempting a sharp metadata read — also normalises
-  // arbitrary heic/heif/etc input down to jpeg/png/webp via the
-  // pipeline's existing renderer. If sharp can't parse it, the file
-  // isn't a real image regardless of its declared content-type.
+  // sharp metadata read doubles as our format-validation step — if
+  // libvips can't parse the bytes, it isn't really an image.
   let buffer: Buffer;
   let mime: string;
   let detectedExt: string;
   try {
     const inputBuf = Buffer.from(await file.arrayBuffer());
-    const meta = await sharp(inputBuf, { limitInputPixels: 41_000_000, failOn: 'warning' })
-      .metadata();
+    const meta = await sharp(inputBuf, UNTRUSTED_SHARP_OPTS).metadata();
     if (!meta.width || !meta.height) throw new Error('Image has no dimensions');
     if (meta.width < 200 || meta.height < 200) {
       return { ok: false, error: 'Image too small — please upload at least 200×200 pixels.' };
@@ -343,10 +327,10 @@ export async function revertCustomerPhoto(
   const rl = await checkRateLimit(`gift-revert:${ip}`, { max: 10, windowSeconds: 60 });
   if (!rl.allowed) return { ok: false, error: 'Too many requests. Try again in a minute.' };
 
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(giftItemId)) {
+  if (!z.string().uuid().safeParse(giftItemId).success) {
     return { ok: false, error: 'Invalid gift item id.' };
   }
-  const sb = service();
+  const sb = serviceClient();
   const { data: line } = await sb
     .from('gift_order_items')
     .select(`

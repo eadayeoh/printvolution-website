@@ -1,15 +1,7 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
+import { serviceClient } from '@/lib/gifts/storage';
 
 export async function respondToProof(
   token: string,
@@ -27,7 +19,7 @@ export async function respondToProof(
 
   const cleanNote = note ? note.slice(0, 1000) : null;
 
-  const sb = service();
+  const sb = serviceClient();
   const { data: existing } = await sb
     .from('gift_order_items')
     .select('id, proof_status')

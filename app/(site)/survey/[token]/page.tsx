@@ -1,20 +1,12 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { serviceClient } from '@/lib/gifts/storage';
 import { SurveyForm } from '@/components/survey/survey-form';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'How did we do?', robots: { index: false, follow: false } };
 
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
 export default async function SurveyPage({ params }: { params: { token: string } }) {
-  const sb = service();
+  const sb = serviceClient();
   const { data: row } = await sb
     .from('nps_responses')
     .select('id, token, score, responded_at, order:orders(order_number)')

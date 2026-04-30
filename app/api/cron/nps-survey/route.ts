@@ -1,38 +1,19 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { randomBytes } from 'crypto';
 import { verifyCronAuth } from '@/lib/cron-auth';
 import { sendEmail, npsSurveyEmail } from '@/lib/email';
 import { reportError } from '@/lib/observability';
+import { siteOrigin } from '@/lib/site';
+import { serviceClient } from '@/lib/gifts/storage';
+import { mintToken } from '@/lib/tokens';
 
 export const dynamic = 'force-dynamic';
-
-function siteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url && url.length > 0) return url.replace(/\/$/, '');
-  return 'https://printvolution.sg';
-}
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
-function newToken(): string {
-  // 24 random bytes → 32-char base64url. Long enough that a typo
-  // can't accidentally land on someone else's survey.
-  return randomBytes(24).toString('base64url');
-}
 
 export async function GET(req: Request) {
   if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const sb = service();
+  const sb = serviceClient();
 
   // Orders completed at least 7 days ago, never surveyed yet. We can't
   // do a NOT EXISTS via PostgREST; pull the candidate list and the
@@ -54,7 +35,7 @@ export async function GET(req: Request) {
   let failed = 0;
 
   for (const o of candidates) {
-    const token = newToken();
+    const token = mintToken();
     try {
       const { error: insErr } = await sb
         .from('nps_responses')

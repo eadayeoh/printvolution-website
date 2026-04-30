@@ -2,8 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { randomBytes } from 'crypto';
 import { sendEmail, proofApprovalEmail } from '@/lib/email';
+import { mintToken } from '@/lib/tokens';
+import { siteOrigin } from '@/lib/site';
 
 async function requireAdmin() {
   const sb = createClient();
@@ -14,12 +15,6 @@ async function requireAdmin() {
     throw new Error('Admin only');
   }
   return sb;
-}
-
-function siteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url && url.length > 0) return url.replace(/\/$/, '');
-  return 'https://printvolution.sg';
 }
 
 export async function advanceStatus(form: FormData) {
@@ -81,7 +76,7 @@ async function maybeSendProofEmail(
   const order = Array.isArray(row.order) ? row.order[0] : row.order;
   if (!order?.email) return;
 
-  const token = randomBytes(24).toString('base64url');
+  const token = mintToken();
   const { error: upErr } = await sb
     .from('gift_order_items')
     .update({

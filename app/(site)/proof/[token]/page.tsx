@@ -1,21 +1,12 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-import { signUrl } from '@/lib/gifts/storage';
+import { serviceClient, signUrl } from '@/lib/gifts/storage';
 import { ProofForm } from '@/components/proof/proof-form';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Approve your proof', robots: { index: false, follow: false } };
 
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
 export default async function ProofPage({ params }: { params: { token: string } }) {
-  const sb = service();
+  const sb = serviceClient();
   const { data } = await sb
     .from('gift_order_items')
     .select(`

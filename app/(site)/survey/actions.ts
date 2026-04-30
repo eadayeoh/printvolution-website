@@ -1,15 +1,7 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
+import { serviceClient } from '@/lib/gifts/storage';
 
 export async function submitNps(
   token: string,
@@ -26,7 +18,7 @@ export async function submitNps(
   }
   const cleanComment = comment ? comment.slice(0, 1000) : null;
 
-  const sb = service();
+  const sb = serviceClient();
   // First check the row exists + is unanswered, then update with a
   // guard on responded_at so a duplicate submit can't overwrite.
   const { data: existing } = await sb

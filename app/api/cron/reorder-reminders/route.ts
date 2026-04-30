@@ -1,31 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { verifyCronAuth } from '@/lib/cron-auth';
 import { sendEmail, reorderReminderEmail } from '@/lib/email';
 import { reportError } from '@/lib/observability';
+import { siteOrigin } from '@/lib/site';
+import { serviceClient } from '@/lib/gifts/storage';
 
 export const dynamic = 'force-dynamic';
-
-function siteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url && url.length > 0) return url.replace(/\/$/, '');
-  return 'https://printvolution.sg';
-}
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
 
 export async function GET(req: Request) {
   if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const sb = service();
+  const sb = serviceClient();
   const nowIso = new Date().toISOString();
 
   // Find orders whose reminder window has come due. We cap the batch

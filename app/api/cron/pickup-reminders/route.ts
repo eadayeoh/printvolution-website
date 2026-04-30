@@ -1,25 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { verifyCronAuth } from '@/lib/cron-auth';
 import { sendEmail, pickupReadyReminderEmail } from '@/lib/email';
 import { reportError } from '@/lib/observability';
+import { serviceClient } from '@/lib/gifts/storage';
 
 export const dynamic = 'force-dynamic';
-
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
 
 export async function GET(req: Request) {
   if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const sb = service();
+  const sb = serviceClient();
   // 48 hours ago — orders ready since before this need a nudge.
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 

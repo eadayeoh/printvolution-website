@@ -21,6 +21,7 @@ import { renderPhotoResize, runAiTransform, transformBytesForMode } from './pipe
 import { createClient } from '@/lib/supabase/server';
 import { parsePersonalisationNotes, validateHexColor, validateFontKey } from './personalisation-notes';
 import { stampSvgSize } from './svg-size';
+import { UNTRUSTED_SHARP_OPTS } from './sharp-config';
 
 /** Per-mode production output format spec. Maps a snapshot mode
  *  string to (a) the primary file format the production pipeline
@@ -229,15 +230,6 @@ async function loadSharp() {
   const mod = await import('sharp' as any).catch(() => null);
   return mod?.default ?? null;
 }
-
-/**
- * Hard ceiling on sharp's input decoder when the bytes came from a
- * customer upload. ~41 MP is enough for full-frame DSLR photos but
- * blocks decompression-bomb PNGs that would otherwise allocate
- * gigabytes of RGBA buffer mid-decode. Pair with `failOn:'warning'`
- * so malformed JPEG/PNG headers throw instead of crashing libvips.
- */
-const UNTRUSTED_SHARP_OPTS = { limitInputPixels: 41_000_000, failOn: 'warning' as const };
 
 // ---------------------------------------------------------------------------
 // PREVIEW PIPELINE

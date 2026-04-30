@@ -2,6 +2,7 @@ import 'server-only';
 import { Resend } from 'resend';
 import { formatSGD } from '@/lib/utils';
 import { BRAND, SITE } from '@/lib/brand';
+import { siteOrigin } from '@/lib/site';
 
 /**
  * Thin wrapper around Resend.
@@ -18,16 +19,11 @@ import { BRAND, SITE } from '@/lib/brand';
 const FROM = process.env.EMAIL_FROM || 'Printvolution <orders@printvolution.sg>';
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || '';
 
-// On Vercel, NEXT_PUBLIC_VERCEL_URL is the deployment-specific URL
-// (printvolution-abc123-team.vercel.app), not the production domain —
-// emails using it would link to preview deploys. Prefer
-// NEXT_PUBLIC_SITE_URL, fall back to the hard-coded production host
-// so links work even before the env var is provisioned.
-// TODO(env): set NEXT_PUBLIC_SITE_URL=https://printvolution.sg in Vercel
-function siteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url && url.length > 0) return url.replace(/\/$/, '');
-  return 'https://printvolution.sg';
+/** Greeting first-name with sane fallback. Many templates need this
+ *  same "Hi <Name>" pattern; centralising avoids the empty-string +
+ *  whitespace-only edge cases drifting between templates. */
+function firstName(name: string | null | undefined): string {
+  return (name ?? '').trim().split(/\s+/)[0] || 'there';
 }
 
 let _client: Resend | null = null;
@@ -255,7 +251,7 @@ export function orderStatusEmail(orderNumber: string, customerName: string, stat
 }
 
 export function welcomeEmail(email: string, name: string | null): { subject: string; html: string } {
-  const first = (name ?? '').trim().split(/\s+/)[0] || 'there';
+  const first = firstName(name);
   const subject = `Welcome to Printvolution, ${first}`;
   const body = `
     <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 8px;color:${BRAND_INK};">
@@ -296,7 +292,7 @@ export type ShippedEmailPayload = {
 };
 
 export function orderShippedEmail(p: ShippedEmailPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `Your Printvolution order is on the way — ${p.order_number}`;
   const trackingUrl = p.tracking_url
     || `${siteOrigin()}/track?order=${encodeURIComponent(p.order_number)}`;
@@ -334,7 +330,7 @@ export type RefundedEmailPayload = {
 };
 
 export function orderRefundedEmail(p: RefundedEmailPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const refundLabel = formatSGD(p.refund_cents);
   const subject = p.refund_cents > 0
     ? `Order ${p.order_number} cancelled — refund ${refundLabel}`
@@ -380,7 +376,7 @@ export type OrderEditLinkPayload = {
 };
 
 export function orderEditLinkEmail(p: OrderEditLinkPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `Review your order — ${p.order_number}`;
   const noteBlock = p.staffNote
     ? `<div style="background:#fafaf7;border-left:3px solid ${BRAND_PINK};padding:12px 14px;margin:14px 0;font-size:13px;color:#444;line-height:1.6;">
@@ -413,7 +409,7 @@ export type ReorderReminderPayload = {
 };
 
 export function reorderReminderEmail(p: ReorderReminderPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `Time to reorder? ${p.order_number}`;
   const body = `
     <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
@@ -438,7 +434,7 @@ export type PickupReadyReminderPayload = {
 };
 
 export function pickupReadyReminderEmail(p: PickupReadyReminderPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `Friendly reminder: ${p.order_number} is ready for pickup`;
   const body = `
     <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
@@ -469,7 +465,7 @@ export type ProofApprovalPayload = {
 };
 
 export function proofApprovalEmail(p: ProofApprovalPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `Proof ready for approval — ${p.order_number}`;
   const body = `
     <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">
@@ -495,7 +491,7 @@ export type NpsSurveyPayload = {
 };
 
 export function npsSurveyEmail(p: NpsSurveyPayload): { subject: string; html: string } {
-  const first = p.customer_name.split(/\s+/)[0] || 'there';
+  const first = firstName(p.customer_name);
   const subject = `How was ${p.order_number}?`;
   const body = `
     <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;color:${BRAND_INK};">

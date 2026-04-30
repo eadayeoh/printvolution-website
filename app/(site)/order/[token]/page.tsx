@@ -1,25 +1,14 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-import { formatSGD } from '@/lib/utils';
 import { OrderEditForm } from '@/components/order/order-edit-form';
 import { GiftDesignEditor } from '@/components/order/gift-design-editor';
-import { signUrl } from '@/lib/gifts/storage';
-
-const COST_FREE_PROVIDERS = new Set(['passthrough', 'local_edge', 'local_bw']);
+import { serviceClient, signUrl } from '@/lib/gifts/storage';
+import { isCostFreeProvider } from '@/lib/gifts/pipeline-providers';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Review your order', robots: { index: false, follow: false } };
 
-function service() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-}
-
 export default async function CustomerOrderEditPage({ params }: { params: { token: string } }) {
-  const sb = service();
+  const sb = serviceClient();
   const { data: order } = await sb
     .from('orders')
     .select(`
@@ -63,7 +52,7 @@ export default async function CustomerOrderEditPage({ params }: { params: { toke
       hasOriginalBackup: !!g.original_source_asset_id,
       personalisationNotes: (g.personalisation_notes as string) ?? '',
       previewUrl,
-      photoEditable: COST_FREE_PROVIDERS.has(provider),
+      photoEditable: isCostFreeProvider(provider),
       pipelineProvider: provider,
     };
   }));

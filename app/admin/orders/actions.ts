@@ -1,11 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { randomBytes } from 'crypto';
 import { requireAdmin, createServiceClient } from '@/lib/auth/require-admin';
 import { logAdminAction } from '@/lib/auth/admin-audit';
 import { reportError } from '@/lib/observability';
 import { sendEmail, orderEditLinkEmail } from '@/lib/email';
+import { mintToken } from '@/lib/tokens';
+import { siteOrigin } from '@/lib/site';
 
 const ALLOWED_STATUSES = ['pending', 'processing', 'ready', 'shipped', 'completed', 'cancelled'] as const;
 
@@ -131,12 +132,6 @@ export async function updateOrderStatus(
   return { ok: true };
 }
 
-function siteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url && url.length > 0) return url.replace(/\/$/, '');
-  return 'https://printvolution.sg';
-}
-
 /** Send a customer-edit link for the given order. Mints a fresh
  *  token on every call so an old link in an old email goes dead;
  *  if the order is locked we refuse to mint at all. The customer
@@ -160,12 +155,20 @@ export async function sendCustomerEditLink(
     return { ok: false, error: 'This order is locked from customer edits.' };
   }
 
-  const token = randomBytes(24).toString('base64url');
-  const { error } = await supabase
+  const token = mintToken();
+  // CAS on customer_edit_locked=false closes the read-then-write
+  // window: if a different admin locks the order between the SELECT
+  // above and this UPDATE, the row count is 0 and we surface a
+  // friendly error instead of silently overwriting the lock.
+  const { error, count } = await supabase
     .from('orders')
-    .update({ customer_edit_token: token, customer_edit_locked: false })
-    .eq('id', orderId);
+    .update({ customer_edit_token: token }, { count: 'exact' })
+    .eq('id', orderId)
+    .eq('customer_edit_locked', false);
   if (error) return { ok: false, error: error.message };
+  if (count === 0) {
+    return { ok: false, error: 'Order was locked from customer edits in another tab.' };
+  }
 
   const note = (staffNote ?? '').trim().slice(0, 500) || null;
   const { subject, html } = orderEditLinkEmail({
