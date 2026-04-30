@@ -1637,14 +1637,41 @@ export function GiftTemplateEditor({
             openId={openSection}
             onOpen={setOpenSection}
           >
+            {/* Move to a different group — surfaces the same picker
+                that lives in the page header, here in the section
+                admin opens to change catalog settings. The header
+                picker stays as a quick-access duplicate. */}
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-neutral-600">Group</span>
+              <select
+                value={groupName || ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '__custom__') { setNewGroupDraft(''); return; }
+                  setGroupName(v);
+                }}
+                className={inputCls}
+              >
+                <option value="">Ungrouped</option>
+                {(existingGroups ?? []).map((g) => <option key={g} value={g}>{g}</option>)}
+                {groupName && !(existingGroups ?? []).includes(groupName) && (
+                  <option value={groupName}>{groupName} (current)</option>
+                )}
+                <option value="__custom__">+ New group…</option>
+              </select>
+              <span className="mt-1 block text-[10px] text-neutral-500">
+                Pick a different group to move this template, or &ldquo;+ New group&rdquo; to coin one. Click <strong>Save</strong> at the top to commit.
+              </span>
+            </label>
             {/* Group rename / delete — only show actions when the
                 template is actually in a saved group, since "Ungrouped"
                 has nothing to rename. Rename uses an inline input
                 instead of window.prompt; delete is a two-step
-                confirm. */}
+                confirm. These act on the GROUP as a whole — every
+                template in it — not just this one. */}
             {groupName && (existingGroups ?? []).includes(groupName) && (
               <div className="rounded-lg border border-neutral-200 p-3">
-                <div className="mb-2 text-xs font-bold text-ink">Group: {groupName}</div>
+                <div className="mb-2 text-xs font-bold text-ink">Group: {groupName} <span className="font-normal text-neutral-500">(applies to every template in this group)</span></div>
                 {groupRenaming !== null ? (
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <input
