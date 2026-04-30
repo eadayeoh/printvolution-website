@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { cache } from 'react';
+import { evaluateFormula } from '@/lib/pricing';
 
 /**
  * Normalise a PostgREST embed. 1:1 foreign-key embeds (where the FK column
@@ -179,7 +180,8 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
       category:categories!products_category_id_fkey(slug, name),
       subcategory:categories!products_subcategory_id_fkey(slug, name),
       product_pricing(rows),
-      product_extras(image_url)
+      product_extras(image_url),
+      product_configurator(type, options)
     `)
     .eq('is_active', true)
     .order('sort_order');
@@ -209,6 +211,29 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
       for (const r of rows) {
         for (const price of r.prices ?? []) {
           if (typeof price === 'number' && price > 0 && (min === null || price < min)) min = price;
+        }
+      }
+    }
+    // Formula-driven products (Life Size Standee, Photo Frames, Poster,
+    // Roll Up Banner, Embroidery, Artist Canvas, PVC Canvas, Rubber
+    // Stamp …) keep their pricing as price_formula strings on
+    // product_configurator.options. Mirror what product-page.tsx does
+    // for `fromPrice`: evaluate every option's formula at qty=1, take
+    // the cheapest positive result.
+    if (min === null) {
+      const cfgSteps = (p.product_configurator ?? []) as Array<{
+        type?: string | null;
+        options?: Array<{ price_formula?: string | null; price_cents?: number | null }> | null;
+      }>;
+      for (const step of cfgSteps) {
+        if (step.type !== 'swatch' && step.type !== 'select') continue;
+        for (const opt of step.options ?? []) {
+          if (opt.price_formula) {
+            const cents = Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100);
+            if (cents > 0 && (min === null || cents < min)) min = cents;
+          } else if (typeof opt.price_cents === 'number' && opt.price_cents > 0) {
+            if (min === null || opt.price_cents < min) min = opt.price_cents;
+          }
         }
       }
     }
@@ -249,7 +274,8 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
           category:categories!products_category_id_fkey(slug),
           subcategory:categories!products_subcategory_id_fkey(slug),
           product_pricing(rows),
-          product_extras(image_url)
+          product_extras(image_url),
+          product_configurator(type, options)
         )
       )
     `)
@@ -284,6 +310,25 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
         const rows = embedOne(rp.product_pricing)?.rows ?? [];
         for (const row of rows) for (const p of row.prices ?? []) {
           if (typeof p === 'number' && p > 0 && (min === null || p < min)) min = p;
+        }
+      }
+      // Formula-driven products: cheapest configurator-option formula
+      // at qty=1, mirroring what listProducts does.
+      if (min === null) {
+        const cfgSteps = (rp.product_configurator ?? []) as Array<{
+          type?: string | null;
+          options?: Array<{ price_formula?: string | null; price_cents?: number | null }> | null;
+        }>;
+        for (const step of cfgSteps) {
+          if (step.type !== 'swatch' && step.type !== 'select') continue;
+          for (const opt of step.options ?? []) {
+            if (opt.price_formula) {
+              const cents = Math.round(evaluateFormula(opt.price_formula, { qty: 1, base: 0 }) * 100);
+              if (cents > 0 && (min === null || cents < min)) min = cents;
+            } else if (typeof opt.price_cents === 'number' && opt.price_cents > 0) {
+              if (min === null || opt.price_cents < min) min = opt.price_cents;
+            }
+          }
         }
       }
       return {
