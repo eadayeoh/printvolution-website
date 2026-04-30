@@ -40,7 +40,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: rawTitle,
       description,
       type: 'website',
-      images: heroImage ? [{ url: heroImage, alt: p.name }] : undefined,
+      // Next.js fully replaces openGraph from the parent layout, so the
+      // og-default.png inherited from app/layout.tsx is lost unless we
+      // restate it here as a fallback.
+      images: heroImage
+        ? [{ url: heroImage, alt: p.name }]
+        : [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Printvolution' }],
     },
   };
 }

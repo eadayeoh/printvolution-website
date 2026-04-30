@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Privacy & data retention',
   description: 'How Printvolution handles customer data, uploads, and production files.',
+  alternates: { canonical: 'https://printvolution.sg/legal/privacy' },
 };
 
 export default function PrivacyPage() {

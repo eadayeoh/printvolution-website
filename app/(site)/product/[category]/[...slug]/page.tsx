@@ -53,7 +53,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       url,
       type: 'website',
-      images: product.extras?.image_url ? [product.extras.image_url] : undefined,
+      images: product.extras?.image_url
+        ? [product.extras.image_url]
+        : [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Printvolution' }],
     },
     twitter: {
       card: 'summary_large_image',

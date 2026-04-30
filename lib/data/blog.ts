@@ -24,12 +24,19 @@ export async function listPublishedPosts(limit = 50): Promise<BlogPostSummary[]>
     .from('blog_posts')
     .select('id, slug, title, excerpt, featured_image_url, author, published_at, tags')
     .eq('status', 'published')
+    // WordPress imports flag soft-deleted posts by prefixing the slug with
+    // `__trashed` while leaving status='published' — hide them from the index.
+    .not('slug', 'like', '\\_\\_trashed%')
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit);
   return (data ?? []) as BlogPostSummary[];
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  // Block direct `/blog/__trashed*` URLs as well — they render real content
+  // because of the WP-imported status, but they're not posts the team wants
+  // public.
+  if (slug.startsWith('__trashed')) return null;
   const sb = createClient();
   const { data } = await sb
     .from('blog_posts')

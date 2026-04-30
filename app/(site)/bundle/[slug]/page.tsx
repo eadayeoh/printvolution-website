@@ -20,6 +20,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: bundle.name,
       description,
       type: 'website',
+      images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Printvolution' }],
     },
   };
 }

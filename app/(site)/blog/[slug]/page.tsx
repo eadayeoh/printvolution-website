@@ -19,7 +19,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: post.title,
       description: post.excerpt || undefined,
-      images: post.featured_image_url ? [post.featured_image_url] : undefined,
+      images: post.featured_image_url
+        ? [post.featured_image_url]
+        : [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Printvolution' }],
       type: 'article',
     },
   };
