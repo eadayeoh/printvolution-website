@@ -187,18 +187,29 @@ export const listProducts = cache(async (): Promise<ProductListItem[]> => {
   if (error) throw error;
 
   return ((data ?? []) as any[]).map((p: any) => {
-    const rows = embedOne(p.product_pricing)?.rows ?? [];
-    let min: number | null = null;
-    for (const r of rows) {
-      for (const price of r.prices ?? []) {
-        if (typeof price === 'number' && (min === null || price < min)) min = price;
-      }
-    }
-    // pricing_table takes precedence if present
+    // Two pricing sources, in priority order:
+    //   1. pricing_table (modern, synced from pvpricelist) — if present
+    //      AND non-empty, it is the single source of truth.
+    //   2. product_pricing.rows (legacy hand-built grid) — fallback
+    //      only when no pricing_table exists.
+    //
+    // Folding both into one minimum (the previous behaviour) was a
+    // bug: legacy rows contain a placeholder 0 for products like
+    // Stickers / Flyers / Paper Bag, and 0 < every real price in the
+    // pricing_table, so the zero won. The shop card then displayed
+    // "Price Quote" even though pvpricelist had real numbers.
     const pt = p.pricing_table as PricingTable | null;
-    if (pt && pt.prices) {
+    let min: number | null = null;
+    if (pt && pt.prices && Object.keys(pt.prices).length > 0) {
       for (const v of Object.values(pt.prices)) {
-        if (typeof v === 'number' && (min === null || v < min)) min = v;
+        if (typeof v === 'number' && v > 0 && (min === null || v < min)) min = v;
+      }
+    } else {
+      const rows = embedOne(p.product_pricing)?.rows ?? [];
+      for (const r of rows) {
+        for (const price of r.prices ?? []) {
+          if (typeof price === 'number' && price > 0 && (min === null || price < min)) min = price;
+        }
       }
     }
     const extras = embedOne<any>(p.product_extras);
@@ -234,7 +245,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
         related_product_id,
         display_order,
         related:products!product_related_related_product_id_fkey(
-          slug, name, icon,
+          slug, name, icon, pricing_table,
           category:categories!products_category_id_fkey(slug),
           subcategory:categories!products_subcategory_id_fkey(slug),
           product_pricing(rows),
@@ -260,9 +271,21 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     .map((r: any) => {
       const rp = r.related;
       if (!rp) return null;
-      const rows = embedOne(rp.product_pricing)?.rows ?? [];
+      // Same pricing_table-first / legacy-fallback rule as listProducts.
+      // Without this, related-product cards on a PDP would show 0 for
+      // any product whose modern prices live only in pricing_table.
+      const pt = rp.pricing_table as PricingTable | null;
       let min: number | null = null;
-      for (const row of rows) for (const p of row.prices ?? []) if (typeof p === 'number' && (min === null || p < min)) min = p;
+      if (pt && pt.prices && Object.keys(pt.prices).length > 0) {
+        for (const v of Object.values(pt.prices)) {
+          if (typeof v === 'number' && v > 0 && (min === null || v < min)) min = v;
+        }
+      } else {
+        const rows = embedOne(rp.product_pricing)?.rows ?? [];
+        for (const row of rows) for (const p of row.prices ?? []) {
+          if (typeof p === 'number' && p > 0 && (min === null || p < min)) min = p;
+        }
+      }
       return {
         slug: rp.slug,
         name: rp.name,

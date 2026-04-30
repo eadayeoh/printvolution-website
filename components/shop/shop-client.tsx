@@ -187,7 +187,7 @@ export function ShopClient({ items, serviceCategories, giftCategories, initialCa
                       {p.tagline && <p className="pv-tag">{p.tagline}</p>}
                       <div className="pv-foot">
                         <div className="pv-price">
-                          {p.min_price !== null && p.min_price > 0 ? (
+                          {p.min_price !== null ? (
                             <>
                               <span className="lbl">From</span>
                               {formatSGD(p.min_price)}
