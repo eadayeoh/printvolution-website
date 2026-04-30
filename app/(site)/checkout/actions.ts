@@ -382,11 +382,18 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // of placing a second one. Network retries and double-clicks both
   // hit this path. Skipped when the client didn't send a key (legacy
   // / admin-side flows).
+  //
+  // CRITICAL: scope the lookup to the same email. Otherwise a UUID
+  // collision (or a malicious client reusing another shopper's key)
+  // would leak the prior shopper's order_number. With the email
+  // filter, the worst-case is "your own retry returned your own
+  // order" — exactly the intended behaviour.
   if (data.idempotency_key) {
     const { data: priorOrder } = await sb
       .from('orders')
       .select('id, order_number')
       .eq('idempotency_key', data.idempotency_key)
+      .eq('email', data.email)
       .maybeSingle();
     if (priorOrder) {
       return {
@@ -782,10 +789,14 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   if (oErr) {
     const isDup = (oErr as any)?.code === '23505';
     if (isDup && data.idempotency_key) {
+      // Same scoping guard as the early-return: never hand back an
+      // order that wasn't placed by this email, even on the dup-error
+      // recovery path.
       const { data: priorOrder } = await sb
         .from('orders')
         .select('id, order_number')
         .eq('idempotency_key', data.idempotency_key)
+        .eq('email', data.email)
         .maybeSingle();
       if (priorOrder) {
         return {
