@@ -308,11 +308,11 @@ function drawOnTile(
   ctx.fillRect(ax, ay, aw, ah);
 
   if (side2Img) {
-    // Side 2 shows together with Side 1 when the LED is on, but at 70%
+    // Side 2 shows together with Side 1 when the LED is on, but at 50%
     // opacity so the warm backlight + Side 1 line art still read clearly
     // on top of it.
     ctx.save();
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.5;
     drawCover(ctx, side2Img, ax, ay, aw, ah);
     ctx.restore();
   }
