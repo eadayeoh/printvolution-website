@@ -14,6 +14,7 @@ import { reportError } from '@/lib/observability';
 import { buildCityMapSvg, fetchCityMapVectors } from '@/lib/gifts/city-map-svg';
 import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
 import { stampSvgSize } from '@/lib/gifts/svg-size';
+import { resolveImageZoneDataUris } from '@/lib/gifts/image-zone-data-uris';
 
 export async function GET(
   _req: NextRequest,
@@ -114,6 +115,10 @@ export async function GET(
     const safeNamesFont   = validateFontKey(n['city_font_names'])   ?? undefined;
     const safeEventFont   = validateFontKey(n['city_font_event'])   ?? undefined;
     const safeTaglineFnt  = validateFontKey(n['city_font_tagline']) ?? undefined;
+    // Photo zones — fetch each gift_assets row and base64-encode so the
+    // SVG is self-contained (printer software doesn't need to chase a
+    // signed URL). Map keyed by zone id, same shape the renderer wants.
+    const imageFills = await resolveImageZoneDataUris(sb, n);
     const svgMarkup = buildCityMapSvg({
       vectors: primaryVectors,
       names:     n['city_names']   ?? '',
@@ -128,6 +133,7 @@ export async function GET(
       // Drop the navy background — foil printer wants only the gold paths.
       materialColor: null,
       zones: templateZones,
+      imageFills,
       spots: extras.length > 0
         ? [
             { vectors: primaryVectors, cityLabel: n['city_label'] ?? '' },

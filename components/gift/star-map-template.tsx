@@ -58,6 +58,8 @@ type Props = {
     dateUtc: Date | null;
     caption?: string | null;
   }>;
+  /** Photo URLs (blob: in preview, data: in admin) keyed by image-zone id. */
+  imageFills?: Record<string, string>;
 };
 
 export function StarMapTemplate({
@@ -81,6 +83,7 @@ export function StarMapTemplate({
   zones,
   templateRefDims,
   extras,
+  imageFills,
 }: Props) {
   // Scene is the only expensive bit (190 stars × atan2/sin/cos + constellation
   // segments). Recompute only when the inputs that affect it change.
@@ -133,8 +136,9 @@ export function StarMapTemplate({
       zones,
       templateRefDims,
       spots,
+      imageFills,
     }),
-    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones, templateRefDims, spots],
+    [scene, dateUtc, names, event, locationLabel, tagline, coordinates, showLines, showLabels, namesFont, eventFont, locationFont, taglineFont, layout, foilColor, materialColor, zones, templateRefDims, spots, imageFills],
   );
 
   return (

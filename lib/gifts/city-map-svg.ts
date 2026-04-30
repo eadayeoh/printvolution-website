@@ -13,6 +13,8 @@
  * No dependencies on React or DOM. Pure server module + pure data.
  */
 
+import { emitImageZones } from './image-zones-svg';
+
 // ── Geometry (mm — viewBox is 0 0 W H) ──────────────────────────────────────
 export const CM_GEOM = Object.freeze({
   W: 100,
@@ -319,6 +321,11 @@ export type BuildCityMapSvgInput = {
   /** Per-anchor map data. spots[i] feeds the i-th city_disk anchor.
    *  Missing entries fall back to the top-level vectors. */
   spots?: CityMapSpot[];
+  /** URL or data: URI per image-zone id. Customer-side preview passes
+   *  blob: URLs from the upload component; the foil-SVG admin route
+   *  passes base64 data URIs so the SVG is self-contained. Zones not
+   *  in this map render as an outlined placeholder. */
+  imageFills?: Record<string, string>;
 };
 
 /** Render a single map rect — used by both the legacy single-disk
@@ -379,6 +386,7 @@ export function buildCityMapSvg({
   materialColor = '#1a2740',
   zones,
   spots,
+  imageFills,
 }: BuildCityMapSvgInput): string {
   const { W, H, MAP_X, MAP_Y, MAP_W, MAP_H } = CM_GEOM;
   let body = '';
@@ -412,6 +420,13 @@ export function buildCityMapSvg({
   } else {
     body += emitDisk(vectors, { x: MAP_X, y: MAP_Y, w: MAP_W, h: MAP_H }, 'cityMapClip', foilColor, cityFont);
   }
+
+  // Image zones — emit AFTER disks so photos sit on top of the
+  // material background (but BELOW footer text so labels don't get
+  // covered). Each image zone respects its mask_preset (heart /
+  // circle / star) via a per-zone clipPath; missing fills render as
+  // an outlined placeholder so admin sees the spot in the editor.
+  body += emitImageZones(zones, imageFills, W, H, foilColor);
 
   // Footer block — names / event / city / tagline. When the template
   // carries text zones with the canonical ids ('city_names',
@@ -508,3 +523,5 @@ function emitCityZoneText(
   const op = opacity < 1 ? ` opacity="${opacity}"` : '';
   return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="${anchor}" font-size="${size}" font-family="${fontFamily}, sans-serif" fill="${fill}"${fontStyle}${fontWeight}${ls}${op}>${esc(text)}</text>`;
 }
+
+// Image-zone rendering is shared with star-map — see image-zones-svg.ts.

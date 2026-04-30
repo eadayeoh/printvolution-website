@@ -14,6 +14,7 @@ import { reportError } from '@/lib/observability';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 import { parsePersonalisationNotes, validateFontKey } from '@/lib/gifts/personalisation-notes';
 import { stampSvgSize } from '@/lib/gifts/svg-size';
+import { resolveImageZoneDataUris } from '@/lib/gifts/image-zone-data-uris';
 
 export async function GET(
   _req: NextRequest,
@@ -151,6 +152,10 @@ export async function GET(
       }
     }
 
+    // Photo zones — fetch each gift_assets row and base64-encode so the
+    // SVG is self-contained for the foil printer.
+    const imageFills = await resolveImageZoneDataUris(sb, n);
+
     const svgMarkup = buildStarMapSvg({
       scene,
       dateUtc,
@@ -171,6 +176,7 @@ export async function GET(
       // prints need the full artwork.
       materialColor: layout === 'foil' ? null : undefined,
       zones: templateZones,
+      imageFills,
       spots: starExtras.length > 0
         ? [
             { scene, caption: null },

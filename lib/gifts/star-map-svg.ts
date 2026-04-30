@@ -15,6 +15,7 @@
 
 import { STARS, CONSTELLATIONS, type CatStar } from './star-catalogue';
 import type { GiftTemplateZone, GiftTemplateTextZone, GiftTemplateRenderAnchorZone } from './types';
+import { emitImageZones } from './image-zones-svg';
 
 // ── Geometry (mm — viewBox is 0 0 W H) ──────────────────────────────────────
 //
@@ -263,6 +264,11 @@ export type BuildStarMapSvgInput = {
    *  missing entries fall back to the top-level scene. Captions render
    *  under each disk. */
   spots?: Array<{ scene: StarMapScene | null; caption?: string | null }>;
+  /** URL or data: URI per image-zone id. Same contract as the city map
+   *  renderer — preview passes blob: URLs, foil-svg admin route passes
+   *  base64 data URIs. Zones not in this map render as outlined
+   *  placeholders. */
+  imageFills?: Record<string, string>;
 };
 
 // ── Zone helpers ────────────────────────────────────────────────────────────
@@ -387,6 +393,7 @@ export function buildStarMapSvg({
   zones,
   templateRefDims,
   spots,
+  imageFills,
 }: BuildStarMapSvgInput): string {
   const isPoster = layout === 'poster';
 
@@ -527,6 +534,8 @@ export function buildStarMapSvg({
       body += `<text x="${dCX.toFixed(2)}" y="${(dCY + dR + 4).toFixed(2)}" text-anchor="middle" font-size="2.6" font-family="${fontLoc}, Georgia, serif" font-style="italic" fill="${inkColor}">${esc(spot.caption)}</text>`;
     }
   });
+
+  body += emitImageZones(zones, imageFills, W, H, inkColor);
 
   // ── Footer ────────────────────────────────────────────────────────────────
   //

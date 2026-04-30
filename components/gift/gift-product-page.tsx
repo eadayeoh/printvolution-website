@@ -66,6 +66,7 @@ import { CityMapInputs } from '@/components/gift/city-map-inputs';
 import { ExtraCityLocationsInputs } from '@/components/gift/extra-city-locations-inputs';
 import { ExtraStarEventsInputs } from '@/components/gift/extra-star-events-inputs';
 import { ImageZoneUploads } from '@/components/gift/image-zone-uploads';
+import { TemplateThumbnail } from '@/components/gift/template-thumbnail';
 import type { CityMapVectors } from '@/lib/gifts/city-map-svg';
 import { StarMapTemplate } from '@/components/gift/star-map-template';
 import { StarMapInputs } from '@/components/gift/star-map-inputs';
@@ -2155,6 +2156,11 @@ export function GiftProductPage({
                           caption: e.caption,
                         })),
                       ]}
+                      imageFills={Object.fromEntries(
+                        Object.entries(imageZoneFills)
+                          .filter(([, f]) => f.previewUrl)
+                          .map(([id, f]) => [id, f.previewUrl as string]),
+                      )}
                       // materialColor intentionally NOT passed — colour
                       // overlays only retint the foil (text/lines), not
                       // the background. Renderer falls back to its
@@ -2224,6 +2230,11 @@ export function GiftProductPage({
                         }
                         return { lat: e.lat, lng: e.lng, dateUtc: dUtc, caption: e.caption };
                       })}
+                      imageFills={Object.fromEntries(
+                        Object.entries(imageZoneFills)
+                          .filter(([, f]) => f.previewUrl)
+                          .map(([id, f]) => [id, f.previewUrl as string]),
+                      )}
                     />
                     );
                   })() : isSpotifyPlaque ? (() => {
@@ -3074,7 +3085,10 @@ export function GiftProductPage({
                                     style={{ objectFit: 'cover' }}
                                   />
                                 ) : (
-                                  <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
+                                  <TemplateThumbnail
+                                    zones={(t.zones_json as any) ?? null}
+                                    renderer={(t as { renderer?: string }).renderer ?? null}
+                                  />
                                 )}
                                 {badge ? <OccasionBadge label={badge} /> : null}
                               </div>
@@ -3394,7 +3408,10 @@ export function GiftProductPage({
                                 style={{ objectFit: 'cover' }}
                               />
                             ) : (
-                              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🎨</div>
+                              <TemplateThumbnail
+                                zones={(t.zones_json as any) ?? null}
+                                renderer={(t as { renderer?: string }).renderer ?? null}
+                              />
                             )}
                             {badge ? <OccasionBadge label={badge} /> : null}
                           </div>

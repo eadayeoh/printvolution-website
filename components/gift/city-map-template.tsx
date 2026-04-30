@@ -35,6 +35,8 @@ type Props = {
   zones?: GiftTemplateZone[] | null;
   /** Per-anchor map data for multi-anchor layouts. */
   spots?: CityMapSpot[];
+  /** Photo URLs (blob: in preview, data: in admin) keyed by image-zone id. */
+  imageFills?: Record<string, string>;
 };
 
 export function CityMapTemplate({
@@ -52,6 +54,7 @@ export function CityMapTemplate({
   materialColor,
   zones,
   spots,
+  imageFills,
 }: Props) {
   // Memoise the SVG string — buildCityMapSvg can be heavy when there are
   // thousands of road paths, and the customer types into footer text often.
@@ -72,8 +75,9 @@ export function CityMapTemplate({
       materialColor,
       zones,
       spots,
+      imageFills,
     }),
-    [vectors, names, event, cityLabel, tagline, coordinates, namesFont, eventFont, cityFont, taglineFont, foilColor, materialColor, zones, spots],
+    [vectors, names, event, cityLabel, tagline, coordinates, namesFont, eventFont, cityFont, taglineFont, foilColor, materialColor, zones, spots, imageFills],
   );
 
   return (
