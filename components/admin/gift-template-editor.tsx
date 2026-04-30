@@ -33,6 +33,7 @@ import { buildCityMapSvg } from '@/lib/gifts/city-map-svg';
 import { buildStarMapSvg, buildStarMapScene } from '@/lib/gifts/star-map-svg';
 import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
 import { SpotifyPlaqueTemplate } from '@/components/gift/spotify-plaque-template';
+import { RENDERER_LAYOUT_OPTIONS } from '@/lib/gifts/renderer-config';
 
 const GIFT_MODES: GiftMode[] = ['laser', 'uv', 'embroidery', 'photo-resize', 'eco-solvent', 'digital', 'uv-dtf'];
 
@@ -409,6 +410,24 @@ export function GiftTemplateEditor({
     template?.production_files ?? [],
   );
   const [occasionId, setOccasionId] = useState<string>(template?.occasion_id ?? '');
+  // Per-renderer admin config (layout key + default content). Free-form
+  // because each renderer has its own shape; we just shuttle the
+  // object through to renderer_config in the save payload.
+  const [rendererConfig, setRendererConfig] = useState<Record<string, unknown>>(
+    () => ((template?.renderer_config ?? {}) as Record<string, unknown>),
+  );
+  function setRendererConfigField(key: string, value: unknown) {
+    setRendererConfig((prev) => {
+      // Treat empty string + undefined the same — drop the key so the
+      // saved JSON stays clean. Booleans + numbers always persist.
+      if (value === undefined || value === '' || value === null) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
+  }
   // Empty Set = inherit all product shape_options. Any non-empty
   // selection narrows the PDP's "Pick your shape" picker.
   const [allowedShapeKinds, setAllowedShapeKinds] = useState<Set<ShapeKind>>(
@@ -904,6 +923,7 @@ export function GiftTemplateEditor({
       occasion_id: occasionId.trim() || null,
       allowed_shape_kinds: allowedShapeKinds.size > 0 ? Array.from(allowedShapeKinds) : null,
       production_files: productionFiles.length > 0 ? productionFiles : null,
+      renderer_config: rendererConfig,
     };
     startTransition(async () => {
       if (template) {
@@ -1703,23 +1723,12 @@ export function GiftTemplateEditor({
             );
           })()}
 
-          {isRendererTemplate && (
-            <div className="rounded-lg border-2 border-magenta/30 bg-magenta/5 px-4 py-3 text-[12px] leading-snug text-ink">
-              <div className="mb-1 font-bold uppercase tracking-wider text-magenta">
-                Code-driven template — renderer: <span className="font-mono">{renderer}</span>
-              </div>
-              <div>
-                Layout, geometry, and footer text styling come from code, not
-                zones. The preview below shows what the renderer outputs
-                with placeholder text. <strong>Customer-facing text fields</strong>
-                {' '}(names / event / location / tagline) are entered on the
-                product page itself — not here.
-                {' '}
-                <strong>Where the design sits inside the physical frame</strong>
-                {' '}is controlled per variant on the gift product page
-                (mockup image + design area rectangle).
-              </div>
-            </div>
+          {isRendererTemplate && renderer && (
+            <RendererConfigPanel
+              renderer={renderer}
+              config={rendererConfig}
+              onChange={setRendererConfigField}
+            />
           )}
           <div className="rounded-lg border border-neutral-200 bg-white">
             <div className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-2">
@@ -2893,4 +2902,160 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
 
 function clamp(v: number, a: number, b: number) {
   return Math.max(a, Math.min(b, v));
+}
+
+// ---------------------------------------------------------------------------
+// Renderer-config panel
+// ---------------------------------------------------------------------------
+//
+// Replaces the old static "code-driven template" notice with an
+// editable panel for renderer-driven templates (city_map / star_map /
+// song_lyrics / spotify_plaque). Admin sets layout + content
+// defaults; customer overrides at order time still win.
+
+function RendererConfigPanel({
+  renderer,
+  config,
+  onChange,
+}: {
+  renderer: string;
+  config: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+}) {
+  const layouts = RENDERER_LAYOUT_OPTIONS[renderer] ?? [];
+  const layoutKey = (config.layout as string | undefined) ?? '';
+  const get = (k: string) => (config[k] as string | undefined) ?? '';
+  const getBool = (k: string, fallback = false) => (typeof config[k] === 'boolean' ? (config[k] as boolean) : fallback);
+
+  return (
+    <div className="rounded-lg border-2 border-pink/30 bg-pink/5 p-4">
+      <div className="mb-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-pink">
+          Renderer config — <span className="font-mono">{renderer}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-neutral-600 leading-snug">
+          Set layout + default content for this template. Customer-supplied
+          values at order time still override these — admin defaults appear
+          in the preview and as fallbacks if the customer leaves a field blank.
+        </p>
+      </div>
+
+      {layouts.length > 0 && (
+        <label className="mb-4 block">
+          <span className="mb-1 block text-[11px] font-bold text-ink">Layout</span>
+          <select
+            value={layoutKey || (layouts.find((l) => l.available)?.key ?? '')}
+            onChange={(e) => onChange('layout', e.target.value)}
+            className="w-full max-w-md rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs focus:border-pink focus:outline-none"
+          >
+            {layouts.map((l) => (
+              <option key={l.key} value={l.key} disabled={!l.available}>
+                {l.label}{!l.available ? ' (coming soon)' : ''}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[10px] text-neutral-500">
+            {layouts.find((l) => l.key === layoutKey)?.description ?? layouts.find((l) => l.available)?.description}
+          </span>
+        </label>
+      )}
+
+      {(renderer === 'city_map' || renderer === 'star_map' || renderer === 'song_lyrics') && (
+        <RendererTextField
+          label="Default title"
+          hint="Shown above the map / sky chart. Customer typed value wins; this is the fallback."
+          value={get('default_title')}
+          onChange={(v) => onChange('default_title', v)}
+        />
+      )}
+
+      {(renderer === 'star_map' || renderer === 'song_lyrics') && (
+        <RendererTextField
+          label="Default subtitle / event"
+          hint='e.g. "The first dance", "When we met". Optional.'
+          value={get('default_subtitle')}
+          onChange={(v) => onChange('default_subtitle', v)}
+        />
+      )}
+
+      {(renderer === 'city_map' || renderer === 'star_map') && (
+        <RendererTextField
+          label="Names separator"
+          hint='Slotted between the two names. e.g. " ❤ ", " & ", " · "'
+          value={get('default_names_separator')}
+          onChange={(v) => onChange('default_names_separator', v)}
+        />
+      )}
+
+      {(renderer === 'song_lyrics' || renderer === 'spotify_plaque') && (
+        <RendererTextField
+          label="Default tagline"
+          hint='Single-line caption shown under the artwork. Optional.'
+          value={get('default_tagline')}
+          onChange={(v) => onChange('default_tagline', v)}
+        />
+      )}
+
+      {(renderer === 'city_map' || renderer === 'star_map') && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <RendererBoolField
+            label="Show coordinates"
+            hint="Latitude / longitude under the map."
+            value={getBool('show_coordinates', true)}
+            onChange={(v) => onChange('show_coordinates', v)}
+          />
+          <RendererBoolField
+            label="Show date"
+            hint='e.g. "21 Apr 2024"'
+            value={getBool('show_date', true)}
+            onChange={(v) => onChange('show_date', v)}
+          />
+        </div>
+      )}
+
+      <p className="mt-4 text-[10px] text-neutral-500 leading-relaxed">
+        <strong>Where the design sits inside the physical frame</strong> is
+        controlled per variant on the gift product page (mockup image + design
+        area rectangle). Layouts marked &ldquo;coming soon&rdquo; are listed
+        here so this template is ready when the renderer ships them.
+      </p>
+    </div>
+  );
+}
+
+function RendererTextField({
+  label, hint, value, onChange,
+}: { label: string; hint?: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="mb-3 block">
+      <span className="mb-1 block text-[11px] font-bold text-ink">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full max-w-md rounded border-2 border-neutral-200 bg-white px-2 py-1.5 text-xs focus:border-pink focus:outline-none"
+        maxLength={200}
+      />
+      {hint && <span className="mt-1 block text-[10px] text-neutral-500">{hint}</span>}
+    </label>
+  );
+}
+
+function RendererBoolField({
+  label, hint, value, onChange,
+}: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-start gap-2">
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 cursor-pointer accent-pink"
+      />
+      <span>
+        <span className="block text-[11px] font-bold text-ink">{label}</span>
+        {hint && <span className="block text-[10px] text-neutral-500 leading-snug">{hint}</span>}
+      </span>
+    </label>
+  );
 }

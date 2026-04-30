@@ -395,6 +395,10 @@ export type GiftTemplate = {
    *  Wins over the product-level setting. NULL or empty = inherit from
    *  the product (which may itself fall through to the mode default). */
   production_files?: Array<'png' | 'jpg' | 'svg' | 'pdf'> | null;
+  /** Per-renderer admin defaults — see lib/gifts/renderer-config.ts.
+   *  Free-form JSON whose shape depends on `renderer`. Customer
+   *  inputs at order time still override these. */
+  renderer_config?: Record<string, unknown> | null;
 };
 
 /** Date-windowed occasion (e.g. Mother's Day 2026). Tagged on

@@ -455,6 +455,14 @@ const TemplateSchema = z.object({
   occasion_id: z.string().uuid().nullable().optional(),
   allowed_shape_kinds: z.array(z.enum(['cutout', 'rectangle', 'template'])).nullable().optional(),
   production_files: z.array(z.enum(['png', 'jpg', 'svg', 'pdf'])).nullable().optional(),
+  // Per-renderer admin defaults — see lib/gifts/renderer-config.ts.
+  // Free-form JSON because each renderer has its own shape; the
+  // renderers themselves tolerate missing fields. Capped to 32 keys
+  // so an admin paste accident doesn't bloat the row.
+  renderer_config: z.record(z.string().max(40), z.unknown())
+    .refine((o) => Object.keys(o).length <= 32, { message: 'renderer_config has too many keys (max 32).' })
+    .default({})
+    .optional(),
 });
 
 /** Validates that mode_override (if set) matches an active gift_modes
