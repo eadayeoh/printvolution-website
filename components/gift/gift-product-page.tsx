@@ -17,6 +17,7 @@ import { filterPromptsByTemplate, type GiftPrompt } from '@/lib/gifts/prompts-sh
 import { encodeNoteValue, validateHexColor } from '@/lib/gifts/personalisation-notes';
 import { GiftCropTool } from '@/components/gift/gift-crop-tool';
 import { GiftMockupPreview } from '@/components/gift/gift-mockup-preview';
+import { LedRevealOutputBox } from '@/components/gift/led-reveal-output-box';
 import { GiftReadyByCard } from '@/components/gift/gift-ready-by-card';
 import { GiftMockupPreviewInteractive } from '@/components/gift/gift-mockup-preview-interactive';
 import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
@@ -2274,6 +2275,41 @@ export function GiftProductPage({
                     draggable layer — no separate overlay here. */}
               </div>
             </div>
+
+            {/* LED Light Reveal Frame: two-tile output preview showing the
+                Side-1 (lights-off) vs Side-1 + Side-2 (lights-on) look.
+                Stylised approximation — labelled as such on the tiles. */}
+            {product.slug === 'led-light-reveal-frame'
+              && hasSurfaces
+              && shapeMockup.url
+              && shapeMockup.area
+              && (() => {
+                const surfaces = selectedVariant?.surfaces ?? [];
+                if (surfaces.length < 2) return null;
+                const s1 = surfaces[0];
+                const s2 = surfaces[1];
+                const f1 = surfaceFills[s1.id] ?? {};
+                const f2 = surfaceFills[s2.id] ?? {};
+                const has1 = !!f1.photoThumb || !!f1.text?.trim();
+                const has2 = !!f2.photoThumb || !!f2.text?.trim();
+                if (!has1 && !has2) return null;
+                return (
+                  <LedRevealOutputBox
+                    mockupUrl={shapeMockup.url}
+                    area={shapeMockup.area}
+                    side1={{
+                      label: s1.label,
+                      photoUrl: f1.photoThumb ?? null,
+                      text: f1.text ?? null,
+                    }}
+                    side2={{
+                      label: s2.label,
+                      photoUrl: f2.photoThumb ?? null,
+                      text: f2.text ?? null,
+                    }}
+                  />
+                );
+              })()}
 
             {/* Regenerate CTA — surfaces when the customer switches the
                 style picker after a generation, so the visible preview
