@@ -305,6 +305,11 @@ const OrderSchema = z.object({
   coupon_code: z.string().max(60).optional().nullable(),
   gift_wrap: z.boolean().default(false),
   gift_message: z.string().max(280).optional().nullable(),
+  // Optional client-minted UUID. Same key on a retry → same order
+  // returned. Schema-stored as text so a malformed key doesn't crash
+  // the insert; the partial unique index on the column is what
+  // actually enforces dedup at the DB level.
+  idempotency_key: z.string().min(8).max(80).optional().nullable(),
   items: z.array(
     z.object({
       product_slug: z.string(),
@@ -366,6 +371,26 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   // Service-role client so we can insert regardless of RLS session
   const sb = serviceClient();
 
+  // Idempotency early-return: if the same key has already produced an
+  // order, hand back the order_number from the original row instead
+  // of placing a second one. Network retries and double-clicks both
+  // hit this path. Skipped when the client didn't send a key (legacy
+  // / admin-side flows).
+  if (data.idempotency_key) {
+    const { data: priorOrder } = await sb
+      .from('orders')
+      .select('id, order_number')
+      .eq('idempotency_key', data.idempotency_key)
+      .maybeSingle();
+    if (priorOrder) {
+      return {
+        ok: true,
+        order_number: priorOrder.order_number as string,
+        id: priorOrder.id as string,
+      };
+    }
+  }
+
   // Calculate totals
   const subtotal = data.items.reduce((s, i) => s + i.line_total_cents, 0);
   const delivery = data.delivery_method === 'delivery' ? DELIVERY_FLAT_CENTS : 0;
@@ -376,7 +401,9 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
   let couponDiscount = 0;
   let couponId: string | null = null;
   if (data.coupon_code && data.coupon_code.trim()) {
-    const r = await evaluateCouponForOrder(data.coupon_code, subtotal);
+    // Email is the per-customer key — pass it so a shopper on one
+    // address can't redeem the same code over and over.
+    const r = await evaluateCouponForOrder(data.coupon_code, subtotal, data.email);
     if (!r.ok) return { ok: false, error: `Promo code: ${r.error}` };
     couponCode = r.coupon.code;
     couponDiscount = r.discountCents;
@@ -733,11 +760,34 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
       gift_message: data.gift_message?.trim() || null,
       points_earned: pointsEarned,
       status: 'pending',
+      idempotency_key: data.idempotency_key ?? null,
     })
-    .select('id, order_number')
+    .select('id, order_number, total_cents')
     .single();
 
-  if (oErr || !order) return { ok: false, error: 'Order create failed: ' + oErr?.message };
+  // Race condition guard: two concurrent requests with the same
+  // idempotency_key both pass the early-return SELECT (race window),
+  // both try to INSERT, the unique partial index rejects the second.
+  // Recover by fetching the original row.
+  if (oErr) {
+    const isDup = (oErr as any)?.code === '23505';
+    if (isDup && data.idempotency_key) {
+      const { data: priorOrder } = await sb
+        .from('orders')
+        .select('id, order_number')
+        .eq('idempotency_key', data.idempotency_key)
+        .maybeSingle();
+      if (priorOrder) {
+        return {
+          ok: true,
+          order_number: priorOrder.order_number as string,
+          id: priorOrder.id as string,
+        };
+      }
+    }
+    return { ok: false, error: 'Order create failed: ' + oErr.message };
+  }
+  if (!order) return { ok: false, error: 'Order create failed' };
 
   // Best-effort: a failure here doesn't roll back the order — the
   // customer already got their discount, we just lose accounting.
@@ -890,40 +940,19 @@ export async function submitOrder(input: OrderInput): Promise<OrderResult> {
     }
   }
 
-  // Upsert member record (for points tracking)
-  const { data: existing } = await sb.from('members').select('id, points_balance, total_earned').eq('email', data.email).maybeSingle();
-  if (existing) {
-    await sb.from('members').update({
-      name: data.customer_name,
-      phone: data.phone,
-      points_balance: (existing.points_balance as number) + pointsEarned,
-      total_earned: (existing.total_earned as number) + pointsEarned,
-    }).eq('id', existing.id);
-    await sb.from('points_transactions').insert({
-      member_id: existing.id,
-      order_id: order.id,
-      delta: pointsEarned,
-      type: 'earned',
-      note: `Order ${order.order_number}`,
-    });
-  } else {
-    const { data: newMember } = await sb.from('members').insert({
-      email: data.email,
-      name: data.customer_name,
-      phone: data.phone,
-      points_balance: pointsEarned,
-      total_earned: pointsEarned,
-    }).select('id').single();
-    if (newMember) {
-      await sb.from('points_transactions').insert({
-        member_id: newMember.id,
-        order_id: order.id,
-        delta: pointsEarned,
-        type: 'earned',
-        note: `First order ${order.order_number}`,
-      });
-    }
-  }
+  // Upsert member record + atomically credit the earned points.
+  // Going through the add_member_points RPC (migration 0098) lets two
+  // concurrent orders on the same email serialise on the unique-email
+  // row lock — the previous read-modify-write JS path silently lost
+  // one order's points when both reads observed the same balance.
+  await sb.rpc('add_member_points', {
+    p_email: data.email,
+    p_name: data.customer_name,
+    p_phone: data.phone,
+    p_delta: pointsEarned,
+    p_order_id: order.id,
+    p_note: `Order ${order.order_number}`,
+  });
 
   // Send order confirmation emails (non-blocking — never fail the order
   // because email didn't go out)

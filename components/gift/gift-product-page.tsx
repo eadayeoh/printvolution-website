@@ -23,6 +23,23 @@ import { GiftMockupPreviewInteractive } from '@/components/gift/gift-mockup-prev
 import { SongLyricsTemplate } from '@/components/gift/song-lyrics-template';
 import { GiftVariantPicker } from '@/components/gift/gift-variant-picker';
 import { GiftVariantLivePreview } from '@/components/gift/gift-variant-live-preview';
+import DOMPurify from 'isomorphic-dompurify';
+
+/**
+ * Sanitize admin-set HTML before injecting it into the customer page.
+ * The "Who's it for?" tips and similar admin fields support light
+ * formatting (bold, links) but a compromised admin account could
+ * otherwise drop a `<script>` into a JSON column and ship arbitrary
+ * JS to every customer who lands on the product page.
+ */
+function safeAdminHtml(dirty: string | null | undefined): string {
+  if (!dirty) return '';
+  return DOMPurify.sanitize(String(dirty), {
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'a', 'br', 'span'],
+    ALLOWED_ATTR: ['href', 'title'],
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:)/i,
+  });
+}
 import { GiftRetentionNotice } from '@/components/gift/gift-retention-notice';
 import { SeoMagazine, type SeoMagazineData } from '@/components/product/seo-magazine';
 import {
@@ -4025,7 +4042,7 @@ export function GiftProductPage({
                     marginBottom: 14,
                     margin: '0 0 14px',
                   }}
-                  dangerouslySetInnerHTML={{ __html: o.tip }}
+                  dangerouslySetInnerHTML={{ __html: safeAdminHtml(o.tip) }}
                 />
                 {o.suggested && (
                   <div

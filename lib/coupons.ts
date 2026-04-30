@@ -45,8 +45,18 @@ export function computeCouponDiscountCents(coupon: CouponRow, subtotalCents: num
 /** Look up a coupon by code and run all the activation checks against
  *  the order being placed. Used by the checkout server action AND the
  *  pre-submit "Apply code" preview, so customers see an error before
- *  they hit the final submit. */
-export async function evaluateCouponForOrder(rawCode: string, subtotalCents: number): Promise<CouponEvalResult> {
+ *  they hit the final submit.
+ *
+ *  When `customerEmail` is supplied, we also reject the redemption if
+ *  this email has already used the coupon — without it the global
+ *  `max_uses` cap is the only protection, and a discount-hunter on
+ *  one address can wipe out the whole quota in a single sitting.
+ */
+export async function evaluateCouponForOrder(
+  rawCode: string,
+  subtotalCents: number,
+  customerEmail?: string | null,
+): Promise<CouponEvalResult> {
   const code = normalizeCode(rawCode);
   if (!code) return { ok: false, error: 'Enter a code.' };
 
@@ -82,6 +92,24 @@ export async function evaluateCouponForOrder(rawCode: string, subtotalCents: num
     const dollars = (minSpend / 100).toFixed(2);
     return { ok: false, error: `Minimum spend S$${dollars} not met.` };
   }
+
+  // Per-customer cap. We don't have a max_uses_per_email column on
+  // coupons, so the rule is hard-coded: each email can redeem each
+  // coupon at most once. If you ever introduce a multi-use loyalty
+  // coupon, add a column and gate this check on it.
+  if (customerEmail && customerEmail.trim()) {
+    const email = customerEmail.trim().toLowerCase();
+    const { data: prior, error: priorErr } = await sb
+      .from('coupon_redemptions')
+      .select('order_id, orders!inner(email)')
+      .eq('coupon_id', c.id)
+      .ilike('orders.email', escapeLike(email))
+      .limit(1);
+    if (!priorErr && prior && prior.length > 0) {
+      return { ok: false, error: 'This code has already been used on your email.' };
+    }
+  }
+
   const discountCents = computeCouponDiscountCents(c, subtotalCents);
   if (discountCents <= 0) return { ok: false, error: NOT_VALID };
   return { ok: true, coupon: c, discountCents };

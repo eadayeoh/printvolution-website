@@ -6,10 +6,29 @@ import { createClient } from '@/lib/supabase/client';
 import { checkLoginRateLimit, recordFailedLogin } from '@/app/login/actions';
 import { Turnstile } from '@/components/common/turnstile';
 
+/**
+ * Only allow same-origin paths in `redirectTo`. Without this an
+ * attacker can craft `/login?redirectTo=https://evil.com/phish`,
+ * trick a customer into logging in, and bounce them to a phishing
+ * page that wears the printvolution.sg brand cookies. The check
+ * rejects:
+ *   - protocol-relative URLs (`//evil.com/...`)
+ *   - absolute URLs (`https://evil.com/...`, `javascript:...`,
+ *     `data:...`)
+ *   - anything not starting with a single `/`
+ */
+function safeRedirect(target: string | null | undefined, fallback: string): string {
+  if (!target || typeof target !== 'string') return fallback;
+  if (!target.startsWith('/')) return fallback;
+  if (target.startsWith('//')) return fallback;
+  if (target.startsWith('/\\')) return fallback;
+  return target;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') ?? '/admin';
+  const redirectTo = safeRedirect(searchParams.get('redirectTo'), '/admin');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

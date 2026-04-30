@@ -230,6 +230,15 @@ async function loadSharp() {
   return mod?.default ?? null;
 }
 
+/**
+ * Hard ceiling on sharp's input decoder when the bytes came from a
+ * customer upload. ~41 MP is enough for full-frame DSLR photos but
+ * blocks decompression-bomb PNGs that would otherwise allocate
+ * gigabytes of RGBA buffer mid-decode. Pair with `failOn:'warning'`
+ * so malformed JPEG/PNG headers throw instead of crashing libvips.
+ */
+const UNTRUSTED_SHARP_OPTS = { limitInputPixels: 41_000_000, failOn: 'warning' as const };
+
 // ---------------------------------------------------------------------------
 // PREVIEW PIPELINE
 // ---------------------------------------------------------------------------
@@ -346,7 +355,7 @@ export async function runPreviewPipeline(input: PreviewInput): Promise<PreviewOu
 
   // Normalise: auto-orient via EXIF, drop alpha where not needed.
   // Flatten over white so transparent PNGs don't drop to black.
-  buf = await sharp(buf).rotate().flatten({ background: '#ffffff' }).jpeg({ quality: 80 }).toBuffer();
+  buf = await sharp(buf, UNTRUSTED_SHARP_OPTS).rotate().flatten({ background: '#ffffff' }).jpeg({ quality: 80 }).toBuffer();
 
   switch (kind) {
     case 'photo-resize':
@@ -549,7 +558,7 @@ async function renderRendererTemplate(args: {
           throw new Error(`Spotify Plaque: cannot decode ${rawMime} — sharp not available on this runtime`);
         }
         try {
-          photoBytes = await sharp(Buffer.from(sourceBytes)).jpeg({ quality: 90 }).toBuffer();
+          photoBytes = await sharp(Buffer.from(sourceBytes), UNTRUSTED_SHARP_OPTS).jpeg({ quality: 90 }).toBuffer();
           photoMime = 'image/jpeg';
         } catch (e: any) {
           throw new Error(`Spotify Plaque: failed to decode ${rawMime} photo: ${e?.message ?? 'unknown'}`);
@@ -979,7 +988,7 @@ export async function runProductionPipeline(input: ProductionInput): Promise<Pro
   const pipeline = stylePipeline ?? await resolvePipeline(product);
   const kind = pipeline?.kind ?? product.mode;
   let buf: Buffer = Buffer.from(src);
-  buf = await sharp(buf).rotate().toBuffer();
+  buf = await sharp(buf, UNTRUSTED_SHARP_OPTS).rotate().toBuffer();
 
   switch (kind) {
     case 'photo-resize':

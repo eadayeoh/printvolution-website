@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,6 +44,19 @@ export function CheckoutForm() {
   const [mounted, setMounted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // One stable idempotency key per checkout session. The server uses
+  // it to dedupe double-clicks and network retries — both end up
+  // returning the same order_number instead of inserting twice.
+  // Reset only after a successful submit (the redirect unmounts the
+  // form, so on remount a fresh key is minted).
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (idempotencyKeyRef.current === null && typeof window !== 'undefined') {
+    idempotencyKeyRef.current =
+      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `co_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  }
 
   useEffect(() => setMounted(true), []);
 
@@ -107,6 +120,7 @@ export function CheckoutForm() {
         coupon_code: coupon?.code ?? null,
         gift_wrap: !!values.gift_wrap,
         gift_message: values.gift_wrap ? (values.gift_message?.trim() || null) : null,
+        idempotency_key: idempotencyKeyRef.current ?? undefined,
         items: items.map((i) => ({
           product_slug: i.product_slug,
           product_name: i.product_name,
