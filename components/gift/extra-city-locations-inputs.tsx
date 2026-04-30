@@ -19,6 +19,9 @@ export type ExtraCityLocation = {
   label: string;
   vectors: CityMapVectors | null;
   caption: string;
+  /** Per-anchor map radius in km. Lets the customer zoom one disc tight
+   *  (1km — "the cafe we met") and another wide (6km — a whole city). */
+  radiusKm: number;
 };
 
 type Props = {
@@ -92,7 +95,7 @@ function ExtraRow({
       const lat = geo.lat;
       const lng = geo.lng;
       const label = geo.label.split(',')[0];
-      const vec = await fetchCityMapPaths(lat, lng, 3);
+      const vec = await fetchCityMapPaths(lat, lng, row.radiusKm || 3);
       if (mySeq !== seqRef.current) return;
       if (!vec.ok) { setErr(vec.error ?? 'Map fetch failed'); return; }
       onChange({ lat, lng, label, vectors: vec.vectors });
@@ -154,6 +157,40 @@ function ExtraRow({
       >
         {busy ? '…' : row.vectors ? '✓ Set' : 'Resolve'}
       </button>
+      {/* Radius slider — per-anchor zoom. Re-fetches vectors when admin
+          drags AND a city is already resolved (so the disc actually
+          updates). For unset rows, the slider just stages the value
+          for the next Resolve click. */}
+      <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 32 }}>
+        <span style={{ fontSize: 10, color: 'var(--pv-muted)', minWidth: 56 }}>Zoom</span>
+        <input
+          type="range"
+          min={1}
+          max={6}
+          step={0.5}
+          value={row.radiusKm}
+          onChange={(e) => {
+            const km = parseFloat(e.target.value);
+            onChange({ radiusKm: km });
+          }}
+          onMouseUp={async () => {
+            if (row.lat == null || row.lng == null) return;
+            const mySeq = ++seqRef.current;
+            setBusy(true);
+            try {
+              const vec = await fetchCityMapPaths(row.lat, row.lng, row.radiusKm);
+              if (mySeq !== seqRef.current) return;
+              if (vec.ok) onChange({ vectors: vec.vectors });
+            } finally {
+              if (mySeq === seqRef.current) setBusy(false);
+            }
+          }}
+          style={{ flex: 1 }}
+        />
+        <span style={{ fontSize: 11, fontFamily: 'var(--pv-f-mono)', minWidth: 36, textAlign: 'right', color: 'var(--pv-ink)' }}>
+          {row.radiusKm.toFixed(1)} km
+        </span>
+      </div>
       {err && (
         <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#c00' }}>{err}</div>
       )}

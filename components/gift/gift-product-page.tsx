@@ -513,6 +513,10 @@ export function GiftProductPage({
     label: string;
     vectors: CityMapVectors | null;
     caption: string;
+    /** Per-anchor map radius in km. Defaults to the primary's radius
+     *  but admin can pull tighter ("the cafe where we met" → 1km) or
+     *  wider ("Met in Singapore" → 6km). */
+    radiusKm: number;
   };
   const [extraCityLocations, setExtraCityLocations] = useState<ExtraCityLocation[]>([]);
   // Resize the extras array to match the template's city_disk count - 1
@@ -528,7 +532,7 @@ export function GiftProductPage({
       if (prev.length === need) return prev;
       const next = prev.slice(0, need);
       while (next.length < need) {
-        next.push({ lat: null, lng: null, label: '', vectors: null, caption: '' });
+        next.push({ lat: null, lng: null, label: '', vectors: null, caption: '', radiusKm: cityRadius });
       }
       return next;
     });
@@ -1301,6 +1305,23 @@ export function GiftProductPage({
     const config: Record<string, string> = {
       Mode: GIFT_MODE_LABEL[product.mode],
     };
+    // Multi-anchor summary: surface the city/event names so the cart
+    // line + admin order detail show "Singapore · London · Tokyo"
+    // instead of needing to JSON-parse personalisation_notes.
+    if (isCityMap) {
+      const cities = [
+        cityLabel.trim() || (cityLat != null ? 'Primary' : ''),
+        ...extraCityLocations.map((e) => e.label.trim()),
+      ].filter(Boolean);
+      if (cities.length > 1) config.Cities = cities.join(' · ');
+    }
+    if (isStarMap) {
+      const events = [
+        starLocLabel.trim() || (starLat != null ? 'Primary' : ''),
+        ...extraStarEvents.map((e) => e.label.trim()),
+      ].filter(Boolean);
+      if (events.length > 1) config.Events = events.join(' · ');
+    }
     if (shapePickerActive) {
       config.Shape = selectedShapeKind === 'template'
         ? `Template — ${templates.find((t) => t.id === selectedShapeTemplateId)?.name ?? 'Template'}`
@@ -1484,6 +1505,7 @@ export function GiftProductPage({
               lat: e.lat, lng: e.lng,
               label: e.label.trim() || null,
               caption: e.caption.trim() || null,
+              radius_km: Number.isFinite(e.radiusKm) ? e.radiusKm : null,
             }
           : null
       ));
@@ -2053,11 +2075,18 @@ export function GiftProductPage({
                       // the background. Renderer falls back to its
                       // layout default (navy for foil, white for poster).
                     />
-                  ) : isCityMap ? (
+                  ) : isCityMap ? (() => {
+                    // Renderer-config fallbacks: when admin has set
+                    // default_title / default_subtitle / etc on the
+                    // template's renderer_config, those land here as
+                    // fallbacks for whatever the customer left blank.
+                    const rcfg = ((templates.find((t) => t.id === selectedTemplateId) as any)?.renderer_config ?? {}) as Record<string, unknown>;
+                    const def = (k: string) => (typeof rcfg[k] === 'string' ? (rcfg[k] as string) : '');
+                    return (
                     <CityMapTemplate
                       vectors={cityVectors}
-                      names={cityNames}
-                      event={cityEvent}
+                      names={cityNames || def('default_title')}
+                      event={cityEvent || def('default_subtitle')}
                       cityLabel={cityLabel}
                       tagline={cityTagline}
                       coordinates={cityShowCoords && cityLat != null && cityLng != null ? `${cityLat.toFixed(4)}° N · ${cityLng.toFixed(4)}° E` : undefined}
@@ -2087,13 +2116,17 @@ export function GiftProductPage({
                       // the background. Renderer falls back to its
                       // layout default (navy for foil, white for poster).
                     />
-                  ) : isStarMap ? (
+                    );
+                  })() : isStarMap ? (() => {
+                    const rcfg = ((templates.find((t) => t.id === selectedTemplateId) as any)?.renderer_config ?? {}) as Record<string, unknown>;
+                    const def = (k: string) => (typeof rcfg[k] === 'string' ? (rcfg[k] as string) : '');
+                    return (
                     <StarMapTemplate
                       lat={starLat}
                       lng={starLng}
                       dateUtc={starDateUtc}
-                      names={starNames}
-                      event={starEvent}
+                      names={starNames || def('default_title')}
+                      event={starEvent || def('default_subtitle')}
                       locationLabel={starLocLabel}
                       tagline={starTagline}
                       coordinates={starShowCoords && starLat != null && starLng != null
@@ -2148,7 +2181,8 @@ export function GiftProductPage({
                         return { lat: e.lat, lng: e.lng, dateUtc: dUtc, caption: e.caption };
                       })}
                     />
-                  ) : isSpotifyPlaque ? (() => {
+                    );
+                  })() : isSpotifyPlaque ? (() => {
                     const t = templates.find((t) => (t as { renderer?: string }).renderer === 'spotify_plaque');
                     const w = (t as { reference_width_mm?: number | null } | undefined)?.reference_width_mm;
                     const h = (t as { reference_height_mm?: number | null } | undefined)?.reference_height_mm;

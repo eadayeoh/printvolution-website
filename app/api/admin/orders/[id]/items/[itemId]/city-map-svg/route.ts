@@ -51,7 +51,7 @@ export async function GET(
     // (one per city_disk anchor beyond the primary). The cart-line
     // PRESERVES empty slots so anchor[i] alignment is stable — an
     // unfilled extra renders as the placeholder, not a shifted map.
-    type Extra = { lat: number; lng: number; label?: string | null; caption?: string | null } | null;
+    type Extra = { lat: number; lng: number; label?: string | null; caption?: string | null; radius_km?: number | null } | null;
     let extras: Extra[] = [];
     try {
       const raw = n['city_extras'];
@@ -71,9 +71,16 @@ export async function GET(
     }
 
     const safeRadius = Math.max(1, Math.min(15, radius || 5));
+    // Per-extra radius wins when present so the customer's tighter zoom
+    // ("the cafe" → 1km) doesn't get widened back to the primary's 5km.
+    const extraRadiusFor = (e: Extra) => {
+      if (!e) return safeRadius;
+      const r = typeof e.radius_km === 'number' && Number.isFinite(e.radius_km) ? e.radius_km : safeRadius;
+      return Math.max(1, Math.min(15, r));
+    };
     const [primaryVectors, ...extraVectors] = await Promise.all([
       fetchCityMapVectors(lat, lng, safeRadius),
-      ...extras.map((e) => (e ? fetchCityMapVectors(e.lat, e.lng, safeRadius) : Promise.resolve(null))),
+      ...extras.map((e) => (e ? fetchCityMapVectors(e.lat, e.lng, extraRadiusFor(e)) : Promise.resolve(null))),
     ]);
 
     // Look up the template's zones so the renderer iterates anchors at
