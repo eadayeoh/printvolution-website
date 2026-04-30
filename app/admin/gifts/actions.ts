@@ -395,7 +395,11 @@ export async function createGiftMode(input: z.input<typeof NewModeSchema>) {
 // zones_json was z.record(unknown) which let admin save objects with
 // no id at all, breaking the renderer at customer time.
 const ZoneShape = z.object({
-  id: z.string().min(1),
+  // Zone id is interpolated raw into SVG attributes (clipPath ids,
+  // url(#…) refs, image-zone keys). Restricting to a slug-style charset
+  // closes a path where a malicious admin (or an admin-token compromise)
+  // could inject SVG/HTML via an id like `x"/><script>…</script>`.
+  id: z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, 'letters, digits, underscores, hyphens only'),
   type: z.enum(['image', 'text', 'calendar', 'render_anchor', 'shape']),
   x_mm: z.number().finite(),
   y_mm: z.number().finite(),

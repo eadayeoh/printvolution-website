@@ -153,8 +153,12 @@ export async function GET(
     }
 
     // Photo zones — fetch each gift_assets row and base64-encode so the
-    // SVG is self-contained for the foil printer.
-    const imageFills = await resolveImageZoneDataUris(sb, n);
+    // SVG is self-contained for the foil printer. `allowMissing` lets
+    // the admin still pull the layout even when the customer's source
+    // bytes were retention-purged; missing zones surface via the
+    // X-Missing-Image-Zones response header.
+    const { fills: imageFills, missing: missingImageZones } =
+      await resolveImageZoneDataUris(sb, n, { allowMissing: true });
 
     const svgMarkup = buildStarMapSvg({
       scene,
@@ -199,14 +203,15 @@ export async function GET(
     const sizeSuffix = hasSize ? `-${Math.round(sizeWmm)}x${Math.round(sizeHmm)}mm` : '';
     const filename = `${row.product_slug}-${row.id.slice(0, 8)}${sizeSuffix}.svg`;
 
-    return new NextResponse(xml, {
-      status: 200,
-      headers: {
-        'Content-Type': 'image/svg+xml; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'private, no-store',
-      },
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'private, no-store',
+    };
+    if (missingImageZones.length > 0) {
+      headers['X-Missing-Image-Zones'] = missingImageZones.join(',');
+    }
+    return new NextResponse(xml, { status: 200, headers });
   } catch (err) {
     reportError(err, { route: 'admin.orders.star_map_svg', order_id: params.id });
     return NextResponse.json({ error: 'Failed to generate SVG' }, { status: 500 });

@@ -8,7 +8,6 @@
  * time so we don't burn storage on uploads the customer abandons.
  */
 
-import { useEffect, useRef } from 'react';
 import type { GiftTemplateZone } from '@/lib/gifts/types';
 
 export type ImageZoneFill = {
@@ -24,13 +23,11 @@ type Props = {
 };
 
 export function ImageZoneUploads({ zones, fills, onChange }: Props) {
-  // Track blob URLs we mint so we can revoke on unmount / replace —
-  // otherwise a long edit session would leak File objects in memory.
-  const urlsRef = useRef<string[]>([]);
-  useEffect(() => () => {
-    urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
-  }, []);
-
+  // URL lifecycle is owned by the parent — this component used to revoke
+  // its minted blob URLs on unmount, but the form unmounts whenever the
+  // customer picks a template with no image zones, leaving the parent
+  // holding revoked URLs in `fills`. The parent now revokes on
+  // template change and on its own unmount.
   const imageZones = (zones ?? []).filter((z) => z.type === 'image');
   if (imageZones.length === 0) return null;
 
@@ -46,7 +43,6 @@ export function ImageZoneUploads({ zones, fills, onChange }: Props) {
       return;
     }
     const previewUrl = URL.createObjectURL(file);
-    urlsRef.current.push(previewUrl);
     onChange({
       ...fills,
       [zoneId]: { file, previewUrl, assetId: null },

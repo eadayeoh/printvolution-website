@@ -33,15 +33,13 @@ export function emitImageZones(
     const rotate = iz.rotation_deg
       ? ` transform="rotate(${iz.rotation_deg} ${(x + w / 2).toFixed(2)} ${(y + h / 2).toFixed(2)})"`
       : '';
-    if (mask && mask !== 'circle') {
+    if (mask === 'heart' || mask === 'star') {
       const clipId = `imgClip-${iz.id}`;
-      const presetD = mask === 'heart' ? HEART_PATH : mask === 'star' ? STAR_PATH : null;
-      if (presetD) {
-        body += `<defs><clipPath id="${clipId}" clipPathUnits="objectBoundingBox" transform="scale(0.01)"><path d="${presetD}"/></clipPath></defs>`;
-      }
+      const presetD = mask === 'heart' ? HEART_PATH : STAR_PATH;
+      body += `<defs><clipPath id="${clipId}" clipPathUnits="objectBoundingBox" transform="scale(0.01)"><path d="${presetD}"/></clipPath></defs>`;
       if (url) {
         body += `<g${rotate}><image href="${url}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/></g>`;
-      } else if (presetD) {
+      } else {
         body += `<g${rotate}><path d="${presetD}" transform="translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${(w / 100).toFixed(4)},${(h / 100).toFixed(4)})" fill="none" stroke="${outlineColor}" stroke-width="0.4" stroke-dasharray="2 1.5" opacity="0.55"/></g>`;
       }
     } else if (mask === 'circle') {

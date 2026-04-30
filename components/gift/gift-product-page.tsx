@@ -594,6 +594,59 @@ export function GiftProductPage({
     assetId: string | null;
   };
   const [imageZoneFills, setImageZoneFills] = useState<Record<string, ImageZoneFill>>({});
+  // Stable derived map of zone-id → preview blob URL for the renderers.
+  // Without memoising, the parent rebuilt this object on every render and
+  // the children's useMemo (which lists imageFills as a dep) re-ran the
+  // full SVG build on every keystroke — defeating the whole point of
+  // memoising buildCityMapSvg / buildStarMapSvg.
+  const liveImageFills = useMemo(
+    () => Object.fromEntries(
+      Object.entries(imageZoneFills)
+        .filter(([, f]) => f.previewUrl)
+        .map(([id, f]) => [id, f.previewUrl as string]),
+    ),
+    [imageZoneFills],
+  );
+  // Ref holds the latest fills so the prune+flush effects can read them
+  // without taking state as a dep (which would re-run them on every
+  // upload). Sync during render is the documented React pattern.
+  const fillsRef = useRef(imageZoneFills);
+  fillsRef.current = imageZoneFills;
+  // Prune photo fills whose zone no longer exists in the selected
+  // template. Without this, swapping A → B → A leaves stale entries
+  // pointing at blob URLs the form's prior unmount may have revoked,
+  // which renders as broken `<image>` tags in both the live preview and
+  // the SVG. Side effects (revokeObjectURL) live OUTSIDE the setState
+  // updater so the updater stays pure — strict-mode double-invocation
+  // doesn't double-fire revokes.
+  useEffect(() => {
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    const zoneIds = new Set(
+      (((tpl as any)?.zones_json ?? []) as Array<{ id: string; type: string }>)
+        .filter((z) => z.type === 'image')
+        .map((z) => z.id),
+    );
+    const orphans: string[] = [];
+    for (const [id, fill] of Object.entries(fillsRef.current)) {
+      if (!zoneIds.has(id)) {
+        if (fill.previewUrl) URL.revokeObjectURL(fill.previewUrl);
+        orphans.push(id);
+      }
+    }
+    if (orphans.length === 0) return;
+    setImageZoneFills((prev) => {
+      const next = { ...prev };
+      for (const id of orphans) delete next[id];
+      return next;
+    });
+  }, [selectedTemplateId, templates]);
+  // Final flush — revoke any remaining blob URLs when the page unmounts
+  // so a long-lived SPA navigation doesn't leak File objects.
+  useEffect(() => () => {
+    for (const fill of Object.values(fillsRef.current)) {
+      if (fill.previewUrl) URL.revokeObjectURL(fill.previewUrl);
+    }
+  }, []);
   useEffect(() => {
     const tpl = templates.find((t) => t.id === selectedTemplateId);
     const zones = (tpl as any)?.zones_json ?? [];
@@ -1255,6 +1308,14 @@ export function GiftProductPage({
         const r = await uploadGiftSourceOnly(fd);
         if (r.ok) {
           imageZoneAssets[zoneId] = r.sourceAssetId;
+        } else {
+          // Surface the failure instead of letting the customer add a
+          // half-built line to cart — printer would receive an SVG with
+          // placeholders where their photo should be. Same handling as
+          // the surfaces upload flow below.
+          setErr(r.error || 'Photo upload failed');
+          setAddingToCart(false);
+          return;
         }
       }
       // Mix in any zones that already had asset ids from a previous
@@ -2156,11 +2217,7 @@ export function GiftProductPage({
                           caption: e.caption,
                         })),
                       ]}
-                      imageFills={Object.fromEntries(
-                        Object.entries(imageZoneFills)
-                          .filter(([, f]) => f.previewUrl)
-                          .map(([id, f]) => [id, f.previewUrl as string]),
-                      )}
+                      imageFills={liveImageFills}
                       // materialColor intentionally NOT passed — colour
                       // overlays only retint the foil (text/lines), not
                       // the background. Renderer falls back to its
@@ -2230,11 +2287,7 @@ export function GiftProductPage({
                         }
                         return { lat: e.lat, lng: e.lng, dateUtc: dUtc, caption: e.caption };
                       })}
-                      imageFills={Object.fromEntries(
-                        Object.entries(imageZoneFills)
-                          .filter(([, f]) => f.previewUrl)
-                          .map(([id, f]) => [id, f.previewUrl as string]),
-                      )}
+                      imageFills={liveImageFills}
                     />
                     );
                   })() : isSpotifyPlaque ? (() => {
